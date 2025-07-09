@@ -1,0 +1,50 @@
+site_name: Visual Novel Club Resources
+site_url: https://drinosaret.github.io/vn-club-resources
+
+theme:
+  name: material
+  prev_next_buttons_location: both
+  logo: assets/favicon2.png
+  favicon: assets/favicon2.png
+  custom_dir: overrides
+  features:
+    - navigation.tabs
+    - navigation.instant
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - content.code.copy
+    - header.social
+  palette:
+    scheme: default
+    primary: indigo
+    accent: deep orange
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    repo: fontawesome/brands/discord  # optional GitHub icon override
+
+# This removes the default "Made with Material" footer
+copyright: ""
+
+nav:
+  - Home: index.md
+  - Where to Find VNs: find.md
+  - Where to Get VNs: sources.md
+  - Tools: tools.md
+
+extra:
+  discord_invite: "https://discord.com/invite/WBdTEt9FuD"
+  generator: false
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - pymdownx.emoji
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css

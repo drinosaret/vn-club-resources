@@ -1,0 +1,28 @@
+# MkDocs build output
+site/
+
+# Python-related files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+pip-wheel-metadata/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+*.code-workspace
+.vscode/
+
+# Miscellaneous
+*.log
+*.bak
+*.tmp
