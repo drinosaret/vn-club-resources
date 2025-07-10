@@ -37,7 +37,7 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 - [NovelGame.jp](https://novelgame.jp/)  
   Free platform for indie/doujin VNs. Often made with TyranoScript. Search by tag, rating, play length, etc.
 
-- [Freem!](https://www.freem.ne.jp/win)  
+- [Freem!](https://www.freem.ne.jp/)  
   Hosts a wide variety of Japanese free games, including visual novels and hybrids. Check the ノベルゲーム category or search manually.
 
 ---
