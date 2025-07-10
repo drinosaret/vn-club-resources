@@ -4,7 +4,7 @@ A curated resource site for discovering, obtaining, and enjoying Japanese visual
 
 ## Website
 
-Visit: [https://yourusername.github.io/vn-resources/](https://yourusername.github.io/vn-resources/)
+Visit: [drinosaret.github.io/vn-club-resources/](https://drinosaret.github.io/vn-club-resources/)
 
 ## Built With
 
