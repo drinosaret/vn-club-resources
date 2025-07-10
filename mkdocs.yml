@@ -1,5 +1,6 @@
 site_name: Visual Novel Club Resources
 site_url: https://drinosaret.github.io/vn-club-resources
+site_description: Resources page for VN Club Resurrection.
 
 theme:
   name: material
