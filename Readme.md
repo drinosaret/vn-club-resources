@@ -13,7 +13,7 @@ Visit: [https://yourusername.github.io/vn-resources/](https://yourusername.githu
 
 ## Community
 
-Join the discussion: [Discord](https://discord.com/invite/WBdTEt9FuD)
+Join the discussion: [Discord](https://discord.gg/Ze7dYKVTHf)
 
 ---
 
