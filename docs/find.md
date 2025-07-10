@@ -4,7 +4,7 @@ Useful sources for discovering new titles and keeping track of what you’ve rea
 
 ---
 
-## <a href="https://vndb.org/" target="_blank" rel="noopener noreferrer">VNDB</a>
+## [VNDB](https://vndb.org/)
 
 ![VNDB Screenshot](assets/vndb.png){ width=600 }
 
@@ -12,13 +12,13 @@ A massive, community-maintained encyclopedia of VNs. If you aren't on here, what
 
 **Features:**
 
-- Detailed release history
+- Detailed release history  
 - Tags, ratings, and screenshots  
 - User lists and advanced filters (great for creating your infinite backlog)
 
 ---
 
-## <a href="https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/" target="_blank" rel="noopener noreferrer">ErogameScape</a>
+## [ErogameScape](https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/)
 
 ![ErogameScape Screenshot](assets/erogamescape.png){ width=600 }
 

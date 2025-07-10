@@ -1,6 +1,7 @@
 site_name: Visual Novel Club Resources
 site_url: https://drinosaret.github.io/vn-club-resources
 site_description: Resources page for VN Club Resurrection.
+site_author: VN Club Resurrection
 
 theme:
   name: material
@@ -23,21 +24,22 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
-  icon:
-    repo: fontawesome/brands/discord  # optional GitHub icon override
 
-# This removes the default "Made with Material" footer
 copyright: ""
 
 nav:
   - Home: index.md
-  - Where to Find VNs: find.md
-  - Where to Get VNs: sources.md
+  - Where to find VNs: find.md
+  - Where to get VNs: sources.md
   - Tools: tools.md
 
 extra:
   discord_invite: "https://discord.gg/Ze7dYKVTHf"
   generator: false
+  social:
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/Ze7dYKVTHf
+      name: VN Club Resurrection Discord
 
 markdown_extensions:
   - attr_list
@@ -46,6 +48,14 @@ markdown_extensions:
   - pymdownx.superfences
   - toc:
       permalink: true
+  - meta
 
 extra_css:
   - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ja
+  - open-in-new-tab
