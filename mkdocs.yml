@@ -20,7 +20,6 @@ theme:
   palette:
     scheme: default
     primary: indigo
-    accent: deep orange
   font:
     text: Roboto
     code: Roboto Mono
@@ -36,10 +35,7 @@ nav:
 extra:
   discord_invite: "https://discord.gg/Ze7dYKVTHf"
   generator: false
-  social:
-    - icon: fontawesome/brands/discord
-      link: https://discord.gg/Ze7dYKVTHf
-      name: VN Club Resurrection Discord
+
 
 markdown_extensions:
   - attr_list
