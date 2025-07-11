@@ -1,6 +1,6 @@
-# Welcome to the Visual Novel Club Resources Page
+## <div style="text-align: center;">Welcome to the Visual Novel Club Resources Page</div>
 
-![Hikaru](assets/hikaru.gif){: style="display: block; margin-left: auto; margin-right: auto; width: 300px;" }
+![Hikaru](assets/hikaru.gif){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 
 This (work-in-progress) site is a curated hub for learning Japanese through visual novels, eroge, and other video games. Whether you're new to the medium or already deep into immersion, you'll find:
 
