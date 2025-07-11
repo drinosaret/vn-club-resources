@@ -1,4 +1,4 @@
-# Welcome to Visual Novel Club Resources page
+# Welcome to the Visual Novel Club Resources Page
 
 ![Hikaru](assets/hikaru.gif){: style="display: block; margin-left: auto; margin-right: auto; width: 300px;" }
 
