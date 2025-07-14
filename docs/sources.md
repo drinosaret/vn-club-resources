@@ -129,7 +129,7 @@ These are often called “premium links” or “mirror links" and some may eith
 - Download managers like [JDownloader](https://jdownloader.org/) or [Motrix](https://github.com/agalwood/Motrix) can help with bulk or large downloads by merging split releases and automatically handling file extraction.  
 - Use a VPN if links are region-locked.
 
-These mirrors are one reason sites like Shinnku or Ryuugames may be more convenient than older DDL forums. If you are committed to being a free user, the tools [here](https://filehostlist.miraheze.org/wiki/Free_Premium_Leeches#Guide) may help you bypass certain restrictions. If you are someone like me who downloads obscure games frequently, pairing a debrid service like [Real-Debrid](https://real-debrid.com/) or [Debrid-Link](https://debrid-link.com/) with JDownloader may be ideal. However, this is not recommended for the average user. Do not let anyone convince you that you must spend money to learn with your favorite games. It is often simply a matter of finding the right link.
+These mirrors are one reason sites like Shinnku or Ryuugames may be more convenient than older DDL forums. If you are committed to being a free user, these [tools](https://filehostlist.miraheze.org/wiki/Free_Premium_Leeches#Guide) may help you bypass certain restrictions. If you are someone like me who downloads obscure games frequently, pairing a debrid service like [Real-Debrid](https://real-debrid.com/) or [Debrid-Link](https://debrid-link.com/) with JDownloader may be ideal. However, this is not recommended for the average user. Do not let anyone convince you that you must spend a lot of money to learn with your favorite games. It is often simply a matter of finding the right link.
 
 ---
 

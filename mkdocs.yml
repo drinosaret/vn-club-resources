@@ -30,6 +30,9 @@ nav:
   - Home: index.md
   - Where to Find VNs: find.md
   - Where to Get VNs: sources.md
+  - Guides:
+      - Texthooking Guide: texthooking-guide.md
+      - JL Guide: jl-guide.md
   - Tools: tools.md
 
 extra:
@@ -39,9 +42,10 @@ extra:
 
 markdown_extensions:
   - attr_list
+  - md_in_html
+  - pymdownx.superfences
   - admonition
   - pymdownx.emoji
-  - pymdownx.superfences
   - toc:
       permalink: true
   - meta
