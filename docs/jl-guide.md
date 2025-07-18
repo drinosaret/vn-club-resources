@@ -130,6 +130,12 @@ One thing you need to pay attention to is the difference between a dictionary li
 - **Kanji Dictionary**: Dictionaries that appear under the kanji tab of Yomitan (the window that opens when you click on a specific kanji) should be added as "Kanji Dictionary"
 - **Kanji Dictionary with Word Schema**: Dictionaries that are still technically for kanji but appear among regular dictionary entries should be added as "Kanji Dictionary with Word Schema"
 
+!!! tip "Identifying Dictionary Types"
+    You can also check the extracted file directory to determine the dictionary type:
+
+    - **Kanji Dictionary**: Contains files titled `kanji_bank_1.json`, `kanji_bank_2.json`, etc.
+    - **Kanji Dictionary with Word Schema**: Contains files titled `term_bank_1.json`, `term_bank_2.json`, etc.
+
 | ![Kanji Dictionary Example](assets/JL8.png){ width="300" } | ![Kanji Dictionary Word Scheme Example](assets/JL9.png){ width="300" } |
 |:---:|:---:|
 | **Add as Kanji Dictionary**<br>*Shows in kanji tab only* | **Add as Kanji Dictionary with Word Schema**<br>*Shows among word entries* |

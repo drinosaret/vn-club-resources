@@ -48,7 +48,7 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 **Recommended:**
 
-- **[Anime-Sharing](https://www.anime-sharing.com/)** — Forum-based hub for sharing VNs and related media. Many releases originate here and are often clean rips from DLsite. Focuses on DDL sharing, but offers torrents as well. Make sure sort by new to find working links.
+- **[Anime-Sharing](https://www.anime-sharing.com/)** — Forum-based hub for sharing VNs and related media. Many releases originate here and are often clean rips from DLsite. Focuses on DDL sharing, but offers torrents as well. Make sure to sort by new to find working links.
 
 - **[Nyaa.si](https://nyaa.si/)** — Public torrent tracker with many visual novels. Check here for popular SFW titles.
 

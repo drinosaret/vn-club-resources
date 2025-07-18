@@ -33,4 +33,4 @@ Japanese database for eroge and visual novels. Mostly useful for when you want t
 
 ---
 
-Looking for actual download sources? Check [here](sources.md).
+Looking for actual download sources? Check the [sources](sources.md) page.

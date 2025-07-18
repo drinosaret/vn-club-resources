@@ -10,13 +10,14 @@ theme:
   favicon: assets/favicon2.png
   custom_dir: overrides
   features:
-    - navigation.tabs
     - navigation.instant
     - navigation.top
     - navigation.footer
     - search.suggest
     - content.code.copy
     - header.social
+    - navigation.expand
+    - navigation.sections
   palette:
     scheme: default
     primary: indigo
@@ -28,12 +29,14 @@ copyright: ""
 
 nav:
   - Home: index.md
-  - Where to Find VNs: find.md
-  - Where to Get VNs: sources.md
+  - Resources:
+      - Where to Find VNs: find.md
+      - Where to Get VNs: sources.md
+      - Tools: tools.md
   - Guides:
       - Texthooking Guide: texthooking-guide.md
       - JL Guide: jl-guide.md
-  - Tools: tools.md
+      - VNTimeTracker Guide: VNTimeTracker-guide.md
 
 extra:
   discord_invite: "https://discord.gg/Ze7dYKVTHf"
