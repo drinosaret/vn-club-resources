@@ -1,18 +1,18 @@
-# Text Hooking Guide
+# Textractor Guide
 
 This guide walks you through setting up **Textractor** and connecting it to a browser-based UI using the **WebSocket extension**. Ideal for reading and mining from Japanese visual novels using Yomitan in your browser.
 
 ---
 
-## ✅ Requirements
+## Requirements
 
-- 📥 [Textractor (Chenx221's fork)](https://github.com/Chenx221/Textractor)
-- 📥 [WebSocket Extension (kuroahna)](https://github.com/kuroahna/textractor_websocket)
-- 🌐 [Texthooker UI (Renji-XD)](https://renji-xd.github.io/texthooker-ui/)
+- [Textractor (Chenx221's fork)](https://github.com/Chenx221/Textractor)
+- [WebSocket Extension (kuroahna)](https://github.com/kuroahna/textractor_websocket)
+- [Texthooker UI (Renji-XD)](https://renji-xd.github.io/texthooker-ui/)
 
 ---
 
-## 🛠 Step 1: Set Up Textractor
+## Step 1: Set Up Textractor
 
 1. Download Textractor from [Chenx221's GitHub](https://github.com/Chenx221/Textractor). (On the releases tab, you will find a list of files that go texthook_xxxxxx.7z. Get the newest one listed as "Textractor (仅英语)")
 2. Extract the `.zip` file.
@@ -22,17 +22,17 @@ This guide walks you through setting up **Textractor** and connecting it to a br
 
 ---
 
-## 🔌 Step 2: Install the WebSocket Extension
+## Step 2: Install the WebSocket Extension
 
 Download the WebSocket extension from the [Releases page](https://github.com/kuroahna/textractor_websocket/releases) of the `kuroahna/textractor_websocket` repository.
 
-### 📁 File Setup
+### File Setup
 
 1. Unzip the release package.
 2. Copy `textractor_websocket_x86.dll` into your `Textractor/x86` folder.
 3. Copy `textractor_websocket_x64.dll` into your `Textractor/x64` folder.
 
-### 🧩 Add Extensions to Textractor
+### Add Extensions to Textractor
 
 #### For `x86`:
 
@@ -55,7 +55,7 @@ Download the WebSocket extension from the [Releases page](https://github.com/kur
 
 ---
 
-## 🎮 Step 3: Hook the Visual Novel
+## Step 3: Hook the Visual Novel
 
 1. Launch your visual novel and get to a point where you can start loading text.
 2. Open the matching version of **Textractor** (`x86` or `x64`) based on your game.
@@ -74,7 +74,7 @@ If textractor can't automatically find a working hook, you can try searching man
 
 ---
 
-## 🌐 Step 4: View Text in the Browser
+## Step 4: View Text in the Browser
 
 1. Open [Renji-XD’s Texthooker UI](https://renji-xd.github.io/texthooker-ui/) in your browser. If the WebSocket is working, the colored icon in the top right should be green. If it's still red, trying clicking on it to reconnect.
 2. Click the **Start** button in the top-right corner. (Or enable "Allow new Line during Pause" and "Autostart Timer by Line during Pause" in the settings.)
@@ -90,7 +90,7 @@ If textractor can't automatically find a working hook, you can try searching man
 
 ---
 
-## 📝 Additional Tips
+## Additional Tips
 
 - Keep both `x86` and `x64` folders ready — the version depends on the VN.
 - Some games may not hook correctly if you set Textractor to automatically use a saved hook. Try restarting the game or clicking "Forget game".

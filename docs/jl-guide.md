@@ -3,7 +3,7 @@
 This page offers directions on how to set up and use the [JL](https://github.com/rampaa/JL) pop-up dictionary.
 
 !!! note
-    JL is best paired with a texthooker for extracting text from games or applications. For more information on texthookers and setup, see [this guide on texthooking](texthooking-guide.md).
+    JL is best paired with a texthooker for extracting text from games or applications. For more information on texthookers and setup, see [this guide on texthooking](textractor-guide.md).
 
 ![JL](assets/JL.webp)
 

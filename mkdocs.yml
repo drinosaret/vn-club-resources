@@ -34,7 +34,8 @@ nav:
       - Where to Get VNs: sources.md
       - Tools: tools.md
   - Guides:
-      - Texthooking Guide: texthooking-guide.md
+      - Textractor Guide: textractor-guide.md
+      - Agent Guide: agent-guide.md
       - JL Guide: jl-guide.md
       - VNTimeTracker Guide: VNTimeTracker-guide.md
 
