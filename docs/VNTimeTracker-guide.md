@@ -67,7 +67,7 @@ Before you start tracking, configure the global settings to suit your needs:
 
 ### Status Indicators
 
-If configured correctly, both the timer in the main window and the overlay should increase when you are in the window of the game you are tracking.
+If things are configured correctly, both the timer in the main window and the overlay should increase when you are in the window of the game you are tracking.
 
 **Color Code:**
 

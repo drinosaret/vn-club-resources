@@ -37,7 +37,8 @@ nav:
       - Textractor Guide: textractor-guide.md
       - Agent Guide: agent-guide.md
       - JL Guide: jl-guide.md
-      - VNTimeTracker Guide: VNTimeTracker-guide.md
+      - VNTimeTracker Guide: vntimetracker-guide.md
+      - JDownloader Guide: jdownloader-guide.md
 
 extra:
   discord_invite: "https://discord.gg/Ze7dYKVTHf"
