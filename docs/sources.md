@@ -74,6 +74,8 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 - [bt.orzx.im](https://bt.orzx.im/list.php?BoardID=5) — Chinese torrent board hosting "2D. G.F." releases, often including VNs, CG sets, and other otaku content.
 
+- [Japanese PC Compendium](https://japanesepccompendium.blogspot.com) — Site dedicated to retro Japanese computers that provides mediafire links to old games on various platforms. Check out the adventure category for VN-style games.
+
 - [Akiba-Online](https://www.akiba-online.com/forums/hentai-game-downloads.41/) — Another DDL forum similar to Anime-sharing.
 
 - [Hentai-Sharing](https://hentai-sharing.net/) — DDL site that clones releases from Anime-sharing. May have working links when the originals go down.
