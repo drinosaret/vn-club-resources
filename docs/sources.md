@@ -66,16 +66,22 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 - [Ryuugames](https://www.ryuugames.com/) — Frequently updated blog with links to Japanese VNs. Keep in mind that their "Japanese (Raw)" section doesn't actually filter out translated games. May be more convenient than other sources due to the inclusion of Google Drive and OneDrive links.
 
-- [Ryuublogger](https://ryuubloggerv2.blogspot.com) — Similar to Ryuugames, but appears inactive.
+- [zi0.cc](https://zi0.cc/) — Chinese DDL site with a lot of raw games. Sorted using a folder structure similar to Shinnku. Includes collections sorted by developer. Avoid games in the "汉化galgame会社合集" folder or releases with "汉化" in the name as those are translated.
 
 - [Mikocon](https://www.mikocon.com/) — Chinese forum-style site with a section for Japanese eroge and VNs. Useful source for finding cracks for games with DRM, as many of them originate here.
 
 - [GGBases](https://www.ggbases.com) — Chinese mirror of Nyaa with added metadata like tags, images, and CG gallery links. May help with browsing or previewing content.
 
+- [TouchGal](https://www.touchgal.us) — Chinese galgame resource that provides direct download links. Games tagged as "日本語" or "生肉资源" are in Japanese. You can filter by language on the search page.
+
+- [GalDL](https://www.galdl.com) — Chinese galgame resource that provides torrent links. Check the オリジナル版 tab for raw games.
+
 - [bt.orzx.im](https://bt.orzx.im/list.php?BoardID=5) — Chinese torrent board hosting "2D. G.F." releases, often including VNs, CG sets, and other otaku content.
 
 - [Japanese PC Compendium](https://japanesepccompendium.blogspot.com) — Site dedicated to retro Japanese computers that provides mediafire links to old games on various platforms. Check out the adventure category for VN-style games.
 
+- [Ryuublogger](https://ryuubloggerv2.blogspot.com) — Similar to Ryuugames, but appears inactive.
+  
 - [Akiba-Online](https://www.akiba-online.com/forums/hentai-game-downloads.41/) — Another DDL forum similar to Anime-sharing.
 
 - [Hentai-Sharing](https://hentai-sharing.net/) — DDL site that clones releases from Anime-sharing. May have working links when the originals go down.
