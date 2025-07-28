@@ -94,6 +94,8 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 - [Hentai4Daily](https://hentai4daily.com/) — Another one.
 
+- [Doujinblog](https://doujinblog.org/) — One more.
+
 Looking for console games? Check out the [r/ROMs megathread](https://r-roms.github.io/) for everything you need.
 
 ---
