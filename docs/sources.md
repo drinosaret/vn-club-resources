@@ -56,6 +56,9 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 - [Kichikuou Web](https://kichikuou.github.io/web/)  
   Site that allows you to play Kichikuou Rance in your browser. Requires that you provide your own CD-ROM image file to play. Might be a good idea to check out the Internet Archive.
 
+- [VNPocket](https://vnpocket.com/)  
+  Web-based platform hosting mainly doujin eroge with some visual novels that can be played directly in your browser.
+
 ---
 
 ## 🗃 Archives & Preservation
