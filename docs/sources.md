@@ -42,6 +42,22 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 ---
 
+## 🌐 Web-Based Games
+
+- [The Asenheim Project](https://tss.asenheim.org/)  
+  Web-based visual novel project that lets you play retro games in your browser.
+
+- [TsukiWeb](https://tsukiweb.holofield.fr/)  
+  Web-based implementation of Tsukihime. Go to Config > Advanced > Language in order to enable Japanese text.
+
+- [Fate/Stay Night Web](https://fatestaynight.vnovel.org/)  
+  Web-based implementation of Fate/Stay Night. In order to play in Japanese, press ESC to open the settings menu and set the language to 日本語.
+
+- [Kichikuou Web](https://kichikuou.github.io/web/)  
+  Site that allows you to play Kichikuou Rance in your browser. Requires that you provide your own CD-ROM image file to play. Might be a good idea to check out the Internet Archive.
+
+---
+
 ## 🗃 Archives & Preservation
 
 > These are listed for **preservation/discovery purposes only**. Please support creators when possible :)
@@ -56,7 +72,7 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 - **[Shinnku](https://www.shinnku.com/)** — Chinese visual novel resource site offering a wide range of Japanese titles. The site is organized, regularly updated, and supports downloads for Windows, Android, and other platforms. Check out the [生肉集合](https://www.shinnku.com/files/galgame0) section for raw VNs sorted by release date.
 
-- **[H-Suki](https://www.h-suki.com/en/home)** — Adult-oriented DDL site with VN downloads and patches. Great for older and rare titles. Impressive PC-98 collection. Requires a login to download, but links from here are pretty much guaranteed to work.
+- **[H-Suki](https://www.h-suki.com/en/home)** — Adult-oriented DDL site with VN downloads and patches. Great for older and rare titles. Impressive PC-98 collection. Requires a login to download, but links from here tend to last for a while.
 
 - **[Internet Archive](https://archive.org/)** — Huge digital library. Great for older obscure titles. The [Neo Kobe](https://archive.org/details/NeoKobe-NecPc-98012017-11-17) collection is an essential for anyone interested in PC-98 games.
 
