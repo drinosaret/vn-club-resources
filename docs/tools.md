@@ -25,8 +25,8 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 - **[VNTimeTracker](https://github.com/drinosaret/VNTimeTracker)** — Track your reading progress across visual novels. | [Guide](timetracker-guide.md)
 - **[ManicTime](https://manictime.com/)** — Automatic time tracking software to monitor your reading sessions.
 - **[Cold Turkey](https://getcoldturkey.com/)** — Website and application blocker to help maintain focus while reading.
-- **[PluckyFilter](https://pluckyfilter.com/)** — Advanced self-control filter with command line support for blocking distracting websites and applications. Only works with Chromium-based browsers.
-- **[ProcrastiTracker](https://github.com/aardappel/procrastitracker)** — Lightweight Windows time tracker that automatically monitors application usage.
+- **[Plucky](https://pluckyfilter.com/)** — Advanced self-control filter with command line support for blocking distracting websites and applications. Only works with Chromium-based browsers.
+- **[Procrastitracker](https://github.com/aardappel/procrastitracker)** — Lightweight Windows time tracker that automatically monitors application usage.
 
 ## 🎮 Controller Support
 
