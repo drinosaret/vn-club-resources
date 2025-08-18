@@ -6,7 +6,7 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 
 - **[Textractor (Chenx211 Fork)](https://github.com/Chenx221/Textractor)** — Modern fork of the classic texthooker. Best for most modern Windows VNs. | [Guide](textractor-guide.md)
 - **[Agent](https://github.com/0xDC00/agent)** — Script-based texthooker used for cases where normal text-hookers won't work. Many scripts for emulated games are available. | [Guide](agent-guide.md)
-- **[ITHVNR](https://drive.google.com/file/d/13aHF4uIXWn-3YML_k2YCDWhtGgn5-tnO/view)** — Replaced by textractor, but supposedly may work better with certain older games.
+- **[ITHVNR](https://drive.google.com/file/d/13aHF4uIXWn-3YML_k2YCDWhtGgn5-tnO/view)** — Replaced by textractor, but may work better with certain older games.
 - **[LunaTranslator](https://github.com/HIllya51/LunaTranslator)** — More bloated than all of the other options, but may work when the others fail and does have legitimately useful features. Apparently controversial for stealing code from Agent and Textractor, but must be included as a more modern texthooker. You better turn off the MTL if you actually intend to learn anything.
 
 ## 📖 Dictionaries
@@ -18,12 +18,15 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 
 - **[OwOCR](https://github.com/AuroraWright/owocr)** — An optical character recognition program that can make reading Japanese text from visual novels much easier. | [Guide](owocr-guide.md)
 - **[GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner)** — GUI alternative to OwOCR with additional features for sentence mining.
+- **[MeikiPop](https://github.com/rtr46/meikipop)** — OCR popup dictionary tool.
 
 ## ⏰ Time Management & Productivity
 
 - **[VNTimeTracker](https://github.com/drinosaret/VNTimeTracker)** — Track your reading progress across visual novels. | [Guide](timetracker-guide.md)
 - **[ManicTime](https://manictime.com/)** — Automatic time tracking software to monitor your reading sessions.
 - **[Cold Turkey](https://getcoldturkey.com/)** — Website and application blocker to help maintain focus while reading.
+- **[PluckyFilter](https://pluckyfilter.com/)** — Advanced self-control filter with command line support for blocking distracting websites and applications. Only works with Chromium-based browsers.
+- **[ProcrastiTracker](https://github.com/aardappel/procrastitracker)** — Lightweight Windows time tracker that automatically monitors application usage.
 
 ## 🎮 Controller Support
 
@@ -37,6 +40,11 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 - **[ShaderGlass](https://github.com/mausimus/ShaderGlass)** — Real-time shader effects for any Windows application, useful for enhancing visual novels.
 - **[DxWnd](https://dxwnd.org/)** — Tool for running older games in windowed mode and fixing compatibility issues.
 - **[QuickChangeResolution](https://github.com/jackdp/Quick-Change-Resolution)** — Small utility for quickly changing display resolution.
+
+## 📱 Android/Mobile
+
+- **[ExaGear](https://github.com/XHYN-PH/exagear-302)** — Windows emulator for Android that allows you to play Windows games and visual novels on mobile devices.
+- **[Kirikiroid2Yuri](https://github.com/YuriSizuku/Kirikiroid2Yuri)** — Android application for playing visual novels made with the Kirikiri engine (.xp3 format files).
 
 ## 🔧 Miscellaneous
 
