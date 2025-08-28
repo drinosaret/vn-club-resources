@@ -108,6 +108,16 @@ Now when you take a screenshot with this hotkey, it will only copy to clipboard 
 ### JL
 - **[JL](jl-guide.md)** — Hover dictionary program that can read from clipboard automatically. Perfect companion to OwOCR for seamless lookups.
 
+**Pro tip:** You can position the JL window over a text box so that ShareX will automatically snap to that area if you hover over it. Just ensure that the "Text only visible on hover" setting is enabled.
+
+**Quality of Life Settings:** JL has some useful options that make working with OCR tools easier:
+
+- Preferences → Popup → Auto lookup the first term when it's copied from the clipboard
+- Preferences → Popup → Auto lookup the first term when it's copied from a WebSocket
+- Preferences → Popup → Don't auto look up the first term on text change if Main Window is not minimized
+
+These settings allow looking up text without directly interacting with the textbox. OCRing the part you want to look up will automatically bring up the result popup.
+
 ### Yomitan Search Page
 - Enable clipboard monitor in the extension
 - Click the magnifying glass to access the search page
