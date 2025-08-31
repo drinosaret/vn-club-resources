@@ -19,6 +19,7 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 - **[OwOCR](https://github.com/AuroraWright/owocr)** — An optical character recognition program that can make reading Japanese text from visual novels much easier. | [Guide](owocr-guide.md)
 - **[GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner)** — GUI alternative to OwOCR with additional features for sentence mining.
 - **[MeikiPop](https://github.com/rtr46/meikipop)** — OCR popup dictionary tool.
+- **[YomiNinja](https://github.com/matt-m-o/YomiNinja)** — OCR and dictionary tool that extracts text from any visual content and overlays it for seamless dictionary lookups.
 
 ## ⏰ Time Management & Productivity
 

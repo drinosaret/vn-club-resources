@@ -29,27 +29,35 @@ copyright: ""
 
 nav:
   - Home: index.md
+  - Start Here:
+      - The Guide: guide.md
   - Resources:
       - Where to Find VNs: find.md
       - Where to Get VNs: sources.md
       - Tools: tools.md
   - Guides:
+      - JL Guide: jl-guide.md
       - Textractor Guide: textractor-guide.md
       - Agent Guide: agent-guide.md
       - OwOCR Guide: owocr-guide.md
-      - JL Guide: jl-guide.md
       - VNTimeTracker Guide: timetracker-guide.md
       - JDownloader Guide: jdownloader-guide.md
+  - Other: 
+      - Community: join.md
 
 extra:
-  discord_invite: "https://discord.gg/Ze7dYKVTHf"
+  discord_invite: "/vn-club-resources/join/"
   generator: false
 
 
 markdown_extensions:
   - attr_list
   - md_in_html
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - admonition
   - pymdownx.emoji
   - toc:
