@@ -8,7 +8,10 @@ This guide walks you through setting up **Textractor** and connecting it to a br
 
 - [Textractor (Chenx221's fork)](https://github.com/Chenx221/Textractor)
 - [WebSocket Extension (kuroahna)](https://github.com/kuroahna/textractor_websocket)
+
+### Integration Options
 - [Texthooker UI (Renji-XD)](https://renji-xd.github.io/texthooker-ui/)
+- [JL](jl-guide.md)
 
 ---
 
@@ -74,7 +77,7 @@ If textractor can't automatically find a working hook, you can try searching man
 
 ---
 
-## Step 4: View Text in the Browser
+## How to View Text in the Browser
 
 1. Open [Renji-XD’s Texthooker UI](https://renji-xd.github.io/texthooker-ui/) in your browser. If the WebSocket is working, the colored icon in the top right should be green. If it's still red, trying clicking on it to reconnect.
 2. Click the **Start** button in the top-right corner. (Or enable "Allow new Line during Pause" and "Autostart Timer by Line during Pause" in the settings.)
@@ -87,6 +90,82 @@ If textractor can't automatically find a working hook, you can try searching man
 
 ![Successful Websocket Conenction](assets/texthooking3.png){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 <div style="text-align:center; font-size: 0.95em; color: #666; margin-bottom: 1em;"><em>This is what a successful WebSocket connection looks like (icon is green)</em></div>
+
+---
+
+## Useful Regex Patterns
+
+Below are common regular expressions you can use to clean up text captured by Textractor. These patterns can be used with the Textractor "Regex Filter" and "Regex Replacer" extensions, texthooking pages, or any text processing tool that supports regex.
+
+!!! tip "Test Your Patterns"
+    Use [RegExr](https://regexr.com/) to test and refine these patterns with your specific examples before applying them.
+
+### 1. Remove bracketed speaker tags
+
+Example: `【太郎】こんにちは` → `こんにちは`
+
+```regex
+^\s*[【\[][^】\]]+[】\]]\s*
+```
+
+### 2. Remove everything before a name tag
+
+Example: `garbage【太郎】こんにちは` → `【太郎】こんにちは`
+
+```regex
+^.*?(?=[【\[][^】\]]+[】\]])
+```
+
+### 3. Strip ruby/furigana
+
+Example: `今日《きょう》です` → `今日です`
+
+```regex
+《[^》]+》
+```
+
+Keep base text with leading pipe: `｜今日《きょう》` → `今日`
+```regex
+｜([^《]+)《[^》]+》
+```
+Replace with: `$1`
+
+
+### 4. Remove timestamps
+
+Example: `[00:01:23]こんにちは` → `こんにちは`
+
+```regex
+^\s*[\[\(]?\d{1,2}:\d{2}(?::\d{2})?[\]\)]?\s*
+```
+
+### 5. Normalize spaces and newlines
+
+Example: `こんにちは　世界` → `こんにちは 世界`
+
+```regex
+\u3000
+```
+Replace with: ` ` (single space)
+
+Collapse repeated newlines:
+```regex
+\n{2,}
+```
+Replace with: `\n\n`
+
+### 6. Remove control characters
+
+Example: Remove invisible control characters
+
+```regex
+[\x00-\x1F\x7F]+
+```
+
+!!! warning "Edge Cases"
+    - Names that include punctuation (will be matched by the simple name patterns)
+    - Games using non-standard brackets or custom markup
+    - Make sure to test patterns on sample text before you continue reading
 
 ---
 

@@ -158,8 +158,10 @@ Similarly, only dictionaries added as name dictionaries will come up when the as
 
 **Organization**: Once you have added your dictionaries, you will be able to organize them however you want by pressing the up and down arrows to the left of the name of each dictionary. Additionally, you will be able to edit the previous settings for each dictionary at any time.
 
-!!! info
-    The dictionaries that were automatically installed at the start may have some special settings. One of note is the option to automatically check for updates after a set number of days.
+!!! info "Auto-Updates"
+    The built-in dictionaries (JMdict, Kanjidic, JMnedict) have special settings, particularly JMdict. 
+    
+    Additionally, any dictionary that is able to be auto-updated with Yomitan can now be auto-updated in JL as well. This extends JL's update capabilities to any compatible dictionary that supports automatic updates.
 
 ![Special Settings](assets/JL11.png){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 
