@@ -1,6 +1,6 @@
 site_name: Visual Novel Club Resources
-site_url: https://drinosaret.github.io/vn-club-resources
-site_description: Resources page for VN Club Resurrection.
+site_url: https://vnclub.org/
+site_description: Learn Japanese with Visual Novels – VN Club Resources
 site_author: VN Club Resurrection
 
 theme:
@@ -46,7 +46,7 @@ nav:
       - Community: join.md
 
 extra:
-  discord_invite: "/vn-club-resources/join/"
+  discord_invite: "/join/"
   generator: false
 
 

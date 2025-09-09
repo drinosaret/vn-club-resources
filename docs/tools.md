@@ -21,14 +21,6 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 - **[MeikiPop](https://github.com/rtr46/meikipop)** — OCR popup dictionary tool.
 - **[YomiNinja](https://github.com/matt-m-o/YomiNinja)** — OCR and dictionary tool that extracts text from any visual content and overlays it for seamless dictionary lookups.
 
-## ⏰ Time Management & Productivity
-
-- **[VNTimeTracker](https://github.com/drinosaret/VNTimeTracker)** — Track your reading progress across visual novels. | [Guide](timetracker-guide.md)
-- **[ManicTime](https://manictime.com/)** — Automatic time tracking software to monitor your reading sessions.
-- **[Cold Turkey](https://getcoldturkey.com/)** — Website and application blocker to help maintain focus while reading.
-- **[Plucky](https://pluckyfilter.com/)** — Advanced self-control filter with command line support for blocking distracting websites and applications. Only works with Chromium-based browsers.
-- **[Procrastitracker](https://github.com/aardappel/procrastitracker)** — Lightweight Windows time tracker that automatically monitors application usage.
-
 ## 🎮 Controller Support
 
 - **[JoyToKey](https://joytokey.net/en/)** — Controller-to-keyboard mapping software for using gamepads with visual novels.
@@ -46,6 +38,15 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 
 - **[ExaGear](https://github.com/XHYN-PH/exagear-302)** — Windows emulator for Android that allows you to play Windows games and visual novels on mobile devices.
 - **[Kirikiroid2Yuri](https://github.com/YuriSizuku/Kirikiroid2Yuri)** — Android application for playing visual novels made with the Kirikiri engine (.xp3 format files).
+
+## ⏰ Time Management & Productivity
+
+- **[VNTimeTracker](https://github.com/drinosaret/VNTimeTracker)** — Track your reading progress across visual novels. | [Guide](timetracker-guide.md)
+- **[ManicTime](https://manictime.com/)** — Automatic time tracking software to monitor your reading sessions.
+- **[Cold Turkey](https://getcoldturkey.com/)** — Website and application blocker to help maintain focus while reading.
+- **[Plucky](https://pluckyfilter.com/)** — Advanced self-control filter with command line support for blocking distracting websites and applications. Only works with Chromium-based browsers.
+- **[Procrastitracker](https://github.com/aardappel/procrastitracker)** — Lightweight Windows time tracker that automatically monitors application usage.
+- **[Hourglass](https://chris.dziemborowicz.com/apps/hourglass/)** — Simple but powerful countdown timer for Windows.
 
 ## 🔧 Miscellaneous
 
