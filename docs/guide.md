@@ -9,15 +9,15 @@
 
 ![Mememasa](assets/guide1.png)
 
-Visual novels offer a unique advantage for Japanese learners that traditional textbooks simply can't match:
+Visual novels offer a number of unique advantages for Japanese learners that traditional textbooks simply can't match:
 
 - **Extensive reading practice** - VNs contain thousands of lines of dialogue and narration
 - **Native audio** - Many VNs are fully voice-acted by professional Japanese voice actors
 - **Visual context** - Images and scenes help you understand situations and context
 - **Engaging content** - You're learning through stories you actually want to follow
-- **Interactive learning** - Choices and branching paths keep you actively engaged
+- **Interactive learning** - Choices and alternate routes keep you actively engaged
 
-Unlike textbooks (which lack real context), VNs let you **read at your own pace** while experiencing **authentic Japanese** in natural contexts.
+Unlike textbooks (which are often unnatural and lack real context), VNs let you **read at your own pace** while experiencing **real Japanese** in natural contexts.
 
 ---
 
@@ -30,7 +30,7 @@ Before getting started, it's helpful to understand what you'll be reading. Japan
 These are the two phonetic scripts, each containing about 46 basic characters. They represent the same sounds but have different uses:
 
 - **Hiragana** - Primarily used for grammar particles, parts of words of Japanese origin, and native Japanese words
-- **Katakana** - Used primarily for foreign loanwords (like コーヒー for "coffee"), slang, onomatopeia, and emphasis
+- **Katakana** - Used primarily for foreign loanwords (like コーヒー for "coffee"), slang, onomatopoeia, and emphasis
 
 As phonetic scripts, once you learn them, you can read any kana text out loud, even if you don't understand the meaning.
 
@@ -116,7 +116,7 @@ Forget the traditional "build foundations first" approach. That's a trap that ke
 
 Think of it this way: when children learn their native language, they don't spend years studying grammar before attempting to understand stories. They're thrown into the language from day one, picking up patterns through exposure. The same principle applies here.
 
-Even if at the beginning it seems impossible, if you trust the process and make a serious effort to understand all Japanese that you interact with, you will improve. You won't do this if you keep telling yourself that you "need" translations. You don't.
+At the beginning, it may seem impossible, and the results of your efforts may not immediately be apparent. However, if you trust the process and make a serious effort to understand all Japanese text that you interact with, you will improve. If you instead keep telling yourself that you "need" translations, and that you're still "not ready" for real native content, you won't.
 
 **Your actual timeline:** Learn kana (1 week maximum), start the [Kaishi 1.5k](https://ankiweb.net/shared/info/1196762551) Anki deck, set up tools, and immediately start engaging with native content. Don't wait for some arbitrary "readiness" milestone that doesn't exist.
 
