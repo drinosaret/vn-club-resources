@@ -1,3 +1,7 @@
+---
+description: Buy or download untranslated Japanese visual novels from DLsite, DMM, Nyaa, and other sources. Complete guide to acquiring VNs.
+---
+
 # 🛒 Where to Get Japanese Visual Novels
 
 This page lists sources to **buy or download untranslated Japanese VNs**, whether commercial or doujin.

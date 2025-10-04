@@ -1,3 +1,7 @@
+---
+description: JDownloader setup guide for downloading Japanese visual novels. Automate VN downloads from file hosting services, handle split archives, and manage bulk downloads efficiently.
+---
+
 # JDownloader Guide
 
 This guide walks you through setting up and using **JDownloader** and the **Download with JDownloader** browser extension to help improve your experience with DDL sites.

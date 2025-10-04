@@ -1,10 +1,14 @@
-# Join the VN Club Community
+---
+description: Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs, get help with setup, share progress, and discover new visual novels.
+---
+
+# Join the VN Club Resurrection Community
 
 Connect with other Japanese learners and VN readers in our Discord server!
 
 ## Discord Server
 
-**[Join VN Club Discord](https://discord.gg/Ze7dYKVTHf)**
+**[Join VN Club Resurrection Discord](https://discord.gg/Ze7dYKVTHf)**
 
 Our community is the perfect place to:
 

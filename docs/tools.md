@@ -1,3 +1,7 @@
+---
+description: Essential tools for reading Japanese visual novels including Textractor, JL, Yomitan, OwOCR, and productivity software for VN readers and Japanese learners.
+---
+
 # 🧰 Useful Tools
 
 Essential tools and utilities to enhance your visual novel reading experience, from text extraction to productivity improvements.

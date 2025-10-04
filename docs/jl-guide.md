@@ -1,3 +1,7 @@
+---
+description: Complete JL dictionary setup guide for visual novel readers. Learn how to configure JL popup dictionary with Yomitan dictionaries, enable Anki mining, and integrate with Textractor for seamless VN reading.
+---
+
 # JL Guide
 
 This page offers directions on how to set up and use the [JL](https://github.com/rampaa/JL) pop-up dictionary.

@@ -1,3 +1,7 @@
+---
+description: Learn Japanese through visual novels with our comprehensive guides, tools, and resources for VN readers. Setup text hookers, dictionaries, and start your immersion journey today.
+---
+
 # Home
 
 ## <div style="text-align: center;">Welcome to the Visual Novel Club Resources Page</div>

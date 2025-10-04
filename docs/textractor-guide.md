@@ -1,3 +1,7 @@
+---
+description: Step-by-step Textractor setup guide for extracting Japanese text from visual novels. Learn text hooking, configure extensions, integrate with JL/Yomitan dictionaries, and troubleshoot common issues.
+---
+
 # Textractor Guide
 
 This guide walks you through setting up **Textractor** and connecting it to a browser-based UI using the **WebSocket extension**. Ideal for reading and mining from Japanese visual novels using Yomitan in your browser.

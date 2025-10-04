@@ -1,3 +1,7 @@
+---
+description: VNTimeTracker setup guide for tracking your visual novel reading progress. Monitor time spent reading Japanese VNs and display your learning statistics.
+---
+
 # VNTimeTracker Guide
 
 VNTimeTracker is a simple Python application designed to help you read more by accurately tracking your time spent reading visual novels.

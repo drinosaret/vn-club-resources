@@ -1,3 +1,7 @@
+---
+description: OwOCR optical character recognition setup guide for visual novels. Extract Japanese text from images, untexthookable VNs, and console games using OCR with JL dictionary integration.
+---
+
 # OwOCR Guide
 
 A simple guide on how to quickly set up and use [OwOCR](https://github.com/AuroraWright/owocr), an optical character recognition program that can make reading Japanese text from visual novels much easier.

@@ -1,3 +1,7 @@
+---
+description: Agent text hooker setup guide for visual novels and emulated games. Configure script-based text extraction when standard text hookers fail.
+---
+
 # Agent Guide
 
 This guide walks you through setting up and using **Agent**, a universal script-based text hooker powered by FRIDA. Agent is designed for extracting text from visual novels and games across various platforms including PC games, emulators, and Unity games. Despite the simple UI, Agent is a powerful tool for hooking games that might not work with textractor.

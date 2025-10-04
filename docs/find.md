@@ -1,3 +1,7 @@
+---
+description: Discover Japanese visual novels with VNDB, ErogameScape, and other databases.
+---
+
 # 📚 Where to Find VNs
 
 Useful sources for discovering new titles and keeping track of what you’ve read.

@@ -1,3 +1,7 @@
+---
+description: Complete beginner's guide to learning Japanese through visual novels. Learn kana, setup Textractor and JL dictionary, master Anki mining, and start reading VNs with immersion-based learning strategies.
+---
+
 # Learning Japanese with Visual Novels
 
 *Your complete beginner's guide to reading Japanese VNs and games*
