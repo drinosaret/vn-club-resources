@@ -1,5 +1,8 @@
 ---
-description: Step-by-step Textractor setup guide for extracting Japanese text from visual novels. Learn text hooking, configure extensions, integrate with JL/Yomitan dictionaries, and troubleshoot common issues.
+description: Step-by-step guide to setting up Textractor for visual novels, including H-codes, regex patterns, and text hooking troubleshooting for Japanese learning.
+sitemap:
+  priority: 0.9
+  changefreq: monthly
 ---
 
 # Textractor Guide
@@ -57,7 +60,7 @@ Download the WebSocket extension from the [Releases page](https://github.com/kur
 
 > **Tip:** You can remove any unhelpful extensions (like extra new lines) from your Extensions list. My settings are provided below for reference.
 
-![My Textractor Settings](assets/texthooking.png)
+![My Textractor Settings](assets/texthooking.webp)
 <div style="text-align:center; font-size: 0.95em; color: #666; margin-bottom: 1em;"><em>Textractor with the WebSocket extension loaded (Extensions window)</em></div>
 
 ---
@@ -75,7 +78,7 @@ Download the WebSocket extension from the [Releases page](https://github.com/kur
 6. Use the top dropdown in Textractor (where it says "Console") and press up and down to cycle through the hooks.
 7. Find a hook that accurately reflects the game's text.
 
-![Textractor UI](assets/texthooking2.png)
+![Textractor UI](assets/texthooking2.webp)
 
 If textractor can't automatically find a working hook, you can try searching manually by selecting "Search for hooks" or checking the discussion tab of the game's VNDB page to see if anyone has listed a working hook code.
 
@@ -92,7 +95,7 @@ If textractor can't automatically find a working hook, you can try searching man
 
 > This allows the texthooker UI to receive text directly from Textractor using the WebSocket extension.
 
-![Successful Websocket Conenction](assets/texthooking3.png){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
+![Successful Websocket Conenction](assets/texthooking3.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 <div style="text-align:center; font-size: 0.95em; color: #666; margin-bottom: 1em;"><em>This is what a successful WebSocket connection looks like (icon is green)</em></div>
 
 ---

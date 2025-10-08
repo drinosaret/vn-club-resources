@@ -1,5 +1,8 @@
 ---
 description: Discover Japanese visual novels with VNDB, ErogameScape, and other databases.
+sitemap:
+  priority: 0.8
+  changefreq: monthly
 ---
 
 # 📚 Where to Find VNs
@@ -10,7 +13,7 @@ Useful sources for discovering new titles and keeping track of what you’ve rea
 
 ## [VNDB](https://vndb.org/)
 
-![VNDB Screenshot](assets/vndb.png){ width=600 }
+![VNDB Screenshot](assets/vndb.webp){ width=600 }
 
 A massive, community-maintained encyclopedia of VNs. If you aren't on here, what are you doing?
 
@@ -24,7 +27,7 @@ A massive, community-maintained encyclopedia of VNs. If you aren't on here, what
 
 ## [ErogameScape](https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/)
 
-![ErogameScape Screenshot](assets/erogamescape.png){ width=600 }
+![ErogameScape Screenshot](assets/erogamescape.webp){ width=600 }
 
 Japanese database for eroge and visual novels. Mostly useful for when you want to know what the native audience thinks about a certain game.
 

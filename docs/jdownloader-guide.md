@@ -15,7 +15,7 @@ This guide walks you through setting up and using **JDownloader** and the **Down
       - [Chrome/Edge](https://chromewebstore.google.com/detail/download-with-jdownloader/jfpmbokkdeapjommajdfmmheiiakdlgo)
       - [Firefox](https://addons.mozilla.org/en-US/firefox/addon/download-with-jdownloader/)
 
-![Download page](assets/jdownloader1.png)
+![Download page](assets/jdownloader1.webp)
 
 ---
 
@@ -38,7 +38,7 @@ Once you have installed the program, open it and you will be taken to the main w
      - A setting of around 8 should generally work fine
      - Setting it too high may cause issues, so feel free to experiment
 
-![Jdownloader General Settings](assets/jdownloader3.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Jdownloader General Settings](assets/jdownloader3.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ### Archive Extractor Settings
 
@@ -47,7 +47,7 @@ When enabled, JDownloader will automatically extract your downloaded files. You 
 - Set it to extract in the same directory as where you downloaded your files
 - Configure a different directory specifically for extracted content under "Extract destination folder"
 
-![Jdownloader Extraction settings](assets/jdownloader2.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Jdownloader Extraction settings](assets/jdownloader2.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ### Advanced Settings
 
@@ -69,7 +69,7 @@ If you're using a premium account or debrid service:
 6. If successful, your account should appear with a green checkmark under "Status"
 7. Enable the lock icon at the top of the page to ensure JDownloader uses your premium account
 
-![Top Menu Settings](assets/jdownloader4.png){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
+![Top Menu Settings](assets/jdownloader4.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 
 ---
 
@@ -100,10 +100,10 @@ You can add links to JDownloader in several ways:
     - Archive password (for automatic extraction)
     - Auto extract settings
     - Priority settings
-![Jdownloader downloads screen](assets/jdownloader5.png){: style="display: block; margin: 1.5em auto 2em auto; width: 600px;" }
+![Jdownloader downloads screen](assets/jdownloader5.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 600px;" }
 
 3. **Start Download**: Right-click on the package and select "Start Downloads"
-![Start Download](assets/jdownloader6.png){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
+![Start Download](assets/jdownloader6.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
 
 4. **Access Files**: When finished, on the downloads tab, right-click on your package and select "Open downloads directory"
 
@@ -132,7 +132,7 @@ Once configured correctly, several features become available:
 
 - Right-click context menu options
 - Extension icon for enabling/disabling automatic downloads to JDownloader
-![Context menu options](assets/Jdownloader7.png){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
+![Context menu options](assets/Jdownloader7.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
 
 **Useful Features:**
 

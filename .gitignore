@@ -27,3 +27,5 @@ Thumbs.db
 *.bak
 *.tmp
 .markdownlint.yaml
+backup/
+docs/draft/

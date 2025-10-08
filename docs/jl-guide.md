@@ -1,5 +1,8 @@
 ---
-description: Complete JL dictionary setup guide for visual novel readers. Learn how to configure JL popup dictionary with Yomitan dictionaries, enable Anki mining, and integrate with Textractor for seamless VN reading.
+description: Step-by-step guide to setting up JL dictionary for visual novels - features Anki mining, pitch accents, frequency display, and pop-up lookups for Japanese learning.
+sitemap:
+  priority: 0.9
+  changefreq: monthly
 ---
 
 # JL Guide
@@ -25,7 +28,7 @@ First, download JL from its GitHub repository:
 !!! warning
     This program is only intended to run on Windows systems.
 
-![download link](assets/JL2.png)
+![download link](assets/JL2.webp)
 
 ### Downloading Dictionaries
 
@@ -55,7 +58,7 @@ Now you will be able to see the main JL window on your desktop. You can:
 - **Adjust opacity**: Click the first icon in the top left to reveal a slider for window opacity
 - **Adjust text size**: Click the "T" icon to adjust the size of the text
 
-![JL in action](assets/JL3.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![JL in action](assets/JL3.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ### Text Input Configuration
 
@@ -71,7 +74,7 @@ Before we start importing additional dictionaries, let's first make sure that th
 
 The websocket server address that you need to use will differ depending on the plugin or program you are using, but the default of `ws://127.0.0.1:6677` will work with [textractor_websocket](https://github.com/kuroahna/textractor_websocket).
 
-![Websocket settings](assets/JL4.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Websocket settings](assets/JL4.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ## Basic Functionality
 
@@ -101,7 +104,7 @@ In mining mode, you will be able to scroll through the full list of results. By 
 
 **Text Select**: Requires you to click and drag to highlight the text that you want to look up, bringing you straight into mining mode.
 
-![Mining mode example](assets/JL5.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Mining mode example](assets/JL5.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ## Adding Additional Dictionaries
 
@@ -113,7 +116,7 @@ Before you start adding dictionaries to JL:
 2. Extract each dictionary's zip file to its own folder
 3. Ensure the index and term bank JSON files of each dictionary are found at the root of each extracted folder
 
-![Folder directory](assets/JL6.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Folder directory](assets/JL6.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ### Adding Word Dictionaries
 
@@ -125,7 +128,7 @@ Additional dictionaries can be added to JL:
 
 **Dictionary types**: Assuming you are using Yomitan format dictionaries, you can leave the format as is for now and select a type. Conveniently, dictionaries from Marv's collection are labeled by type, so depending on the label, you will know which to select. Dictionaries listed as `[JA-JA]` and `[JA-EN]` can be added as word dictionaries.
 
-![Add dictionary screen](assets/JL7.png)
+![Add dictionary screen](assets/JL7.webp)
 
 ### Understanding Kanji Dictionary Types
 
@@ -140,13 +143,13 @@ One thing you need to pay attention to is the difference between a dictionary li
     - **Kanji Dictionary**: Contains files titled `kanji_bank_1.json`, `kanji_bank_2.json`, etc.
     - **Kanji Dictionary with Word Schema**: Contains files titled `term_bank_1.json`, `term_bank_2.json`, etc.
 
-| ![Kanji Dictionary Example](assets/JL8.png){ width="300" } | ![Kanji Dictionary Word Scheme Example](assets/JL9.png){ width="300" } |
+| ![Kanji Dictionary Example](assets/JL8.webp){ width="300" } | ![Kanji Dictionary Word Scheme Example](assets/JL9.webp){ width="300" } |
 |:---:|:---:|
 | **Add as Kanji Dictionary**<br>*Shows in kanji tab only* | **Add as Kanji Dictionary with Word Schema**<br>*Shows among word entries* |
 
 Similarly, only dictionaries added as name dictionaries will come up when the associated hotkey to trigger "Name mode" is pressed. You can see the full list of "modes" with their associated default hotkeys below.
 
-![Modes](assets/JL10.png)
+![Modes](assets/JL10.webp)
 
 ### Dictionary Configuration
 
@@ -167,7 +170,7 @@ Similarly, only dictionaries added as name dictionaries will come up when the as
     
     Additionally, any dictionary that is able to be auto-updated with Yomitan can now be auto-updated in JL as well. This extends JL's update capabilities to any compatible dictionary that supports automatic updates.
 
-![Special Settings](assets/JL11.png){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
+![Special Settings](assets/JL11.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 
 ### Adding Frequency Dictionaries
 
@@ -179,7 +182,7 @@ To add frequency dictionaries, you must add them separately through a different 
 
 Most frequency dictionaries use a ranking format, so you should be able to leave this setting alone.
 
-![Frequency setting](assets/JL12.png){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
+![Frequency setting](assets/JL12.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 300px;" }
 
 ## Adding Audio Sources
 
@@ -215,7 +218,7 @@ Online sources like JapanesePod101 can be added in a similar manner:
 
 Additionally, you can add any text-to-speech engines that you have installed on your system.
 
-![Example audio sources](assets/JL13.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Example audio sources](assets/JL13.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ## Enabling Anki Integration
 
@@ -232,7 +235,7 @@ To be able to mine words with JL, you need to configure some additional settings
 
 Assuming you have [AnkiConnect](https://ankiweb.net/shared/info/2055492159) installed, the default server address should work just fine.
 
-![Anki tab](assets/JL14.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Anki tab](assets/JL14.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ### Deck Configuration
 
@@ -293,8 +296,8 @@ If you click on the **Info** button, you will get the following list of the appl
 
 For reference, I've provided some basic settings that will work with the lapis note type for Anki below:
 
-![Anki settings: part 1](assets/JL15.png){: style="display: block; margin: 1.5em auto 2em auto; width: 600px;" }
-![Anki settings: part 2](assets/JL16.png){: style="display: block; margin: 1.5em auto 2em auto; width: 600px;" }
+![Anki settings: part 1](assets/JL15.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 600px;" }
+![Anki settings: part 2](assets/JL16.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 600px;" }
 
 ## Additional Settings
 

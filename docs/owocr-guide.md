@@ -1,5 +1,8 @@
 ---
 description: OwOCR optical character recognition setup guide for visual novels. Extract Japanese text from images, untexthookable VNs, and console games using OCR with JL dictionary integration.
+sitemap:
+  priority: 0.7
+  changefreq: monthly
 ---
 
 # OwOCR Guide
@@ -33,7 +36,7 @@ Before you begin, you'll need to install the following:
 
 Start OwOCR by running `owocr` in your command prompt. By default, the Bing provider should be available.
 
-![OwOCR startup window](assets/owocr1.png)
+![OwOCR startup window](assets/owocr1.webp)
 
 ### Additional Providers
 
@@ -95,13 +98,13 @@ To streamline the OCR process, configure ShareX to automatically copy screenshot
     - **Capture Region** - Freezes screen while adjusting capture area
     - **Capture Region (Light)** - Lighter version without screen freeze
 5. **Set your preferred hotkey** (avoid conflicts with game controls like Shift)
-![ShareX config](assets/owocr2.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![ShareX config](assets/owocr2.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 6. **Configure the hotkey:**
     - Click the gear icon next to your hotkey
     - Under "Task" settings, enable "Override after capture tasks"
     - Select only "Copy image to clipboard"
     - Disable all other settings
-![ShareX Hotkey Settings](assets/owocr3.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![ShareX Hotkey Settings](assets/owocr3.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 Now when you take a screenshot with this hotkey, it will only copy to clipboard for OwOCR to process.
 
@@ -125,7 +128,7 @@ These settings allow looking up text without directly interacting with the textb
 ### Yomitan Search Page
 - Enable clipboard monitor in the extension
 - Click the magnifying glass to access the search page
-![Search page](assets/owocr4.png){: style="display: block; margin: 1.5em auto 2em auto; width: 200px;" }
+![Search page](assets/owocr4.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 200px;" }
 
 ### Browser Extensions
 - **[Lap Clipboard Inserter (Firefox)](https://addons.mozilla.org/en-US/firefox/addon/lap-clipboard-inserter/)** – Reads clipboard text for use with text hooking pages

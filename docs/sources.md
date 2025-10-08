@@ -1,5 +1,8 @@
 ---
 description: Buy or download untranslated Japanese visual novels from DLsite, DMM, Nyaa, and other sources. Complete guide to acquiring VNs.
+sitemap:
+  priority: 0.8
+  changefreq: monthly
 ---
 
 # 🛒 Where to Get Japanese Visual Novels

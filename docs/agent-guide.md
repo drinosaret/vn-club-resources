@@ -1,12 +1,15 @@
 ---
 description: Agent text hooker setup guide for visual novels and emulated games. Configure script-based text extraction when standard text hookers fail.
+sitemap:
+  priority: 0.7
+  changefreq: monthly
 ---
 
 # Agent Guide
 
 This guide walks you through setting up and using **Agent**, a universal script-based text hooker powered by FRIDA. Agent is designed for extracting text from visual novels and games across various platforms including PC games, emulators, and Unity games. Despite the simple UI, Agent is a powerful tool for hooking games that might not work with textractor.
 
-![Agent window](assets/agent1.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Agent window](assets/agent1.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ---
 
@@ -31,7 +34,7 @@ This guide walks you through setting up and using **Agent**, a universal script-
 2. Agent will automatically download and sync scripts from the [scripts repository](https://github.com/0xDC00/scripts)
 3. Under the settings tab, ensure that "Machine Translate" is disabled and that either the websocket server or clipboard output is enabled
 
-![Agent settings](assets/agent5.png){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
+![Agent settings](assets/agent5.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
 
 ---
 
@@ -40,8 +43,8 @@ This guide walks you through setting up and using **Agent**, a universal script-
 ### Basic Operation
 
 1. **Select Target**: To select a target, you can supply a file directory to an exe file or you can more simply click and drag the target icon on to your target game. Clicking the dropdown menu next to the target icon and selecting "Create Process" will bring up a file picker allowing you to select a target.
-   ![Agent target icon](assets/agent2.png){: style="display: block; margin: 1.5em auto 2em auto; width: 200px;" }
-   ![Agent target icon drag](assets/agent3.png){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
+   ![Agent target icon](assets/agent2.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 200px;" }
+   ![Agent target icon drag](assets/agent3.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 400px;" }
 2. **Apply Script**: In the window next to the "<>" icon, you can select the appropriate script for your game. You can search by name or platform. Clicking on the "<>" icon will bring up a file picker, allowing you to add a custom script
 3. **Text Extraction**: Press the "Attach" button and text will be hooked and displayed in real-time
 

@@ -6,8 +6,8 @@ site_author: VN Club Resurrection
 theme:
   name: material
   prev_next_buttons_location: both
-  logo: assets/favicon2.png
-  favicon: assets/favicon2.png
+  logo: assets/favicon2.webp
+  favicon: assets/favicon2.webp
   custom_dir: overrides
   features:
     - navigation.instant

@@ -1,5 +1,8 @@
 ---
 description: Learn Japanese with visual novels - complete beginner's guide covering kana, Textractor setup, JL dictionary, Anki mining, and immersion-based learning strategies for reading VNs.
+sitemap:
+  priority: 1.0
+  changefreq: weekly
 ---
 
 # Learning Japanese with Visual Novels
@@ -11,7 +14,7 @@ description: Learn Japanese with visual novels - complete beginner's guide cover
 
 ## Why Visual Novels Are Perfect for Learning Japanese
 
-![Mememasa](assets/guide1.png)
+![Mememasa](assets/guide1.webp)
 
 Visual novels offer a number of unique advantages for Japanese learners that traditional textbooks simply can't match:
 
@@ -233,13 +236,15 @@ Choose between JL (recommended for VN readers) or Yomitan (browser-based alterna
 #### 3. Text Hooker - Your Text Extraction Engine
 
 !!! info "Text Hooking"
-    Textractor extracts text from VNs so you can copy, look up, and mine vocabulary without manually typing Japanese characters.
+    Text hookers like [Textractor](textractor-guide.md) extract text from VNs so you can copy, look up, and mine vocabulary without manually typing Japanese characters.
 
 **What it does:** Hooks into VN processes and extracts displayed text in real-time for easy dictionary lookups.
 
 **Setup:** Follow [our complete Textractor guide](textractor-guide.md) for installation and configuration.
 
 **Key features:** Compatible with most VNs, supports extensions, WebSocket integration for browser dictionaries
+
+**Alternative tools:** If Textractor doesn't work with your game, try [Agent](agent-guide.md) for script-based hooking or [OwOCR](owocr-guide.md) for OCR-based text extraction.
 
 !!! warning "Setup Priority"
     Install tools in order: **Anki → Dictionary Tool → Text Hooker**. Each tool builds on the previous one for optimal workflow integration.
@@ -333,7 +338,7 @@ Remember: **Anki is designed for memory, not learning**. You want to mine words 
 **Smart Mining Strategy:**
 
 1. **Encounter unknown word** during reading
-2. **Look up the word** using JL or Yomitan's integrated lookup
+2. **Look up the word** using [JL](jl-guide.md) or Yomitan's integrated lookup
 3. **Ask yourself**: Is this word learnable, useful, and frequent enough?
 4. **Mine only if it passes the "75% test"** - you can grasp it and it seems worth remembering
 5. **Create Anki card** with the sentence context from your VN

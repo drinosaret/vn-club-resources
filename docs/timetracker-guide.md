@@ -6,7 +6,7 @@ description: VNTimeTracker setup guide for tracking your visual novel reading pr
 
 VNTimeTracker is a simple Python application designed to help you read more by accurately tracking your time spent reading visual novels.
 
-![Time tracker main window](assets/VNTimetracker1.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Time tracker main window](assets/VNTimetracker1.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ---
 
@@ -87,7 +87,7 @@ You can customize the tracker interface to suit your preferences:
 - **Minimize to tray**: The main window can be minimized to the system tray if you find it distracting
 - **Window layout**: Click in the middle of the window and drag to enlarge or hide the left or right components, allowing you to display only one side in the main window if desired
 
-![Main window alternate view](assets/VNTimetracker2.png){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
+![Main window alternate view](assets/VNTimetracker2.webp){: style="display: block; margin: 1.5em auto 2em auto; width: 500px;" }
 
 ---
 
