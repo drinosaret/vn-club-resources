@@ -148,4 +148,24 @@ OwOCR supports reading images and writing text via WebSocket:
 - **Use appropriate providers:** Google Lens works best most of the time, but consider giving other providers a try
 
 ---
-Additional information and detailed usage notes can be found on the OwOCRs's [github page](https://github.com/AuroraWright/owocr)
+
+Additional information and detailed usage notes can be found on the OwOCR's [github page](https://github.com/AuroraWright/owocr)
+
+---
+
+## Related Pages
+
+**Text Hooking Alternatives:**
+
+- [Textractor Guide](textractor-guide.md) - Standard text hooking (try first if possible)
+- [Agent Guide](agent-guide.md) - Script-based text hooker for stubborn games
+
+**Dictionary Setup:**
+
+- [JL Dictionary Guide](jl-guide.md) - Connect OCR output to popup dictionary
+- [Complete Beginner's Guide](guide.md) - Full learning roadmap
+
+**More Resources:**
+
+- [Tools Overview](tools.md) - See all available tools
+- [Where to Get VNs](sources.md) - Find Japanese visual novels to practice with

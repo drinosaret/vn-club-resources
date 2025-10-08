@@ -92,3 +92,22 @@ You can customize the tracker interface to suit your preferences:
 ---
 
 For any other questions or issues, you can check the [GitHub repository](https://github.com/drinosaret/VNTimeTracker) for more information or to open an issue.
+
+---
+
+## Related Pages
+
+**Getting Started:**
+
+- [Complete Beginner's Guide](guide.md) - Full roadmap for learning Japanese with VNs
+- [Where to Get VNs](sources.md) - Find Japanese visual novels to track
+
+**Essential Setup:**
+
+- [Textractor Guide](textractor-guide.md) - Text hooking for reading VNs
+- [JL Dictionary Guide](jl-guide.md) - Dictionary setup for lookups
+- [Tools Overview](tools.md) - See all available VN reading tools
+
+**More Resources:**
+
+- [Where to Find VNs](find.md) - Discover new visual novels on VNDB

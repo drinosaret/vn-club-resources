@@ -171,3 +171,22 @@ These mirrors are one reason sites like Shinnku or Ryuugames may be more conveni
 - You may need a Japanese address (e.g. [Tenso](https://www.tenso.com/)) or proxy service (e.g. Zenmarket, Neokyo, Buyee, White Rabbit).  
 - Most proxy services will refuse to buy digital goods, but you can always check with their customer support.  
 - Some stores **do not sell to overseas accounts**. Use a Japanese VPN or proxy if needed.
+
+---
+
+## Related Pages
+
+**Before You Download:**
+
+- [Where to Find VNs](find.md) - Discover and research visual novels on VNDB
+
+**After You Download:**
+
+- [Textractor Setup](textractor-guide.md) - Extract text from VNs for dictionary lookups
+- [JL Dictionary Guide](jl-guide.md) - Set up popup dictionary for reading
+- [Complete Beginner's Guide](guide.md) - Full learning roadmap
+
+**Download Tools:**
+
+- [JDownloader Guide](jdownloader-guide.md) - Automate downloading from file hosts
+- [Tools Overview](tools.md) - All available tools for VN reading

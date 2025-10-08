@@ -1,5 +1,5 @@
 ---
-description: Learn Japanese through visual novels with our comprehensive guides, tools, and resources for VN readers. Setup text hookers, dictionaries, and start your immersion journey today.
+description: Learn Japanese with visual novels using our comprehensive guides, tools, and resources. Setup text hookers, dictionaries, Anki mining, and start your immersion journey today.
 ---
 
 # Home
@@ -10,9 +10,9 @@ description: Learn Japanese through visual novels with our comprehensive guides,
 
 This site is a curated hub for learning Japanese through visual novels, eroge, and other video games. Whether you're new to the medium or already deep into immersion, you'll find:
 
-- Where to get VNs (free and paid)
-- Tools for text hooking and reading
-- Guides to help you get started
+- [Where to get VNs](sources.md) (free and paid)
+- [Tools for text hooking and reading](tools.md)
+- [Step-by-step setup guides](textractor-guide.md) to help you get started
 
 ---
 
@@ -22,8 +22,10 @@ This site is a curated hub for learning Japanese through visual novels, eroge, a
 
 ## 🔗 Quick Links
 
+- [📖 Complete Beginner's Guide to Learning Japanese with VNs](guide.md)
+- [🛠️ Textractor Setup Guide](textractor-guide.md)
 - [📖 JL Dictionary Setup Guide](jl-guide.md)
 - [🛒 Where to Get Japanese VNs](sources.md)
-- [🧰 Tools for Reading and Hooking](tools.md)
+- [🧰 Essential Tools for VN Reading](tools.md)
 
 > "Read more." – Everyone who made it

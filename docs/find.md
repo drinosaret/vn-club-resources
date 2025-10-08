@@ -37,4 +37,21 @@ Japanese database for eroge and visual novels. Mostly useful for when you want t
 
 ---
 
-Looking for actual download sources? Check the [sources](sources.md) page.
+## Related Pages
+
+**Next Steps:**
+
+- [Where to Get VNs](sources.md) - Download or buy the VNs you find
+- [Complete Beginner's Guide](guide.md) - Learn how to read Japanese VNs
+
+**After You Get a VN:**
+
+- [Textractor Setup](textractor-guide.md) - Extract text for dictionary lookups
+- [JL Dictionary Setup](jl-guide.md) - Set up popup dictionary
+- [Tools Overview](tools.md) - See all available tools
+
+**Community:**
+
+- [Join Our Discord](join.md) - Get VN recommendations and discuss
+
+---

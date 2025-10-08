@@ -327,3 +327,20 @@ The above information covers everything that you need to get started, but JL is 
 ---
 
 For any other questions or issues, you can check the [JL GitHub repository](https://github.com/rampaa/JL) for more information or to open an issue.
+
+---
+
+## Related Pages
+
+**Getting Started:**
+
+- [Complete Beginner's Guide](guide.md) - Full roadmap for learning Japanese with VNs
+- [Textractor Setup](textractor-guide.md) - Extract text from visual novels to use with JL
+
+**Anki Integration:**
+
+- [Main Guide: Mining Section](guide.md#building-vocabulary-through-mining) - Learn how to mine vocabulary from VNs
+
+**Alternative Tools:**
+
+- [Tools Overview](tools.md) - See all available dictionary and learning tools

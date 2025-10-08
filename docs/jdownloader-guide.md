@@ -138,3 +138,22 @@ Once configured correctly, several features become available:
 
 - **Download Link**: Send individual links to JDownloader without using clipboard
 - **Download All Links**: Automatically get all links on a page and choose which to download
+
+---
+
+## Related Pages
+
+**Getting Started:**
+
+- [Complete Beginner's Guide](guide.md) - Full roadmap for learning Japanese with VNs
+- [Where to Get VNs](sources.md) - Find sources for downloading VNs
+
+**Essential Setup:**
+
+- [Textractor Guide](textractor-guide.md) - Set up text hooking after downloading
+- [JL Dictionary Guide](jl-guide.md) - Dictionary for reading VNs
+- [Tools Overview](tools.md) - All VN learning tools
+
+**More Resources:**
+
+- [Where to Find VNs](find.md) - Discover visual novels on VNDB

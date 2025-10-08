@@ -76,5 +76,24 @@ agent.exe [options] [target]
 - **Scripts Repository**: [https://github.com/0xDC00/scripts](https://github.com/0xDC00/scripts)
 - **Script Requests**: Open an issue on the [issues tab](https://github.com/0xDC00/scripts/issues)
 - **Video Tutorials**: [YouTube Playlist](https://www.youtube.com/watch?v=dFfuq2UnKjU&list=PLTZXVVG9AT6Sbl1Yg42sxzVAS6IMfnaNH&index=2)
+
+---
+
+## Related Pages
+
+**Primary Text Hooking:**
+
+- [Textractor Guide](textractor-guide.md) - Standard text hooker (try this first)
+- [Complete Beginner's Guide](guide.md) - Full learning roadmap
+
+**When Text Hooking Fails:**
+
+- [OwOCR Guide](owocr-guide.md) - OCR alternative for untexthookable games
+
+**Next Steps:**
+
+- [JL Dictionary Setup](jl-guide.md) - Connect text hooker to dictionary
+- [Where to Get VNs](sources.md) - Find games to practice with
+- [Tools Overview](tools.md) - See all available tools
   
 ---

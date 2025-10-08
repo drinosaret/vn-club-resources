@@ -182,3 +182,28 @@ Example: Remove invisible control characters
       - Textractor is actually hooked to the VN.
       - You're using a supported browser (Chrome, Firefox, Brave etc.).
       - Your firewall settings and browser extensions aren't blocking the WebSocket connection.
+
+---
+
+## Related Pages
+
+**Getting Started & Learning:**
+
+- [Complete Beginner's Guide](guide.md) – Full roadmap for learning Japanese with VNs
+- [Mining Vocabulary Section](guide.md#building-vocabulary-through-mining) – How to mine words efficiently
+
+**Dictionary & Mining Integration:**
+
+- [JL Dictionary Setup](jl-guide.md) – Pop-up dictionary + Anki mining
+- [Tools Overview](tools.md) – Summary of all recommended tools
+
+**Alternative Text Acquisition:**
+
+- [Agent Guide](agent-guide.md) – Script-based advanced text hooking (use when Textractor struggles)
+- [OwOCR Guide](owocr-guide.md) – OCR fallback for unhookable games
+
+**Finding Visual Novels:**
+
+- [Where to Get VNs](sources.md) – Download sources
+- [Finding VNs on VNDB](find.md) – Discover and choose new titles
+

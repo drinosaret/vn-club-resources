@@ -59,3 +59,20 @@ Essential tools and utilities to enhance your visual novel reading experience, f
 - **[Daemon Tools](https://www.daemon-tools.cc/jpn/home)** — Virtual drive software for mounting disc images.
 - **[Locale Emulator](https://xupefei.github.io/Locale-Emulator/)** — Tool for running Japanese applications with proper locale settings without changing system locale.
 - **[Bottles](https://usebottles.com/)** — Linux compatibility layer for easily running Windows visual novels and applications with Wine. Works well with textractor.
+
+---
+
+## Related Pages
+
+**Getting Started:**
+
+- [Complete Beginner's Guide](guide.md) - Full roadmap for learning Japanese with VNs
+- [Where to Get VNs](sources.md) - Find Japanese visual novels to practice with
+
+**Setup Guides:**
+
+- [Textractor Setup](textractor-guide.md) - Text hooking for visual novels
+- [JL Dictionary Setup](jl-guide.md) - Popup dictionary configuration
+- [OwOCR Setup](owocr-guide.md) - OCR for untexthookable games
+- [Agent Setup](agent-guide.md) - Script-based text hooker
+- [VNTimeTracker Setup](timetracker-guide.md) - Track your reading progress
