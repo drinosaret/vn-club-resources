@@ -80,7 +80,7 @@ This page lists sources to **buy or download untranslated Japanese VNs**, whethe
 
 - **[Sukebei Nyaa](https://sukebei.nyaa.si/)** — NSFW side of of Nyaa, popular for eroge and nukige uploads.
 
-- **[Shinnku](https://www.shinnku.com/)** — Chinese visual novel resource site offering a wide range of Japanese titles. The site is organized, regularly updated, and supports downloads for Windows, Android, and other platforms. Check out the [生肉集合](https://www.shinnku.com/files/galgame0) section for raw VNs sorted by release date.
+- **[Shinnku](https://www.shinnku.com/)** — Chinese visual novel resource site offering a wide range of Japanese titles. The site is organized, regularly updated, and supports downloads for Windows, Android, and other platforms. Check out the [生肉集合](https://www.shinnku.com/files/galgame0) section for raw VNs sorted by release date. Games are marked as 生肉 (raw/untranslated) or 熟肉 (translated) next to the file size on both the search page and individual game pages.
 
 - **[H-Suki](https://www.h-suki.com/en/home)** — Adult-oriented DDL site with VN downloads and patches. Great for older and rare titles. Impressive PC-98 collection. Requires a login to download, but links from here tend to last for a while.
 
