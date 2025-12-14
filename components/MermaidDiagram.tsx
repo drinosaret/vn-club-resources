@@ -110,5 +110,11 @@ export const MermaidDiagram = memo(function MermaidDiagram({ chart }: MermaidDia
     renderDiagram();
   }, [chart]);
 
-  return <div ref={containerRef} className="my-6 flex justify-center mermaid-diagram" />;
+  // This component serves as a fallback for any content that isn't pre-processed
+  return (
+    <div
+      ref={containerRef}
+      className="my-6 flex justify-center mermaid-diagram"
+    />
+  );
 });

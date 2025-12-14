@@ -43,6 +43,15 @@ body.dark {
   color: #e5e7eb !important;
 }
 
+/* Scroll margin for all headings with IDs (for anchor link navigation) */
+h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
+  scroll-margin-top: 5rem;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  scroll-margin-top: 5rem;
+}
+
 .prose h1 {
   @apply text-4xl font-bold mt-8 mb-4;
   color: #111827 !important;

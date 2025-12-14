@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, memo, useMemo } from 'react';
+import { generateHeadingId } from '@/lib/slug-utils';
 
 interface TOCItem {
   id: string;
@@ -17,48 +18,55 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
 
   // Memoize heading extraction to avoid re-parsing on every render
   const headings = useMemo(() => {
-    // Extract headings from markdown content
     const lines = content.split('\n');
     const toc: TOCItem[] = [];
-    
+
     lines.forEach((line) => {
-      // Remove carriage returns and trim
       const cleanLine = line.replace(/\r/g, '').trim();
-      
-      // Match headings (## heading or ###heading)
       const match = cleanLine.match(/^(#{2,4})\s*(.+)$/);
       if (match) {
         const level = match[1].length;
         let text = match[2].trim();
-        
-        // Clean up the text
-        text = text.replace(/\*\*/g, ''); // Remove bold markers
-        text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // Remove links
-        
-        const id = text
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .replace(/\s+/g, '-');
-        
+        text = text.replace(/\*\*/g, '');
+        text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        const id = generateHeadingId(text);
         toc.push({ id, text, level });
       }
     });
-    
+
     return toc;
   }, [content]);
 
+  // IntersectionObserver for active heading tracking
   useEffect(() => {
     if (headings.length === 0) return;
+
+    const visibleHeadings = new Set<string>();
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
+            visibleHeadings.add(entry.target.id);
+          } else {
+            visibleHeadings.delete(entry.target.id);
           }
         });
+
+        if (visibleHeadings.size > 0) {
+          // Find the topmost visible heading in document order
+          const topmostHeading = headings.find((h) => visibleHeadings.has(h.id));
+          if (topmostHeading) {
+            setActiveId(topmostHeading.id);
+            // Update URL hash without triggering scroll
+            const newHash = `#${topmostHeading.id}`;
+            if (window.location.hash !== newHash) {
+              history.replaceState(null, '', newHash);
+            }
+          }
+        }
       },
-      { rootMargin: '-100px 0px -80% 0px' }
+      { rootMargin: '-80px 0px -40% 0px' }
     );
 
     const elements = headings.map((h) => document.getElementById(h.id)).filter(Boolean) as Element[];
@@ -67,15 +75,19 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
     return () => observer.disconnect();
   }, [headings]);
 
-  // Update URL hash when active heading changes (MkDocs-style behavior)
+  // Initialize activeId from URL hash or first heading
   useEffect(() => {
-    if (!activeId) return;
+    if (headings.length === 0) return;
 
-    // Use replaceState to update URL without adding to browser history
-    // This prevents cluttering the back button with every scroll
-    const newUrl = `${window.location.pathname}${window.location.search}#${activeId}`;
-    window.history.replaceState(null, '', newUrl);
-  }, [activeId]);
+    if (window.location.hash) {
+      const hash = window.location.hash.slice(1);
+      if (headings.some(h => h.id === hash)) {
+        setActiveId(hash);
+        return;
+      }
+    }
+    setActiveId(headings[0].id);
+  }, [headings]);
 
   if (headings.length === 0) {
     return (
@@ -104,6 +116,7 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
             >
               <a
                 href={`#${heading.id}`}
+                onClick={() => setActiveId(heading.id)}
                 className={`block py-0.5 transition-colors leading-snug ${
                   activeId === heading.id
                     ? 'text-indigo-600 dark:text-indigo-400 font-medium'

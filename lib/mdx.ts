@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import { getGitDates } from './git-dates';
+import { processMermaidDiagrams } from './mermaid-processor';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 
@@ -77,6 +78,23 @@ export function getContentBySlug(type: 'guides', slug: string): Post | null {
     console.error(`Failed to load content for ${slug}`, error);
     return null;
   }
+}
+
+/**
+ * Get content by slug with pre-rendered mermaid diagrams.
+ * Use this async version for pages that need mermaid diagrams rendered at build time.
+ */
+export async function getContentBySlugAsync(type: 'guides', slug: string): Promise<Post | null> {
+  const post = getContentBySlug(type, slug);
+  if (!post) return null;
+
+  // Process mermaid diagrams at build time
+  const processedContent = await processMermaidDiagrams(post.content);
+
+  return {
+    ...post,
+    content: processedContent,
+  };
 }
 
 export function getAllContent(type: 'guides'): Post[] {

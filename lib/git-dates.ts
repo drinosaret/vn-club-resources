@@ -12,7 +12,7 @@ const gitDatesCache = new Map<string, GitDates>();
 function getGitLastCommitDate(gitPath: string): string | undefined {
   try {
     const result = execSync(
-      `git log --follow --format=%aI -1 -- "${gitPath}"`,
+      `git log --follow -M10 --format=%aI -1 -- "${gitPath}"`,
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: process.cwd() }
     ).trim();
     return result || undefined;
@@ -24,7 +24,7 @@ function getGitLastCommitDate(gitPath: string): string | undefined {
 function getGitFirstCommitDate(gitPath: string): string | undefined {
   try {
     const result = execSync(
-      `git log --follow --format=%aI -- "${gitPath}"`,
+      `git log --follow -M10 --format=%aI -- "${gitPath}"`,
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: process.cwd() }
     ).trim();
     // Get the last line (oldest commit)

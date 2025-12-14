@@ -9,7 +9,7 @@ interface RelatedPagesProps {
 export function RelatedPages({ categories }: RelatedPagesProps) {
   return (
     <section className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
+      <h2 id="related-pages" className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
         <BookOpen className="w-6 h-6 text-primary-500" />
         Related Pages
       </h2>

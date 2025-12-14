@@ -4,6 +4,8 @@
  * for rendering as cards instead of bullet lists.
  */
 
+import { generateHeadingId } from './slug-utils';
+
 export interface ResourceSubItem {
   name: string;
   url: string | null;
@@ -50,13 +52,9 @@ export type ContentBlock =
   | { type: 'related-pages'; categories: RelatedCategory[] }
   | { type: 'markdown'; content: string };
 
-// Generate a slug from a heading
+// Generate a slug from a heading - use shared utility for consistency
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .trim();
+  return generateHeadingId(text);
 }
 
 // Parse a single list item into a ResourceItem

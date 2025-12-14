@@ -1,23 +1,36 @@
 import Image from 'next/image';
 import { Components } from 'react-markdown';
+import { Children, ReactNode, isValidElement } from 'react';
 import { MermaidDiagram } from './MermaidDiagram';
 import { Callout } from './Callout';
 import { CodeBlock } from './CodeBlock';
 import { ImageLightbox } from './ImageLightbox';
+import { generateHeadingId } from '@/lib/slug-utils';
 
-// Helper function to generate heading IDs
-const generateId = (text: string) => {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-');
+// Helper function to extract text from React children
+const getTextFromChildren = (children: ReactNode): string => {
+  return Children.toArray(children)
+    .map((child) => {
+      if (typeof child === 'string') return child;
+      if (typeof child === 'number') return String(child);
+      if (isValidElement(child) && child.props.children) {
+        return getTextFromChildren(child.props.children);
+      }
+      return '';
+    })
+    .join('');
+};
+
+// Helper function to generate heading IDs from React children
+const generateId = (children: ReactNode) => {
+  const text = getTextFromChildren(children);
+  return generateHeadingId(text);
 };
 
 export const markdownComponents: Components = {
   // Headings with auto-generated IDs
   h1: ({ children, ...props }) => {
-    const text = String(children);
-    const id = generateId(text);
+    const id = generateId(children);
     return (
       <h1 id={id} className="text-3xl font-bold mb-6" {...props}>
         {children}
@@ -25,8 +38,7 @@ export const markdownComponents: Components = {
     );
   },
   h2: ({ children, ...props }) => {
-    const text = String(children);
-    const id = generateId(text);
+    const id = generateId(children);
     return (
       <h2 id={id} className="text-2xl font-bold mt-12 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" {...props}>
         {children}
@@ -34,8 +46,7 @@ export const markdownComponents: Components = {
     );
   },
   h3: ({ children, ...props }) => {
-    const text = String(children);
-    const id = generateId(text);
+    const id = generateId(children);
     return (
       <h3 id={id} className="text-xl font-semibold mt-8 mb-3" {...props}>
         {children}
@@ -43,8 +54,7 @@ export const markdownComponents: Components = {
     );
   },
   h4: ({ children, ...props }) => {
-    const text = String(children);
-    const id = generateId(text);
+    const id = generateId(children);
     return (
       <h4 id={id} className="text-lg font-semibold mt-6 mb-2" {...props}>
         {children}
@@ -83,16 +93,33 @@ export const markdownComponents: Components = {
       );
     }
 
+    // External images - use aspect-ratio container to prevent layout shift
     if (src.startsWith('http')) {
       return (
         <ImageLightbox src={src} alt={alt}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            {...props}
-            alt={alt}
-            className="rounded-lg shadow-sm mx-auto my-6 max-w-full"
-            style={{ maxWidth: '600px', height: 'auto', display: 'block' }}
-          />
+          <span
+            className="block my-6 mx-auto bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
+            style={{
+              maxWidth: '600px',
+              aspectRatio: '4/3',
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={alt}
+              className="rounded-lg shadow-sm w-full h-full object-contain"
+              loading="lazy"
+              onLoad={(e) => {
+                // Once loaded, adjust container to actual aspect ratio
+                const img = e.target as HTMLImageElement;
+                const container = img.parentElement;
+                if (container && img.naturalWidth && img.naturalHeight) {
+                  container.style.aspectRatio = `${img.naturalWidth}/${img.naturalHeight}`;
+                }
+              }}
+            />
+          </span>
         </ImageLightbox>
       );
     }

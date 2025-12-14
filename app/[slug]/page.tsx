@@ -1,4 +1,4 @@
-import { getContentBySlug, getAllContent } from '@/lib/mdx';
+import { getContentBySlug, getContentBySlugAsync, getAllContent } from '@/lib/mdx';
 import { notFound } from 'next/navigation';
 import { TableOfContents } from '@/components/TableOfContents';
 import { PageNavigation } from '@/components/PageNavigation';
@@ -126,7 +126,9 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
 
 export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const guide = getContentBySlug('guides', slug);
+
+  // Use async version to get pre-rendered mermaid diagrams (eliminates layout shift)
+  const guide = await getContentBySlugAsync('guides', slug);
 
   if (!guide) {
     notFound();
