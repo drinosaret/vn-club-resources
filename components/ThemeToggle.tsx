@@ -9,8 +9,6 @@ export function ThemeToggle() {
   const applyTheme = useCallback((newTheme: 'light' | 'dark') => {
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(newTheme);
-    document.body.classList.remove('light', 'dark');
-    document.body.classList.add(newTheme);
   }, []);
 
   useEffect(() => {

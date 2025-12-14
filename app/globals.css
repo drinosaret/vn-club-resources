@@ -16,16 +16,9 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: 'Roboto', Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
 }
 
-/* Ensure readable text in light mode */
-body:not(.dark) {
-  color: #1f2937;
-}
-
-body.dark {
-  color: #ededed;
-}
 
 @layer utilities {
   .text-balance {
