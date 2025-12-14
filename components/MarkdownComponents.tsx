@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { Components } from 'react-markdown';
 import { Children, ReactNode, isValidElement } from 'react';
 import { MermaidDiagram } from './MermaidDiagram';
@@ -124,18 +123,17 @@ export const markdownComponents: Components = {
       );
     }
 
+    // Local images - use native img to avoid Next.js Image warnings about aspect ratio
     return (
       <ImageLightbox src={src} alt={alt}>
-        <span className="block my-6 mx-auto" style={{ maxWidth: '600px' }}>
-          <Image
-            src={src}
-            alt={alt}
-            width={600}
-            height={450}
-            className="rounded-lg shadow-sm"
-            style={{ width: '100%', height: 'auto' }}
-          />
-        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          className="rounded-lg shadow-sm mx-auto my-6"
+          style={{ maxWidth: '600px', width: '100%', height: 'auto' }}
+          loading="lazy"
+        />
       </ImageLightbox>
     );
   },

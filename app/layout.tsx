@@ -3,6 +3,7 @@ import { Roboto } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const roboto = Roboto({
   weight: ['400', '500', '700'],
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://vnclub.org'),
   icons: {
     icon: '/assets/hikaru-icon2.webp',
+    shortcut: '/favicon.ico',
     apple: '/assets/hikaru-icon2.webp',
   },
   openGraph: {
@@ -77,6 +79,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" suppressHydrationWarning>
       <head>
+        <meta name="color-scheme" content="light dark" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
@@ -95,13 +98,15 @@ export default function RootLayout({
         />
       </head>
       <body className={roboto.className} suppressHydrationWarning>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
-        </div>
+        <ErrorBoundary>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </ErrorBoundary>
       </body>
     </html>
   );

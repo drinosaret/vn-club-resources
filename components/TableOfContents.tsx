@@ -41,6 +41,12 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
   useEffect(() => {
     if (headings.length === 0) return;
 
+    // Guard against browsers that don't support IntersectionObserver
+    if (typeof IntersectionObserver === 'undefined') {
+      setActiveId(headings[0]?.id || '');
+      return;
+    }
+
     const visibleHeadings = new Set<string>();
 
     const observer = new IntersectionObserver(
