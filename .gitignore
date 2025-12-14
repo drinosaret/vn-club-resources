@@ -1,5 +1,11 @@
-# MkDocs build output
-site/
+# Next.js build output
+/.next/
+/out/
+/node_modules/
+*.tsbuildinfo
+
+# MkDocs build output (legacy)
+/legacy/site/
 
 # Python-related files
 __pycache__/
@@ -21,11 +27,11 @@ Thumbs.db
 .idea/
 *.code-workspace
 .vscode/
+temp
 
 # Miscellaneous
 *.log
 *.bak
 *.tmp
-.markdownlint.yaml
-backup/
-docs/draft/
+nul
+temp/

@@ -1,0 +1,267 @@
+---
+description: OwOCR optical character recognition setup guide for visual novels. Extract Japanese text from images, untexthookable VNs, and console games using OCR with JL dictionary integration.
+sitemap:
+  priority: 0.7
+  changefreq: monthly
+---
+
+# OwOCR Guide
+
+A simple guide on how to quickly set up and use [OwOCR](https://github.com/AuroraWright/owocr), an optical character recognition program that can make reading Japanese text from visual novels much easier.
+
+> **Note:** This program uses a command line interface. If you're looking for something with a GUI, consider using [GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner) which runs a fork of OwOCR.
+
+![OwOCR in action](assets/owocr-main.webp)
+
+## Installation
+
+1. Install **[Python](https://www.python.org/downloads/)** (3.11, 3.12, or 3.13)
+   > **Warning:** During installation, make sure to select "Add to Path". If you skip this step, OwOCR will not work.
+2. Open your command prompt/terminal and run:
+   ```bash
+   pip install owocr
+   ```
+3. Install Google Lens for best OCR accuracy:
+   ```bash
+   pip install "owocr[lens]"
+   ```
+
+Other providers:
+- **Bing:** pre-installed → key: `b` (close second best, recommended)
+- **Apple Live Text:** pre-installed → key: `d` (macOS only, includes vertical text support on Sonoma+)
+- **Apple Vision:** pre-installed → key: `a` (macOS only, best local engine on Mac)
+- **OneOCR:** `pip install "owocr[oneocr]"` → key: `o` (Windows 10/11, fast and accurate)
+- **Manga OCR:** `pip install "owocr[mangaocr]"` → key: `m` (good for vertical text)
+- **EasyOCR:** `pip install "owocr[easyocr]"` → key: `e`
+- **RapidOCR:** `pip install "owocr[rapidocr]"` → key: `r`
+- **meikiocr:** `pip install "owocr[meikiocr]"` → key: `k` (fast local option, best for Linux, supports GPU acceleration with `onnxruntime-gpu`)
+
+> **From the GitHub:** If using an online engine like Lens, the developer recommends setting a secondary local engine with `-es`: `-es=oneocr` on Windows, `-es=alivetext` on macOS.
+
+![OwOCR startup window](assets/owocr1.webp)
+
+## Getting Started
+
+There are two ways to use OwOCR: **screen capture mode** (recommended) or **clipboard mode**.
+
+### Screen Capture Mode (Recommended)
+
+This is the easiest way to get started. OwOCR captures directly from your screen with a hotkey.
+
+```bash
+owocr -r=screencapture --engine=glens
+```
+
+This starts OwOCR with Google Lens and opens an area selector when triggered. The recognized text is copied to your clipboard for dictionary lookup.
+
+**Capture a specific window:**
+```bash
+owocr -r=screencapture -sa=YourWindowTitle --engine=glens
+```
+
+Replace `YourWindowTitle` with part of your game's window title. OwOCR will capture the first window that matches.
+
+**Capture just part of a window:**
+```bash
+owocr -r=screencapture -sa=YourWindowTitle -swa="" --engine=glens
+```
+
+Adding `-swa=""` opens a selector to choose a specific area within that window. Useful when you only want to OCR the text box.
+
+### Recommended Command
+
+For the best experience with texthooker page integration and window targeting:
+
+```bash
+owocr -r=screencapture --engine=glens -es=oneocr -w=websocket -wp=6677 -sa="YourWindowTitle" -swa=""
+```
+
+| Flag | What it does |
+|------|--------------|
+| `-r=screencapture` | Use screen capture mode instead of clipboard monitoring |
+| `--engine=glens` | Use Google Lens as the primary OCR engine (best accuracy) |
+| `-es=oneocr` | Use OneOCR as a secondary fallback engine for faster local processing. Windows only, use `-es=alivetext` on macOS |
+| `-w=websocket` | Output text via WebSocket instead of clipboard |
+| `-wp=6677` | Use port 6677 (same as Textractor, so your texthooker page works with both) |
+| `-sa="YourWindowTitle"` | Target a window containing this text in its title (locks onto the window) |
+| `-swa=""` | Opens a selector to choose a specific area within that window |
+
+Replace `YourWindowTitle` with part of your game's window title.
+
+#### Launcher Script
+
+Create a batch file (e.g., `owocr-launcher.bat`) for easy one-click launching with window targeting:
+
+> **Warning:** Don't name the file `owocr.bat` or it will call itself instead of the actual program.
+
+```batch
+@echo off
+set "WINDOW="
+echo OwOCR Launcher
+echo.
+choice /C YN /M "Target a specific window"
+if errorlevel 2 goto skip
+
+set /p WINDOW=Enter window title:
+if not defined WINDOW goto skip
+echo Starting with window: %WINDOW%
+call owocr -r=screencapture --engine=glens -es=oneocr -w=websocket -wp=6677 -sa="%WINDOW%" -swa=""
+goto end
+
+:skip
+echo Starting without window targeting...
+call owocr -r=screencapture --engine=glens -es=oneocr -w=websocket -wp=6677
+
+:end
+pause
+```
+
+This script prompts you to optionally enter a window title, then launches OwOCR with the recommended settings.
+
+### Clipboard Mode
+
+If you prefer using a screenshot tool like ShareX, OwOCR can monitor your clipboard instead:
+
+```bash
+owocr --engine=glens
+```
+
+Take a screenshot that copies to clipboard, and OwOCR will automatically process it and replace the clipboard contents with the recognized text.
+
+## ShareX Configuration (Optional)
+
+If you prefer clipboard mode with ShareX instead of OwOCR's built-in screen capture:
+
+1. Right-click the ShareX system tray icon → "Hotkey settings"
+2. Click "Add" to create a new hotkey
+3. Select **Capture Region** or **Capture Region (Light)**
+4. Set your preferred hotkey (avoid keys games use, like Shift)
+
+![ShareX config](assets/owocr2.webp)
+
+5. Click the gear icon next to your hotkey
+6. Under "Task" settings, enable "Override after capture tasks"
+7. Select only "Copy image to clipboard" and disable everything else
+
+![ShareX Hotkey Settings](assets/owocr3.webp)
+
+## Dictionary Integration
+
+### JL
+
+**[JL](/jl-guide)** is the recommended dictionary for OwOCR. It works with both clipboard and WebSocket input.
+
+**For the ShareX workflow** (OCRing specific words for instant lookup), enable these settings:
+- Preferences → Popup → Auto lookup the first term when it's copied from the clipboard
+- Preferences → Popup → Auto lookup the first term when it's copied from a WebSocket
+- Preferences → Popup → Don't auto look up the first term on text change if Main Window is not minimized
+
+These settings let you OCR text and immediately see the definition without any extra clicks.
+
+### Yomitan
+
+Enable clipboard monitor in Yomitan, then click the magnifying glass to access the search page.
+
+<img src="assets/owocr4.webp" alt="Search page" style="display: block; margin: 1.5em auto 2em auto; width: 200px;" />
+
+### Browser Extensions
+
+For texthooker page integration:
+- **[Lap Clipboard Inserter (Firefox)](https://addons.mozilla.org/en-US/firefox/addon/lap-clipboard-inserter/)**
+- **[Clipboard Inserter Redux (Chrome)](https://chromewebstore.google.com/detail/clipboard-inserter-redux/fhjjmocaopmmngdjmpgibphfchdmpbop)**
+
+### WebSocket Support
+
+OwOCR can send text via WebSocket instead of clipboard:
+- Use `-w=websocket` to write text to WebSocket
+- Default port is 7331 (configurable in config file)
+
+## Runtime Controls
+
+While OwOCR is running, you can use these keys:
+
+| Key | Action |
+|-----|--------|
+| `l` | Switch to Google Lens |
+| `m` | Switch to Manga OCR |
+| `b` | Switch to Bing |
+| `s` | Cycle through available engines |
+| `p` | Pause/resume OCR |
+| `t` or `q` | Quit the program |
+
+## Command Reference
+
+### Input/Output Options
+
+| Option | Description |
+|--------|-------------|
+| `-r`, `--read_from` | Where to read images from: `clipboard`, `websocket`, `unixsocket`, `screencapture`, or a directory path |
+| `-rs`, `--read_from_secondary` | Optional secondary input source |
+| `-w`, `--write_to` | Where to save text: `clipboard`, `websocket`, or a file path |
+| `-e`, `--engine` | OCR engine: `glens`, `bing`, `mangaocr`, `mangaocrs`, `gvision`, `avision`, `alivetext`, `azure`, `winrtocr`, `oneocr`, `easyocr`, `rapidocr`, `ocrspace` |
+| `-es`, `--engine_secondary` | Secondary local engine for two-pass processing |
+
+### Screen Capture Options
+
+| Option | Description |
+|--------|-------------|
+| `-sa`, `--screen_capture_area` | Target area: empty (selector), coordinates (`x,y,width,height`), `screen_N`, or window name |
+| `-swa`, `--screen_capture_window_area` | Subsection of window: empty (selector), coordinates, or `window` for whole window |
+| `-sd`, `--screen_capture_delay_secs` | Delay between screenshots. `-1` to disable periodic capture |
+| `-sw`, `--screen_capture_only_active_windows` | Only capture when target window is active |
+| `-sf`, `--screen_capture_frame_stabilization` | Wait for stable text before processing. `-1` waits for matching results, `0` disables |
+| `-sl`, `--screen_capture_line_recovery` | Recover missed lines from unstable frames |
+| `-sr`, `--screen_capture_regex_filter` | Regex to filter unwanted text (e.g., `▶\|♥\|・`) |
+| `-sc`, `--screen_capture_combo` | Hotkey combo for taking screenshots (e.g., `<ctrl>+<shift>+s`) |
+| `-scc`, `--coordinate_selector_combo` | Hotkey combo for changing capture area |
+
+### Text Processing Options
+
+| Option | Description |
+|--------|-------------|
+| `-l`, `--language` | Language code: `ja` (Japanese), `zh` (Chinese), `ko` (Korean), etc. |
+| `-j`, `--join_lines` | Remove spaces/separators between lines |
+| `-jp`, `--join_paragraphs` | Remove spaces/separators between paragraphs |
+| `-ls`, `--line_separator` | Custom line separator (supports `\n`) |
+| `-ps`, `--paragraph_separator` | Custom paragraph separator |
+| `-rt`, `--reorder_text` | Regroup and reorder text instead of using OCR engine order |
+| `-f`, `--furigana_filter` | Filter furigana from Japanese text (requires `-rt`) |
+| `-of`, `--output_format` | Output format: `text` (default) or `json` (includes coordinates) |
+
+### Other Options
+
+| Option | Description |
+|--------|-------------|
+| `-p`, `--pause_at_startup` | Start paused |
+| `-d`, `--delete_images` | Delete images after processing (when reading from directory) |
+| `-n`, `--notifications` | Show OS notification with detected text |
+| `-a`, `--auto_pause` | Auto-pause after N seconds of no recognition. `0` to disable |
+| `-cp`, `--combo_pause` | Hotkey combo for pause (e.g., `<ctrl>+<shift>+p`) |
+| `-cs`, `--combo_engine_switch` | Hotkey combo for switching engines |
+| `-wp`, `--websocket_port` | WebSocket port (default: 7331) |
+| `-ds`, `--delay_seconds` | Delay between clipboard/directory checks |
+| `-v`, `--verbosity` | Output verbosity: `-2` (full text), `-1` (timestamps only), `0` (errors only), or character limit |
+
+## Tips
+
+- **Use Google Lens** for best accuracy in most cases
+- **Avoid hotkey conflicts** with game controls
+- **Mouse buttons work great** as hotkeys if your mouse has extra buttons
+- **Test your setup** on some Japanese text before starting a VN
+- **Config file:** You can store settings in `C:\Users\YourUsername\.config\owocr_config.ini` (Linux/macOS: `~/.config/owocr_config.ini`)
+
+For more details, see the [OwOCR GitHub page](https://github.com/AuroraWright/owocr).
+
+## Related Pages
+
+**Text Hooking Alternatives:**
+- [Textractor Guide](/textractor-guide) - Standard text hooking (try first if possible)
+- [Agent Guide](/agent-guide) - Script-based text hooker for stubborn games
+
+**Dictionary Setup:**
+- [JL Dictionary Guide](/jl-guide) - Connect OCR output to popup dictionary
+- [Complete Beginner's Guide](/guide) - Full learning roadmap
+
+**More Resources:**
+- [Tools Overview](/tools) - See all available tools
+- [Where to Get VNs](/sources) - Find Japanese visual novels to practice with

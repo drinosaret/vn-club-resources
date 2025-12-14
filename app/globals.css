@@ -1,0 +1,222 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Roboto', Arial, Helvetica, sans-serif;
+}
+
+/* Ensure readable text in light mode */
+body:not(.dark) {
+  color: #1f2937;
+}
+
+body.dark {
+  color: #ededed;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom styles for markdown content */
+.prose {
+  @apply max-w-none;
+  color: #1f2937 !important;
+}
+
+.dark .prose {
+  color: #e5e7eb !important;
+}
+
+.prose h1 {
+  @apply text-4xl font-bold mt-8 mb-4;
+  color: #111827 !important;
+}
+
+.dark .prose h1 {
+  color: #f9fafb !important;
+}
+
+.prose h2 {
+  @apply text-3xl font-bold mt-6 mb-3;
+  color: #111827 !important;
+}
+
+.dark .prose h2 {
+  color: #f9fafb !important;
+}
+
+.prose h3 {
+  @apply text-2xl font-semibold mt-5 mb-2;
+  color: #111827 !important;
+}
+
+.dark .prose h3 {
+  color: #f9fafb !important;
+}
+
+.prose p {
+  @apply mb-4 leading-relaxed;
+  color: #374151 !important;
+}
+
+.dark .prose p {
+  color: #d1d5db !important;
+}
+
+.prose a {
+  @apply underline;
+  color: #4f46e5 !important;
+}
+
+.prose a:hover {
+  color: #4338ca !important;
+}
+
+.dark .prose a {
+  color: #818cf8 !important;
+}
+
+.dark .prose a:hover {
+  color: #a5b4fc !important;
+}
+
+.prose ul, .prose ol {
+  @apply my-4 ml-6;
+}
+
+.prose li {
+  @apply mb-2;
+  color: #374151 !important;
+}
+
+.dark .prose li {
+  color: #d1d5db !important;
+}
+
+.prose code {
+  @apply bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono;
+  color: #db2777 !important;
+}
+
+.dark .prose code {
+  @apply bg-gray-800;
+  color: #f472b6 !important;
+}
+
+.prose pre {
+  @apply bg-gray-100 p-4 rounded-lg overflow-x-auto my-4;
+}
+
+.dark .prose pre {
+  @apply bg-gray-800;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-primary-500 pl-4 italic my-4;
+  color: #374151 !important;
+}
+
+.dark .prose blockquote {
+  color: #d1d5db !important;
+}
+
+.prose img {
+  @apply rounded-lg my-4 mx-auto;
+  max-width: 700px;
+  width: 100%;
+  height: auto;
+}
+
+.prose strong {
+  color: #111827 !important;
+  font-weight: 600;
+}
+
+.dark .prose strong {
+  color: #f9fafb !important;
+}
+
+/* Mermaid diagram styling */
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Force all text elements to be dark */
+.mermaid-diagram text,
+.mermaid-diagram tspan,
+.mermaid-diagram .nodeLabel,
+.mermaid-diagram .edgeLabel,
+.mermaid-diagram foreignObject div,
+.mermaid-diagram span {
+  fill: #111827 !important;
+  color: #111827 !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+}
+
+/* Target specific text in nodes */
+.mermaid-diagram g.node text,
+.mermaid-diagram g.label text {
+  fill: #111827 !important;
+}
+
+/* Subgraph/cluster title styling - most important */
+.mermaid-diagram .cluster text,
+.mermaid-diagram .cluster-label text,
+.mermaid-diagram g.cluster text,
+.mermaid-diagram g[class*="cluster"] text {
+  fill: #000000 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mermaid-diagram text,
+  .mermaid-diagram tspan,
+  .mermaid-diagram .nodeLabel,
+  .mermaid-diagram .edgeLabel,
+  .mermaid-diagram foreignObject div,
+  .mermaid-diagram span,
+  .mermaid-diagram g.node text,
+  .mermaid-diagram g.label text {
+    fill: #f9fafb !important;
+    color: #f9fafb !important;
+  }
+  
+  .mermaid-diagram .cluster text,
+  .mermaid-diagram .cluster-label text,
+  .mermaid-diagram g.cluster text,
+  .mermaid-diagram g[class*="cluster"] text {
+    fill: #ffffff !important;
+    color: #ffffff !important;
+  }
+  
+  .mermaid-diagram .node rect,
+  .mermaid-diagram .node circle,
+  .mermaid-diagram .node polygon {
+    fill: #374151 !important;
+    stroke: #6366f1 !important;
+  }
+  
+  .mermaid-diagram .edgePath path {
+    stroke: #9ca3af !important;
+  }
+}

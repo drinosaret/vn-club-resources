@@ -1,0 +1,100 @@
+---
+description: ShaderGlass overlay guide for visual novels. Apply CRT shaders, upscaling, and retro effects to VNs and games using this transparent overlay tool.
+sitemap:
+  priority: 0.7
+  changefreq: monthly
+---
+
+# ShaderGlass Guide
+
+This guide covers [ShaderGlass](https://github.com/mausimus/ShaderGlass), a lightweight Windows overlay application that applies shader effects on top of your desktop or specific windows. It includes over 1,200 built-in shaders for CRT simulation, upscaling, and various visual effects.
+
+ShaderGlass can work as a much lighter-weight alternative to Magpie if you don't need neural network upscaling.
+
+![ShaderGlass CRT shader comparison](assets/shaderglass2.webp)
+
+## Requirements
+
+- **Windows 10** (version 2004 / build 19041) or **Windows 11**
+- **DirectX 11** capable GPU
+- A visual novel or game to enhance
+
+## Installation
+
+1. Download the latest release from the [ShaderGlass Releases page](https://github.com/mausimus/ShaderGlass/releases)
+2. Extract the downloaded archive to a folder of your choice
+3. Run `ShaderGlass.exe` to start the application
+
+## Basic Usage
+
+### Operating Modes
+
+ShaderGlass has two main modes:
+
+- **Desktop Glass** - A transparent floating window that applies shaders to anything behind it. With click-through enabled, this requires the least setup but can be resource intensive.
+- **Window Clone** - Captures and processes a specific application window. You can enlarge the clone window to upscale like Magpie, but you may need to adjust pixel size and shader settings for best results.
+
+You can set a specific window as the input source under **Input** instead of your entire desktop, but not every application works well with this - some games may crash.
+
+### Quick Start
+
+1. Launch ShaderGlass
+2. Launch your visual novel or game
+3. Select your input source (Desktop or specific Window)
+4. Choose a shader from the library
+5. Position the overlay over your game
+
+### Recommended Shaders
+
+ShaderGlass includes shaders from the RetroArch library. Try the **random button** under the Shaders tab to discover new shaders you might like.
+
+**For Retro VNs:**
+- **CRT shaders** - Emulate old CRT monitors (crt-royale, crt-geom, crt-lottes)
+- **Scanline effects** - Add authentic scanlines
+
+**For Upscaling:**
+- **xBR / ScaleFX** - Smooth pixel art upscaling
+- **Sharp-Bilinear** - Clean scaling for pixel art
+
+**For General Use:**
+- **Sharpening filters** - Enhance clarity
+- **Color correction** - Adjust colors and gamma
+
+## Configuration
+
+### Pixel Size Setting
+
+For crisp results, set **Input → Pixel Size** to match your game's scaling. This ensures the shader processes pixels correctly.
+
+If your text appears blurry, try adjusting the pixel size setting.
+
+### Performance Tips
+
+- Use **Window Clone** mode for better performance
+- Select your dedicated GPU in the Processing settings if you have multiple graphics cards
+- Lower frame rate if experiencing performance issues
+
+### Saving Profiles
+
+To save your settings:
+
+1. Go to **Processing → Save profile as**
+2. Choose a name and location for your profile
+
+To load a saved profile, select **Processing → Load profile**.
+
+You can also set a default profile that loads automatically by pressing **Set as default profile**.
+
+<img src="assets/shaderglass1.webp" alt="ShaderGlass Processing menu" style="max-height: 350px; width: auto;" />
+
+## Related Pages
+
+**Display Tools:**
+
+- [Magpie Guide](/magpie-guide) - Neural network upscaling for VNs
+- [Tools Overview](/tools) - See all available VN tools
+
+**Getting Started:**
+
+- [Complete Beginner's Guide](/guide) - Full roadmap for learning Japanese with VNs
+- [Where to Get VNs](/sources) - Find visual novels to play

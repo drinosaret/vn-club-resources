@@ -1,0 +1,133 @@
+---
+description: Magpie window upscaling guide for visual novels. Upscale low-resolution VNs and games with advanced scaling algorithms like Anime4K, FSR, CuNNy, and CRT shaders.
+sitemap:
+  priority: 0.7
+  changefreq: monthly
+---
+
+# Magpie Guide
+
+This guide walks you through setting up and using [Magpie](https://github.com/Blinue/Magpie), a lightweight window upscaling tool that can dramatically improve the visual quality of older visual novels and games.
+
+Magpie applies advanced scaling algorithms to windowed applications, making low-resolution content look crisp on modern high-resolution displays.
+
+![Magpie main window](assets/magpie1.webp)
+
+## Requirements
+
+- **Windows 10** (version 1903 or later) or **Windows 11**
+- **DirectX** feature level 11
+- A visual novel or game
+
+## Installation
+
+1. Download the latest release from the [Magpie Releases page](https://github.com/Blinue/Magpie/releases)
+2. Extract the downloaded archive to a folder of your choice
+3. Run `Magpie.exe` to start the application
+
+## Basic Usage
+
+### Hotkeys
+
+Magpie can upscale windows in two different modes:
+
+- **Fullscreen** - Scales the window to fill your entire screen
+  - Default hotkey: `Alt + Shift + A`
+- **Windowed** - Scales the window while keeping it windowed
+  - Default hotkey: `Alt + Shift + Q`
+
+### Quick Start
+
+1. Launch Magpie
+2. Launch your visual novel or game
+3. Click on the game window to make it active
+4. Press `Alt + Shift + A` for fullscreen scaling, or `Alt + Shift + Q` for windowed scaling
+5. Press the same hotkey again to deactivate scaling
+
+**Before scaling:**
+
+![Before Magpie scaling](assets/magpie2.webp)
+
+**After scaling:**
+
+![After Magpie scaling](assets/magpie3.webp)
+
+### Scaling Algorithms
+
+Magpie includes many scaling options. Here are the most relevant for visual novels:
+
+**Best for VNs:**
+- **CuNNy** - The go-to choice for VN artwork. Handles illustrated characters and backgrounds beautifully (recommended)
+- **Anime4K** - Works well on VN sprites. Multiple variants for different needs
+- **ACNet** - Can clean up grainy or compressed CGs while upscaling
+
+**If CuNNy is too slow:**
+- **FSR** - Much faster but still looks decent. Good fallback for weaker hardware
+- **Lanczos / Jinc** - Classic algorithms that work on anything
+- **FSRCNNX** - Balance between quality and speed
+
+**For PC-98 and older VNs:**
+- **CRT shaders** (Easymode, Geom, Hyllian, Lottes) - Give that authentic retro look if you're playing classic titles
+- **xBRZ / MMPX** - Smooth out pixel art while preserving the aesthetic
+- **Pixellate / SharpBilinear** - Keep pixels sharp without blurring
+
+**Optional post-processing:**
+- **CAS** - Quick sharpening pass
+- **AdaptiveSharpen** - Brings out soft details without overdoing it
+- **SMAA / FXAA** - Reduce jagged edges on text and UI elements
+
+<img src="assets/magpie4.webp" alt="Available scaling modes in Magpie" style="max-height: 400px; width: auto;" />
+
+## Configuration
+
+### Recommended Settings for VNs
+
+For visual novels, [CuNNy](https://github.com/funnyplanter/CuNNy) tends to give the best results. It was specifically designed with VN-style artwork in mind.
+
+- **CuNNy-NVL** - Tuned for the kind of art you see in VNs. Start here
+- **CuNNy-DS** - Includes extra cleanup if your source looks noisy or soft
+- **CuNNy-fast** - Try this if your GPU struggles with the standard version
+
+The variants with larger numbers (8x32, 4x32) look nicer but are more demanding. If you're getting stuttering or low framerates, drop down to a smaller or "fast" variant.
+
+To enable CuNNy:
+
+1. Open Magpie and go to any of your profiles
+2. Under the **General** section, find the **Scaling mode** setting
+3. Change the scaling mode to a **CuNNy** variant
+
+### Profiles
+
+Magpie allows you to create multiple profiles with different settings like scaling mode and capture method. You can switch between profiles depending on what works best for each game.
+
+### Graphics Card Selection
+
+If you have multiple graphics cards (e.g., integrated and dedicated GPU), you may need to select the correct one:
+
+1. Open your profile settings
+2. Go to the **Performance** section
+3. Select your preferred graphics card
+
+This is important for getting the best performance, especially on laptops with both integrated and dedicated graphics.
+
+### Troubleshooting
+
+> **Tip:** For older games, try disabling DPI scaling overrides in the game's compatibility settings before using Magpie.
+
+If a game has built-in resolution options, it may be best to use the game's native settings rather than Magpie's scaling.
+
+## Related Pages
+
+**Display Tools:**
+
+- [Tools Overview](/tools) - See all available VN tools including other display utilities
+
+**Getting Started:**
+
+- [Complete Beginner's Guide](/guide) - Full roadmap for learning Japanese with VNs
+- [Where to Get VNs](/sources) - Find visual novels to play
+
+**Essential Setup:**
+
+- [Textractor Guide](/textractor-guide) - Set up text hooking
+- [JL Dictionary Guide](/jl-guide) - Dictionary for reading VNs
