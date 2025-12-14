@@ -87,6 +87,8 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
       }
     }
     setActiveId(headings[0].id);
+    // Set initial hash to first heading for consistency
+    history.replaceState(null, '', `#${headings[0].id}`);
   }, [headings]);
 
   if (headings.length === 0) {
