@@ -68,7 +68,10 @@ function cleanMarkdown(content: string): string {
     // Remove alignment syntax
     .replace(/^\{ align=center \}\s*$/gm, '')
     // Remove centered divs but keep content
-    .replace(/<div align="center">\s*([\s\S]*?)\s*<\/div>/gi, '\n$1\n');
+    .replace(/<div align="center">\s*([\s\S]*?)\s*<\/div>/gi, '\n$1\n')
+    // Convert relative asset paths to absolute (fixes trailingSlash navigation)
+    .replace(/!\[([^\]]*)\]\(assets\//g, '![$1](/assets/')
+    .replace(/src="assets\//g, 'src="/assets/');
 }
 
 interface MarkdownRendererProps {
