@@ -64,11 +64,6 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
           const topmostHeading = headings.find((h) => visibleHeadings.has(h.id));
           if (topmostHeading) {
             setActiveId(topmostHeading.id);
-            // Update URL hash without triggering scroll
-            const newHash = `#${topmostHeading.id}`;
-            if (window.location.hash !== newHash) {
-              history.replaceState(null, '', newHash);
-            }
           }
         }
       },
@@ -93,8 +88,6 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
       }
     }
     setActiveId(headings[0].id);
-    // Set initial hash to first heading for consistency
-    history.replaceState(null, '', `#${headings[0].id}`);
   }, [headings]);
 
   if (headings.length === 0) {
