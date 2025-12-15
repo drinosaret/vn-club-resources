@@ -75,10 +75,23 @@ Access settings through the system tray icon's right-click menu. Configuration i
 - **Auto scan mode** - Enable continuous scanning without holding the hotkey
 - **OCR provider** - Choose between Google Lens, meikiocr (local), or [OwOCR](/owocr-guide) (WebSocket)
 
+## Anki Mining Fork
+
+If you want to create Anki cards directly from Meikipop, check out [pnotisdev's fork](https://github.com/pnotisdev/meikipop). It adds:
+
+- **Anki card creation** (Alt+A) - Captures screenshots and context sentences
+- **Duplicate detection** - Prevents adding words already in your deck
+- **Automated audio** - Fetches audio from languagepod101.com
+- **Additional shortcuts** - Alt+C to copy text, Alt+J for Jisho
+- **More dictionaries** - Supports monolingual dictionaries like [kaikki](https://yomidevs.github.io/kaikki-to-yomitan/)
+
+!!! note
+    This fork has no prebuilt releases - you'll need to [build it from source](#from-source).
+
 ## Limitations
 
-Meikipop is focused specifically on dictionary lookups. It does not support:
-- SRS flashcard mining (use [JL](/jl-guide) for this)
+The original Meikipop is focused specifically on dictionary lookups. It does not support:
+- SRS flashcard mining (use [JL](/jl-guide) or the [Anki fork above](#anki-mining-fork))
 - Multiple dictionaries simultaneously
 
 ## Tips
