@@ -92,33 +92,19 @@ export const markdownComponents: Components = {
       );
     }
 
-    // External images - use aspect-ratio container to prevent layout shift
+    // External images - use simple container without dynamic aspect ratio changes
+    // Avoids layout thrashing from onLoad style modifications
     if (src.startsWith('http')) {
       return (
         <ImageLightbox src={src} alt={alt}>
-          <span
-            className="block my-6 mx-auto bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
-            style={{
-              maxWidth: '600px',
-              aspectRatio: '4/3',
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={src}
-              alt={alt}
-              className="rounded-lg shadow-sm w-full h-full object-contain"
-              loading="lazy"
-              onLoad={(e) => {
-                // Once loaded, adjust container to actual aspect ratio
-                const img = e.target as HTMLImageElement;
-                const container = img.parentElement;
-                if (container && img.naturalWidth && img.naturalHeight) {
-                  container.style.aspectRatio = `${img.naturalWidth}/${img.naturalHeight}`;
-                }
-              }}
-            />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            className="rounded-lg shadow-sm mx-auto my-6"
+            style={{ maxWidth: '600px', width: '100%', height: 'auto' }}
+            loading="lazy"
+          />
         </ImageLightbox>
       );
     }

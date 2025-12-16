@@ -28,6 +28,7 @@ Thumbs.db
 *.code-workspace
 .vscode/
 temp
+drafts/
 
 # Miscellaneous
 *.log

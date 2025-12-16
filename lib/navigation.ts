@@ -43,6 +43,7 @@ export const navigation: NavSection[] = [
       { title: 'VNTimeTracker', slug: 'timetracker-guide', description: 'Track your reading time' },
       { title: 'JDownloader', slug: 'jdownloader-guide', description: 'Download manager setup' },
       { title: 'NP2 (PC-98)', slug: 'np2-guide', description: 'Retro VN emulation' },
+      { title: 'GameHub Lite', slug: 'gamehub-lite-guide', description: 'Windows emulation on Android' },
     ],
   },
   {

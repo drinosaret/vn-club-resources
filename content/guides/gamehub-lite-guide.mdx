@@ -1,0 +1,92 @@
+---
+description: GameHub Lite setup guide for running Windows visual novels and games on Android devices.
+sitemap:
+  priority: 0.7
+  changefreq: monthly
+---
+
+# GameHub Lite Guide
+
+[GameHub Lite](https://github.com/Producdevity/gamehub-lite) is a free, community-maintained Android app that lets you play Windows games on your phone or tablet. It's a privacy-focused modification of the GameHub emulator with telemetry removed and no login required.
+
+![GameHub Lite running a visual novel](/assets/gamehub-lite-gameplay.webp)
+
+## Quick Start
+
+![GameHub Lite dashboard](/assets/gamehub-lite-dashboard.webp)
+
+1. **Download** the APK from the [releases page](https://github.com/Producdevity/gamehub-lite/releases)
+2. **Install** the APK (you may need to enable "Install from unknown sources" in Android settings)
+3. **Open** GameHub Lite and tap **Import Game**
+4. **Grant file access** when prompted
+5. **Navigate** to your extracted game folder and select the game's `.exe` file
+6. **Wait** for Windows emulation components to download (first time only)
+7. **Return to dashboard** and tap the game icon to play
+
+![Downloading emulation components](/assets/gamehub-lite-download.webp)
+
+That's it! Most visual novels work out of the box with no additional configuration needed.
+
+## Controls
+
+GameHub Lite uses touch controls by default:
+
+- **Drag anywhere** on screen to move the cursor
+- **Tap** to left-click
+- **Two-finger tap** to right-click
+
+### Disabling Touch Overlay
+
+If you find the on-screen controls distracting:
+
+1. Press the **back button** to open the settings menu
+2. Go to **Controls**
+3. Set **Touch controls** to off
+
+![Controls settings menu](/assets/gamehub-lite-controls.webp)
+
+### External Controllers
+
+GameHub Lite supports Bluetooth gamepads and USB controllers. Connect your controller and it should work automatically.
+
+## Game Settings
+
+To access settings for a specific game, tap the **...** next to "View Details" when selecting a game on the dashboard.
+
+![Game settings menu](/assets/gamehub-lite-settings.webp)
+
+### General Settings
+
+- **Container language and region**: If you're having display issues, try setting this to `ja_JP`
+- **Resolution**: Adjust the rendering resolution
+- **Environment variables**: Set custom environment variables
+- **Reset game data**: Clear saved data for the game
+- **Enter container**: Access the Windows desktop and filesystem where your game runs
+
+![Container desktop environment](/assets/gamehub-lite-container.webp)
+
+### Compatibility Settings
+
+Advanced options for users familiar with Wine, including selecting different compatibility layers.
+
+## Features
+
+- **No account required**: Start playing immediately
+- **Privacy-focused**: Telemetry, analytics, and tracking removed
+- **Works offline**: No internet needed after initial setup
+- **Japanese text works**: Most visual novels display correctly without extra configuration
+- **Steam library sync**: Tap the Steam icon and sign in to sync your Steam play data
+
+## Tips and Limitations
+
+- Performance varies by device (more powerful phones run games better)
+- Some games may not work at all
+- If a game runs slowly, try closing background apps or lowering in-game resolution
+- Keep your device plugged in during longer sessions as emulation is battery-intensive
+
+## Related Pages
+
+**Getting Started:**
+
+- [Tools Overview](/tools) - See all available tools
+- [Complete Beginner's Guide](/guide) - Full learning roadmap

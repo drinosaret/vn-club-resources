@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, memo, useMemo } from 'react';
+import { useEffect, useState, memo, useMemo, useRef, useCallback } from 'react';
 import { generateHeadingId } from '@/lib/slug-utils';
 
 interface TOCItem {
@@ -15,6 +15,30 @@ interface TableOfContentsProps {
 
 export const TableOfContents = memo(function TableOfContents({ content }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>('');
+  const pendingActiveIdRef = useRef<string | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+
+  // Debounced state update using requestAnimationFrame to prevent jitter during scroll
+  const debouncedSetActiveId = useCallback((id: string) => {
+    pendingActiveIdRef.current = id;
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (pendingActiveIdRef.current !== null) {
+          setActiveId(pendingActiveIdRef.current);
+        }
+        rafIdRef.current = null;
+      });
+    }
+  }, []);
+
+  // Cleanup RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
 
   // Memoize heading extraction to avoid re-parsing on every render
   const headings = useMemo(() => {
@@ -63,7 +87,7 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
           // Find the topmost visible heading in document order
           const topmostHeading = headings.find((h) => visibleHeadings.has(h.id));
           if (topmostHeading) {
-            setActiveId(topmostHeading.id);
+            debouncedSetActiveId(topmostHeading.id);
           }
         }
       },
@@ -74,7 +98,7 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
     elements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [headings]);
+  }, [headings, debouncedSetActiveId]);
 
   // Initialize activeId from URL hash or first heading
   useEffect(() => {
@@ -104,7 +128,7 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
   }
 
   return (
-    <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto">
+    <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-y-contain">
       <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
         <h3 className="font-semibold text-xs uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-4">
           On This Page

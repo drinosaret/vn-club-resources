@@ -153,71 +153,59 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   color: #f9fafb !important;
 }
 
-/* Mermaid diagram styling */
+/* Mermaid diagram styling - uses CSS instead of JS for better performance */
 .mermaid-diagram svg {
   max-width: 100%;
   height: auto;
 }
 
-/* Force all text elements to be dark */
-.mermaid-diagram text,
-.mermaid-diagram tspan,
-.mermaid-diagram .nodeLabel,
-.mermaid-diagram .edgeLabel,
-.mermaid-diagram foreignObject div,
-.mermaid-diagram span {
-  fill: #111827 !important;
-  color: #111827 !important;
-  font-weight: 600 !important;
-  font-size: 14px !important;
-}
-
-/* Target specific text in nodes */
-.mermaid-diagram g.node text,
-.mermaid-diagram g.label text {
-  fill: #111827 !important;
-}
-
-/* Subgraph/cluster title styling - most important */
-.mermaid-diagram .cluster text,
+/* Cluster/subgraph labels - dark text on light pastel backgrounds */
 .mermaid-diagram .cluster-label text,
-.mermaid-diagram g.cluster text,
-.mermaid-diagram g[class*="cluster"] text {
-  fill: #000000 !important;
-  color: #000000 !important;
-  font-weight: 700 !important;
-  font-size: 16px !important;
+.mermaid-diagram .cluster-label tspan,
+.mermaid-diagram .cluster foreignObject p,
+.mermaid-diagram .cluster foreignObject span,
+.mermaid-diagram .cluster foreignObject div {
+  fill: #1a1a1a !important;
+  color: #1a1a1a !important;
+  font-weight: 600 !important;
 }
 
+/* Node labels - white text on darker backgrounds */
+.mermaid-diagram .node .label text,
+.mermaid-diagram .node .label tspan,
+.mermaid-diagram .node foreignObject p,
+.mermaid-diagram .node foreignObject span,
+.mermaid-diagram .node foreignObject div {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Edge labels - theme-aware */
+.mermaid-diagram .edgeLabel text,
+.mermaid-diagram .edgeLabel tspan,
+.mermaid-diagram .edgeLabel p,
+.mermaid-diagram .edgeLabel span {
+  fill: #1a1a1a !important;
+  color: #1a1a1a !important;
+}
+
+/* Dark mode - edge labels only need to change */
+.dark .mermaid-diagram .edgeLabel text,
+.dark .mermaid-diagram .edgeLabel tspan,
+.dark .mermaid-diagram .edgeLabel p,
+.dark .mermaid-diagram .edgeLabel span {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* Also support system dark mode preference */
 @media (prefers-color-scheme: dark) {
-  .mermaid-diagram text,
-  .mermaid-diagram tspan,
-  .mermaid-diagram .nodeLabel,
-  .mermaid-diagram .edgeLabel,
-  .mermaid-diagram foreignObject div,
-  .mermaid-diagram span,
-  .mermaid-diagram g.node text,
-  .mermaid-diagram g.label text {
-    fill: #f9fafb !important;
-    color: #f9fafb !important;
-  }
-  
-  .mermaid-diagram .cluster text,
-  .mermaid-diagram .cluster-label text,
-  .mermaid-diagram g.cluster text,
-  .mermaid-diagram g[class*="cluster"] text {
+  html:not(.light) .mermaid-diagram .edgeLabel text,
+  html:not(.light) .mermaid-diagram .edgeLabel tspan,
+  html:not(.light) .mermaid-diagram .edgeLabel p,
+  html:not(.light) .mermaid-diagram .edgeLabel span {
     fill: #ffffff !important;
     color: #ffffff !important;
-  }
-  
-  .mermaid-diagram .node rect,
-  .mermaid-diagram .node circle,
-  .mermaid-diagram .node polygon {
-    fill: #374151 !important;
-    stroke: #6366f1 !important;
-  }
-  
-  .mermaid-diagram .edgePath path {
-    stroke: #9ca3af !important;
   }
 }

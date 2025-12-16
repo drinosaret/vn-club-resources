@@ -20,6 +20,7 @@ import {
   Timer,
   Download,
   Monitor,
+  Smartphone,
   ArrowRight,
 } from 'lucide-react';
 
@@ -82,6 +83,7 @@ const guidesSection: NavSection = {
     { title: 'VNTimeTracker', slug: 'timetracker-guide', description: 'Track your reading progress', icon: Timer },
     { title: 'JDownloader', slug: 'jdownloader-guide', description: 'Download manager for file hosts', icon: Download },
     { title: 'Neko Project II', slug: 'np2-guide', description: 'PC-98 emulator for classic VNs', icon: Monitor },
+    { title: 'GameHub Lite', slug: 'gamehub-lite-guide', description: 'Windows emulation on Android', icon: Smartphone },
   ],
 };
 
@@ -90,7 +92,7 @@ function ItemCard({ item }: { item: NavItem }) {
   return (
     <Link
       href={`/${item.slug}`}
-      className="group relative flex items-start gap-4 p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg hover:shadow-primary-500/10 transition-all duration-200"
+      className="group relative flex items-start gap-4 p-4 rounded-xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg hover:shadow-primary-500/10 transition-[border-color,box-shadow] duration-200"
     >
       <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200">
         <Icon className="w-5 h-5 text-white" />
@@ -103,7 +105,7 @@ function ItemCard({ item }: { item: NavItem }) {
           {item.description}
         </p>
       </div>
-      <ArrowRight className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all duration-200 flex-shrink-0 mt-2" />
+      <ArrowRight className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-[color,transform] duration-200 flex-shrink-0 mt-2" />
     </Link>
   );
 }

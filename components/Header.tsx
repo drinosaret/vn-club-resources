@@ -41,7 +41,7 @@ const mobileNavigation: NavSection[] = [
     name: 'Guides',
     items: [
       { name: 'Anki', href: '/anki-guide' },
-      { name: 'JL Dictionary', href: '/jl-guide' },
+      { name: 'JL', href: '/jl-guide' },
       { name: 'Textractor', href: '/textractor-guide' },
       { name: 'Agent', href: '/agent-guide' },
       { name: 'OwOCR', href: '/owocr-guide' },
@@ -51,6 +51,7 @@ const mobileNavigation: NavSection[] = [
       { name: 'VNTimeTracker', href: '/timetracker-guide' },
       { name: 'JDownloader', href: '/jdownloader-guide' },
       { name: 'Neko Project II', href: '/np2-guide' },
+      { name: 'GameHub Lite', href: '/gamehub-lite-guide' },
     ],
   },
   { name: 'Join Discord', href: '/join' },
@@ -147,7 +148,7 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4">
+          <div className="md:hidden mt-4 pb-4 max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden">
             <div className="flex flex-col space-y-1">
               <SearchBar
                 className="mb-3"

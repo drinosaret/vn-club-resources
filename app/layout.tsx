@@ -6,6 +6,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NavigationPrefetch } from "@/components/NavigationPrefetch";
 
 const roboto = Roboto({
   weight: ['400', '500', '700'],
@@ -82,6 +83,12 @@ export default function RootLayout({
     <html lang="en" className="light" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
+        {/* Preload critical assets */}
+        <link rel="preload" href="/assets/hikaru-icon2.webp" as="image" type="image/webp" />
+        {/* Preconnect to analytics */}
+        <link rel="preconnect" href="https://va.vercel-scripts.com" crossOrigin="anonymous" />
+        {/* Prefetch search index for faster search */}
+        <link rel="prefetch" href="/search-index.json" as="fetch" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
@@ -100,6 +107,7 @@ export default function RootLayout({
         />
       </head>
       <body className={roboto.className} suppressHydrationWarning>
+        <NavigationPrefetch />
         <ErrorBoundary>
           <div className="flex flex-col min-h-screen">
             <Header />

@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -79,8 +80,11 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
-  const cleanedContent = cleanMarkdown(content);
-  const blocks = parseContent(cleanedContent);
+  // Memoize expensive parsing operations to prevent re-computation during scroll
+  const blocks = useMemo(() => {
+    const cleanedContent = cleanMarkdown(content);
+    return parseContent(cleanedContent);
+  }, [content]);
 
   return (
     <div className="space-y-4">
