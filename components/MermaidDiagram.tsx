@@ -21,7 +21,7 @@ export const MermaidDiagram = memo(function MermaidDiagram({ chart }: MermaidDia
             theme: 'neutral',
             securityLevel: 'loose',
             flowchart: {
-              htmlLabels: true,
+              htmlLabels: false,
               curve: 'basis',
             },
           });
