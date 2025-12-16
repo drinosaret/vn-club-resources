@@ -20,7 +20,6 @@
     "flexsearch": "^0.8.212",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.400.0",
-    "mermaid": "^11.12.1",
     "next": "^16.0.3",
     "next-sitemap": "^4.2.3",
     "react": "^18.3.1",
@@ -37,7 +36,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
-    "@mermaid-js/mermaid-cli": "^11.12.0",
     "@next/eslint-plugin-next": "^16.0.10",
     "@types/hast": "^3.0.4",
     "@types/mdast": "^4.0.4",

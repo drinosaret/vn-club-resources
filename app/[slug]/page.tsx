@@ -127,7 +127,6 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
 export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // Use async version to get pre-rendered mermaid diagrams (eliminates layout shift)
   const guide = await getContentBySlugAsync('guides', slug);
 
   if (!guide) {

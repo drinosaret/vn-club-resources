@@ -1,6 +1,5 @@
 import { Components } from 'react-markdown';
 import { Children, ReactNode, isValidElement } from 'react';
-import { MermaidDiagram } from './MermaidDiagram';
 import { Callout } from './Callout';
 import { CodeBlock } from './CodeBlock';
 import { ImageLightbox } from './ImageLightbox';
@@ -218,12 +217,6 @@ export const markdownComponents: Components = {
 
   // Code
   code: ({ className, ...props }) => {
-    // Mermaid diagrams
-    if (className === 'language-mermaid') {
-      const code = String(props.children).replace(/\n$/, '');
-      return <MermaidDiagram chart={code} />;
-    }
-
     // Inline code
     const isInline = !className || !className.startsWith('language-');
 
