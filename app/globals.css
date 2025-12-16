@@ -170,14 +170,14 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   font-weight: 600 !important;
 }
 
-/* Node labels - white text on darker backgrounds */
+/* Node labels - dark text for readability on light backgrounds */
 .mermaid-diagram .node .label text,
 .mermaid-diagram .node .label tspan,
 .mermaid-diagram .node foreignObject p,
 .mermaid-diagram .node foreignObject span,
 .mermaid-diagram .node foreignObject div {
-  fill: #ffffff !important;
-  color: #ffffff !important;
+  fill: #1a1a1a !important;
+  color: #1a1a1a !important;
   font-weight: 600 !important;
 }
 
