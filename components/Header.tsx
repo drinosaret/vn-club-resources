@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import SearchBar from './SearchBar';
+import { getHeaderNavigation } from '@/lib/navigation';
 
 const DiscordIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -15,55 +16,8 @@ const DiscordIcon = ({ className }: { className?: string }) => (
 
 const DISCORD_URL = '/join';
 
-interface NavItem {
-  name: string;
-  href: string;
-}
-
-interface NavSection {
-  name: string;
-  href?: string;
-  items?: NavItem[];
-}
-
-const mobileNavigation: NavSection[] = [
-  { name: 'Home', href: '/' },
-  { name: 'Start Here', href: '/guide' },
-  {
-    name: 'Resources',
-    items: [
-      { name: 'Recommendations', href: '/find' },
-      { name: 'Where to Get VNs', href: '/sources' },
-      { name: 'Tools', href: '/tools' },
-    ],
-  },
-  {
-    name: 'Guides',
-    items: [
-      { name: 'Anki', href: '/anki-guide' },
-      { name: 'JL', href: '/jl-guide' },
-      { name: 'Textractor', href: '/textractor-guide' },
-      { name: 'Agent', href: '/agent-guide' },
-      { name: 'OwOCR', href: '/owocr-guide' },
-      { name: 'Meikipop', href: '/meikipop-guide' },
-      { name: 'Magpie', href: '/magpie-guide' },
-      { name: 'ShaderGlass', href: '/shaderglass-guide' },
-      { name: 'VNTimeTracker', href: '/timetracker-guide' },
-      { name: 'JDownloader', href: '/jdownloader-guide' },
-      { name: 'Neko Project II', href: '/np2-guide' },
-      { name: 'GameHub Lite', href: '/gamehub-lite-guide' },
-    ],
-  },
-  { name: 'Join Discord', href: '/join' },
-];
-
-const desktopNavigation = [
-  { name: 'Home', href: '/' },
-  { name: 'Start Here', href: '/guide' },
-  { name: 'Resources', href: '/find' },
-  { name: 'Guides', href: '/anki-guide' },
-  { name: 'Other', href: '/join' },
-];
+// Get navigation from single source of truth
+const { mobile: mobileNavigation, desktop: desktopNavigation } = getHeaderNavigation();
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

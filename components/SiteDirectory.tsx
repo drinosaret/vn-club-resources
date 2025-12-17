@@ -22,73 +22,44 @@ import {
   Monitor,
   Smartphone,
   ArrowRight,
+  LucideIcon,
 } from 'lucide-react';
+import { getSiteDirectorySections, NavItem } from '@/lib/navigation';
 
-interface NavItem {
-  title: string;
-  slug: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-interface NavSection {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  gradient: string;
-  items: NavItem[];
-}
-
-const mainSections: NavSection[] = [
-  {
-    title: 'Start Here',
-    icon: GraduationCap,
-    gradient: 'from-emerald-500 to-teal-600',
-    items: [
-      { title: 'The Guide', slug: 'guide', description: 'Complete roadmap for learning Japanese with VNs', icon: BookOpen },
-    ],
-  },
-  {
-    title: 'Resources',
-    icon: FolderOpen,
-    gradient: 'from-blue-500 to-indigo-600',
-    items: [
-      { title: 'Recommendations', slug: 'find', description: 'Databases, trackers, and where to discover VNs', icon: Search },
-      { title: 'Where to Get VNs', slug: 'sources', description: 'Digital storefronts and download sources', icon: ShoppingBag },
-      { title: 'Tools', slug: 'tools', description: 'Essential software for VN reading', icon: Package },
-    ],
-  },
-  {
-    title: 'Community',
-    icon: Users,
-    gradient: 'from-pink-500 to-rose-600',
-    items: [
-      { title: 'Join Discord', slug: 'join', description: 'Connect with fellow learners', icon: Users },
-    ],
-  },
-];
-
-const guidesSection: NavSection = {
-  title: 'Setup Guides',
-  icon: Wrench,
-  gradient: 'from-violet-500 to-purple-600',
-  items: [
-    { title: 'Anki', slug: 'anki-guide', description: 'Spaced repetition for vocabulary', icon: BookMarked },
-    { title: 'JL', slug: 'jl-guide', description: 'Popup dictionary for VN readers', icon: Languages },
-    { title: 'Textractor', slug: 'textractor-guide', description: 'Text hooking for Windows VNs', icon: Type },
-    { title: 'Agent', slug: 'agent-guide', description: 'Script-based hooker for emulators', icon: Cpu },
-    { title: 'OwOCR', slug: 'owocr-guide', description: 'OCR for untexthookable games', icon: ScanText },
-    { title: 'Meikipop', slug: 'meikipop-guide', description: 'OCR popup dictionary', icon: ScanText },
-    { title: 'Magpie', slug: 'magpie-guide', description: 'Window upscaling for older games', icon: Maximize },
-    { title: 'ShaderGlass', slug: 'shaderglass-guide', description: 'Real-time shader effects overlay', icon: Palette },
-    { title: 'VNTimeTracker', slug: 'timetracker-guide', description: 'Track your reading progress', icon: Timer },
-    { title: 'JDownloader', slug: 'jdownloader-guide', description: 'Download manager for file hosts', icon: Download },
-    { title: 'Neko Project II', slug: 'np2-guide', description: 'PC-98 emulator for classic VNs', icon: Monitor },
-    { title: 'GameHub Lite', slug: 'gamehub-lite-guide', description: 'Windows emulation on Android', icon: Smartphone },
-  ],
+// Icon mappings by slug - presentational only
+const iconMap: Record<string, LucideIcon> = {
+  'guide': BookOpen,
+  'find': Search,
+  'sources': ShoppingBag,
+  'tools': Package,
+  'join': Users,
+  'anki-guide': BookMarked,
+  'jl-guide': Languages,
+  'textractor-guide': Type,
+  'agent-guide': Cpu,
+  'owocr-guide': ScanText,
+  'meikipop-guide': ScanText,
+  'magpie-guide': Maximize,
+  'shaderglass-guide': Palette,
+  'timetracker-guide': Timer,
+  'jdownloader-guide': Download,
+  'np2-guide': Monitor,
+  'kirikiriroid-guide': Smartphone,
+  'gamehub-lite-guide': Smartphone,
 };
 
+const sectionConfig: Record<string, { icon: LucideIcon; gradient: string }> = {
+  'Start Here': { icon: GraduationCap, gradient: 'from-emerald-500 to-teal-600' },
+  'Resources': { icon: FolderOpen, gradient: 'from-blue-500 to-indigo-600' },
+  'Community': { icon: Users, gradient: 'from-pink-500 to-rose-600' },
+  'Setup Guides': { icon: Wrench, gradient: 'from-violet-500 to-purple-600' },
+};
+
+// Get navigation data from single source of truth
+const { mainSections: mainSectionsData, guides: guidesData } = getSiteDirectorySections();
+
 function ItemCard({ item }: { item: NavItem }) {
-  const Icon = item.icon;
+  const Icon = iconMap[item.slug] ?? Package;
   return (
     <Link
       href={`/${item.slug}`}
@@ -110,15 +81,16 @@ function ItemCard({ item }: { item: NavItem }) {
   );
 }
 
-function SectionHeader({ section }: { section: NavSection }) {
-  const Icon = section.icon;
+function SectionHeader({ title, gradient }: { title: string; gradient: string }) {
+  const config = sectionConfig[title];
+  const Icon = config?.icon ?? Wrench;
   return (
     <div className="flex items-center gap-3 mb-4">
-      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${section.gradient} flex items-center justify-center shadow-md`}>
+      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shadow-md`}>
         <Icon className="w-4 h-4 text-white" />
       </div>
       <h3 className="font-bold text-lg text-gray-900 dark:text-white">
-        {section.title}
+        {title}
       </h3>
     </div>
   );
@@ -140,9 +112,9 @@ export function SiteDirectory() {
         <div className="grid lg:grid-cols-5 gap-8">
           {/* Left column - 2/5 width */}
           <div className="lg:col-span-2 space-y-8">
-            {mainSections.map((section) => (
-              <div key={section.title}>
-                <SectionHeader section={section} />
+            {mainSectionsData.map((section) => (
+              <div key={section.key}>
+                <SectionHeader title={section.title} gradient={sectionConfig[section.title]?.gradient ?? 'from-gray-500 to-gray-600'} />
                 <div className="space-y-3">
                   {section.items.map((item) => (
                     <ItemCard key={item.slug} item={item} />
@@ -154,9 +126,9 @@ export function SiteDirectory() {
 
           {/* Right column - Guides - 3/5 width */}
           <div className="lg:col-span-3">
-            <SectionHeader section={guidesSection} />
+            <SectionHeader title="Setup Guides" gradient={sectionConfig['Setup Guides']?.gradient ?? 'from-violet-500 to-purple-600'} />
             <div className="grid sm:grid-cols-2 gap-3">
-              {guidesSection.items.map((item) => (
+              {guidesData.map((item) => (
                 <ItemCard key={item.slug} item={item} />
               ))}
             </div>

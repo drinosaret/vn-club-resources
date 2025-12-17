@@ -30,7 +30,7 @@ export function PageNavigation({ currentSlug }: PageNavigationProps) {
   };
 
   return (
-    <nav className="sticky top-24 z-10">
+    <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto sidebar-scroll">
       <div className="mb-3">
         <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">VN Club Resources</h2>
       </div>
