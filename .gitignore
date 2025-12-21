@@ -36,3 +36,4 @@ drafts/
 *.tmp
 nul
 temp/
+public/search-index.json

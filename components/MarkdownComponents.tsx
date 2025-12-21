@@ -3,6 +3,7 @@ import { Children, ReactNode, isValidElement } from 'react';
 import { Callout } from './Callout';
 import { CodeBlock } from './CodeBlock';
 import { ImageLightbox } from './ImageLightbox';
+import { LazyImage } from './LazyImage';
 import { generateHeadingId } from '@/lib/slug-utils';
 
 // Helper function to extract text from React children
@@ -70,7 +71,7 @@ export const markdownComponents: Components = {
     return <hr className="my-8 border-0 border-t border-gray-200 dark:border-gray-700" />;
   },
 
-  // Images with lightbox support
+  // Images with lightbox support and lazy loading
   img: (props) => {
     const src = props.src || '';
     const alt = props.alt || '';
@@ -84,42 +85,21 @@ export const markdownComponents: Components = {
           <img
             src={src}
             alt={alt}
-            className="rounded-lg shadow-sm mx-auto my-6"
+            className="rounded-lg shadow-sm mx-auto my-2"
             style={props.style}
           />
         </ImageLightbox>
       );
     }
 
-    // External images - use simple container without dynamic aspect ratio changes
-    // Avoids layout thrashing from onLoad style modifications
-    if (src.startsWith('http')) {
-      return (
-        <ImageLightbox src={src} alt={alt}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt={alt}
-            className="rounded-lg shadow-sm mx-auto my-6"
-            style={{ maxWidth: '600px', width: '100%', aspectRatio: '16 / 10', objectFit: 'contain' }}
-            loading="lazy"
-          />
-        </ImageLightbox>
-      );
-    }
-
-    // Local images - use native img to avoid Next.js Image warnings about aspect ratio
+    // Use LazyImage for proper loading state handling
     return (
-      <ImageLightbox src={src} alt={alt}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          className="rounded-lg shadow-sm mx-auto my-6"
-          style={{ maxWidth: '600px', width: '100%', aspectRatio: '16 / 10', objectFit: 'contain' }}
-          loading="lazy"
-        />
-      </ImageLightbox>
+      <LazyImage
+        src={src}
+        alt={alt}
+        className="rounded-lg shadow-sm mx-auto my-4"
+        style={{ maxWidth: '600px', width: '100%' }}
+      />
     );
   },
 
