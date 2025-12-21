@@ -75,9 +75,13 @@ Access settings through the system tray icon's right-click menu. Configuration i
 - **Auto scan mode** - Enable continuous scanning without holding the hotkey
 - **OCR provider** - Choose between Google Lens, meikiocr (local), or [OwOCR](/owocr-guide) (WebSocket)
 
-## Anki Mining Fork
+## Anki Mining Forks
 
-If you want to create Anki cards directly from Meikipop, check out [pnotisdev's fork](https://github.com/pnotisdev/meikipop). It adds:
+If you want to create Anki cards directly from Meikipop, there are two community forks available:
+
+### pnotisdev's fork
+
+[pnotisdev's fork](https://github.com/pnotisdev/meikipop) adds:
 
 - **Anki card creation** (Alt+A) - Captures screenshots and context sentences
 - **Duplicate detection** - Prevents adding words already in your deck
@@ -85,13 +89,22 @@ If you want to create Anki cards directly from Meikipop, check out [pnotisdev's 
 - **Additional shortcuts** - Alt+C to copy text, Alt+J for Jisho
 - **More dictionaries** - Supports monolingual dictionaries like [kaikki](https://yomidevs.github.io/kaikki-to-yomitan/)
 
+### zurcGH's fork
+
+[zurcGH's meikipop-anki](https://github.com/zurcGH/meikipop-anki) adds:
+
+- **Yomitan-style Anki integration** - Card creation workflow similar to Yomitan
+- **Frequency and pitch accent** - Displays frequency info and pitch accent marks
+- **Yomitan-api integration** - Uses your existing Yomitan dictionaries (bilingual and monolingual)
+- **Toggleable features** - Enable or disable individual features as needed
+
 !!! note
-    This fork has no prebuilt releases - you'll need to [build it from source](#from-source).
+    Neither fork has prebuilt releases. You'll need to [build from source](#from-source).
 
 ## Limitations
 
 The original Meikipop is focused specifically on dictionary lookups. It does not support:
-- SRS flashcard mining (use [JL](/jl-guide) or the [Anki fork above](#anki-mining-fork))
+- SRS flashcard mining (use [JL](/jl-guide) or the [Anki forks above](#anki-mining-forks))
 - Multiple dictionaries simultaneously
 
 ## Tips

@@ -1,11 +1,11 @@
 ---
-description: Step-by-step guide to setting up Textractor for visual novels, including H-codes, regex patterns, and text hooking troubleshooting for Japanese learning.
+description: How to use Textractor for visual novels. Setup guide for text hooking, WebSocket extension, texthooker UI, regex patterns, and mobile access for Japanese learners.
 sitemap:
   priority: 0.9
   changefreq: monthly
 ---
 
-# Textractor Guide
+# How to Use Textractor
 
 This guide walks you through setting up **Textractor** and connecting it to a browser-based UI using the **WebSocket extension**. Ideal for reading and mining from Japanese visual novels using Yomitan in your browser.
 
@@ -18,7 +18,7 @@ This guide walks you through setting up **Textractor** and connecting it to a br
 
 ### Integration Options
 - [Texthooker UI (Renji-XD)](https://renji-xd.github.io/texthooker-ui/)
-- [Kizuna Texthooker](https://kizuna-texthooker-ui.fly.dev/) - Alternative with leaderboards | [VNCR Room](https://kizuna-texthooker-ui.fly.dev/rooms/vncr)
+- [Kizuna Texthooker](https://kizuna-texthooker-ui.app/) - Alternative with leaderboards | [VNCR Room](https://kizuna-texthooker-ui.app/rooms/vncr)
 - [JL](/jl-guide)
 
 ## Step 1: Set Up Textractor
@@ -78,7 +78,7 @@ If textractor can't automatically find a working hook, you can try searching man
 
 ## How to View Text in the Browser
 
-1. Open [Renji-XD's Texthooker UI](https://renji-xd.github.io/texthooker-ui/) or [Kizuna Texthooker](https://kizuna-texthooker-ui.fly.dev/) in your browser. If the WebSocket is working, the colored icon in the top right should be green. If it's still red, trying clicking on it to reconnect.
+1. Open [Renji-XD's Texthooker UI](https://renji-xd.github.io/texthooker-ui/) or [Kizuna Texthooker](https://kizuna-texthooker-ui.app/) in your browser. If the WebSocket is working, the colored icon in the top right should be green. If it's still red, trying clicking on it to reconnect.
 2. Click the **Start** button in the top-right corner. (Or enable "Allow new Line during Pause" and "Autostart Timer by Line during Pause" in the settings.)
 3. Once Textractor is hooked and sending text, the UI will display it in real time.
 4. The WebSocket server will be automatically started by Textractor at:
@@ -88,6 +88,65 @@ If textractor can't automatically find a working hook, you can try searching man
 > This allows the texthooker UI to receive text directly from Textractor using the WebSocket extension.
 
 ![Successful WebSocket connection (icon is green)](assets/texthooking3.webp)
+
+## Running Texthooker Page Locally for Mobile Access
+
+Want to look up words on your phone or tablet while playing VNs fullscreen on your PC? By hosting the texthooker UI locally and using [Tailscale](https://tailscale.com/), you can access the texthooker page from any device on your network while still receiving text via WebSocket. This lets you read and look up words without alt-tabbing or using tools like Magpie.
+
+### 1. Build the Texthooker UI
+
+First, install [Node.js](https://nodejs.org/) if you don't have it already.
+
+Then clone or download [Renji-XD's Texthooker UI](https://github.com/Renji-XD/texthooker-ui) from GitHub and build it:
+
+```bash
+npm install --global pnpm
+pnpm install
+pnpm run build
+```
+
+This creates a `docs` folder with the built application.
+
+### 2. Run a Local Web Server
+
+Create a file called `start-server.bat` in the texthooker-ui folder with the following contents:
+
+```batch
+@echo off
+cd docs
+python -m http.server 8080
+pause
+```
+
+Double-click the batch file to start the server. The texthooker UI will be available at `http://localhost:8080`.
+
+### 3. Set Up Tailscale (Recommended)
+
+[Tailscale](https://tailscale.com/) creates a secure private network between your devices, allowing your phone to connect to your PC even when not on the same Wi-Fi.
+
+1. Install Tailscale on your PC and mobile device
+2. Sign in with the same account on both devices
+3. Note your PC's Tailscale IP address (visible in the [admin console](https://login.tailscale.com/admin/machines))
+
+### 4. Access from Mobile
+
+1. On your mobile device, open `http://[your-ip]:8080` in your browser (where `[your-ip]` is the IP of your PC running Textractor)
+2. In the texthooker UI settings, change the WebSocket URL to `ws://[your-ip]:6677`
+3. Click connect. You should now receive text from Textractor on your phone
+
+<div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 1rem 0;">
+  <img src="/assets/texthooker-mobile-settings.webp" alt="Texthooker mobile settings showing WebSocket configuration" style="max-width: 280px; width: auto; margin: 0;" />
+  <img src="/assets/texthooker-mobile-working.webp" alt="Texthooker receiving text on mobile" style="max-width: 280px; width: auto; margin: 0;" />
+</div>
+
+### Recommended Mobile Browsers
+
+These browsers support Chrome extensions like Yomitan for dictionary lookups:
+
+- **Edge** (Android/iOS) - Recommended
+- **Kiwi Browser** (Android) - No longer maintained
+
+> **Tip:** This setup lets you keep your game running fullscreen while looking up words on a separate device. No need for windowed mode or screen upscalers.
 
 ## Useful Regex Patterns
 

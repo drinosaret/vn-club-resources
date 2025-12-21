@@ -101,7 +101,7 @@ export const markdownComponents: Components = {
             src={src}
             alt={alt}
             className="rounded-lg shadow-sm mx-auto my-6"
-            style={{ maxWidth: '600px', width: '100%', height: 'auto' }}
+            style={{ maxWidth: '600px', width: '100%', aspectRatio: '16 / 10', objectFit: 'contain' }}
             loading="lazy"
           />
         </ImageLightbox>
@@ -116,7 +116,7 @@ export const markdownComponents: Components = {
           src={src}
           alt={alt}
           className="rounded-lg shadow-sm mx-auto my-6"
-          style={{ maxWidth: '600px', width: '100%', height: 'auto' }}
+          style={{ maxWidth: '600px', width: '100%', aspectRatio: '16 / 10', objectFit: 'contain' }}
           loading="lazy"
         />
       </ImageLightbox>
