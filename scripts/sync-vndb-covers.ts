@@ -162,6 +162,21 @@ function findUnconvertedImages(): string[] {
 }
 
 /**
+ * Run a promise with a timeout. Rejects if the promise doesn't resolve in time.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms: ${label}`)), ms);
+    promise.then(
+      (val) => { clearTimeout(timer); resolve(val); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
+const SHARP_TIMEOUT_MS = 30_000; // 30s per image
+
+/**
  * Convert a single image to WebP with retry
  */
 async function convertToWebP(jpgPath: string, retries = 2): Promise<boolean> {
@@ -169,17 +184,18 @@ async function convertToWebP(jpgPath: string, retries = 2): Promise<boolean> {
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      await sharp(jpgPath)
-        .webp({ quality: WEBP_QUALITY })
-        .toFile(webpPath);
+      await withTimeout(
+        sharp(jpgPath).webp({ quality: WEBP_QUALITY }).toFile(webpPath),
+        SHARP_TIMEOUT_MS,
+        jpgPath,
+      );
       return true;
     } catch (error) {
       if (attempt < retries) {
-        // Wait a bit before retrying
         await new Promise(resolve => setTimeout(resolve, 100));
         continue;
       }
-      // Log error on final failure but don't crash
+      console.warn(`\nFailed to convert: ${path.basename(jpgPath)} (${error instanceof Error ? error.message : error})`);
       return false;
     }
   }
@@ -194,6 +210,8 @@ async function convertImagesInParallel(images: string[]): Promise<{ converted: n
   const queue = [...images];
   let processed = 0;
 
+  const logEvery = images.length < 50 ? 1 : 100;
+
   async function worker() {
     while (queue.length > 0) {
       const imagePath = queue.shift();
@@ -207,7 +225,7 @@ async function convertImagesInParallel(images: string[]): Promise<{ converted: n
       }
 
       processed++;
-      if (processed % 100 === 0) {
+      if (processed % logEvery === 0) {
         process.stdout.write(`\rConverted ${processed}/${images.length} images...`);
       }
     }
@@ -285,13 +303,17 @@ async function generateVariants(task: VariantTask, retries = 2): Promise<{ gener
 
       for (const variant of task.variants) {
         try {
-          await sharp(sourceBuffer)
-            .resize(variant.width, null, {
-              fit: 'inside',
-              withoutEnlargement: true,
-            })
-            .webp({ quality: WEBP_QUALITY })
-            .toFile(variant.outputPath);
+          await withTimeout(
+            sharp(sourceBuffer)
+              .resize(variant.width, null, {
+                fit: 'inside',
+                withoutEnlargement: true,
+              })
+              .webp({ quality: WEBP_QUALITY })
+              .toFile(variant.outputPath),
+            SHARP_TIMEOUT_MS,
+            `${task.jpgPath} w${variant.width}`,
+          );
           results.generated++;
         } catch {
           results.failed++;
@@ -319,6 +341,8 @@ async function generateVariantsInParallel(tasks: VariantTask[]): Promise<{ gener
   let processed = 0;
   const totalVariants = tasks.reduce((sum, t) => sum + t.variants.length, 0);
 
+  const logEvery = tasks.length < 50 ? 1 : 100;
+
   async function worker() {
     while (queue.length > 0) {
       const task = queue.shift();
@@ -329,7 +353,7 @@ async function generateVariantsInParallel(tasks: VariantTask[]): Promise<{ gener
       results.failed += taskResults.failed;
 
       processed++;
-      if (processed % 100 === 0) {
+      if (processed % logEvery === 0) {
         process.stdout.write(`\rGenerated ${results.generated + results.failed}/${totalVariants} resized variants...`);
       }
     }
