@@ -1,5 +1,3 @@
-import FlexSearch from 'flexsearch';
-
 export interface SearchDocument {
   id: string;
   slug: string;
@@ -28,53 +26,56 @@ let indexLoaded = false;
 export async function loadSearchIndex(): Promise<void> {
   if (indexLoaded) return;
 
-  try {
-    const response = await fetch('/search-index.json');
-    documents = await response.json();
+  const response = await fetch('/search-index.json', {
+    signal: AbortSignal.timeout(10000), // 10s timeout
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to load search index: ${response.status}`);
+  }
+  documents = await response.json();
 
-    // Build a map for quick lookups
-    documentMap = new Map(documents.map(doc => [doc.id, doc]));
+  // Build a map for quick lookups
+  documentMap = new Map(documents.map(doc => [doc.id, doc]));
 
-    // Create a simple index for searching
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    searchIndex = new (FlexSearch as any).Index({
-      tokenize: 'forward',
-      encode: (str: string) => {
-        // Custom encoder that works with both English and Japanese
-        const tokens: string[] = [];
-        const words = str.toLowerCase().split(/\s+/);
+  // Dynamically import FlexSearch so it's not bundled with every page
+  const FlexSearch = (await import('flexsearch')).default;
 
-        for (const word of words) {
-          tokens.push(word);
-          // For CJK characters, also add individual characters and n-grams
-          const cjkChars = word.match(/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g);
-          if (cjkChars) {
-            tokens.push(...cjkChars);
-            // Add bigrams for better CJK matching
-            for (let i = 0; i < word.length - 1; i++) {
-              if (/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(word[i])) {
-                tokens.push(word.substring(i, i + 2));
-              }
+  // Create a simple index for searching
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  searchIndex = new (FlexSearch as any).Index({
+    tokenize: 'forward',
+    encode: (str: string) => {
+      // Custom encoder that works with both English and Japanese
+      const tokens: string[] = [];
+      const words = str.toLowerCase().split(/\s+/);
+
+      for (const word of words) {
+        tokens.push(word);
+        // For CJK characters, also add individual characters and n-grams
+        const cjkChars = word.match(/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g);
+        if (cjkChars) {
+          tokens.push(...cjkChars);
+          // Add bigrams for better CJK matching
+          for (let i = 0; i < word.length - 1; i++) {
+            if (/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(word[i])) {
+              tokens.push(word.substring(i, i + 2));
             }
           }
         }
+      }
 
-        return tokens;
-      },
-    });
+      return tokens;
+    },
+  });
 
-    // Add all documents to the index
-    // Combine title, description, and content for searching
-    for (const doc of documents) {
-      const searchableText = [doc.title, doc.description || '', doc.content].join(' ');
-      searchIndex.add(doc.id, searchableText);
-    }
-
-    indexLoaded = true;
-  } catch (error) {
-    console.error('Failed to load search index:', error);
-    throw error;
+  // Add all documents to the index
+  // Combine title, description, and content for searching
+  for (const doc of documents) {
+    const searchableText = [doc.title, doc.description || '', doc.content].join(' ');
+    searchIndex.add(doc.id, searchableText);
   }
+
+  indexLoaded = true;
 }
 
 function getExcerpt(content: string, query: string, maxLength: number = 150): string {
@@ -102,8 +103,11 @@ function getExcerpt(content: string, query: string, maxLength: number = 150): st
   return excerpt;
 }
 
+const MAX_QUERY_LENGTH = 500;
+
 export async function searchContent(query: string): Promise<SearchResult[]> {
-  if (!query.trim()) return [];
+  const trimmed = query.trim();
+  if (!trimmed || trimmed.length > MAX_QUERY_LENGTH) return [];
 
   await loadSearchIndex();
 

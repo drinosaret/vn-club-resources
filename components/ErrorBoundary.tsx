@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, ReactNode } from 'react';
+import { logReporter } from '@/lib/log-reporter';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -8,6 +9,22 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+}
+
+/**
+ * Sanitize stack trace to remove sensitive information like absolute paths
+ * and user-specific directory names.
+ */
+function sanitizeStackTrace(stack: string | undefined): string | undefined {
+  if (!stack) return undefined;
+
+  return stack
+    // Remove absolute paths, keep just filename
+    .replace(/(?:at\s+)?(?:[A-Za-z]:)?(?:\/[\w.-]+)+\//g, '')
+    // Remove user directory paths (Windows and Unix)
+    .replace(/(?:C:\\Users\\[^\\]+\\|\/home\/[^/]+\/|\/Users\/[^/]+\/)/gi, '')
+    // Truncate to reasonable length
+    .slice(0, 2000);
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -21,7 +38,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Report to backend with sanitized stack traces
+    logReporter.error(error.message, {
+      stackTrace: sanitizeStackTrace(error.stack),
+      componentStack: sanitizeStackTrace(errorInfo.componentStack ?? undefined),
+      component: 'ErrorBoundary',
+    });
   }
 
   render() {

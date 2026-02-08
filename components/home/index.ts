@@ -1,0 +1,18 @@
+export { HeroSection } from './HeroSection';
+export { FloatingCovers } from './FloatingCovers';
+export { StatsBanner } from './StatsBanner';
+export { FeaturedVNs } from './FeaturedVNs';
+export type { FeaturedVNData } from '@/lib/featured-vns';
+export { AnnouncementBanner } from './AnnouncementBanner';
+export { StatsPreviewSection } from './StatsPreviewSection';
+export { FeatureCard } from './FeatureCard';
+export { MiniScoreChart } from './MiniScoreChart';
+export { MiniReleaseYearChart } from './MiniReleaseYearChart';
+export { DashboardCard } from './DashboardCard';
+export { DashboardGrid } from './DashboardGrid';
+export { StatsSearchPreview } from './StatsSearchPreview';
+export { ExploreSection } from './ExploreSection';
+export { FeatureStrip } from './FeatureStrip';
+export { FeatureStripCard } from './FeatureStripCard';
+export { GuidesCarousel } from './GuidesCarousel';
+export { FeatureShowcase } from './FeatureShowcase';

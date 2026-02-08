@@ -1,6 +1,12 @@
 import Link from 'next/link';
-import { BookOpen, Users, Newspaper, Wrench } from 'lucide-react';
-import { SiteDirectory } from '@/components/SiteDirectory';
+import { Users } from 'lucide-react';
+import { HeroSection } from '@/components/home/HeroSection';
+import { FeaturedVNs } from '@/components/home/FeaturedVNs';
+import { ExploreSection } from '@/components/home/ExploreSection';
+import { getGuidesWithImages } from '@/lib/navigation-server';
+import { getFeaturedVNsData } from '@/lib/featured-vns';
+import type { Metadata } from 'next';
+import { safeJsonLdStringify } from '@/lib/metadata-utils';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -9,7 +15,6 @@ function GitHubIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-import type { Metadata } from 'next';
 
 export const dynamic = 'force-static';
 
@@ -23,9 +28,15 @@ export const metadata: Metadata = {
 const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'Visual Novel Club Resources',
+  name: 'VN Club',
+  alternateName: ['Visual Novel Club Resources', 'VNClub'],
   url: 'https://vnclub.org',
-  description: 'Learn Japanese with visual novels using our comprehensive guides, tools, and resources.',
+  description: 'Learn Japanese with visual novels. The definitive resource for immersion-based Japanese learning through VNs. Guides, tools, and VNDB integration to find your next read.',
+  inLanguage: 'en',
+  about: {
+    '@type': 'Thing',
+    name: 'Learning Japanese through Visual Novels',
+  },
   potentialAction: {
     '@type': 'SearchAction',
     target: {
@@ -36,143 +47,61 @@ const websiteSchema = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  // Get guides with images for the visual showcase
+  const guides = getGuidesWithImages();
+  // Fetch featured VNs server-side with ISR caching
+  const featuredVNs = await getFeaturedVNsData();
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(websiteSchema) }}
       />
       <div className="w-full">
-        {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6">
-              Welcome to the Club
-            </h1>
-            <div className="mb-8 select-none">
-              <span
-                className="text-7xl md:text-8xl lg:text-9xl font-black tracking-wider
-                  bg-gradient-to-br from-white via-primary-200 to-white bg-clip-text text-transparent"
-              >
-                魑魅魍魎
-              </span>
-            </div>
-            <p className="text-lg mb-10 max-w-3xl mx-auto text-primary-50">
-              This site is a curated hub for learning Japanese through visual novels, eroge, and other video games. 
-              Whether you’re new to the medium or already deep into immersion, you’ll find everything you need to get started.
+        {/* 1. Hero Section with Stats Banner */}
+        <HeroSection />
+
+        {/* 2. Featured VNs Section */}
+        <FeaturedVNs vns={featuredVNs} />
+
+        {/* 3. Explore Section - Site Directory */}
+        <ExploreSection guides={guides} />
+
+        {/* 5. Community CTA */}
+        <section className="bg-gradient-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">
+          <div className="container mx-auto px-4 max-w-4xl text-center">
+            <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">
+              Get Involved
+            </h2>
+            <p className="text-lg md:text-xl mb-8 md:mb-10 text-primary-100 max-w-2xl mx-auto">
+              This is an open wiki maintained by the community. Join us on Discord or help improve the site on GitHub.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link 
-                href="/guide" 
-                className="bg-white text-primary-700 px-8 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors"
+              <Link
+                href="/join"
+                className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-all duration-200"
               >
-                Get Started
+                <Users className="w-5 h-5" />
+                Join Discord
               </Link>
-              <Link 
-                href="/join" 
-                className="bg-primary-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-400 transition-colors border-2 border-white"
+              <a
+                href="https://github.com/drinosaret/vn-club-resources"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-primary-500/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-500/50 transition-all duration-200 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm"
               >
-                Join Community
-              </Link>
+                <GitHubIcon className="w-5 h-5" />
+                Contribute on GitHub
+              </a>
             </div>
+            <blockquote className="mt-8 md:mt-12 text-base md:text-lg italic text-primary-200">
+              &quot;Read more.&quot; – Everyone who made it
+            </blockquote>
           </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
-            Everything You Need
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <FeatureCard
-              icon={<BookOpen className="w-12 h-12 text-primary-600" />}
-              title="Comprehensive Guides"
-              description="Step-by-step tutorials for setting up tools and getting started with Japanese VNs"
-              href="/guide"
-            />
-            <FeatureCard
-              icon={<Wrench className="w-12 h-12 text-primary-600" />}
-              title="Essential Tools"
-              description="Curated collection of tools for text hooking, OCR, dictionaries, and more"
-              href="/tools"
-            />
-            <FeatureCard
-              icon={<Newspaper className="w-12 h-12 text-primary-600" />}
-              title="Resources"
-              description="Discover new VNs, find recommendations, and learn where to get them"
-              href="/find"
-            />
-            <FeatureCard
-              icon={<Users className="w-12 h-12 text-primary-600" />}
-              title="Active Community"
-              description="Connect with fellow learners, get help, and share your progress"
-              href="/join"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Site Directory */}
-      <SiteDirectory />
-
-      {/* Community CTA */}
-      <section className="bg-primary-600 text-white py-16">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Get Involved
-          </h2>
-          <p className="text-xl mb-8 text-primary-100">
-            This is an open wiki maintained by the community. Join us on Discord or help improve the site on GitHub.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/join"
-              className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors"
-            >
-              <Users className="w-5 h-5" />
-              Join Discord
-            </Link>
-            <a
-              href="https://github.com/drinosaret/vn-club-resources"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-primary-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-400 transition-colors border-2 border-white"
-            >
-              <GitHubIcon className="w-5 h-5" />
-              Contribute on GitHub
-            </a>
-          </div>
-          <blockquote className="mt-12 text-lg italic text-primary-200">
-            &quot;Read more.&quot; – Everyone who made it
-          </blockquote>
-        </div>
-      </section>
+        </section>
       </div>
     </>
-  );
-}
-
-function FeatureCard({ icon, title, description, href }: { 
-  icon: React.ReactNode; 
-  title: string; 
-  description: string;
-  href: string;
-}) {
-  return (
-    <Link href={href} className="block group">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-xl transition-shadow h-full">
-        <div className="mb-4">{icon}</div>
-        <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">
-          {title}
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          {description}
-        </p>
-      </div>
-    </Link>
   );
 }

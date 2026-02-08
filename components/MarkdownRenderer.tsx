@@ -4,8 +4,29 @@ import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { markdownComponents } from './MarkdownComponents';
 import { AdmonitionBlock } from './AdmonitionBlock';
+
+// Custom sanitization schema that allows safe HTML while blocking XSS
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    // Allow class attributes for styling
+    '*': [...(defaultSchema.attributes?.['*'] || []), 'className', 'class'],
+    // Allow target and rel on links for external links
+    a: [...(defaultSchema.attributes?.a || []), 'target', 'rel'],
+    // Allow src and alt on images
+    img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'loading'],
+  },
+  // Block dangerous protocols
+  protocols: {
+    ...defaultSchema.protocols,
+    href: ['http', 'https', 'mailto'],
+    src: ['http', 'https'],
+  },
+};
 
 interface ContentBlock {
   type: 'markdown' | 'admonition';
@@ -106,7 +127,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           <div key={index}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
+              rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
               components={markdownComponents}
             >
               {block.content}

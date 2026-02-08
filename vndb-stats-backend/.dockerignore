@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.tw_session
+*.session
+
+# Data files
+data/
+*.zst
+*.dump
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Version control
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+docker-compose*.yml
+Dockerfile
+
+# Documentation
+*.md
+LICENSE

@@ -1,0 +1,24 @@
+name: Deploy to VPS
+
+on:
+  # Uncomment once VPS is set up and GitHub secrets (VPS_HOST, VPS_SSH_KEY) are configured:
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch:  # Manual only until VPS is ready
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/vn-club-resources
+            git pull --ff-only
+            docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
+            docker image prune -f

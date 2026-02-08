@@ -7,114 +7,115 @@ sitemap:
 
 # Magpie Guide
 
-This guide walks you through setting up and using [Magpie](https://github.com/Blinue/Magpie), a lightweight window upscaling tool that can dramatically improve the visual quality of older visual novels and games.
+[Magpie](https://github.com/Blinue/Magpie) is an extremely lightweight application for window upscaling which provides a serious visual enhancement for older visual novels and video games.
 
-Magpie applies advanced scaling algorithms to windowed applications, making low-resolution content look crisp on modern high-resolution displays.
+The advanced window scaling algorithms applied by Magpie to windowed applications provide older low-resolution content a sharp appearance on today's high-resolution monitors.
 
 ![Magpie main window](assets/magpie1.webp)
 
-## Requirements
+## Hardware Requirements
 
-- **Windows 10** (version 1903 or later) or **Windows 11**
-- **DirectX** feature level 11
-- A visual novel or game
+- **Windows 10** (version 1903 or later)
+- **DirectX** Feature Level 11
+- Visual novel or video game to upscale
 
 ## Installation
 
-1. Download the latest release from the [Magpie Releases page](https://github.com/Blinue/Magpie/releases)
-2. Extract the downloaded archive to a folder of your choice
-3. Run `Magpie.exe` to start the application
+### Download the Latest Release of Magpie
 
-## Basic Usage
+1. Visit the [Magpie Releases page](https://github.com/Blinue/Magpie/releases)
+2. Download the latest version of Magpie
+3. Unzip the file to a location that is easy to locate
+4. Run `Magpie.exe` to begin using it
+
+## Basic Use of Magpie
 
 ### Hotkeys
 
-Magpie can upscale windows in two different modes:
+Magpie allows users to upscale windows in two ways:
 
-- **Fullscreen** - Scales the window to fill your entire screen
-  - Default hotkey: `Alt + Shift + A`
-- **Windowed** - Scales the window while keeping it windowed
-  - Default hotkey: `Alt + Shift + Q`
+- **Full Screen** - Fill your entire screen
+  - Default Hotkey: `Alt + Shift + A`
+- **Windowed** - Allow the window to remain within the boundaries of your monitor
+  - Default Hotkey: `Alt + Shift + Q`
 
-### Quick Start
+### How to Get Started Quickly
 
 1. Launch Magpie
-2. Launch your visual novel or game
-3. Click on the game window to make it active
-4. Press `Alt + Shift + A` for fullscreen scaling, or `Alt + Shift + Q` for windowed scaling
-5. Press the same hotkey again to deactivate scaling
+2. Run your visual novel or video game
+3. Click on the window of the game to select it as active
+4. Press `Alt + Shift + A` to use full-screen upscaling, or `Alt + Shift + Q` to use windowed upscaling
+5. Press the same hotkey once more to disable the upscaling
 
-**Before scaling:**
+**Before Scaling:**
 
 ![Before Magpie scaling](assets/magpie2.webp)
 
-**After scaling:**
+**After Scaling:**
 
 ![After Magpie scaling](assets/magpie3.webp)
 
 ### Scaling Algorithms
 
-Magpie includes many scaling options. Here are the most relevant for visual novels:
+Magpie comes with several pre-configured scaling options specifically designed to support the artwork found in visual novels.
 
 **Best for VNs:**
-- **CuNNy** - The go-to choice for VN artwork. Handles illustrated characters and backgrounds beautifully (recommended)
-- **Anime4K** - Works well on VN sprites. Multiple variants for different needs
-- **ACNet** - Can clean up grainy or compressed CGs while upscaling
+- **CuNNy** - This is the best choice for VN artwork. It creates stunning effects on illustrated characters and backgrounds. Recommended.
+- **Anime4K** - Excellent for VN sprite upscaling, with many variants
+- **ACNet** - Eliminates blurry/distorted CGs during upscale
 
-**If CuNNy is too slow:**
-- **FSR** - Much faster but still looks decent. Good fallback for weaker hardware
-- **Lanczos / Jinc** - Classic algorithms that work on anything
-- **FSRCNNX** - Balance between quality and speed
+**When CuNNy is Too Slow:**
+- **FSR** - Much faster than CuNNy while creating nice results. Suitable for lower-end hardware
+- **Lanczos / Jinc** - Classic methods that will function on anything
+- **FSRCNNX** - Compromise between speed and quality
 
-**For PC-98 and older VNs:**
-- **CRT shaders** (Easymode, Geom, Hyllian, Lottes) - Give that authentic retro look if you're playing classic titles
-- **xBRZ / MMPX** - Smooth out pixel art while preserving the aesthetic
-- **Pixellate / SharpBilinear** - Keep pixels sharp without blurring
+**Older VNs (PC-98):**
+- **CRT Shaders** (Easymode, Geom, Hyllian, Lottes) - Adds the nostalgic feel of CRT
+- **xBRZ / MMPX** - Smoothes pixel art without distorting the style
+- **Pixellate / SharpBilinear** - Maintains pixel clarity without blurring
 
-**Optional post-processing:**
-- **CAS** - Quick sharpening pass
-- **AdaptiveSharpen** - Brings out soft details without overdoing it
-- **SMAA / FXAA** - Reduce jagged edges on text and UI elements
+**Optional Post-processing:**
+- **CAS** - Rapid sharpening tool
+- **AdaptiveSharpen** - More gentle and won't ruin fine detail
+- **SMAA / FXAA** - Reduces harsh edge blur on text/UI elements
 
-<img src="assets/magpie4.webp" alt="Available scaling modes in Magpie" style="max-height: 400px; width: auto;" />
+<img src="assets/magpie4.webp" alt="All available scaling modes for Magpie" style="max-height: 400px; width: auto;" />
 
-## Configuration
+## Configuring
 
-### Recommended Settings for VNs
+### Suggested Configuration for Visual Novels
 
-For visual novels, [CuNNy](https://github.com/funnyplanter/CuNNy) tends to give the best results. It was specifically designed with VN-style artwork in mind.
+[CuNNy](https://github.com/funnyplanter/CuNNy) is generally the default choice for visual novels due to its design around the type of artwork seen in most VNs.
 
-- **CuNNy-NVL** - Tuned for the kind of art you see in VNs. Start here
-- **CuNNy-DS** - Includes extra cleanup if your source looks noisy or soft
-- **CuNNy-fast** - Try this if your GPU struggles with the standard version
+- **CuNNy-NVL** - Best starting point for standard VN art
+- **CuNNy-DS** - Provides additional cleaning if your original source appears to be noisy/soft
+- **CuNNy-fast** - When your GPU cannot run the normal version
 
-The variants with larger numbers (8x32, 4x32) look nicer but are more demanding. If you're getting stuttering or low framerates, drop down to a smaller or "fast" variant.
+While the larger versions (8x32, 4x32) result in better visuals they do come at a cost. In case you notice stuttering or a very low frame rate, try reducing the size of the upscaling or using the "fast" version.
 
 To enable CuNNy:
 
-1. Open Magpie and go to any of your profiles
-2. Under the **General** section, find the **Scaling mode** setting
-3. Change the scaling mode to a **CuNNy** variant
+1. Open Magpie and open a new profile
+2. Look for the scaling mode setting under **General**
+3. Replace with a CuNNy variant
 
 ### Profiles
 
-Magpie allows you to create multiple profiles with different settings like scaling mode and capture method. You can switch between profiles depending on what works best for each game.
+Magpie has the ability to create multiple profiles and assign various settings for scaling mode and capture method. Based upon the current game you're playing, you can quickly switch between these profiles.
 
-### Graphics Card Selection
+### Choosing Graphics Cards
 
-If you have multiple graphics cards (e.g., integrated and dedicated GPU), you may need to select the correct one:
+If you have a laptop with both a dedicated and integrated graphics card, ensure you choose the correct one.
 
 1. Open your profile settings
-2. Go to the **Performance** section
-3. Select your preferred graphics card
-
-This is important for getting the best performance, especially on laptops with both integrated and dedicated graphics.
+2. Find the **Performance** tab
+3. Choose the graphics card you wish to use
 
 ### Troubleshooting
 
-> **Tip:** For older games, try disabling DPI scaling overrides in the game's compatibility settings before using Magpie.
+> **Tip:** Some older games may be able to upscale smoother if you disable DPI scaling in the game's compatibility settings before running through Magpie.
 
-If a game has built-in resolution options, it may be best to use the game's native settings rather than Magpie's scaling.
+It would likely be better to use the game's native resolution settings instead of using Magpie's upscaling for games that contain their own resolution selection options.
 
 ## Related Pages
 

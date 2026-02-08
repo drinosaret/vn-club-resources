@@ -1,0 +1,169 @@
+# =============================================================================
+# VNDB Stats Backend - Docker Compose Configuration
+# =============================================================================
+#
+# DATA PERSISTENCE:
+#   Your data is stored in Docker volumes (pgdata, redisdata, dumps).
+#   These volumes PERSIST across container restarts and rebuilds.
+#
+# SAFE COMMANDS (keep your data):
+#   docker-compose restart          # Restart containers
+#   docker-compose up --build       # Rebuild and restart
+#   docker-compose down             # Stop containers
+#
+# DANGEROUS COMMAND (deletes ALL data):
+#   docker-compose down -v          # The -v flag removes volumes!
+#
+# See DEVELOPMENT.md for full development workflow guide.
+# =============================================================================
+
+services:
+  # Main API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    # NOTE: CORS_ORIGINS is set in .env (gitignored). For production, set it in deploy/.env.prod
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-vndb_dev_password}@db:5432/vndb_stats
+      - REDIS_URL=redis://redis:6379
+      - DEBUG=false
+      - WATCHFILES_FORCE_POLLING=true
+      - PYTHONUNBUFFERED=1
+      # Disable auto-update - worker handles imports now
+      - AUTO_UPDATE=false
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - dumps:/app/data
+      - ./app:/app/app  # Mount source code for hot reloading
+      - ./scripts:/app/scripts
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app", "--reload-delay", "1.0"]
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
+  # PostgreSQL database
+  # Data is stored in the 'pgdata' volume - persists across restarts
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=vndb
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vndb_dev_password}
+      - POSTGRES_DB=vndb_stats
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Port NOT exposed to host — use `docker compose exec db psql -U vndb vndb_stats` for local access
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vndb -d vndb_stats"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    # Port NOT exposed to host — access via docker network only
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
+  # Discord bot for admin management via slash commands
+  discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-vndb_dev_password}@db:5432/vndb_stats
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - dumps:/app/data
+      - ./app:/app/app
+      - ./discord_bot:/app/discord_bot
+      - ./scripts:/app/scripts
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
+    command: ["python", "scripts/run_bot.py"]
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
+  # Dedicated worker for imports and scheduled tasks
+  # Runs separately from API to avoid blocking queries during imports
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-vndb_dev_password}@db:5432/vndb_stats
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+      # DEV_MODE=true prevents automatic imports on startup
+      # Set to false in production for automatic daily updates
+      - DEV_MODE=false
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - dumps:/app/data
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
+    command: ["python", "scripts/worker.py"]
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
+# =============================================================================
+# VOLUMES - These store your data persistently
+# =============================================================================
+# pgdata:    PostgreSQL database (~40k VNs, all stats, recommendations)
+# redisdata: Redis cache (temporary, can be regenerated)
+# dumps:     Downloaded VNDB dump files (used for imports)
+#
+# These volumes survive container restarts and rebuilds.
+# Only deleted when you run: docker-compose down -v
+# =============================================================================
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  dumps:
+    driver: local
+
+networks:
+  vndb-net:
+    driver: bridge

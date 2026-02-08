@@ -26,6 +26,37 @@ function extractTitleFromContent(content: string): string | null {
   return match ? match[1].trim() : null;
 }
 
+/**
+ * Extract the first image URL from MDX content.
+ * Checks markdown image syntax first, then HTML img tags.
+ */
+export function extractFirstImage(content: string): string | null {
+  // Match markdown image: ![alt](path) - capture the path
+  const mdMatch = content.match(/!\[[^\]]*\]\(([^)]+)\)/);
+  // Match HTML img: <img ... src="path" ... /> - capture the src
+  const htmlMatch = content.match(/src=["']([^"']+\.(?:webp|png|jpg|jpeg|gif))["']/i);
+
+  // Use whichever appears first in the content
+  const mdIndex = mdMatch ? mdMatch.index! : Infinity;
+  const htmlIndex = htmlMatch ? htmlMatch.index! : Infinity;
+
+  const imgPath = mdIndex <= htmlIndex ? mdMatch?.[1] : htmlMatch?.[1];
+  if (!imgPath) return null;
+
+  // Normalize path: convert relative 'assets/' to absolute '/assets/'
+  return imgPath.replace(/^assets\//, '/assets/');
+}
+
+/**
+ * Get the hero image for a guide by its slug.
+ * Reads the guide content and extracts the first image.
+ */
+export function getGuideHeroImage(slug: string): string | null {
+  const post = getContentBySlug('guides', slug);
+  if (!post) return null;
+  return extractFirstImage(post.content);
+}
+
 export function getContentBySlug(type: 'guides', slug: string): Post | null {
   const cacheKey = `${type}:${slug}`;
 
@@ -73,8 +104,8 @@ export function getContentBySlug(type: 'guides', slug: string): Post | null {
     }
 
     return post;
-  } catch (error) {
-    console.error(`Failed to load content for ${slug}`, error);
+  } catch {
+    // Content file failed to load
     return null;
   }
 }
@@ -106,8 +137,8 @@ export function getAllContent(type: 'guides'): Post[] {
       });
 
     return posts;
-  } catch (error) {
-    console.error(`Failed to load content list for ${type}`, error);
+  } catch {
+    // Content directory failed to load
     return [];
   }
 }

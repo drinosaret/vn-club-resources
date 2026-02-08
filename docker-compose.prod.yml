@@ -1,0 +1,221 @@
+# =============================================================================
+# VN Club Production - Full Stack
+# =============================================================================
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
+#
+# First run:
+#   1. Copy deploy/.env.prod.example to deploy/.env.prod and fill in values
+#   2. Run the compose command above
+#   3. Wait for containers to start (backend runs migrations automatically)
+#   4. Run initial data import:
+#      docker compose -f docker-compose.prod.yml exec api python scripts/initial_import.py
+#
+# Updates:
+#   git pull && docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
+#
+# =============================================================================
+
+services:
+  # Nginx reverse proxy — the only service exposed to the internet
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # Next.js frontend (standalone mode)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_VNDB_STATS_API: ${NEXT_PUBLIC_VNDB_STATS_API}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    environment:
+      - NODE_ENV=production
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
+      - NEXT_PUBLIC_VNDB_STATS_API=${NEXT_PUBLIC_VNDB_STATS_API}
+      - VNDB_CACHE_DIR=/data/vndb-cache
+    volumes:
+      - vndb-cache:/data/vndb-cache
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # FastAPI backend
+  api:
+    build:
+      context: ./vndb-stats-backend
+      dockerfile: Dockerfile
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - DEBUG=false
+      - CORS_ORIGINS=["https://vnclub.org","https://api.vnclub.org"]
+      - VNDB_API_URL=https://api.vndb.org/kana
+      - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
+      - DUMP_STORAGE_PATH=/app/data
+      - FRONTEND_URL=https://vnclub.org
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
+      - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - dumps:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # PostgreSQL
+  db:
+    image: postgres:15.13-alpine
+    environment:
+      - POSTGRES_USER=vndb
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=vndb_stats
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vndb -d vndb_stats"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # Redis
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redisdata:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # Discord bot
+  discord-bot:
+    build:
+      context: ./vndb-stats-backend
+      dockerfile: Dockerfile
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
+    command: ["python", "scripts/run_bot.py"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - DISCORD_ADMIN_ROLE_IDS=${DISCORD_ADMIN_ROLE_IDS:-}
+      - DISCORD_ADMIN_USER_IDS=${DISCORD_ADMIN_USER_IDS:-}
+      - FRONTEND_URL=https://vnclub.org
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - dumps:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # Worker for scheduled imports
+  worker:
+    build:
+      context: ./vndb-stats-backend
+      dockerfile: Dockerfile
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
+    command: ["python", "scripts/worker.py"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - DEV_MODE=false
+      - DUMP_STORAGE_PATH=/app/data
+      - VNDB_API_URL=https://api.vndb.org/kana
+      - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - dumps:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+volumes:
+  pgdata:
+  redisdata:
+  dumps:
+  vndb-cache:
+
+networks:
+  vnclub:
+    driver: bridge

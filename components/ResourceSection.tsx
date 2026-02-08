@@ -1,3 +1,4 @@
+import { Link } from 'lucide-react';
 import { ResourceCard } from './ResourceCard';
 import type { ResourceSection as ResourceSectionType } from '@/lib/resource-parser';
 
@@ -10,9 +11,17 @@ export function ResourceSection({ section }: ResourceSectionProps) {
     <section className="mb-12">
       <h2
         id={section.id}
-        className="text-2xl font-bold mt-12 mb-6 pb-3 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+        className="group text-2xl font-bold mt-12 mb-6 pb-3 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
       >
         {section.title}
+        <a
+          href={`#${section.id}`}
+          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Permanent link"
+          aria-label="Link to this section"
+        >
+          <Link className="inline h-4 w-4" />
+        </a>
       </h2>
 
       {section.description && (
@@ -26,9 +35,17 @@ export function ResourceSection({ section }: ResourceSectionProps) {
           {subsection.title && (
             <h3
               id={subsection.id}
-              className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200"
+              className="group text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200"
             >
               {subsection.title}
+              <a
+                href={`#${subsection.id}`}
+                className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                title="Permanent link"
+                aria-label="Link to this section"
+              >
+                <Link className="inline h-4 w-4" />
+              </a>
             </h3>
           )}
           {subsection.description && (

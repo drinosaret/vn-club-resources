@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowRight, BookOpen, Link as LinkIcon } from 'lucide-react';
 import type { RelatedCategory } from '@/lib/resource-parser';
 
 interface RelatedPagesProps {
@@ -9,9 +9,17 @@ interface RelatedPagesProps {
 export function RelatedPages({ categories }: RelatedPagesProps) {
   return (
     <section className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-      <h2 id="related-pages" className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
+      <h2 id="related-pages" className="group text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
         <BookOpen className="w-6 h-6 text-primary-500" />
         Related Pages
+        <a
+          href="#related-pages"
+          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Permanent link"
+          aria-label="Link to this section"
+        >
+          <LinkIcon className="inline h-4 w-4" />
+        </a>
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

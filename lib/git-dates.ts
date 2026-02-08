@@ -9,29 +9,24 @@ export interface GitDates {
 // Cache git dates to avoid repeated git command execution
 const gitDatesCache = new Map<string, GitDates>();
 
-function getGitLastCommitDate(gitPath: string): string | undefined {
-  try {
-    const result = execSync(
-      `git log --follow -M10 --format=%aI -1 -- "${gitPath}"`,
-      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: process.cwd() }
-    ).trim();
-    return result || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function getGitFirstCommitDate(gitPath: string): string | undefined {
+/**
+ * Get both first and last commit dates for a file in a single git call.
+ * --follow tracks renames so dates survive file moves.
+ */
+function getGitDatesForPath(gitPath: string): GitDates {
   try {
     const result = execSync(
       `git log --follow -M10 --format=%aI -- "${gitPath}"`,
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], cwd: process.cwd() }
     ).trim();
-    // Get the last line (oldest commit)
     const lines = result.split('\n').filter(Boolean);
-    return lines[lines.length - 1] || undefined;
+    if (lines.length === 0) return {};
+    return {
+      updated: lines[0],               // newest commit = first line
+      created: lines[lines.length - 1], // oldest commit = last line
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -45,41 +40,35 @@ export function getGitDates(filePath: string): GitDates {
     // Normalize path for git (use forward slashes, relative to repo root)
     const gitPath = filePath.replace(/\\/g, '/');
 
-    // Try the current file path first
-    let createdDate = getGitFirstCommitDate(gitPath);
-    let updatedDate = getGitLastCommitDate(gitPath);
+    // Try the current file path first (single git call for both dates)
+    let dates = getGitDatesForPath(gitPath);
 
     // If no history found, try the original docs path
     // content/guides/guide.mdx -> docs/guide.md
-    if ((!createdDate || !updatedDate) && gitPath.includes('content/guides/')) {
+    if ((!dates.created || !dates.updated) && gitPath.includes('content/guides/')) {
       const filename = path.basename(gitPath, '.mdx') + '.md';
-      // Try original docs/ path first (works before commit)
-      if (!createdDate) {
-        createdDate = getGitFirstCommitDate(`docs/${filename}`);
-      }
-      if (!updatedDate) {
-        updatedDate = getGitLastCommitDate(`docs/${filename}`);
+      // Try original docs/ path first
+      if (!dates.created || !dates.updated) {
+        const fallback = getGitDatesForPath(`docs/${filename}`);
+        dates = {
+          created: dates.created || fallback.created,
+          updated: dates.updated || fallback.updated,
+        };
       }
       // After commit, try legacy/docs/ path
-      if (!createdDate) {
-        createdDate = getGitFirstCommitDate(`legacy/docs/${filename}`);
-      }
-      if (!updatedDate) {
-        updatedDate = getGitLastCommitDate(`legacy/docs/${filename}`);
+      if (!dates.created || !dates.updated) {
+        const fallback = getGitDatesForPath(`legacy/docs/${filename}`);
+        dates = {
+          created: dates.created || fallback.created,
+          updated: dates.updated || fallback.updated,
+        };
       }
     }
 
-    const dates = {
-      created: createdDate,
-      updated: updatedDate,
-    };
-
     // Cache the result
     gitDatesCache.set(filePath, dates);
-
     return dates;
-  } catch (error) {
-    console.error('Git dates error:', error);
+  } catch {
     // Return empty if git commands fail (e.g., not in a git repo)
     const emptyDates = {};
     gitDatesCache.set(filePath, emptyDates);

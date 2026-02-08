@@ -1,11 +1,26 @@
+.cl*/
+.int*/
+
+# Ignore root markdown files by default, whitelist specific ones
+/*.md
+!Readme.md
+!LICENSE
+
 # Next.js build output
 /.next/
 /out/
 /node_modules/
 *.tsbuildinfo
 
-# MkDocs build output (legacy)
-/legacy/site/
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Legacy MkDocs site (migrated to Next.js)
+legacy/
 
 # Python-related files
 __pycache__/
@@ -15,9 +30,18 @@ __pycache__/
 .Python
 env/
 venv/
+.venv*/
 *.egg-info/
 .pytest_cache/
 pip-wheel-metadata/
+
+# Debug/temp data files
+our_*.txt
+vndb_*.txt
+vndb_*.json
+api_response*.json
+all_g323_vns.txt
+stats.json
 
 # Editor and OS files
 .DS_Store
@@ -34,6 +58,70 @@ drafts/
 *.log
 *.bak
 *.tmp
+reference/
 nul
 temp/
 public/search-index.json
+public/sitemap*.xml
+public/robots.txt
+
+# Tooling artifacts
+.playwright-mcp/
+
+# VNDB image cache (served via /img/ API route, don't commit)
+.cache/
+.cache-backup/
+public/cache/
+
+# Backend data (downloaded VNDB dumps, large files)
+vndb-stats-backend/data/
+
+# Backend environment (keep .env.example, ignore actual .env)
+vndb-stats-backend/.env
+
+# Twitter/social media session files (contain auth tokens)
+*.tw_session
+
+# Backend logs
+vndb-stats-backend/log/
+vndb-stats-backend/logs/
+vndb-stats-backend/log_tensorboard/
+
+# Backend benchmark generated content (keep config.yaml)
+vndb-stats-backend/benchmark/checkpoints/
+vndb-stats-backend/benchmark/vn_dataset/
+vndb-stats-backend/benchmark/results.json
+vndb-stats-backend/benchmark/comparison_report.md
+
+# Docker local overrides
+vndb-stats-backend/docker-compose.override.yml
+
+# Production env (keep .example, ignore actual)
+deploy/.env.prod
+
+# SSL certificates (Cloudflare Origin CA)
+deploy/nginx/ssl/
+
+# Vercel
+.vercel/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# ESLint cache
+.eslintcache
+
+# Local development scripts (not needed in repo)
+scripts/local/
+vndb-stats-backend/scripts/local/
+
+# Backend cached/temp data files
+vndb-stats-backend/*.json
+vndb-stats-backend/*.csv
+vndb-stats-backend/nul

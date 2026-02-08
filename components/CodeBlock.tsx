@@ -18,8 +18,8 @@ export function CodeBlock({ children }: CodeBlockProps) {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    } catch {
+      // Clipboard copy failed - silently ignore
     }
   };
 
@@ -33,7 +33,7 @@ export function CodeBlock({ children }: CodeBlockProps) {
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute top-3 right-3 p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-300 dark:hover:bg-gray-600"
+        className="absolute top-3 right-3 p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-gray-300 dark:hover:bg-gray-600"
         aria-label="Copy code"
       >
         {copied ? (

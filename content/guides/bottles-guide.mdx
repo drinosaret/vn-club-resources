@@ -1,0 +1,159 @@
+---
+description: Play Japanese visual novels on Linux using Bottles to learn Japanese. Set up Wine prefixes, configure Japanese locale, install VNs, and run Textractor for text hooking.
+sitemap:
+  priority: 0.8
+  changefreq: monthly
+---
+
+# Bottles Guide
+
+This guide covers how to play Windows visual novels on Linux using Bottles. Bottles is a Wine prefix manager that makes it easy to run Windows games and applications without complicated setup.
+
+<img height="166" width="251" alt="A visual novel running on Linux through Bottles" src="assets/bottles-vn-running.webp" />
+
+> If you're coming from Windows, think of Bottles as an easy and convenient way to manage Wine. Each "bottle" is an isolated Windows environment where you can install and run your games.
+
+## Installing Bottles
+
+You can install Bottles with Flatpak. On Ubuntu or similar distros, just run the following commands:
+
+```bash
+# Install Flatpak if you don't have it
+sudo apt install flatpak
+
+# Add the Flathub repository
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+```
+
+Run these commands, reboot, and then you're ready to install Bottles:
+
+```bash
+flatpak install flathub com.usebottles.bottles
+```
+
+Launch Bottles from the applications menu, or just open the terminal and run `flatpak run com.usebottles.bottles`.
+
+## Creating a Bottle
+
+Once you have Bottles open:
+
+1. Click **Create New Bottle**
+2. Give it a name (I just use "VNs" or "Visual Novels")
+3. Select **Gaming** as the environment. This includes dependencies that games commonly need
+4. Set **Runner** to `sys-wine` for better compatibility with tools like Textractor
+5. Leave **Bottle Directory** on default unless you have a reason to change it
+6. Click **Create**
+
+![Create New Bottle dialog in Bottles](/assets/bottles-create.webp)
+
+Bottles will download and configure everything automatically. This might take a minute.
+
+## Configuring for Japanese Games
+
+Before installing anything, there are a few settings worth changing to make sure Japanese text displays correctly.
+
+### Adding Japanese Font Support
+
+1. Select your bottle
+2. Under **Options**, click **Dependencies**
+3. Search for and install `cjkfonts`
+
+![Dependencies list in Bottles](/assets/bottles-dependencies.webp)
+
+Without this, Japanese text will likely show up as empty boxes.
+
+### Setting Japanese Locale
+
+Some games expect to be running on a Japanese system. To set this up:
+
+1. Under **Options**, click **Settings**
+2. Scroll down to the **Compatibility** section
+3. Under **Environment Variables**, add the following:
+   * `LANG` \= `ja_JP.UTF-8`
+   * `LC_ALL` \= `ja_JP.UTF-8`
+
+### Common Dependencies
+
+Depending on the game, you might also need:
+
+* `vcredist2019` - Visual C++ runtime, required by many games
+* `lavfilters` - Fixes audio/video playback issues
+* `quartz` - Another audio fix for older games
+
+You don't need to install all of these upfront. If a game has issues, check if one of these helps.
+
+## Installing a Visual Novel
+
+To install a game:
+
+1. Select your bottle
+2. Click **Run Executable**
+3. Navigate to and select the game's installer (`.exe` file)
+4. Follow the installation wizard as you would on Windows
+
+Once installed, the game should appear in your bottle's program list. If it doesn't show up automatically, you can add it manually by clicking **Add Shortcuts** and browsing to the game's `.exe`.
+
+For games that don't require installation, just click **Add Shortcuts** and add the game's `.exe` directly.
+
+> **Important:** Store your game files inside the bottle's `drive_c` folder. Flatpak sandboxes Bottles, so games stored outside may have issues accessing save data or other files. You can find your bottle's folder at `~/.var/app/com.usebottles.bottles/data/bottles/bottles/[YourBottleName]/drive_c/`.
+
+![Game files extracted to the bottle's drive\_c folder](/assets/bottles-drive-c.webp)
+
+## Running Games
+
+Select the game from your program list and click the play button (▶). Hopefully it just works.
+
+You can also use **Run Executable** to run any `.exe` directly without adding it as a shortcut.
+
+### When Things Don't Work
+
+If the game crashes or has issues, here are some things to try:
+
+**Black screen or immediate crash**: Try switching to a different runner. Go to your bottle's settings and under **Runner**, try switching between `sys-wine` and `soda`. Different runners work better for different games.
+
+**No text displaying**: Make sure you installed `cjkfonts` from the dependencies.
+
+**No audio or broken audio**: Install the `lavfilters` dependency.
+
+**Game won't start at all**: Try running the executable as administrator. Right-click on the program and select **Run as Administrator**.
+
+## Text Hooking
+
+You can run text hookers like Textractor directly in Bottles alongside your games.
+
+### Running Textractor in Bottles
+
+1. Download [Textractor](https://github.com/Chenx221/Textractor) and extract it to your bottle's `drive_c` folder
+2. In Bottles, click **Add Shortcuts** and add the Textractor `.exe` (use `x86` or `x64` depending on your game)
+3. Start your VN first, then start Textractor from the same bottle
+4. Attach Textractor to your game as you normally would
+
+Both programs need to run from the same bottle for Textractor to see and hook the game process.
+
+![Textractor hooked to a visual novel running in Bottles](/assets/bottles-textractor.webp)
+
+> **Tip:** If Textractor's extensions menu doesn't work (right-click not responding), try switching your bottle's runner to `sys-wine` instead of `soda`. This fixes the issue for most users.
+
+### Alternatives
+
+* **Use Agent**: [Agent](/agent-guide) has a native Linux build, so you don't need to run it through Bottles
+* **Use OCR instead**: [OwOCR](/owocr-guide) with the MeikiOCR engine is the best OCR option for Linux users, extracting text from the screen directly
+
+## Tips
+
+* **Duplicate working bottles**: Once you have a bottle configured well, you can duplicate it by clicking the backup button (top right of bottle details) and selecting "Duplicate"
+* **Check VNDB discussions**: The discussion tab on a game's VNDB page sometimes has notes about running it on Linux
+* **Keep runners updated**: Check the Updates section in Bottles for newer runner versions if a game isn't working
+
+## Related Pages
+
+**Text Hooking & Mining:**
+
+- [Textractor Guide](/textractor-guide) – Text hooking for Windows
+- [Agent Guide](/agent-guide) – Alternative text extraction
+- [JL Dictionary Setup](/jl-guide) – Pop-up dictionary for lookups
+
+**Finding Visual Novels:**
+
+- [Where to Get VNs](/sources) – Download sources
+- [Finding VNs on VNDB](/find) – Discover and choose new titles

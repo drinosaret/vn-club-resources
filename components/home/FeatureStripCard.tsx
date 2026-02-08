@@ -1,0 +1,49 @@
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+
+interface FeatureStripCardProps {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  badge?: string;
+  cta?: string;
+}
+
+export function FeatureStripCard({
+  href,
+  icon,
+  title,
+  description,
+  badge,
+  cta = 'Learn more',
+}: FeatureStripCardProps) {
+  return (
+    <Link href={href} className="group block h-full">
+      <div className="h-full bg-white dark:bg-gray-800 rounded-2xl p-5 md:p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="flex items-start justify-between mb-4">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <div className="text-primary-600 dark:text-primary-400">
+              {icon}
+            </div>
+          </div>
+          {badge && (
+            <span className="px-2 py-0.5 text-xs font-medium uppercase tracking-wider rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+              {badge}
+            </span>
+          )}
+        </div>
+        <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          {title}
+        </h3>
+        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+          {description}
+        </p>
+        <div className="flex items-center text-primary-600 dark:text-primary-400 font-medium text-sm">
+          <span>{cta}</span>
+          <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+    </Link>
+  );
+}

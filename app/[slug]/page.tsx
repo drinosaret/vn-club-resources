@@ -7,6 +7,7 @@ import { CalendarPlus, History, Pencil } from 'lucide-react';
 import { ResourceMarkdownRenderer } from '@/components/ResourceMarkdownRenderer';
 import { RelativeTime } from '@/components/RelativeTime';
 import type { Metadata } from 'next';
+import { safeJsonLdStringify } from '@/lib/metadata-utils';
 
 export const dynamic = 'force-static';
 export const dynamicParams = false;
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: guide.title,
       description,
       url,
-      siteName: 'Visual Novel Club Resources',
+      siteName: 'VN Club',
       publishedTime: guide.date,
       modifiedTime: guide.updated || guide.date,
       authors: ['VN Club Resurrection'],
@@ -64,9 +65,49 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+// FAQ schema for the main guide page (targets featured snippets)
+const mainGuideFAQ = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Can you learn Japanese from visual novels?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes! Visual novels are one of the best media for learning Japanese. They provide extensive reading practice with thousands of lines of native Japanese text, full voice acting for listening comprehension, and visual context to help understand situations. Unlike textbooks, VNs are real Japanese media written by native speakers.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What tools do I need to read Japanese visual novels?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'You need three essential tools: a text hooker (Textractor or Agent) to extract text from the game, a dictionary tool (JL or Yomitan) for looking up words, and Anki for saving and reviewing new vocabulary. Our guides walk you through setting up each tool step by step.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is the best visual novel for beginners learning Japanese?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Good beginner visual novels include titles with simple vocabulary and full voice acting. Popular choices include slice-of-life VNs with everyday Japanese. Check our Browse page to filter VNs by difficulty and find one that matches your level.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How long does it take to read a visual novel in Japanese?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'As a beginner, expect to spend significantly more time than native readers. A 10-hour VN might take 40-80 hours. Speed improves rapidly with practice. After reading a few VNs, most learners see dramatic improvement in reading speed and comprehension.',
+      },
+    },
+  ],
+};
+
 // JSON-LD structured data for guides
 function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>, slug: string) {
-  return [
+  const schemas: Record<string, unknown>[] = [
     {
       '@context': 'https://schema.org',
       '@type': 'Article',
@@ -82,7 +123,7 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
       },
       publisher: {
         '@type': 'Organization',
-        name: 'Visual Novel Club Resources',
+        name: 'VN Club',
         url: 'https://vnclub.org',
         logo: {
           '@type': 'ImageObject',
@@ -122,6 +163,13 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
       ],
     },
   ];
+
+  // Add FAQ schema to the main guide page for featured snippets
+  if (slug === 'guide') {
+    schemas.push(mainGuideFAQ);
+  }
+
+  return schemas;
 }
 
 export default async function GuidePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -139,7 +187,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
       <div className="container mx-auto px-4 py-12">
         <div className="flex gap-6 max-w-[1600px] mx-auto">

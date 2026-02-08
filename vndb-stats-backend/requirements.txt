@@ -1,0 +1,58 @@
+# FastAPI and server
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.18
+
+# Database
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30.0
+alembic>=1.14.0
+psycopg[binary]>=3.2.0
+
+# Data processing (unpinned for Python 3.14 compatibility)
+pandas>=2.2.0
+numpy>=2.0.0
+scipy>=1.14.0
+
+# ML/Recommendations (unpinned for Python 3.14 compatibility)
+scikit-learn>=1.5.0
+implicit>=0.7.0
+
+# LightFM is NOT required - we use a pure NumPy/SciPy hybrid CF implementation
+# that works on all Python versions. The train_lightfm() function uses sklearn's
+# TruncatedSVD to combine CF embeddings with tag features.
+
+# RecBole for recommendation benchmarking (optional - install separately for GPU support)
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+# pip install recbole
+
+# VNDB API client
+httpx>=0.28.0
+aiohttp>=3.11.0
+
+# Caching
+redis>=5.2.0
+
+# Task scheduling
+apscheduler>=3.10.0
+
+# News aggregation
+feedparser>=6.0.0
+tweety-ns>=1.1.0
+beautifulsoup4>=4.12.0
+lxml>=5.3.0
+python-dateutil>=2.9.0
+
+# File handling (unpinned for Python 3.14)
+zstandard>=0.23.0
+orjson>=3.10.0
+
+# Validation
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+
+# Discord Bot
+discord.py>=2.3.0
+
+# Rate limiting
+slowapi>=0.1.9

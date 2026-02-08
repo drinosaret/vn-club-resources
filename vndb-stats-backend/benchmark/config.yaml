@@ -1,0 +1,71 @@
+# RecBole Benchmark Configuration for VN Recommendation
+# =====================================================
+#
+# This config is used for benchmarking different recommendation algorithms
+# against VNDB global vote data.
+
+# Data settings
+data_path: benchmark/
+dataset: vn_dataset
+USER_ID_FIELD: user_id
+ITEM_ID_FIELD: item_id
+RATING_FIELD: rating
+TIME_FIELD: timestamp
+
+# Load specific columns
+load_col:
+  inter: [user_id, item_id, rating, timestamp]
+
+# Data filtering
+# Remove users with too few interactions (cold start)
+user_inter_num_interval: "[5,inf)"
+# Remove items with too few interactions
+item_inter_num_interval: "[5,inf)"
+
+# Training settings
+epochs: 20
+train_batch_size: 2048
+eval_batch_size: 4096
+learning_rate: 0.001
+
+# Model-specific defaults
+embedding_size: 64
+
+# GPU settings (local GPU available)
+gpu_id: 0
+use_gpu: True
+
+# Evaluation settings
+eval_args:
+  # Random split: 80% train, 10% validation, 10% test
+  split: {'RS': [0.8, 0.1, 0.1]}
+  order: RO  # Random Order (alternatives: TO = temporal order)
+  mode: full  # Full ranking evaluation
+  group_by: user  # Group by user for evaluation
+
+# Metrics (standard recommendation metrics)
+metrics: ['Recall', 'NDCG', 'Hit', 'MRR', 'Precision']
+topk: [5, 10, 20]
+valid_metric: NDCG@10
+
+# Negative sampling for training
+train_neg_sample_args:
+  distribution: uniform
+  sample_num: 1
+
+# Early stopping
+stopping_step: 10
+eval_step: 1
+
+# Checkpoint settings
+checkpoint_dir: benchmark/checkpoints/
+save_dataset: False
+save_dataloaders: False
+
+# Reproducibility
+seed: 42
+reproducibility: True
+
+# Logging
+log_wandb: False
+show_progress: True

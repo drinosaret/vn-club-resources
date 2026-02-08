@@ -36,7 +36,7 @@ export function PageNavigation({ currentSlug }: PageNavigationProps) {
       </div>
 
       <div className="space-y-4">
-        {navigation.map((section) => {
+        {navigation.filter((section) => section.title !== 'Features').map((section) => {
           const Icon = sectionIcons[section.title];
           const isHomeSection = section.title === 'Home';
           const isCollapsible = collapsibleSections.includes(section.title);

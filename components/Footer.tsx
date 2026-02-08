@@ -1,10 +1,21 @@
 import Link from 'next/link';
 
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="hover:text-primary-400 transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
+        <div className="grid md:grid-cols-5 gap-8 mb-8">
           {/* About */}
           <div>
             <h3 className="text-white font-semibold mb-4">VN Club</h3>
@@ -13,66 +24,68 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Resources */}
-          <div>
-            <h3 className="text-white font-semibold mb-4">Resources</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/guide" className="hover:text-primary-400 transition-colors">
-                  Getting Started
-                </Link>
-              </li>
-              <li>
-                <Link href="/find" className="hover:text-primary-400 transition-colors">
-                  Recommendations
-                </Link>
-              </li>
-              <li>
-                <Link href="/sources" className="hover:text-primary-400 transition-colors">
-                  Where to Get VNs
-                </Link>
-              </li>
-              <li>
-                <Link href="/tools" className="hover:text-primary-400 transition-colors">
-                  Tools
-                </Link>
-              </li>
-            </ul>
-          </div>
-
           {/* Guides */}
           <div>
             <h3 className="text-white font-semibold mb-4">Setup Guides</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/jl-guide" className="hover:text-primary-400 transition-colors">
-                  JL Dictionary
-                </Link>
+                <FooterLink href="/anki-guide">Anki Guide</FooterLink>
               </li>
               <li>
-                <Link href="/textractor-guide" className="hover:text-primary-400 transition-colors">
-                  Textractor
-                </Link>
+                <FooterLink href="/jl-guide">JL Guide</FooterLink>
               </li>
               <li>
-                <Link href="/agent-guide" className="hover:text-primary-400 transition-colors">
-                  Agent
-                </Link>
+                <FooterLink href="/textractor-guide">Textractor Guide</FooterLink>
               </li>
               <li>
-                <Link href="/owocr-guide" className="hover:text-primary-400 transition-colors">
-                  OwOCR
-                </Link>
+                <FooterLink href="/owocr-guide">OwOCR Guide</FooterLink>
               </li>
               <li>
-                <Link href="/timetracker-guide" className="hover:text-primary-400 transition-colors">
-                  VNTimeTracker
-                </Link>
+                <FooterLink href="/bottles-guide">Bottles Guide</FooterLink>
               </li>
               <li>
-                <Link href="/jdownloader-guide" className="hover:text-primary-400 transition-colors">
-                  JDownloader
-                </Link>
+                <FooterLink href="/jdownloader-guide">JDownloader Guide</FooterLink>
+              </li>
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Resources</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <FooterLink href="/guide">Getting Started</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/find">Find VNs</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/sources">Where to Get VNs</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/tools">Tools</FooterLink>
+              </li>
+            </ul>
+          </div>
+
+          {/* Features */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Features</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <FooterLink href="/browse">Browse VNs</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/recommendations">Recommendations</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/stats">VNDB Stats</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/news">VN News</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/quiz">Kana Quiz</FooterLink>
               </li>
             </ul>
           </div>
@@ -82,9 +95,7 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Community</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/join" className="hover:text-primary-400 transition-colors">
-                  Join Discord
-                </Link>
+                <FooterLink href="/join">Join Discord</FooterLink>
               </li>
               <li>
                 <a

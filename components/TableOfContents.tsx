@@ -128,7 +128,7 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
   }
 
   return (
-    <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-y-contain">
+    <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-y-contain pr-4">
       <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
         <h3 className="font-semibold text-xs uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-4">
           On This Page

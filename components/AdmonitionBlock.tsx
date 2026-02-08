@@ -94,11 +94,14 @@ export function AdmonitionBlock({ type, title, children }: AdmonitionBlockProps)
                 p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
                 strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                 em: ({ children }) => <em className="italic">{children}</em>,
-                a: ({ href, children }) => (
-                  <a href={href} className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                    {children}
-                  </a>
-                ),
+                a: ({ href, children }) => {
+                  const safeHref = href && /^https?:\/\//.test(href) ? href : undefined;
+                  return (
+                    <a href={safeHref} className="text-indigo-600 dark:text-indigo-400 hover:underline" rel="noopener noreferrer">
+                      {children}
+                    </a>
+                  );
+                },
                 ul: ({ children }) => <ul className="list-disc list-outside ml-4 space-y-1 my-3">{children}</ul>,
                 ol: ({ children }) => <ol className="list-decimal list-outside ml-4 space-y-1 my-3">{children}</ol>,
                 li: ({ children }) => <li className="pl-1">{children}</li>,

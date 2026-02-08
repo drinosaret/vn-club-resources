@@ -7,7 +7,7 @@ sitemap:
 
 # Meikipop Guide
 
-[Meikipop](https://github.com/rtr46/meikipop) is an incredibly fast OCR popup dictionary that lets you look up Japanese text anywhere on your screen. Point your mouse at any Japanese text, press a hotkey, and get instant dictionary definitions. Magic.
+[Meikipop](https://github.com/rtr46/meikipop) is an incredibly fast OCR popup dictionary that lets you look up Japanese text anywhere on your screen. Just point your mouse at any Japanese text, press a hotkey, and you get instant dictionary definitions. Magic.
 
 Unlike browser extensions, Meikipop works with any on-screen text.
 
@@ -21,7 +21,7 @@ Unlike browser extensions, Meikipop works with any on-screen text.
 2. Extract the archive to a folder of your choice
 3. Run the executable
 
-The prebuilt binaries include the dictionary, so no additional setup is required.
+The prebuilt binaries come with the dictionary included, so no extra setup is needed.
 
 ### From Source
 
@@ -44,7 +44,7 @@ Requires **Python 3.10+**.
 
 ### macOS Permissions
 
-macOS users need to grant the following permissions in System Preferences:
+macOS users will need to grant these permissions in System Preferences:
 - **Input Monitoring** - For hotkey detection
 - **Screen Recording** - For capturing screen content
 - **Accessibility** - For mouse position tracking
@@ -54,17 +54,17 @@ macOS users need to grant the following permissions in System Preferences:
 ![Meikipop terminal window](assets/meikipop-terminal.webp)
 
 1. **Launch the application** - A system tray icon will appear
-2. **Select scan region** - On first run, you'll be prompted to select a screen region to scan
-3. **Position your mouse** over Japanese text you want to look up
+2. **Select scan region** - On first launch, you'll be asked to select a screen region to scan
+3. **Position your mouse** over the Japanese text you want to look up
 4. **Press and hold the hotkey** (Shift by default)
-5. **View the popup** - Dictionary results appear instantly
-6. **Release the hotkey** to hide the popup
+5. **View the popup** - Dictionary results show up instantly
+6. **Release the hotkey** to dismiss the popup
 
 Right-click the system tray icon to access settings and options.
 
 ## Configuration
 
-Access settings through the system tray icon's right-click menu. Configuration is saved to `config.ini` in the application folder.
+You can access settings through the system tray icon's right-click menu. Your configuration gets saved to `config.ini` in the application folder.
 
 <img src="assets/meikipop-settings.webp" alt="Meikipop settings dialog" style="max-height: 400px; width: auto;" />
 
@@ -77,7 +77,7 @@ Access settings through the system tray icon's right-click menu. Configuration i
 
 ## Anki Mining Forks
 
-If you want to create Anki cards directly from Meikipop, there are two community forks available:
+If you want to make Anki cards directly from Meikipop, there are a couple of community forks worth checking out:
 
 ### pnotisdev's fork
 
@@ -103,14 +103,14 @@ If you want to create Anki cards directly from Meikipop, there are two community
 
 ## Limitations
 
-The original Meikipop is focused specifically on dictionary lookups. It does not support:
+The original Meikipop focuses specifically on dictionary lookups. It doesn't support:
 - SRS flashcard mining (use [JL](/jl-guide) or the [Anki forks above](#anki-mining-forks))
 - Multiple dictionaries simultaneously
 
 ## Tips
 
-- **Auto scan mode** is useful for games where text changes frequently and you want continuous lookups
-- Particularly useful for JRPGs with complex menus where text appears all over the screen, compared to VNs where text is usually in a predictable location
+- **Auto scan mode** works well for games where text changes frequently and you want continuous lookups
+- Especially handy for JRPGs with complex menus where text shows up all over the screen, compared to VNs where text is usually in a predictable spot
 - For games that can be text hooked, consider using [Textractor](/textractor-guide) + [JL](/jl-guide) instead
 - Click the system tray icon to quickly toggle Meikipop on/off
 

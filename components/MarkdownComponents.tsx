@@ -1,5 +1,6 @@
 import { Components } from 'react-markdown';
 import { Children, ReactNode, isValidElement } from 'react';
+import { Link } from 'lucide-react';
 import { Callout } from './Callout';
 import { CodeBlock } from './CodeBlock';
 import { ImageLightbox } from './ImageLightbox';
@@ -31,38 +32,77 @@ export const markdownComponents: Components = {
   h1: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h1 id={id} className="text-3xl font-bold mb-6" {...props}>
+      <h1 id={id} className="group text-3xl font-bold mb-6" {...props}>
         {children}
+        <a
+          href={`#${id}`}
+          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Permanent link"
+          aria-label="Link to this section"
+        >
+          <Link className="inline h-5 w-5" />
+        </a>
       </h1>
     );
   },
   h2: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h2 id={id} className="text-2xl font-bold mt-12 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" {...props}>
+      <h2 id={id} className="group text-2xl font-bold mt-12 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" {...props}>
         {children}
+        <a
+          href={`#${id}`}
+          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Permanent link"
+          aria-label="Link to this section"
+        >
+          <Link className="inline h-4 w-4" />
+        </a>
       </h2>
     );
   },
   h3: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h3 id={id} className="text-xl font-semibold mt-8 mb-3" {...props}>
+      <h3 id={id} className="group text-xl font-semibold mt-8 mb-3" {...props}>
         {children}
+        <a
+          href={`#${id}`}
+          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Permanent link"
+          aria-label="Link to this section"
+        >
+          <Link className="inline h-4 w-4" />
+        </a>
       </h3>
     );
   },
   h4: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h4 id={id} className="text-lg font-semibold mt-6 mb-2" {...props}>
+      <h4 id={id} className="group text-lg font-semibold mt-6 mb-2" {...props}>
         {children}
+        <a
+          href={`#${id}`}
+          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Permanent link"
+          aria-label="Link to this section"
+        >
+          <Link className="inline h-3.5 w-3.5" />
+        </a>
       </h4>
     );
   },
 
-  // Paragraphs
-  p: ({ children }) => {
+  // Paragraphs - render as <div> when containing block-level elements (images)
+  // to avoid invalid <div> inside <p> nesting from ImageLightbox
+  p: ({ children, node }) => {
+    const hasImage = node?.children?.some(
+      (child) => 'tagName' in child && child.tagName === 'img'
+    );
+    if (hasImage) {
+      return <div className="my-4 leading-relaxed">{children}</div>;
+    }
     return <p className="my-4 leading-relaxed">{children}</p>;
   },
 

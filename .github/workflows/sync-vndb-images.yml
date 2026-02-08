@@ -1,0 +1,71 @@
+name: Sync VNDB Cover Images
+
+on:
+  # Run weekly on Sunday at 3:00 AM UTC
+  schedule:
+    - cron: '0 3 * * 0'
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      force_full_sync:
+        description: 'Force full sync (ignore cache)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours max for large syncs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore VNDB image cache
+        if: ${{ github.event.inputs.force_full_sync != 'true' }}
+        uses: actions/cache/restore@v4.2.0
+        id: cache-restore
+        with:
+          path: public/cache/vndb
+          key: vndb-images-${{ github.run_id }}
+          restore-keys: |
+            vndb-images-
+
+      - name: Sync VNDB covers via rsync
+        run: |
+          mkdir -p public/cache/vndb/cv
+          echo "Starting rsync from VNDB..."
+          rsync -rtpv --progress --del \
+            rsync://dl.vndb.org/vndb-img/cv/ \
+            public/cache/vndb/cv/
+          echo "Rsync complete!"
+
+      - name: Convert images to WebP
+        run: |
+          npx tsx scripts/sync-vndb-covers.ts --skip-sync
+        env:
+          NODE_ENV: production
+          STATIC_EXPORT: 'true'
+
+      - name: Save VNDB image cache
+        uses: actions/cache/save@v4.2.0
+        with:
+          path: public/cache/vndb
+          key: vndb-images-${{ github.run_id }}
+
+      - name: Report cache size
+        run: |
+          echo "Cache directory contents:"
+          du -sh public/cache/vndb/* || true
+          echo "Total images:"
+          find public/cache/vndb -name "*.webp" | wc -l

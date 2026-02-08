@@ -5,6 +5,8 @@ export interface NavItem {
   title: string;
   slug: string;
   description?: string;
+  href?: string; // Optional external URL (overrides slug-based path)
+  external?: boolean; // Opens in new tab if true
 }
 
 export interface NavSection {
@@ -16,6 +18,7 @@ export interface NavSection {
 export function getHeaderNavigation() {
   const resources = navigation.find(s => s.title === 'Resources');
   const guides = navigation.find(s => s.title === 'Guides');
+  const features = navigation.find(s => s.title === 'Features');
 
   return {
     mobile: [
@@ -29,14 +32,22 @@ export function getHeaderNavigation() {
         name: 'Guides',
         items: guides?.items.map(item => ({ name: item.title, href: `/${item.slug}` })) ?? [],
       },
-      { name: 'Join Discord', href: '/join' },
+      // Features shown directly (not collapsed) since they're main site features
+      { name: 'Browse', href: '/browse' },
+      { name: 'Stats', href: '/stats' },
+      // { name: 'Recommendations', href: '/recommendations' },
+      { name: 'News', href: '/news' },
+      { name: 'Quiz', href: '/quiz' },
     ],
     desktop: [
       { name: 'Home', href: '/' },
-      { name: 'Start Here', href: '/guide' },
+      { name: 'Guides', href: '/guide' },
       { name: 'Resources', href: '/find' },
-      { name: 'Guides', href: '/anki-guide' },
-      { name: 'Other', href: '/join' },
+      { name: 'Browse', href: '/browse' },
+      { name: 'Stats', href: '/stats' },
+      // { name: 'Recommendations', href: '/recommendations' },
+      { name: 'News', href: '/news' },
+      { name: 'Quiz', href: '/quiz' },
     ],
   };
 }
@@ -45,6 +56,7 @@ export function getHeaderNavigation() {
 export function getSiteDirectorySections() {
   const startHere = navigation.find(s => s.title === 'Start Here');
   const resources = navigation.find(s => s.title === 'Resources');
+  const features = navigation.find(s => s.title === 'Features');
   const community = navigation.find(s => s.title === 'Community');
   const guides = navigation.find(s => s.title === 'Guides');
 
@@ -52,6 +64,7 @@ export function getSiteDirectorySections() {
     mainSections: [
       { key: 'start-here', title: 'Start Here', items: startHere?.items ?? [] },
       { key: 'resources', title: 'Resources', items: resources?.items ?? [] },
+      { key: 'features', title: 'Features', items: features?.items ?? [] },
       { key: 'community', title: 'Community', items: community?.items ?? [] },
     ],
     guides: guides?.items ?? [],
@@ -76,11 +89,22 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: 'Features',
+    items: [
+      { title: 'Browse', slug: 'browse', description: 'Search and browse visual novels' },
+      { title: 'Stats', slug: 'stats', description: 'VNDB stats and analytics' },
+      { title: 'Recommendations', slug: 'recommendations', description: 'Personalized VN recommendations' },
+      { title: 'News', slug: 'news', description: 'VN news aggregator' },
+      { title: 'Quiz', slug: 'quiz', description: 'Kana practice quiz' },
+    ],
+  },
+  {
     title: 'Guides',
     items: [
       // Learning & Dictionary
       { title: 'Anki', slug: 'anki-guide', description: 'Flashcard setup and vocabulary mining' },
       { title: 'JL', slug: 'jl-guide', description: 'Popup dictionary for visual novels' },
+      { title: 'Yomitan', slug: 'yomitan-guide', description: 'Browser dictionary extension' },
       // Text Extraction
       { title: 'Textractor', slug: 'textractor-guide', description: 'Text hooking from VN engines' },
       { title: 'Agent', slug: 'agent-guide', description: 'Script-based text extraction' },
@@ -90,6 +114,7 @@ export const navigation: NavSection[] = [
       { title: 'Magpie', slug: 'magpie-guide', description: 'Window upscaling for VNs' },
       { title: 'ShaderGlass', slug: 'shaderglass-guide', description: 'CRT shaders and overlays' },
       // Platform & Emulation
+      { title: 'Bottles (Linux)', slug: 'bottles-guide', description: 'Running VNs on Linux' },
       { title: 'NP2 (PC-98)', slug: 'np2-guide', description: 'Retro VN emulation' },
       { title: 'Kirikiroid2', slug: 'kirikiroid-guide', description: 'Kirikiri VNs on Android' },
       { title: 'GameHub Lite', slug: 'gamehub-lite-guide', description: 'Windows emulation on Android' },
@@ -100,7 +125,9 @@ export const navigation: NavSection[] = [
   },
   {
     title: 'Community',
-    items: [{ title: 'Join', slug: 'join', description: 'Discord server and community' }],
+    items: [
+      { title: 'Discord', slug: 'join', description: 'Join our Discord server' },
+    ],
   },
 ];
 

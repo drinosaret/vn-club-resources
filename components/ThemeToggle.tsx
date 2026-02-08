@@ -14,9 +14,9 @@ export function ThemeToggle() {
 
   useEffect(() => {
     // Check for saved theme preference or default to 'light'
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const savedTheme = localStorage.getItem('theme');
 
-    if (savedTheme) {
+    if (savedTheme === 'light' || savedTheme === 'dark') {
       setTheme(savedTheme);
       applyTheme(savedTheme);
     } else {
@@ -37,7 +37,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <button
-        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="Toggle theme"
       >
         <span className="w-5 h-5 block" />
@@ -48,7 +48,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       aria-label="Toggle theme"
     >
       {theme === 'light' ? (

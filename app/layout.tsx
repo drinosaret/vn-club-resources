@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { NavigationPrefetch } from "@/components/NavigationPrefetch";
+import { NavigationProgress } from "@/components/NavigationProgress";
+import { Providers } from "@/components/Providers";
+import { ScrollToTop } from "@/components/ScrollToTop";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
+import { safeJsonLdStringify } from "@/lib/metadata-utils";
 
 const roboto = Roboto({
   weight: ['400', '500', '700'],
@@ -16,11 +20,11 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: {
-    default: "Visual Novel Club Resources",
+    default: "VN Club | Learn Japanese with Visual Novels",
     template: "%s | VN Club",
   },
-  description: "Learn Japanese with visual novels using our comprehensive guides, tools, and resources. Setup text hookers, dictionaries, Anki mining, and start your immersion journey today.",
-  keywords: ["visual novels", "Japanese learning", "VN", "Japanese", "learning resources", "text hooking", "Anki", "immersion"],
+  description: "Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get personalized recommendations, and find VNs for your level.",
+  keywords: ["learn japanese with visual novels", "visual novel japanese learning", "japanese learning resources", "vn club", "visual novels", "text hooking", "Anki", "immersion", "beginner visual novels japanese", "japanese through visual novels"],
   authors: [{ name: "VN Club Resurrection" }],
   metadataBase: new URL('https://vnclub.org'),
   icons: {
@@ -32,22 +36,22 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://vnclub.org',
-    siteName: 'Visual Novel Club Resources',
-    title: 'Visual Novel Club Resources',
-    description: 'Learn Japanese with visual novels using our comprehensive guides, tools, and resources. Setup text hookers, dictionaries, Anki mining, and start your immersion journey today.',
+    siteName: 'VN Club',
+    title: 'VN Club | Learn Japanese with Visual Novels',
+    description: 'Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get recommendations, and find VNs for your level.',
     images: [
       {
         url: '/assets/hikaru-icon2.webp',
         width: 512,
         height: 512,
-        alt: 'Visual Novel Club Resources',
+        alt: 'VN Club - Learn Japanese with Visual Novels',
       },
     ],
   },
   twitter: {
     card: 'summary',
-    title: 'Visual Novel Club Resources',
-    description: 'Learn Japanese with visual novels using our comprehensive guides, tools, and resources.',
+    title: 'VN Club | Learn Japanese with Visual Novels',
+    description: 'Learn Japanese with visual novels. Guides, tools, and VNDB integration to find VNs for every level.',
     images: ['/assets/hikaru-icon2.webp'],
   },
   robots: {
@@ -59,8 +63,9 @@ export const metadata: Metadata = {
 // Organization JSON-LD schema
 const organizationSchema = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'Visual Novel Club Resources',
+  '@type': 'EducationalOrganization',
+  name: 'VN Club',
+  alternateName: 'Visual Novel Club Resources',
   url: 'https://vnclub.org',
   logo: {
     '@type': 'ImageObject',
@@ -68,10 +73,12 @@ const organizationSchema = {
     width: 512,
     height: 512,
   },
-  description: 'Learn Japanese with visual novels using our comprehensive guides, tools, and resources.',
+  description: 'Learn Japanese with visual novels. Comprehensive guides, tools, and resources for immersion-based Japanese learning through VNs.',
   sameAs: [
     'https://discord.gg/hnfUpsPv8T',
+    'https://github.com/drinosaret/vn-club-resources',
   ],
+  knowsAbout: ['Japanese language learning', 'Visual novels', 'Immersion learning', 'Text hooking'],
 };
 
 export default function RootLayout({
@@ -83,15 +90,9 @@ export default function RootLayout({
     <html lang="en" className="light" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
-        {/* Preload critical assets */}
-        <link rel="preload" href="/assets/hikaru-icon2.webp" as="image" type="image/webp" />
-        {/* Preconnect to analytics */}
-        <link rel="preconnect" href="https://va.vercel-scripts.com" crossOrigin="anonymous" />
-        {/* Prefetch search index for faster search */}
-        <link rel="prefetch" href="/search-index.json" as="fetch" crossOrigin="anonymous" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(organizationSchema) }}
         />
         <script
           dangerouslySetInnerHTML={{
@@ -105,20 +106,40 @@ export default function RootLayout({
             `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                document.documentElement.classList.add('fonts-loading');
+                var done = false;
+                function show() {
+                  if (!done) { done = true; document.documentElement.classList.remove('fonts-loading'); }
+                }
+                document.fonts.ready.then(show);
+                setTimeout(show, 300);
+              })();
+            `,
+          }}
+        />
       </head>
       <body className={roboto.className} suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <NavigationPrefetch />
-        <ErrorBoundary>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Footer />
-          </div>
-        </ErrorBoundary>
-        <Analytics />
-        <SpeedInsights />
+        <Providers>
+          <ScrollToTop />
+          <ScrollToTopButton />
+          <ErrorBoundary>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-grow pt-16 md:pt-[72px]">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </ErrorBoundary>
+        </Providers>
       </body>
     </html>
   );

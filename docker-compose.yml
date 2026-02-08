@@ -1,0 +1,36 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_VNDB_STATS_API=${NEXT_PUBLIC_VNDB_STATS_API}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - VNDB_CACHE_DIR=/data/vndb-cache
+    volumes:
+      # Persist VNDB image cache across container restarts/rebuilds
+      - vndb-cache:/data/vndb-cache
+    restart: unless-stopped
+    # Resource limits for DoS protection
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  vndb-cache:
+    driver: local

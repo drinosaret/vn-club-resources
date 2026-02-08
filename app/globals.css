@@ -5,19 +5,65 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Design System Tokens (see .interface-design/system.md) */
+  /* Text hierarchy */
+  --text-primary: #111827;      /* gray-900 */
+  --text-secondary: #4b5563;    /* gray-600 */
+  --text-muted: #6b7280;        /* gray-500 */
+  --text-faint: #9ca3af;        /* gray-400 */
+
+  /* Surfaces */
+  --surface-base: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-overlay: #ffffff;
+  --surface-inset: #f9fafb;     /* gray-50 */
+
+  /* Borders */
+  --border-default: #e5e7eb;    /* gray-200 */
+  --border-subtle: #f3f4f6;     /* gray-100 */
+  --border-strong: #d1d5db;     /* gray-300 */
+
+  /* Brand */
+  --brand-primary: #4f46e5;     /* indigo-600 */
+  --brand-primary-hover: #4338ca; /* indigo-700 */
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+
+  /* Design System Tokens (dark mode) */
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;    /* gray-400 */
+  --text-muted: #9ca3af;        /* gray-400 */
+  --text-faint: #6b7280;        /* gray-500 */
+
+  --surface-base: #111827;      /* gray-900 */
+  --surface-raised: #1f2937;    /* gray-800 */
+  --surface-overlay: #1f2937;   /* gray-800 */
+  --surface-inset: #1f2937;     /* gray-800 */
+
+  --border-default: #374151;    /* gray-700 */
+  --border-subtle: rgba(75, 85, 99, 0.5); /* gray-600/50 */
+  --border-strong: #4b5563;     /* gray-600 */
+
+  --brand-primary: #818cf8;     /* indigo-400 */
+  --brand-primary-hover: #a5b4fc; /* indigo-300 */
 }
 
-body {
+html, body {
   color: var(--foreground);
   background: var(--background);
-  overflow-x: hidden;
 }
 
+/* Smooth scroll only for in-page anchor navigation (not page changes) */
+/* Applied via scroll-smooth class on specific elements or via JS */
+
+/* Prevent horizontal scrolling without breaking sticky positioning */
+body {
+  overflow-x: clip;
+}
 
 @layer utilities {
   .text-balance {
@@ -203,4 +249,222 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
 
 .dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background-color: #6b7280;
+}
+
+/* Thin scrollbar for horizontal overflow areas */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: #4b5563 transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+/* Hide scrollbar completely */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fade-in animation for tab content */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 200ms ease-out;
+}
+
+/* Shimmer animation for skeleton loading */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+/* Floating animation for hero VN covers */
+@keyframes float {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-50%, -50%) translateY(-15px) rotate(1deg);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-25px) rotate(-1deg);
+  }
+  75% {
+    transform: translate(-50%, -50%) translateY(-10px) rotate(0.5deg);
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes float {
+    0%, 100% {
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  @keyframes shimmer {
+    0%, 100% {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes placeholder-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 1; }
+  }
+
+  .animate-shimmer,
+  .image-placeholder {
+    animation: none;
+  }
+}
+
+/* Subtle pulse animation for loading placeholders */
+@keyframes placeholder-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.image-placeholder {
+  background-color: rgb(229 231 235);
+  animation: placeholder-pulse 1.8s ease-in-out infinite;
+}
+
+.dark .image-placeholder {
+  background-color: rgb(55 65 81);
+}
+
+/* NProgress loading bar */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: #6366f1;
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+}
+
+.dark #nprogress .bar {
+  background: #818cf8;
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px #6366f1, 0 0 5px #6366f1;
+  opacity: 1;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+.dark #nprogress .peg {
+  box-shadow: 0 0 10px #818cf8, 0 0 5px #818cf8;
+}
+
+/* GPU-accelerated transitions for smoother animations */
+.nsfw-blur-transition {
+  will-change: filter;
+}
+
+.loading-overlay {
+  will-change: opacity;
+}
+
+/* Indeterminate progress bar for pagination */
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); width: 40%; }
+  50% { transform: translateX(60%); width: 60%; }
+  100% { transform: translateX(200%); width: 40%; }
+}
+
+.animate-progress-indeterminate {
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+/* GPU acceleration utility classes */
+.gpu-transform {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.preparing-animation {
+  will-change: transform, opacity;
+}
+
+.animation-complete {
+  will-change: auto;
+}
+
+/* Hide body until web fonts are loaded to prevent FOUT (flash of unstyled text).
+   Added by inline <head> script, removed by document.fonts.ready or 300ms timeout. */
+html.fonts-loading body {
+  visibility: hidden;
+}
+
+/* Hide main content during scroll restoration to prevent position-0 flash.
+   Applied by ScrollToTop via useLayoutEffect (before paint), removed after scroll. */
+html.stt-restoring main {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* Respect reduced motion preference for GPU animations */
+@media (prefers-reduced-motion: reduce) {
+  .preparing-animation {
+    will-change: auto;
+  }
+}
+
+/* Force-unblur NSFW images when parent lightbox has revealed them */
+[data-nsfw-revealed="true"] .blur-lg {
+  filter: none !important;
 }

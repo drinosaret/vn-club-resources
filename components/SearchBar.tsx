@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Search, FileText, Newspaper, X } from 'lucide-react';
 import { searchContent, SearchResult } from '@/lib/search';
 
+// Maximum search query length to prevent ReDoS attacks
+const MAX_QUERY_LENGTH = 100;
+
 interface SearchBarProps {
   className?: string;
   onClose?: () => void;
@@ -19,7 +22,21 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prefetchedRef = useRef(false);
   const router = useRouter();
+
+  // Prefetch search index on first focus for faster search
+  const handleFocus = useCallback(() => {
+    if (!prefetchedRef.current) {
+      prefetchedRef.current = true;
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = '/search-index.json';
+      link.as = 'fetch';
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    }
+  }, []);
 
   // Debounced search
   useEffect(() => {
@@ -36,8 +53,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
         setResults(searchResults);
         setIsOpen(true);
         setSelectedIndex(-1);
-      } catch (error) {
-        console.error('Search error:', error);
+      } catch {
         setResults([]);
       } finally {
         setIsLoading(false);
@@ -102,9 +118,13 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
   };
 
   const highlightMatch = (text: string, query: string) => {
-    if (!query.trim()) return text;
+    // Validate inputs to prevent ReDoS
+    const trimmedQuery = query.trim().slice(0, MAX_QUERY_LENGTH);
+    if (!trimmedQuery) return text;
 
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    // Escape regex special characters
+    const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
     const parts = text.split(regex);
 
     return parts.map((part, i) =>
@@ -126,9 +146,12 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
           ref={inputRef}
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.target.value.slice(0, MAX_QUERY_LENGTH))}
           onKeyDown={handleKeyDown}
-          onFocus={() => query.trim() && results.length > 0 && setIsOpen(true)}
+          onFocus={() => {
+            handleFocus(); // Prefetch search index on first focus
+            query.trim() && results.length > 0 && setIsOpen(true);
+          }}
           placeholder="Search..."
           className={`
             w-full pl-9 pr-8 py-2
