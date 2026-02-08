@@ -1,11 +1,10 @@
 name: Deploy to VPS
 
 on:
-  # Uncomment once VPS is set up and GitHub secrets (VPS_HOST, VPS_SSH_KEY) are configured:
-  # push:
-  #   branches:
-  #     - main
-  workflow_dispatch:  # Manual only until VPS is ready
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
