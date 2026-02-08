@@ -265,6 +265,10 @@ async def compute_vn_similarities(top_k: int = 100):
     For each VN, stores the top-K most similar VNs based on cosine similarity.
     This enables O(1) similar novels lookup instead of O(n) computation per request.
 
+    Memory-optimized: streams rows from DB and builds a float32 matrix directly,
+    avoiding the intermediate dict + float64 copy that previously caused OOM in
+    Docker containers (no swap, hard memory limit).
+
     Args:
         top_k: Number of similar VNs to store per VN (default 100)
     """
@@ -274,31 +278,55 @@ async def compute_vn_similarities(top_k: int = 100):
     logger.info(f"Settings: top-{top_k} similar VNs per entry")
 
     async with async_session() as db:
-        # Load all tag vectors into memory
-        logger.info("Loading tag vectors...")
+        # Step 1: Get VN IDs and vector dimension (lightweight query)
+        logger.info("Loading tag vector metadata...")
         result = await db.execute(
-            select(TagVNVector.vn_id, TagVNVector.tag_vector)
+            select(TagVNVector.vn_id).order_by(TagVNVector.vn_id)
         )
-        vn_vectors = {row[0]: np.array(row[1]) for row in result.all()}
+        vn_ids = [row[0] for row in result.all()]
+        num_vns = len(vn_ids)
 
-        if not vn_vectors:
+        if num_vns == 0:
             logger.warning("No tag vectors found, run compute_tag_vectors first")
             return
 
-        vn_ids = list(vn_vectors.keys())
-        num_vns = len(vn_ids)
-        logger.info(f"Loaded {num_vns} VN vectors")
+        # Get vector dimension from first row
+        result = await db.execute(
+            select(TagVNVector.tag_vector).limit(1)
+        )
+        sample_vector = result.scalar_one()
+        vector_dim = len(sample_vector)
 
-        # Build matrix for efficient batch computation
-        vector_dim = len(next(iter(vn_vectors.values())))
-        vectors_matrix = np.zeros((num_vns, vector_dim))
-        for i, vn_id in enumerate(vn_ids):
-            vectors_matrix[i] = vn_vectors[vn_id]
+        logger.info(f"Found {num_vns} VNs with {vector_dim}-dim vectors")
+        est_mb = num_vns * vector_dim * 4 / (1024 * 1024)
+        logger.info(f"Estimated matrix size: {est_mb:.0f} MB (float32)")
+
+        # Step 2: Build float32 matrix directly by streaming rows
+        # This avoids materializing all rows as Python objects simultaneously
+        vn_id_to_idx = {vn_id: i for i, vn_id in enumerate(vn_ids)}
+        vectors_matrix = np.zeros((num_vns, vector_dim), dtype=np.float32)
+
+        logger.info("Streaming tag vectors into matrix...")
+        batch_load_size = 5000
+        loaded = 0
+
+        for offset in range(0, num_vns, batch_load_size):
+            batch_ids = vn_ids[offset:offset + batch_load_size]
+            result = await db.execute(
+                select(TagVNVector.vn_id, TagVNVector.tag_vector)
+                .where(TagVNVector.vn_id.in_(batch_ids))
+            )
+            for row in result.all():
+                idx = vn_id_to_idx[row[0]]
+                vectors_matrix[idx] = np.array(row[1], dtype=np.float32)
+            loaded += len(batch_ids)
+            if loaded % 20000 == 0 or loaded == num_vns:
+                logger.info(f"Loaded {loaded}/{num_vns} vectors")
 
         # Clear existing similarities
         await db.execute(text("TRUNCATE TABLE vn_similarities"))
 
-        # Process in batches to manage memory
+        # Step 3: Compute similarities in batches
         batch_size = 500
         total_inserted = 0
 
@@ -319,7 +347,6 @@ async def compute_vn_similarities(top_k: int = 100):
                 sims = similarities[local_idx]
 
                 # Get top-K (excluding self)
-                # Set self-similarity to -1 to exclude
                 sims[global_idx] = -1
                 top_indices = np.argpartition(sims, -top_k)[-top_k:]
                 top_indices = top_indices[np.argsort(sims[top_indices])[::-1]]
@@ -333,7 +360,6 @@ async def compute_vn_similarities(top_k: int = 100):
                             "computed_at": now,
                         })
 
-            # Batch insert
             if similarity_records:
                 await _insert_vn_similarities(db, similarity_records)
                 total_inserted += len(similarity_records)
@@ -541,19 +567,32 @@ async def train_hybrid_embeddings(n_components: int = 64, epochs: int = 30):
     logger.info(f"Training feature-weighted hybrid model (components={n_components})")
 
     async with async_session() as db:
-        # Load CF factors (from ALS training)
+        # Load CF factors (from ALS training) — typically ~30K VNs * 64 floats, small enough
         logger.info("Loading CF factors...")
         cf_result = await db.execute(
             select(CFVNFactors.vn_id, CFVNFactors.factors)
         )
-        cf_factors = {row[0]: np.array(row[1]) for row in cf_result.all()}
+        cf_factors = {row[0]: np.array(row[1], dtype=np.float32) for row in cf_result.all()}
 
-        # Load tag vectors
+        # Load tag vectors in batches to avoid OOM
         logger.info("Loading tag vectors...")
-        tag_result = await db.execute(
-            select(TagVNVector.vn_id, TagVNVector.tag_vector)
+        tag_id_result = await db.execute(
+            select(TagVNVector.vn_id).order_by(TagVNVector.vn_id)
         )
-        tag_vectors = {row[0]: np.array(row[1]) for row in tag_result.all()}
+        tag_vn_ids = [row[0] for row in tag_id_result.all()]
+        tag_vectors: dict[str, np.ndarray] = {}
+
+        batch_load_size = 5000
+        for offset in range(0, len(tag_vn_ids), batch_load_size):
+            batch_ids = tag_vn_ids[offset:offset + batch_load_size]
+            result = await db.execute(
+                select(TagVNVector.vn_id, TagVNVector.tag_vector)
+                .where(TagVNVector.vn_id.in_(batch_ids))
+            )
+            for row in result.all():
+                tag_vectors[row[0]] = np.array(row[1], dtype=np.float32)
+
+        logger.info(f"Loaded {len(tag_vectors)} tag vectors")
 
         if not cf_factors:
             logger.warning("No CF factors found, run train_collaborative_filter first")
@@ -580,7 +619,7 @@ async def train_hybrid_embeddings(n_components: int = 64, epochs: int = 30):
 
         # Compress tag vectors to match CF dimension using SVD
         logger.info("Compressing tag vectors with SVD...")
-        tag_matrix = np.zeros((len(common_vns), tag_dim))
+        tag_matrix = np.zeros((len(common_vns), tag_dim), dtype=np.float32)
         for i, vn_id in enumerate(common_vns):
             tag_matrix[i] = tag_vectors[vn_id]
 
@@ -633,7 +672,7 @@ async def train_hybrid_embeddings(n_components: int = 64, epochs: int = 30):
 
         # Fit SVD on remaining tag vectors
         if tag_only_vns:
-            tag_only_matrix = np.zeros((len(tag_only_vns), tag_dim))
+            tag_only_matrix = np.zeros((len(tag_only_vns), tag_dim), dtype=np.float32)
             tag_only_list = list(tag_only_vns)
             for i, vn_id in enumerate(tag_only_list):
                 tag_only_matrix[i] = tag_vectors[vn_id]

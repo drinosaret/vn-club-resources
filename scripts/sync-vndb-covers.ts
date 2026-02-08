@@ -26,6 +26,7 @@ const CACHE_DIR = resolveCacheDir();
 const CV_DIR = path.join(CACHE_DIR, 'cv');
 const WEBP_QUALITY = 80;
 const CONCURRENT_CONVERSIONS = 10;
+const VARIANT_WIDTHS = [256, 512] as const;
 const IS_WINDOWS = process.platform === 'win32';
 
 /**
@@ -78,6 +79,7 @@ async function syncCovers(): Promise<void> {
           '-rtpv',
           '--progress',
           '--del',
+          '--exclude=*.webp',
           'rsync://dl.vndb.org/vndb-img/cv/',
           targetPath + '/',
         ]
@@ -85,6 +87,7 @@ async function syncCovers(): Promise<void> {
           '-rtpv',
           '--progress',
           '--del',
+          '--exclude=*.webp',
           'rsync://dl.vndb.org/vndb-img/cv/',
           CV_DIR + '/',
         ];
@@ -218,6 +221,128 @@ async function convertImagesInParallel(images: string[]): Promise<{ converted: n
 }
 
 /**
+ * Find JPG files that need resized variants (w256, w512) generated.
+ * Skips variants that already exist and are newer than the source JPG.
+ */
+interface VariantTask {
+  jpgPath: string;
+  variants: { width: number; outputPath: string }[];
+}
+
+function findMissingVariants(): VariantTask[] {
+  const tasks: VariantTask[] = [];
+
+  function scanDir(dir: string) {
+    if (!fs.existsSync(dir)) return;
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scanDir(fullPath);
+      } else if (entry.name.endsWith('.jpg')) {
+        const baseName = entry.name.replace('.jpg', '');
+        const jpgMtime = fs.statSync(fullPath).mtimeMs;
+        const missingVariants: { width: number; outputPath: string }[] = [];
+
+        for (const width of VARIANT_WIDTHS) {
+          const variantPath = path.join(dir, `${baseName}-w${width}.webp`);
+          let needsGeneration = true;
+
+          if (fs.existsSync(variantPath)) {
+            const variantMtime = fs.statSync(variantPath).mtimeMs;
+            if (variantMtime >= jpgMtime) {
+              needsGeneration = false;
+            }
+          }
+
+          if (needsGeneration) {
+            missingVariants.push({ width, outputPath: variantPath });
+          }
+        }
+
+        if (missingVariants.length > 0) {
+          tasks.push({ jpgPath: fullPath, variants: missingVariants });
+        }
+      }
+    }
+  }
+
+  scanDir(CV_DIR);
+  return tasks;
+}
+
+/**
+ * Generate resized variants for a single source image.
+ * Reads the source once and produces all requested widths.
+ */
+async function generateVariants(task: VariantTask, retries = 2): Promise<{ generated: number; failed: number }> {
+  const results = { generated: 0, failed: 0 };
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const sourceBuffer = fs.readFileSync(task.jpgPath);
+
+      for (const variant of task.variants) {
+        try {
+          await sharp(sourceBuffer)
+            .resize(variant.width, null, {
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+            .webp({ quality: WEBP_QUALITY })
+            .toFile(variant.outputPath);
+          results.generated++;
+        } catch {
+          results.failed++;
+        }
+      }
+      return results;
+    } catch {
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        continue;
+      }
+      results.failed += task.variants.length;
+      return results;
+    }
+  }
+  return results;
+}
+
+/**
+ * Generate resized variants in parallel with concurrency limit
+ */
+async function generateVariantsInParallel(tasks: VariantTask[]): Promise<{ generated: number; failed: number }> {
+  const results = { generated: 0, failed: 0 };
+  const queue = [...tasks];
+  let processed = 0;
+  const totalVariants = tasks.reduce((sum, t) => sum + t.variants.length, 0);
+
+  async function worker() {
+    while (queue.length > 0) {
+      const task = queue.shift();
+      if (!task) break;
+
+      const taskResults = await generateVariants(task);
+      results.generated += taskResults.generated;
+      results.failed += taskResults.failed;
+
+      processed++;
+      if (processed % 100 === 0) {
+        process.stdout.write(`\rGenerated ${results.generated + results.failed}/${totalVariants} resized variants...`);
+      }
+    }
+  }
+
+  const workers = Array(CONCURRENT_CONVERSIONS).fill(null).map(() => worker());
+  await Promise.all(workers);
+
+  console.log(`\rGenerated ${results.generated + results.failed}/${totalVariants} resized variants.`);
+  return results;
+}
+
+/**
  * Parse command line arguments
  */
 function parseArgs(): { convertOnly: boolean; skipSync: boolean } {
@@ -251,8 +376,8 @@ async function main() {
     console.log('Skipping rsync (--skip-sync flag)');
   }
 
-  // Find images that need conversion
-  console.log('\nScanning for unconverted images...');
+  // Phase 2: Convert new JPGs to full-size WebP
+  console.log('\nPhase 2: Scanning for unconverted images...');
   const unconverted = findUnconvertedImages();
   console.log(`Found ${unconverted.length} images to convert to WebP`);
 
@@ -262,6 +387,20 @@ async function main() {
     console.log(`\nConversion complete!`);
     console.log(`  Converted: ${results.converted}`);
     console.log(`  Failed: ${results.failed}`);
+  }
+
+  // Phase 3: Generate resized variants (w256, w512)
+  console.log('\nPhase 3: Scanning for missing resized variants...');
+  const variantTasks = findMissingVariants();
+  const totalVariants = variantTasks.reduce((sum, t) => sum + t.variants.length, 0);
+  console.log(`Found ${variantTasks.length} images needing ${totalVariants} resized variants`);
+
+  if (variantTasks.length > 0) {
+    console.log('\nGenerating resized variants (w256, w512)...');
+    const variantResults = await generateVariantsInParallel(variantTasks);
+    console.log(`\nVariant generation complete!`);
+    console.log(`  Generated: ${variantResults.generated}`);
+    console.log(`  Failed: ${variantResults.failed}`);
   }
 
   console.log('\nSync complete!');
