@@ -60,7 +60,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://t.vndb.org https://pbs.twimg.com https://video.twimg.com https://ton.twimg.com https://abs.twimg.com https://store.steampowered.com https://cdn.akamai.steamstatic.com https://vnclub.org",
               "font-src 'self'",

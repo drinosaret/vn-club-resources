@@ -2,20 +2,30 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
 import Link from 'next/link';
-import { Star, Loader2 } from 'lucide-react';
+import { Star, Loader2, BookOpen } from 'lucide-react';
 import { VNSearchResult } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl, ImageWidth } from '@/lib/vndb-image-cache';
 import { getDisplayTitle, TitlePreference } from '@/lib/title-preference';
 import { GridSize, flexItemClasses } from './ViewModeToggle';
-import { NSFWNextImage, isNsfwContent } from '@/components/NSFWImage';
+import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
 
-// Map grid size to optimal image width for performance
-// Mobile: medium/large show 2 columns (~195px CSS) — need 512px for retina sharpness
-// Small shows 3 columns (~120px CSS) — 256px is sufficient for retina
+// Map grid size to the primary image width for preloading and fallback.
+// The actual rendering uses srcset with multiple widths so the browser
+// picks the optimal variant per viewport. This "primary" width is used
+// by the Image() preload objects and as the default src.
 const GRID_IMAGE_WIDTHS: Record<GridSize, ImageWidth> = {
   small: 256,   // 3 cols on mobile (~120px) — 256px fine for 2x retina
   medium: 512,  // 2 cols on mobile (~195px) — needs 512px for retina
   large: 512,   // 2 cols on mobile (~195px) — needs 512px for retina
+};
+
+// srcset widths per grid size — lets the browser pick the smallest
+// sufficient image for the actual CSS layout width + device pixel ratio.
+// Smaller grid = smaller max image; larger grid = needs bigger images.
+const GRID_SRCSET_WIDTHS: Record<GridSize, ImageWidth[]> = {
+  small:  [128, 256],       // max ~170px CSS → 256 covers 1.5x DPR
+  medium: [128, 256, 512],  // max ~210px CSS → 512 covers 2x+ DPR
+  large:  [256, 512],       // max ~260px CSS → 512 covers 2x DPR
 };
 
 // Per-grid sizes attribute — matches actual rendered widths per breakpoint
@@ -197,28 +207,31 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       )}
       {/* Flexbox layout centers incomplete last row like VNDB */}
       <div className={`flex flex-wrap justify-center gap-x-3 gap-y-5 my-6 transition-opacity duration-150 ease-out ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-80' : ''}`}>
-        {displayResults.map((vn, index) => (
-          <VNCover key={vn.id} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} index={index} />
+        {displayResults.map((vn) => (
+          <VNCover key={vn.id} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
         ))}
       </div>
     </div>
   );
 });
 
-// Only the first N images load eagerly (above-the-fold); the rest lazy-load
-// to avoid flooding the image proxy with 35+ simultaneous requests.
-const EAGER_IMAGE_COUNT = 12;
+// All browse grid images use loading="lazy" to prevent React 19 from injecting
+// <link rel="preload" as="image"> into <head> for every non-lazy image.
+// Those preload links accumulate across SWR re-renders and are never cleaned up,
+// spamming the console with "preloaded with link preload was not used" warnings.
+// The VNGrid's own preloading (new Image() for PRELOAD_COUNT above-fold images
+// before grid swap) already handles the above-fold UX.
 
 interface VNCoverProps {
   vn: VNSearchResult;
   preference: TitlePreference;
   imageWidth?: ImageWidth;
+  srcsetWidths?: ImageWidth[];
   imageSizes?: string;
   itemClass?: string;
-  index?: number;
 }
 
-const VNCover = memo(function VNCover({ vn, preference, imageWidth, imageSizes, itemClass, index = 0 }: VNCoverProps) {
+const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass }: VNCoverProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -240,6 +253,18 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, imageSizes, 
   const imageUrl = baseImageUrl && retryKey > 0
     ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}_r=${retryKey}`
     : baseImageUrl;
+
+  // Build srcset so the browser picks the smallest sufficient variant
+  // for the actual layout width × device pixel ratio
+  const srcset = vn.image_url && srcsetWidths
+    ? srcsetWidths
+        .map(w => {
+          const url = getProxiedImageUrl(vn.image_url!, { width: w, vnId });
+          return url ? `${url}${retryKey > 0 ? `${url.includes('?') ? '&' : '?'}_r=${retryKey}` : ''} ${w}w` : null;
+        })
+        .filter(Boolean)
+        .join(', ')
+    : undefined;
   const isNsfw = isNsfwContent(vn.image_sexual);
   const showImage = imageUrl && !imageError;
 
@@ -280,6 +305,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, imageSizes, 
     <Link
       href={`/vn/${vnId}`}
       className={`group block ${itemClass || ''}`}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px 300px' }}
     >
       {/* Cover image container */}
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-shadow bg-gray-200 dark:bg-gray-700">
@@ -290,22 +316,21 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, imageSizes, 
 
         {/* Cover Image — preloaded images display instantly from browser cache */}
         {showImage ? (
-          <NSFWNextImage
+          <NSFWImage
             src={imageUrl}
             alt={title}
             imageSexual={vn.image_sexual}
             vnId={vnId}
-            className="w-full h-full object-cover object-top"
-            fill
+            className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            loading="lazy"
+            srcSet={srcset}
             sizes={imageSizes || IMAGE_SIZES.medium}
-            loading={index < EAGER_IMAGE_COUNT ? 'eager' : 'lazy'}
-            unoptimized
             onLoad={handleImageLoad}
             onError={handleImageError}
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500">
-            <span className="text-xs text-center px-2">{title}</span>
+            <BookOpen className="w-8 h-8" />
           </div>
         )}
 
@@ -341,8 +366,8 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, imageSizes, 
     prevProps.vn.id === nextProps.vn.id &&
     prevProps.preference === nextProps.preference &&
     prevProps.imageWidth === nextProps.imageWidth &&
+    prevProps.srcsetWidths === nextProps.srcsetWidths &&
     prevProps.imageSizes === nextProps.imageSizes &&
-    prevProps.itemClass === nextProps.itemClass &&
-    prevProps.index === nextProps.index
+    prevProps.itemClass === nextProps.itemClass
   );
 });

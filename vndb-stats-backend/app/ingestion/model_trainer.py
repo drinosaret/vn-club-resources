@@ -1,5 +1,6 @@
 """Train recommendation models from imported data."""
 
+import gc
 import logging
 import os
 from datetime import datetime
@@ -21,6 +22,17 @@ from app.db.models import (
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def _log_memory(label: str):
+    """Log current process memory usage."""
+    try:
+        import psutil
+        process = psutil.Process()
+        mem = process.memory_info()
+        logger.info(f"[MEMORY] {label}: RSS={mem.rss / (1024**2):.0f}MB, VMS={mem.vms / (1024**2):.0f}MB")
+    except ImportError:
+        pass
 
 
 async def compute_tag_vectors():
@@ -106,6 +118,8 @@ async def compute_tag_vectors():
 
         await db.commit()
 
+    gc.collect()
+    _log_memory("after tag vectors")
     logger.info("Tag vectors computed")
 
 
@@ -128,6 +142,7 @@ async def train_collaborative_filter():
     Uses the global votes dump.
     """
     logger.info("Training collaborative filtering model")
+    _log_memory("before CF training")
 
     try:
         from implicit.als import AlternatingLeastSquares
@@ -229,6 +244,13 @@ async def train_collaborative_filter():
 
         await db.commit()
 
+        # Free large objects before next phase
+        del model, votes, interaction_matrix
+        del user_ids, vn_ids, rows, cols, data
+        del idx_to_user, idx_to_vn
+
+    gc.collect()
+    _log_memory("after CF training")
     logger.info("Collaborative filtering model trained")
 
 
@@ -276,6 +298,7 @@ async def compute_vn_similarities(top_k: int = 100):
     logger.info("COMPUTING CONTENT-BASED SIMILARITIES (tag vectors)")
     logger.info("=" * 50)
     logger.info(f"Settings: top-{top_k} similar VNs per entry")
+    _log_memory("before content similarity")
 
     async with async_session() as db:
         # Step 1: Get VN IDs and vector dimension (lightweight query)
@@ -369,6 +392,11 @@ async def compute_vn_similarities(top_k: int = 100):
 
         await db.commit()
 
+        # Free large matrix before next phase
+        del vectors_matrix, vn_ids, vn_id_to_idx
+
+    gc.collect()
+    _log_memory("after content similarity")
     logger.info(f"Content-based similarities complete: {total_inserted} pairs stored")
 
 
@@ -418,6 +446,7 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
     logger.info("COMPUTING COLLABORATIVE FILTERING SIMILARITIES (PMI)")
     logger.info("=" * 50)
     logger.info(f"Settings: top-{top_k}, min_users={min_users}")
+    _log_memory("before collaborative similarity")
 
     async with async_session() as db:
         # Load ALL votes - any rating means user read the VN
@@ -469,8 +498,14 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
         valid_pairs = [(pair, count) for pair, count in candidate_counts.items() if count >= min_users]
         logger.info(f"Found {len(valid_pairs)} valid candidate pairs (>={min_users} common users)")
 
+        # Free raw votes (no longer needed, vn_users/user_vns have the data)
+        del votes
+        _log_memory("after candidate pairs")
+
         # Clear candidate_counts to free memory
         del candidate_counts
+        gc.collect()
+        _log_memory("after freeing candidate_counts")
 
         # Clear existing co-occurrence data
         await db.execute(text("TRUNCATE TABLE vn_cooccurrence"))
@@ -530,6 +565,11 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
 
         await db.commit()
 
+        # Free remaining large objects
+        del vn_users, user_vns, valid_pairs, vn_top_similar, cooccurrence_records
+
+    gc.collect()
+    _log_memory("after collaborative similarity")
     logger.info(f"Collaborative filtering complete: {total_inserted} pairs stored")
 
 

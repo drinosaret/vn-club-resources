@@ -56,3 +56,6 @@ discord.py>=2.3.0
 
 # Rate limiting
 slowapi>=0.1.9
+
+# Process monitoring
+psutil>=5.9.0

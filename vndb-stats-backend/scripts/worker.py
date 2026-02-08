@@ -220,6 +220,8 @@ async def recompute_models_only():
 
     Used when data exists but similarity tables are empty (e.g., initial import
     crashed during Phase 3, or model_trainer was added after initial import).
+
+    Has a 2-hour timeout to prevent indefinite hangs.
     """
     import time
     from app.ingestion.model_trainer import (
@@ -230,24 +232,34 @@ async def recompute_models_only():
     )
 
     start_time = time.time()
+    max_duration = 7200  # 2 hours
 
     logger.info("=" * 60)
     logger.info("RECOMPUTING MODELS (data already present)")
+    logger.info(f"Maximum duration: {max_duration // 3600} hours")
     logger.info("=" * 60)
 
     try:
-        logger.info("\n>>> PHASE 2: COMPUTING MODELS <<<")
-        await compute_tag_vectors()
-        await train_collaborative_filter()
+        async with asyncio.timeout(max_duration):
+            logger.info("\n>>> PHASE 2: COMPUTING MODELS <<<")
+            await compute_tag_vectors()
+            await train_collaborative_filter()
 
-        logger.info("\n>>> PHASE 3: COMPUTING SIMILARITY TABLES <<<")
-        await compute_vn_similarities()
-        await compute_item_item_similarity()
+            logger.info("\n>>> PHASE 3: COMPUTING SIMILARITY TABLES <<<")
+            await compute_vn_similarities()
+            await compute_item_item_similarity()
 
+            elapsed = time.time() - start_time
+            logger.info("=" * 60)
+            logger.info(f"MODEL RECOMPUTE COMPLETE - Total time: {int(elapsed // 60)}m {int(elapsed % 60)}s")
+            logger.info("=" * 60)
+
+    except asyncio.TimeoutError:
         elapsed = time.time() - start_time
-        logger.info("=" * 60)
-        logger.info(f"MODEL RECOMPUTE COMPLETE - Total time: {int(elapsed // 60)}m {int(elapsed % 60)}s")
-        logger.info("=" * 60)
+        logger.error("=" * 60)
+        logger.error(f"MODEL RECOMPUTE TIMED OUT after {int(elapsed // 60)}m")
+        logger.error("=" * 60)
+        raise
 
     except Exception as e:
         logger.error(f"Model recompute failed: {e}", exc_info=True)
@@ -369,8 +381,14 @@ async def main():
         logger.error(f"Data migration error: {e}")
         # Don't fail startup - migrations can be run manually later
 
-    # Check database status (and maybe update if production mode)
-    await check_and_update_if_stale()
+    # Check database status (and maybe update if production mode).
+    # If model computation fails (e.g. OOM), continue to scheduler setup
+    # so the daily job can retry later instead of crash-looping.
+    try:
+        await check_and_update_if_stale()
+    except Exception as e:
+        logger.error(f"Startup check/update failed: {e}")
+        logger.error("Worker will continue running — the daily scheduled job will retry.")
 
     # Set up scheduler for daily updates at 4 AM UTC
     scheduler = AsyncIOScheduler()

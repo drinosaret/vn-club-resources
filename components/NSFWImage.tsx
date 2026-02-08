@@ -109,6 +109,8 @@ interface NSFWImageProps {
   vnId?: string;
   className?: string;
   loading?: 'lazy' | 'eager';
+  srcSet?: string;
+  sizes?: string;
   onLoad?: () => void;
   onError?: () => void;
 }
@@ -132,7 +134,7 @@ interface NSFWNextImageProps {
   hideOverlay?: boolean;
 }
 
-export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', onLoad, onError }: NSFWImageProps) {
+export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', srcSet, sizes, onLoad, onError }: NSFWImageProps) {
   const { shouldBlur, handleReveal, handleKeyDown, wrapperRef } = useNSFWReveal(vnId, imageSexual);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -163,6 +165,8 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         className={`${className} ${shouldBlur ? 'blur-lg nsfw-blur-transition' : ''} transition-[filter] duration-300`}
         loading={loading}
         decoding="async"
+        srcSet={srcSet}
+        sizes={sizes}
         onLoad={onLoad}
         onError={onError}
       />

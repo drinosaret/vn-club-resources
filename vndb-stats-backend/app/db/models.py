@@ -81,6 +81,13 @@ class VisualNovel(Base):
         Index("idx_vn_released", "released"),
         Index("idx_vn_rating", rating.desc()),
         Index("idx_vn_title", "title"),
+        # Composite indexes for common browse patterns
+        Index("idx_vn_olang_rating", "olang", rating.desc().nullslast(), "id"),
+        Index("idx_vn_devstatus_rating", "devstatus", rating.desc().nullslast(), "id"),
+        Index("idx_vn_olang", "olang"),
+        Index("idx_vn_devstatus", "devstatus"),
+        Index("idx_vn_votecount", votecount.desc()),
+        Index("idx_vn_minage", "minage"),
     )
 
 

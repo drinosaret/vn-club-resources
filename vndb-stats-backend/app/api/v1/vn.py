@@ -16,6 +16,7 @@ from app.db import schemas
 from app.db.models import VisualNovel, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation
 from app.core.vndb_client import get_vndb_client
 from app.core.auth import require_admin
+from app.core.cache import get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -130,9 +131,33 @@ async def search_vns(
     - Multiple sort options
     """
     import time
+    import hashlib
     start_time = time.time()
 
-    query = select(VisualNovel)
+    # Redis cache: 60s TTL for browse results (data only changes daily)
+    cache = get_cache()
+    cache_params = (
+        q, first_char, tags, exclude_tags, tag_mode, traits, exclude_traits,
+        include_children, year_min, year_max, min_rating, max_rating,
+        length, minage, devstatus, olang, platform,
+        exclude_length, exclude_minage, exclude_devstatus, exclude_olang, exclude_platform,
+        staff, seiyuu, developer, publisher, producer,
+        spoiler_level, nsfw, sort, sort_order, page, limit,
+    )
+    cache_key = f"browse:{hashlib.md5(str(cache_params).encode()).hexdigest()}"
+    cached = await cache.get(cache_key)
+    if cached:
+        cached["query_time"] = round(time.time() - start_time, 3)
+        return schemas.VNSearchResponse(**cached)
+
+    # Only select the columns needed for VNSummary response (165 bytes/row vs 748 for full ORM)
+    _browse_columns = [
+        VisualNovel.id, VisualNovel.title, VisualNovel.title_jp,
+        VisualNovel.title_romaji, VisualNovel.image_url, VisualNovel.image_sexual,
+        VisualNovel.released, VisualNovel.rating, VisualNovel.votecount,
+        VisualNovel.olang,
+    ]
+    query = select(*_browse_columns)
     count_query = select(func.count(VisualNovel.id))
 
     # Text search
@@ -545,9 +570,9 @@ async def search_vns(
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
 
-    # Execute
+    # Execute (result rows are named tuples, not ORM objects)
     result = await db.execute(query)
-    vns = result.scalars().all()
+    vns = result.all()
 
     count_result = await db.execute(count_query)
     total = count_result.scalar_one_or_none() or 0
@@ -810,7 +835,7 @@ async def search_vns(
 
     elapsed_time = time.time() - start_time
 
-    return schemas.VNSearchResponse(
+    response = schemas.VNSearchResponse(
         results=[
             schemas.VNSummary(
                 id=vn.id,
@@ -832,6 +857,11 @@ async def search_vns(
         pages=(total + limit - 1) // limit,
         query_time=round(elapsed_time, 3),
     )
+
+    # Cache the response for 60 seconds (data only changes daily)
+    await cache.set(cache_key, response.model_dump(mode="json"), ttl=60)
+
+    return response
 
 
 @router.get("/traits/counts")
