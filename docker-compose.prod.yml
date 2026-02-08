@@ -48,6 +48,7 @@ services:
       - NODE_ENV=production
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
       - NEXT_PUBLIC_VNDB_STATS_API=${NEXT_PUBLIC_VNDB_STATS_API}
+      - API_URL_INTERNAL=http://api:8000
       - VNDB_CACHE_DIR=/data/vndb-cache
     volumes:
       - vndb-cache:/data/vndb-cache

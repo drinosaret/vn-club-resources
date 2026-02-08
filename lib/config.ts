@@ -11,6 +11,10 @@
  * @throws Error if NEXT_PUBLIC_VNDB_STATS_API is not set
  */
 export function getBackendUrl(): string {
+  // Server-side: prefer internal Docker URL for container-to-container calls
+  if (typeof window === 'undefined' && process.env.API_URL_INTERNAL) {
+    return process.env.API_URL_INTERNAL.replace(/\/$/, '');
+  }
   const url = process.env.NEXT_PUBLIC_VNDB_STATS_API;
   if (!url) {
     throw new Error(
@@ -26,6 +30,9 @@ export function getBackendUrl(): string {
  * Use this only for optional features that can work without the backend.
  */
 export function getBackendUrlOptional(): string | undefined {
+  if (typeof window === 'undefined' && process.env.API_URL_INTERNAL) {
+    return process.env.API_URL_INTERNAL.replace(/\/$/, '');
+  }
   return process.env.NEXT_PUBLIC_VNDB_STATS_API;
 }
 
