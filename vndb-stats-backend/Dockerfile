@@ -31,7 +31,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Create non-root user BEFORE copying code
 RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/dumps && \
+    mkdir -p /app/dumps /app/data && \
     chown -R appuser:appuser /app
 
 WORKDIR /app
