@@ -4,6 +4,8 @@
  */
 
 import { Metadata } from 'next';
+import { stripBBCode } from './bbcode';
+export { stripBBCode };
 
 /**
  * Safely serialize JSON-LD data for embedding in a <script> tag.
@@ -109,22 +111,13 @@ export function getOGImagePath(vndbUrl?: string, imageSexual?: number): string {
 }
 
 /**
- * Strip BBCode tags from VNDB descriptions for plain text metadata.
- */
-export function stripBBCode(text: string): string {
-  return text
-    .replace(/\[url=[^\]]*\]/gi, '')
-    .replace(/\[\/url\]/gi, '')
-    .replace(/\[spoiler\][\s\S]*?\[\/spoiler\]/gi, '')
-    .replace(/\[[^\]]+\]/g, '')
-    .trim();
-}
-
-/**
  * Truncate text for meta descriptions (150-200 chars recommended).
+ * Strips BBCode and collapses all whitespace to single spaces
+ * so OG/Twitter descriptions render as a clean single line.
  */
 export function truncateDescription(text: string, maxLength = 200): string {
-  const cleaned = stripBBCode(text);
+  const stripped = stripBBCode(text);
+  const cleaned = stripped.replace(/\s+/g, ' ').trim();
   if (cleaned.length <= maxLength) return cleaned;
   return cleaned.substring(0, maxLength - 3).trim() + '...';
 }

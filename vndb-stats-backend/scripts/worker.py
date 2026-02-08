@@ -29,7 +29,7 @@ from sqlalchemy import select, func, text
 
 from app.config import get_settings
 from app.db.database import init_db, async_session_maker
-from app.db.models import SystemMetadata, VisualNovel
+from app.db.models import SystemMetadata, VisualNovel, VNSimilarity, VNCoOccurrence
 from app.logging import ScriptDBLogHandler
 
 logging.basicConfig(
@@ -76,6 +76,17 @@ async def get_database_status() -> dict:
             )
             vn_count = result.scalar_one_or_none() or 0
 
+            # Get similarity table counts
+            result = await session.execute(
+                select(func.count()).select_from(VNSimilarity)
+            )
+            similarity_count = result.scalar_one_or_none() or 0
+
+            result = await session.execute(
+                select(func.count()).select_from(VNCoOccurrence)
+            )
+            cooccurrence_count = result.scalar_one_or_none() or 0
+
             # Get last import time
             result = await session.execute(
                 select(SystemMetadata).where(SystemMetadata.key == "last_import")
@@ -92,8 +103,13 @@ async def get_database_status() -> dict:
                 except Exception:
                     pass
 
+            has_similarities = similarity_count > 0 and cooccurrence_count > 0
+
             return {
                 "vn_count": vn_count,
+                "similarity_count": similarity_count,
+                "cooccurrence_count": cooccurrence_count,
+                "has_similarities": has_similarities,
                 "last_import": last_import,
                 "hours_since_import": hours_since,
                 "has_data": vn_count > 0,
@@ -199,8 +215,52 @@ async def run_daily_update():
         raise
 
 
+async def recompute_models_only():
+    """Recompute recommendation models and similarity tables without re-importing data.
+
+    Used when data exists but similarity tables are empty (e.g., initial import
+    crashed during Phase 3, or model_trainer was added after initial import).
+    """
+    import time
+    from app.ingestion.model_trainer import (
+        compute_tag_vectors,
+        train_collaborative_filter,
+        compute_vn_similarities,
+        compute_item_item_similarity,
+    )
+
+    start_time = time.time()
+
+    logger.info("=" * 60)
+    logger.info("RECOMPUTING MODELS (data already present)")
+    logger.info("=" * 60)
+
+    try:
+        logger.info("\n>>> PHASE 2: COMPUTING MODELS <<<")
+        await compute_tag_vectors()
+        await train_collaborative_filter()
+
+        logger.info("\n>>> PHASE 3: COMPUTING SIMILARITY TABLES <<<")
+        await compute_vn_similarities()
+        await compute_item_item_similarity()
+
+        elapsed = time.time() - start_time
+        logger.info("=" * 60)
+        logger.info(f"MODEL RECOMPUTE COMPLETE - Total time: {int(elapsed // 60)}m {int(elapsed % 60)}s")
+        logger.info("=" * 60)
+
+    except Exception as e:
+        logger.error(f"Model recompute failed: {e}", exc_info=True)
+        raise
+
+
 async def check_and_update_if_stale():
-    """Check if data is stale (>24h) and trigger update if so.
+    """Check if data is stale (>24h) or models are missing, and trigger updates.
+
+    Checks:
+    1. If database is empty → trigger full import (production only)
+    2. If data exists but similarity tables are empty → recompute models
+    3. If data is older than 24h → trigger full update (production only)
 
     In DEV_MODE, this function only logs status without triggering updates.
     This prevents unnecessary reimports during development.
@@ -218,24 +278,35 @@ async def check_and_update_if_stale():
 
     if status["has_data"]:
         logger.info(f"  VN Count: {status['vn_count']:,} visual novels")
+        logger.info(f"  Similarities: {status['similarity_count']:,} rows")
+        logger.info(f"  Co-occurrences: {status['cooccurrence_count']:,} rows")
         if status["hours_since_import"] is not None:
             logger.info(f"  Last Import: {status['hours_since_import']:.1f} hours ago")
         else:
             logger.info(f"  Last Import: {status['last_import'] or 'Unknown'}")
-        logger.info(f"  Status: Data is present and available")
+
+        if status["has_similarities"]:
+            logger.info(f"  Status: Data and models are present and available")
+        else:
+            logger.warning(f"  Status: Data present but SIMILARITY TABLES ARE EMPTY")
     else:
         logger.warning("  VN Count: 0 (database is empty)")
         logger.warning("  Status: NEEDS INITIAL IMPORT")
 
     logger.info("-" * 60)
 
-    # In DEV_MODE, never auto-trigger imports
+    # In DEV_MODE, never auto-trigger imports but still warn about missing models
     if settings.dev_mode:
         logger.info("DEV_MODE=true - Automatic imports disabled")
         if not status["has_data"]:
             logger.info("")
             logger.info("To import data, run: npm run api:import")
             logger.info("")
+        elif not status["has_similarities"]:
+            logger.warning("")
+            logger.warning("Similarity tables are empty! Related Games and Users Also Read will not work.")
+            logger.warning("To fix, run: npm run api:import (or wait for daily update in production)")
+            logger.warning("")
         return
 
     # Production mode - check staleness and trigger if needed
@@ -243,6 +314,12 @@ async def check_and_update_if_stale():
         logger.info("No data found - triggering initial import")
         logger.info("(To disable auto-import, set DEV_MODE=true)")
         await run_daily_update()
+        return
+
+    # Data exists but similarity tables are empty - recompute models only (no reimport needed)
+    if not status["has_similarities"]:
+        logger.warning("Similarity tables are empty - recomputing models...")
+        await recompute_models_only()
         return
 
     if status["hours_since_import"] is not None and status["hours_since_import"] > 24:

@@ -11,6 +11,8 @@
 #   3. Wait for containers to start (backend runs migrations automatically)
 #   4. Run initial data import:
 #      docker compose -f docker-compose.prod.yml exec api python scripts/initial_import.py
+#   5. Sync VNDB cover images (rsync + WebP conversion):
+#      docker compose -f docker-compose.prod.yml --profile tools run --rm sync
 #
 # Updates:
 #   git pull && docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
@@ -180,7 +182,37 @@ services:
     networks:
       - vnclub
 
-  # Worker for scheduled imports
+  # VNDB cover image sync: rsync from VNDB + batch convert to WebP
+  # Only runs on-demand via --profile tools, not with regular `up`
+  #
+  # Full sync (rsync + convert): docker compose -f docker-compose.prod.yml --profile tools run --rm sync
+  # Convert only (skip rsync):   docker compose -f docker-compose.prod.yml --profile tools run --rm sync --skip-sync
+  sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    working_dir: /app
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - vndb-cache:/data/vndb-cache
+    environment:
+      - VNDB_CACHE_DIR=/data/vndb-cache
+    profiles:
+      - tools
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        apk add --no-cache rsync > /dev/null 2>&1;
+        npx tsx scripts/sync-vndb-covers.ts "$@";
+        chown -R 1001:1001 /data/vndb-cache
+      - --
+    command: []
+
+  # Worker for scheduled imports and heavy computation (similarity matrices, model training).
+  # No memory limit — these computations need 5-6GB peak for loading 60K tag vectors.
+  # The worker is isolated from API serving, so memory spikes don't affect user requests.
   worker:
     build:
       context: ./vndb-stats-backend
@@ -202,11 +234,6 @@ services:
         condition: service_started
     volumes:
       - dumps:/app/data
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 4G
     restart: unless-stopped
     networks:
       - vnclub

@@ -28,7 +28,12 @@ from app.config import get_settings
 from app.db.database import init_db, async_session_maker
 from app.db.models import SystemMetadata
 from app.ingestion.importer import run_full_import
-from app.ingestion.model_trainer import compute_tag_vectors, train_collaborative_filter
+from app.ingestion.model_trainer import (
+    compute_tag_vectors,
+    train_collaborative_filter,
+    compute_vn_similarities,
+    compute_item_item_similarity,
+)
 from app.logging import ScriptDBLogHandler
 
 
@@ -139,12 +144,21 @@ async def main(args):
             max_age_hours=args.max_age,
         )
 
-        # Compute recommendation models
+        # Phase 2: Compute recommendation models
+        logger.info("\n>>> PHASE 2/3: COMPUTING MODELS <<<")
         logger.info("Computing tag vectors...")
         await compute_tag_vectors()
 
         logger.info("Training collaborative filtering model...")
         await train_collaborative_filter()
+
+        # Phase 3: Compute similarity tables
+        logger.info("\n>>> PHASE 3/3: COMPUTING SIMILARITY TABLES <<<")
+        logger.info("Computing VN similarities (content-based)...")
+        await compute_vn_similarities()
+
+        logger.info("Computing item-item similarity (collaborative)...")
+        await compute_item_item_similarity()
 
         # Record import time
         await update_last_import_time()
