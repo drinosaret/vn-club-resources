@@ -211,14 +211,18 @@ services:
     command: []
 
   # Worker for scheduled imports and heavy computation (similarity matrices, model training).
-  # No memory limit — these computations need 5-6GB peak for loading 60K tag vectors.
-  # The worker is isolated from API serving, so memory spikes don't affect user requests.
+  # Memory limit set to 8GB — similarity computation needs ~6GB peak for loading 60K tag vectors.
+  # Must stay capped to avoid OOM-killing other services on the host.
   worker:
     build:
       context: ./vndb-stats-backend
       dockerfile: Dockerfile
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/worker.py"]
+    deploy:
+      resources:
+        limits:
+          memory: 8G
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
