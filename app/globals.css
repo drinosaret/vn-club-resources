@@ -350,21 +350,24 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
     }
   }
 
-  @keyframes placeholder-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 1; }
-  }
-
   .animate-shimmer,
   .image-placeholder {
     animation: none;
   }
 }
 
-/* Subtle pulse animation for loading placeholders */
+/* Subtle pulse animation for loading placeholders.
+   Animates background-color (not opacity) to avoid creating compositor layers
+   in Firefox — opacity animations create a GPU layer per element, and 42 cover
+   placeholders on the browse page exceed the will-change memory budget. */
 @keyframes placeholder-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%, 100% { background-color: rgb(229 231 235); }
+  50% { background-color: rgb(209 213 219); }
+}
+
+@keyframes placeholder-pulse-dark {
+  0%, 100% { background-color: rgb(55 65 81); }
+  50% { background-color: rgb(65 75 91); }
 }
 
 .image-placeholder {
@@ -374,6 +377,7 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
 
 .dark .image-placeholder {
   background-color: rgb(55 65 81);
+  animation-name: placeholder-pulse-dark;
 }
 
 /* NProgress loading bar */
@@ -415,9 +419,10 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   will-change: filter;
 }
 
-.loading-overlay {
-  will-change: opacity;
-}
+/* loading-overlay intentionally has NO will-change — the overlay covers the
+   entire VN grid (potentially 1200×3000+ px) and would exceed Firefox's
+   will-change memory budget even as a single element. The opacity transition
+   works fine without it. */
 
 /* Indeterminate progress bar for pagination */
 @keyframes progress-indeterminate {

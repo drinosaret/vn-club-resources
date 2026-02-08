@@ -160,7 +160,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         ref={imgRef}
         src={src}
         alt={alt}
-        className={`${className} ${shouldBlur ? 'blur-lg' : ''} nsfw-blur-transition transition-[filter] duration-300`}
+        className={`${className} ${shouldBlur ? 'blur-lg nsfw-blur-transition' : ''} transition-[filter] duration-300`}
         loading={loading}
         decoding="async"
         onLoad={onLoad}
@@ -191,7 +191,7 @@ export function NSFWNextImage({ src, alt, imageSexual, vnId, className = '', fil
       <Image
         src={src}
         alt={alt}
-        className={`${className} ${shouldBlur ? 'blur-lg' : ''} nsfw-blur-transition transition-[filter] duration-300`}
+        className={`${className} ${shouldBlur ? 'blur-lg nsfw-blur-transition' : ''} transition-[filter] duration-300`}
         fill={fill}
         sizes={sizes}
         priority={priority}
