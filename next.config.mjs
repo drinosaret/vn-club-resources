@@ -18,6 +18,7 @@ const connectSrc = [
   'https://vnclub.org',
   'https://api.vnclub.org',
   'https://gc.zgo.at',
+  'https://vnclub.goatcounter.com',
   ...(backendUrl ? [backendUrl] : []),
 ].join(' ');
 
@@ -63,7 +64,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://gc.zgo.at",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://t.vndb.org https://pbs.twimg.com https://video.twimg.com https://ton.twimg.com https://abs.twimg.com https://store.steampowered.com https://cdn.akamai.steamstatic.com https://vnclub.org",
+              "img-src 'self' data: blob: https://t.vndb.org https://pbs.twimg.com https://video.twimg.com https://ton.twimg.com https://abs.twimg.com https://store.steampowered.com https://cdn.akamai.steamstatic.com https://vnclub.org https://vnclub.goatcounter.com",
               "font-src 'self'",
               `connect-src ${connectSrc}`,
               "frame-ancestors 'none'",
