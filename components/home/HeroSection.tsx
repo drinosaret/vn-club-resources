@@ -87,7 +87,7 @@ export function HeroSection() {
               height={400}
               className="object-contain drop-shadow-2xl"
               style={{ display: 'block' }}
-              priority
+              loading="eager"
               unoptimized
             />
           </div>

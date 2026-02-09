@@ -64,8 +64,8 @@ export function FeaturedVNs({ vns }: FeaturedVNsProps) {
 
         {/* 3x2 grid on mobile, 6 columns on desktop - fades in after shuffle */}
         <div className={`grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 transition-opacity duration-300 ${isReady ? 'opacity-100' : 'opacity-0'}`}>
-          {displayedVNs.map((vn, index) => (
-            <FeaturedVNCard key={vn.id} vn={vn} preference={preference} priority={index < 3} />
+          {displayedVNs.map((vn) => (
+            <FeaturedVNCard key={vn.id} vn={vn} preference={preference} />
           ))}
         </div>
 
@@ -83,7 +83,7 @@ export function FeaturedVNs({ vns }: FeaturedVNsProps) {
   );
 }
 
-function FeaturedVNCard({ vn, preference, priority }: { vn: FeaturedVNData; preference: 'japanese' | 'romaji'; priority: boolean }) {
+function FeaturedVNCard({ vn, preference }: { vn: FeaturedVNData; preference: 'japanese' | 'romaji' }) {
   const { onLoad, fadeClass } = useImageFade();
   const displayTitle = getDisplayTitle(vn, preference);
 
@@ -99,7 +99,7 @@ function FeaturedVNCard({ vn, preference, priority }: { vn: FeaturedVNData; pref
               src={vn.imageUrl}
               alt={displayTitle}
               fill
-              priority={priority}
+              loading="lazy"
               className={`object-cover transition-transform duration-300 group-hover:scale-105 ${fadeClass}`}
               sizes="(max-width: 768px) 33vw, 16vw"
               unoptimized
