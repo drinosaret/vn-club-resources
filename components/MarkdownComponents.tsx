@@ -117,18 +117,17 @@ export const markdownComponents: Components = {
     const alt = props.alt || '';
     const hasInlineStyle = props.style && Object.keys(props.style).length > 0;
 
-    // If inline styles are provided (from raw HTML), use a plain img and respect them
+    // If inline styles are provided (from raw HTML), render a plain img
+    // without ImageLightbox wrapper to preserve parent flex/grid layouts
     if (hasInlineStyle) {
       return (
-        <ImageLightbox src={src} alt={alt}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt={alt}
-            className="rounded-lg shadow-sm mx-auto my-2"
-            style={props.style}
-          />
-        </ImageLightbox>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          className="rounded-lg shadow-sm"
+          style={props.style}
+        />
       );
     }
 

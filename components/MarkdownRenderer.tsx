@@ -19,6 +19,8 @@ const sanitizeSchema = {
     a: [...(defaultSchema.attributes?.a || []), 'target', 'rel'],
     // Allow src, alt, and sizing on images (content is from our own MDX files)
     img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'loading', 'width', 'height', 'style'],
+    // Allow style on divs for flex layouts in guide content
+    div: [...(defaultSchema.attributes?.div || []), 'style'],
   },
   // Block dangerous protocols
   protocols: {
