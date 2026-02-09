@@ -32,8 +32,8 @@ class VNClubBot(commands.Bot):
 
     def __init__(self):
         intents = discord.Intents.default()
-        # No command_prefix since we only use slash commands (suppresses message_content intent warning)
-        super().__init__(command_prefix=None, intents=intents)
+        # Unused prefix — this bot only uses slash commands
+        super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
         """Load cogs and sync commands on startup."""

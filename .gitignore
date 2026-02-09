@@ -65,6 +65,9 @@ public/search-index.json
 public/sitemap*.xml
 public/robots.txt
 
+# Generated at deploy time (guide page dates for Docker builds)
+.git-dates.json
+
 # Tooling artifacts
 .playwright-mcp/
 

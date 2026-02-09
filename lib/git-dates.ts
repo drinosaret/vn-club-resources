@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 
 export interface GitDates {
@@ -8,6 +9,24 @@ export interface GitDates {
 
 // Cache git dates to avoid repeated git command execution
 const gitDatesCache = new Map<string, GitDates>();
+
+// Pre-generated dates from .git-dates.json (used in Docker where .git is unavailable)
+// undefined = not loaded yet, null = loaded but file missing/failed
+let preGeneratedDates: Record<string, GitDates> | null | undefined;
+
+function loadPreGeneratedDates(): Record<string, GitDates> | null {
+  if (preGeneratedDates !== undefined) return preGeneratedDates;
+  try {
+    const jsonPath = path.join(process.cwd(), '.git-dates.json');
+    const data = fs.readFileSync(jsonPath, 'utf-8');
+    const parsed: Record<string, GitDates> = JSON.parse(data);
+    preGeneratedDates = parsed;
+    return parsed;
+  } catch {
+    preGeneratedDates = null;
+    return null;
+  }
+}
 
 /**
  * Get both first and last commit dates for a file in a single git call.
@@ -62,6 +81,19 @@ export function getGitDates(filePath: string): GitDates {
           created: dates.created || fallback.created,
           updated: dates.updated || fallback.updated,
         };
+      }
+    }
+
+    // If git commands returned nothing, fall back to pre-generated .git-dates.json
+    // This handles Docker builds where .git is excluded
+    if (!dates.created && !dates.updated) {
+      const preGenerated = loadPreGeneratedDates();
+      if (preGenerated) {
+        // Try the normalized gitPath as key (e.g. "content/guides/guide.mdx")
+        const key = gitPath.replace(/^.*?(content\/guides\/)/, '$1');
+        if (preGenerated[key]) {
+          dates = preGenerated[key];
+        }
       }
     }
 

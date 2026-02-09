@@ -1,4 +1,4 @@
-import { getContentBySlug, getContentBySlugAsync, getAllContent } from '@/lib/mdx';
+import { getContentBySlug, getContentBySlugAsync, getAllContent, extractFirstImage } from '@/lib/mdx';
 import { notFound } from 'next/navigation';
 import { TableOfContents } from '@/components/TableOfContents';
 import { PageNavigation } from '@/components/PageNavigation';
@@ -31,6 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const description = guide.description || `Learn how to ${guide.title.toLowerCase()} with our comprehensive guide.`;
   const url = `https://vnclub.org/${slug}`;
+  const heroImage = extractFirstImage(guide.content) || '/assets/hikaru-icon2.webp';
 
   return {
     title: guide.title,
@@ -46,9 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       authors: ['VN Club Resurrection'],
       images: [
         {
-          url: '/assets/hikaru-icon2.webp',
-          width: 512,
-          height: 512,
+          url: heroImage,
           alt: guide.title,
         },
       ],
@@ -57,7 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       card: 'summary',
       title: guide.title,
       description,
-      images: ['/assets/hikaru-icon2.webp'],
+      images: [heroImage],
     },
     alternates: {
       canonical: url,
@@ -107,6 +106,11 @@ const mainGuideFAQ = {
 
 // JSON-LD structured data for guides
 function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>, slug: string) {
+  const heroImage = extractFirstImage(guide.content);
+  const imageUrl = heroImage
+    ? `https://vnclub.org${heroImage}`
+    : 'https://vnclub.org/assets/hikaru-icon2.webp';
+
   const schemas: Record<string, unknown>[] = [
     {
       '@context': 'https://schema.org',
@@ -134,7 +138,7 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
         '@type': 'WebPage',
         '@id': `https://vnclub.org/${slug}`,
       },
-      image: 'https://vnclub.org/assets/hikaru-icon2.webp',
+      image: imageUrl,
       articleSection: 'Guide',
       inLanguage: 'en-US',
     },

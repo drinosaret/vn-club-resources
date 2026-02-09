@@ -12,6 +12,10 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_ADMIN_USER_IDS: ${{ secrets.DISCORD_ADMIN_USER_IDS }}
+          TWITTER_AUTH_TOKEN: ${{ secrets.TWITTER_AUTH_TOKEN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: deploy
@@ -35,6 +39,9 @@ jobs:
             update_env DISCORD_BOT_TOKEN "$DISCORD_BOT_TOKEN"
             update_env DISCORD_ADMIN_USER_IDS "$DISCORD_ADMIN_USER_IDS"
             update_env TWITTER_AUTH_TOKEN "$TWITTER_AUTH_TOKEN"
+
+            # Generate git dates for guide pages (Docker has no .git)
+            node scripts/generate-git-dates.js
 
             docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
             # Reload nginx config — `up -d` doesn't restart containers for bind-mount changes

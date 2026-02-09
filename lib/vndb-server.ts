@@ -227,21 +227,27 @@ export async function getStaffForMetadata(
  */
 export async function getCharacterForMetadata(
   charId: string
-): Promise<{ name: string; original?: string; description?: string } | null> {
+): Promise<{ name: string; original?: string; description?: string; image_url?: string; image_sexual?: number } | null> {
   const backendUrl = getBackendUrlOptional();
   if (!backendUrl) return null;
 
   const normalizedId = charId.startsWith('c') ? charId : `c${charId}`;
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/character/${normalizedId}`, {
+    const res = await fetch(`${backendUrl}/api/v1/characters/${normalizedId}`, {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(30000),
     });
 
     if (!res.ok) return null;
     const data = await res.json();
-    return { name: data.name, original: data.original, description: data.description };
+    return {
+      name: data.name,
+      original: data.original,
+      description: data.description,
+      image_url: data.image_url,
+      image_sexual: data.image_sexual,
+    };
   } catch {
     return null;
   }
