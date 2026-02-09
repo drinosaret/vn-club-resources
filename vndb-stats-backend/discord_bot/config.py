@@ -12,12 +12,7 @@ class BotSettings:
         guild_id_str = os.environ.get("DISCORD_GUILD_ID", "").strip()
         self.guild_id: int = int(guild_id_str) if guild_id_str else 0
 
-        # Parse comma-separated ID lists
-        role_ids = os.environ.get("DISCORD_ADMIN_ROLE_IDS", "")
-        self.admin_role_ids: list[int] = [
-            int(x.strip()) for x in role_ids.split(",") if x.strip()
-        ]
-
+        # Parse comma-separated admin user ID list
         user_ids = os.environ.get("DISCORD_ADMIN_USER_IDS", "")
         self.admin_user_ids: list[int] = [
             int(x.strip()) for x in user_ids.split(",") if x.strip()

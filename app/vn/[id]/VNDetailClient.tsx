@@ -156,15 +156,18 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
     setError(null);
 
     try {
-      // Refresh from VNDB API and update database
-      const vnData = await vndbStatsApi.refreshVN(vnId);
+      const vnData = await vndbStatsApi.getVN(vnId);
       if (vnData) {
         setVN(vnData);
-      } else {
-        setError('Visual novel not found.');
+        // Reset dependent data so it reloads
+        setSimilarData(null);
+        setSimilarLoading(false);
+        setCharacters([]);
+        setCharactersLoaded(false);
+        setCharactersLoading(false);
       }
     } catch {
-      setError('Failed to refresh visual novel data.');
+      // Don't replace the page — VN data is already displayed
     } finally {
       setIsRefreshing(false);
     }
