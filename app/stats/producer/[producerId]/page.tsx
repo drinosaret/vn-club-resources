@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getProducerForMetadata } from '@/lib/vndb-server';
-import { generatePageMetadata } from '@/lib/metadata-utils';
+import { generatePageMetadata, truncateDescription } from '@/lib/metadata-utils';
 import ProducerDetailClient from './ProducerDetailClient';
 
 interface PageProps {
@@ -19,10 +19,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const displayName = producer.original || producer.name;
+  const description = producer.description
+    ? truncateDescription(producer.description)
+    : `${displayName} — visual novel producer statistics, score distribution, and catalog on VN Club.`;
 
   return generatePageMetadata({
     title: `${displayName} - Producer Stats`,
-    description: `${displayName} — visual novel producer statistics, score distribution, and catalog on VN Club.`,
+    description,
     path: `/stats/producer/${producerId}`,
   });
 }

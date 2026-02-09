@@ -133,7 +133,7 @@ export async function getVNForMetadata(vnId: string): Promise<VNDetail | null> {
  */
 export async function getProducerForMetadata(
   producerId: string
-): Promise<{ name: string; original?: string } | null> {
+): Promise<{ name: string; original?: string; description?: string } | null> {
   const backendUrl = getBackendUrlOptional();
   if (!backendUrl) return null;
 
@@ -204,7 +204,7 @@ export async function getTraitForMetadata(
 export async function getStaffForMetadata(
   staffId: string,
   type: 'staff' | 'seiyuu' = 'staff'
-): Promise<{ name: string; original?: string } | null> {
+): Promise<{ name: string; original?: string; description?: string } | null> {
   const backendUrl = getBackendUrlOptional();
   if (!backendUrl) return null;
 
@@ -227,7 +227,7 @@ export async function getStaffForMetadata(
  */
 export async function getCharacterForMetadata(
   charId: string
-): Promise<{ name: string; original?: string } | null> {
+): Promise<{ name: string; original?: string; description?: string } | null> {
   const backendUrl = getBackendUrlOptional();
   if (!backendUrl) return null;
 
@@ -241,7 +241,7 @@ export async function getCharacterForMetadata(
 
     if (!res.ok) return null;
     const data = await res.json();
-    return { name: data.name, original: data.original };
+    return { name: data.name, original: data.original, description: data.description };
   } catch {
     return null;
   }

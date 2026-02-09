@@ -5,7 +5,7 @@ import { generatePageMetadata } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Browse Visual Novels for Learning Japanese',
-  description: 'Browse visual novels from VNDB with filters for difficulty, tags, language, and length. Find the best VN to match your Japanese reading level.',
+  description: 'Browse thousands of visual novels from VNDB. Filter by tags, length, release date, and more to find your next Japanese reading challenge.',
   path: '/browse',
 });
 

@@ -16,9 +16,26 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: deploy
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DISCORD_BOT_TOKEN,DISCORD_ADMIN_USER_IDS,TWITTER_AUTH_TOKEN
           script: |
             cd ~/vn-club-resources
             git pull --ff-only
+
+            # Sync GitHub secrets into .env.prod (add or update each key)
+            ENV_FILE=deploy/.env.prod
+            update_env() {
+              local key="$1" val="$2"
+              [ -z "$val" ] && return
+              if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
+                sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
+              else
+                echo "${key}=${val}" >> "$ENV_FILE"
+              fi
+            }
+            update_env DISCORD_BOT_TOKEN "$DISCORD_BOT_TOKEN"
+            update_env DISCORD_ADMIN_USER_IDS "$DISCORD_ADMIN_USER_IDS"
+            update_env TWITTER_AUTH_TOKEN "$TWITTER_AUTH_TOKEN"
+
             docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
             # Reload nginx config — `up -d` doesn't restart containers for bind-mount changes
             docker compose -f docker-compose.prod.yml exec nginx nginx -s reload

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getCharacterForMetadata } from '@/lib/vndb-server';
-import { generatePageMetadata } from '@/lib/metadata-utils';
+import { generatePageMetadata, truncateDescription } from '@/lib/metadata-utils';
 import CharacterDetailClient from './CharacterDetailClient';
 
 interface PageProps {
@@ -19,10 +19,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const displayName = character.original || character.name;
+  const description = character.description
+    ? truncateDescription(character.description)
+    : `${displayName} — visual novel character details, traits, and appearances on VN Club.`;
 
   return generatePageMetadata({
     title: displayName,
-    description: `${displayName} — visual novel character details, traits, and appearances on VN Club.`,
+    description,
     path: `/character/${id}`,
   });
 }

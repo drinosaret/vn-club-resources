@@ -6,7 +6,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metad
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'VN Recommendations',
-  description: 'Get personalized visual novel recommendations for learning Japanese based on your VNDB list. Discover your next VN with AI-powered suggestions.',
+  description: 'Get personalized visual novel recommendations for learning Japanese based on your VNDB list. Discover your next VN based on your reading history and preferences.',
   path: '/recommendations',
 });
 

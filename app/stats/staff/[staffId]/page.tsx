@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getStaffForMetadata } from '@/lib/vndb-server';
-import { generatePageMetadata } from '@/lib/metadata-utils';
+import { generatePageMetadata, truncateDescription } from '@/lib/metadata-utils';
 import StaffDetailClient from './StaffDetailClient';
 
 interface PageProps {
@@ -19,10 +19,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const displayName = staff.original || staff.name;
+  const description = staff.description
+    ? truncateDescription(staff.description)
+    : `${displayName} — visual novel staff statistics, credited works, and career analysis on VN Club.`;
 
   return generatePageMetadata({
     title: `${displayName} - Staff Stats`,
-    description: `${displayName} — visual novel staff statistics, credited works, and career analysis on VN Club.`,
+    description,
     path: `/stats/staff/${staffId}`,
   });
 }

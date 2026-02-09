@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Roboto } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
@@ -18,47 +19,56 @@ const roboto = Roboto({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "VN Club | Learn Japanese with Visual Novels",
-    template: "%s | VN Club",
-  },
-  description: "Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get personalized recommendations, and find VNs for your level.",
-  keywords: ["learn japanese with visual novels", "visual novel japanese learning", "japanese learning resources", "vn club", "visual novels", "text hooking", "Anki", "immersion", "beginner visual novels japanese", "japanese through visual novels"],
-  authors: [{ name: "VN Club Resurrection" }],
-  metadataBase: new URL('https://vnclub.org'),
-  icons: {
-    icon: '/assets/hikaru-icon2.webp',
-    shortcut: '/favicon.ico',
-    apple: '/assets/hikaru-icon2.webp',
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://vnclub.org',
-    siteName: 'VN Club',
-    title: 'VN Club | Learn Japanese with Visual Novels',
-    description: 'Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get recommendations, and find VNs for your level.',
-    images: [
-      {
-        url: '/assets/hikaru-icon2.webp',
-        width: 512,
-        height: 512,
-        alt: 'VN Club - Learn Japanese with Visual Novels',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary',
-    title: 'VN Club | Learn Japanese with Visual Novels',
-    description: 'Learn Japanese with visual novels. Guides, tools, and VNDB integration to find VNs for every level.',
-    images: ['/assets/hikaru-icon2.webp'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+const ALLOWED_HOSTS = new Set(['vnclub.org', 'www.vnclub.org', 'beta.vnclub.org']);
+const DEFAULT_ORIGIN = 'https://vnclub.org';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headersList = await headers();
+  const host = headersList.get('host')?.split(':')[0] || '';
+  const origin = ALLOWED_HOSTS.has(host) ? `https://${host}` : DEFAULT_ORIGIN;
+
+  return {
+    title: {
+      default: "VN Club | Learn Japanese with Visual Novels",
+      template: "%s | VN Club",
+    },
+    description: "Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get personalized recommendations, and find VNs for your level.",
+    keywords: ["learn japanese with visual novels", "visual novel japanese learning", "japanese learning resources", "vn club", "visual novels", "text hooking", "Anki", "immersion", "beginner visual novels japanese", "japanese through visual novels"],
+    authors: [{ name: "VN Club Resurrection" }],
+    metadataBase: new URL(origin),
+    icons: {
+      icon: '/assets/hikaru-icon2.webp',
+      shortcut: '/favicon.ico',
+      apple: '/assets/hikaru-icon2.webp',
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: '/',
+      siteName: 'VN Club',
+      title: 'VN Club | Learn Japanese with Visual Novels',
+      description: 'Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get recommendations, and find VNs for your level.',
+      images: [
+        {
+          url: '/assets/hikaru-icon2.webp',
+          width: 512,
+          height: 512,
+          alt: 'VN Club - Learn Japanese with Visual Novels',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary',
+      title: 'VN Club | Learn Japanese with Visual Novels',
+      description: 'Learn Japanese with visual novels. Guides, tools, and VNDB integration to find VNs for every level.',
+      images: ['/assets/hikaru-icon2.webp'],
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 // Organization JSON-LD schema
 const organizationSchema = {

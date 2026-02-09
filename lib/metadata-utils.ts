@@ -19,7 +19,7 @@ export function safeJsonLdStringify(data: unknown): string {
 }
 
 export const SITE_NAME = 'VN Club';
-export const SITE_URL = 'https://vnclub.org';
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://vnclub.org';
 export const DEFAULT_OG_IMAGE = '/assets/hikaru-icon2.webp';
 
 export interface MetadataInput {
@@ -28,8 +28,11 @@ export interface MetadataInput {
   path: string;
   image?: string;
   imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   type?: 'website' | 'article';
   noIndex?: boolean;
+  largeImage?: boolean;
 }
 
 /**
@@ -42,38 +45,44 @@ export function generatePageMetadata({
   path,
   image = DEFAULT_OG_IMAGE,
   imageAlt,
+  imageWidth,
+  imageHeight,
   type = 'website',
   noIndex = false,
+  largeImage = false,
 }: MetadataInput): Metadata {
-  const url = `${SITE_URL}${path}`;
-  const fullImageUrl = image.startsWith('http') ? image : `${SITE_URL}${image}`;
+  // Use relative paths — Next.js resolves them against the dynamic metadataBase
+  // set in app/layout.tsx (which reads the Host header).
+  const isDefaultImage = image === DEFAULT_OG_IMAGE;
+  const ogWidth = imageWidth || (isDefaultImage ? 512 : undefined);
+  const ogHeight = imageHeight || (isDefaultImage ? 512 : undefined);
 
   return {
     title,
     description,
     alternates: {
-      canonical: url,
+      canonical: path,
     },
     openGraph: {
       type,
       title,
       description,
-      url,
+      url: path,
       siteName: SITE_NAME,
       images: [
         {
-          url: fullImageUrl,
-          width: 512,
-          height: 512,
+          url: image,
+          ...(ogWidth && { width: ogWidth }),
+          ...(ogHeight && { height: ogHeight }),
           alt: imageAlt || title,
         },
       ],
     },
     twitter: {
-      card: 'summary',
+      card: largeImage && !isDefaultImage ? 'summary_large_image' : 'summary',
       title,
       description,
-      images: [fullImageUrl],
+      images: [image],
     },
     robots: noIndex ? { index: false, follow: true } : undefined,
   };
