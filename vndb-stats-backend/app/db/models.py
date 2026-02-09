@@ -228,6 +228,18 @@ class UlistLabel(Base):
     )
 
 
+class VndbUser(Base):
+    """VNDB user accounts from database dumps.
+
+    Maps user IDs to usernames. Imported from the 'users' dump file.
+    """
+
+    __tablename__ = "vndb_users"
+
+    uid = Column(String(20), primary_key=True)  # e.g., "u12345"
+    username = Column(String(100), nullable=False)
+
+
 class CachedUserList(Base):
     """Cached user list data fetched from VNDB API.
 

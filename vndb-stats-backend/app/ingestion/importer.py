@@ -4098,6 +4098,81 @@ async def import_ulist_vns(extract_dir: str, force: bool = False):
     await mark_import_complete(ulist_file, "ulist_vns")
 
 
+async def import_vndb_users(extract_dir: str, force: bool = False):
+    """Import VNDB user accounts (uid → username mapping) from the users dump file.
+
+    Args:
+        extract_dir: Directory with extracted dump files
+        force: If True, import regardless of file modification time
+    """
+    users_file = None
+    for root, dirs, files in os.walk(extract_dir):
+        for f in files:
+            if f == "users":
+                users_file = os.path.join(root, f)
+
+    if not users_file:
+        logger.warning("users file not found in extracted files")
+        return
+
+    if not await should_import(users_file, "vndb_users", force):
+        return
+
+    logger.info(f"Importing VNDB users from {users_file}")
+
+    header_file = users_file + ".header"
+    try:
+        with open(header_file, "r", encoding="utf-8") as f:
+            fieldnames = f.read().strip().split("\t")
+        logger.info(f"users fields: {fieldnames}")
+    except FileNotFoundError:
+        logger.error(f"users header not found: {header_file}")
+        return
+
+    # Truncate and re-import
+    async with async_session() as db:
+        await db.execute(text("TRUNCATE TABLE vndb_users"))
+        await db.commit()
+
+    count = 0
+    batch: list[tuple] = []
+    BATCH_SIZE = 10000
+
+    with open(users_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
+        for row in reader:
+            uid = row.get("id", "")
+            username = row.get("username", "")
+            if not uid or not username or username == "\\N":
+                continue
+            if not uid.startswith("u"):
+                uid = f"u{uid}"
+
+            batch.append((uid, username))
+            count += 1
+
+            if len(batch) >= BATCH_SIZE:
+                async with async_session() as db:
+                    await db.execute(
+                        text("INSERT INTO vndb_users (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
+                        [{"uid": u, "username": n} for u, n in batch],
+                    )
+                    await db.commit()
+                batch = []
+
+    # Flush remaining
+    if batch:
+        async with async_session() as db:
+            await db.execute(
+                text("INSERT INTO vndb_users (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
+                [{"uid": u, "username": n} for u, n in batch],
+            )
+            await db.commit()
+
+    logger.info(f"Imported {count} VNDB users")
+    await mark_import_complete(users_file, "vndb_users")
+
+
 async def import_ulist_labels(extract_dir: str, force: bool = False):
     """Import user VN list labels - NO-OP, labels are imported from ulist_vns.
 
@@ -4234,7 +4309,7 @@ async def run_full_import(
         logger.info(f"{progress} {name.upper()} - {status} (elapsed: {elapsed_str})")
         logger.info(f"{'=' * 50}")
 
-    total_steps = 28  # Including download, index drop/recreate, length votes, ulist, average ratings, browse counts, and analyze
+    total_steps = 29  # Including download, index drop/recreate, length votes, users, ulist, average ratings, browse counts, and analyze
 
     # Step 1: Download dumps (or skip if using existing)
     if skip_download:
@@ -4361,34 +4436,39 @@ async def run_full_import(
         log_step(21, total_steps, "Importing length votes", "user playtime averages for length_minutes")
         await import_length_votes(extract_dir)
 
-    # Step 22: User VN lists (for user stats - replaces VNDB API calls)
+    # Step 22: VNDB users (uid → username mapping)
     if "db" in paths:
-        log_step(22, total_steps, "Importing user VN lists", "used for user stats page")
+        log_step(22, total_steps, "Importing VNDB users", "uid to username mapping")
+        await import_vndb_users(extract_dir)
+
+    # Step 23: User VN lists (for user stats - replaces VNDB API calls)
+    if "db" in paths:
+        log_step(23, total_steps, "Importing user VN lists", "used for user stats page")
         await import_ulist_vns(extract_dir)
 
-    # Step 23: User VN list labels (Playing, Finished, etc.)
+    # Step 24: User VN list labels (Playing, Finished, etc.)
     if "db" in paths:
-        log_step(23, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
+        log_step(24, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
         await import_ulist_labels(extract_dir)
 
-    # Step 24: Compute average ratings from votes
-    log_step(24, total_steps, "Computing average ratings", "raw averages for quality signal")
+    # Step 25: Compute average ratings from votes
+    log_step(25, total_steps, "Computing average ratings", "raw averages for quality signal")
     await compute_average_ratings()
 
-    # Step 25: Aggregate platforms and languages from release data
-    log_step(25, total_steps, "Aggregating VN platforms and languages", "from release data")
+    # Step 26: Aggregate platforms and languages from release data
+    log_step(26, total_steps, "Aggregating VN platforms and languages", "from release data")
     await update_vn_platforms_and_languages()
 
-    # Step 26: Compute precomputed browse counts for staff and producers
-    log_step(26, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
+    # Step 27: Compute precomputed browse counts for staff and producers
+    log_step(27, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
     await update_browse_precomputed_counts()
 
-    # Step 27: Recreate indexes
-    log_step(27, total_steps, "Recreating indexes", "may take a few minutes")
+    # Step 28: Recreate indexes
+    log_step(28, total_steps, "Recreating indexes", "may take a few minutes")
     await recreate_import_indexes(dropped_indexes)
 
-    # Step 28: Analyze tables
-    log_step(28, total_steps, "Analyzing tables", "updating query planner statistics")
+    # Step 29: Analyze tables
+    log_step(29, total_steps, "Analyzing tables", "updating query planner statistics")
     await analyze_import_tables()
 
     total_time = time.time() - start_time
@@ -4421,7 +4501,7 @@ async def update_import_progress(
     from sqlalchemy import update
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-    total_steps = 27
+    total_steps = 28
     progress = (step / total_steps) * 100 if total_steps > 0 else 0
 
     async with async_session() as db:
@@ -4640,35 +4720,40 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
             await log_and_track(20, "length_votes", "Importing length votes (user playtime averages)...")
             await import_length_votes(extract_dir)
 
-        # Step 21: User VN lists (for user stats - replaces VNDB API calls)
+        # Step 21: VNDB users (uid → username mapping)
         if "db" in paths:
-            await log_and_track(21, "ulist_vns", "Importing user VN lists...")
+            await log_and_track(21, "vndb_users", "Importing VNDB users (uid → username)...")
+            await import_vndb_users(extract_dir)
+
+        # Step 22: User VN lists (for user stats - replaces VNDB API calls)
+        if "db" in paths:
+            await log_and_track(22, "ulist_vns", "Importing user VN lists...")
             await import_ulist_vns(extract_dir)
 
-        # Step 22: User VN list labels (Playing, Finished, etc.)
+        # Step 23: User VN list labels (Playing, Finished, etc.)
         if "db" in paths:
-            await log_and_track(22, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
+            await log_and_track(23, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
             await import_ulist_labels(extract_dir)
 
-        # Step 23: Aggregate platforms and languages from release data
-        await log_and_track(23, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
+        # Step 24: Aggregate platforms and languages from release data
+        await log_and_track(24, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
         await update_vn_platforms_and_languages()
 
-        # Step 24: Compute precomputed browse counts for staff and producers
-        await log_and_track(24, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
+        # Step 25: Compute precomputed browse counts for staff and producers
+        await log_and_track(25, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
         await update_browse_precomputed_counts()
 
-        # Step 25: Recreate indexes
-        await log_and_track(25, "indexes", "Recreating indexes...")
+        # Step 26: Recreate indexes
+        await log_and_track(26, "indexes", "Recreating indexes...")
         await recreate_import_indexes(dropped_indexes)
         await log_import_message(run_id, "INFO", f"Recreated {len(dropped_indexes)} indexes", "indexes")
 
-        # Step 26: Analyze tables
-        await log_and_track(26, "analyze", "Analyzing tables for query planner...")
+        # Step 27: Analyze tables
+        await log_and_track(27, "analyze", "Analyzing tables for query planner...")
         await analyze_import_tables()
 
-        # Step 27: Evaluate auto-blacklist rules
-        await log_and_track(27, "blacklist", "Evaluating cover blacklist rules...")
+        # Step 28: Evaluate auto-blacklist rules
+        await log_and_track(28, "blacklist", "Evaluating cover blacklist rules...")
         from app.services.blacklist_service import evaluate_auto_blacklist
         async with async_session() as db:
             blacklist_stats = await evaluate_auto_blacklist(db)

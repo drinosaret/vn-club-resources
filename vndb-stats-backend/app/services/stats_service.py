@@ -32,7 +32,7 @@ from app.db.models import (
     Producer, Staff, VNStaff, VNSeiyuu,
     Trait, Character, CharacterVN, CharacterTrait,
     Release, ReleaseVN, ReleaseProducer,
-    CachedUserList,
+    UlistVN, UlistLabel, VndbUser,
 )
 from app.db.schemas import (
     UserStatsResponse, UserInfo, StatsSummary,
@@ -1946,59 +1946,89 @@ class StatsService:
     ) -> list[SimilarUserResponse]:
         """Find users most similar to the given user.
 
+        Uses the ulist_vns dump table directly. Two-phase approach:
+        1. SQL: find candidate users who share rated VNs with the target
+        2. Python: compute full similarity scores for candidates
+
         Args:
             vndb_uid: The target user's VNDB UID
-            user_data: The target user's data (vn_ids, votes from fetch_user_data)
+            user_data: The target user's data (vn_ids, votes from get_user_list)
             limit: Maximum number of similar users to return
 
         Returns:
             List of similar users sorted by compatibility (descending)
         """
+        MIN_SHARED = 3       # Minimum shared rated VNs to be a candidate
+        MAX_CANDIDATES = 200  # Cap candidates for performance
+
         # Extract target user's VN list and votes
         target_vn_ids = set(user_data.get("vn_ids", []))
         target_votes = {v["vn_id"]: v["score"] for v in user_data.get("votes", [])}
+        target_voted_vids = set(target_votes.keys())
 
-        if not target_vn_ids:
+        if not target_voted_vids:
             return []
 
-        # Query all non-expired cached users (excluding target user)
-        result = await self.db.execute(
-            select(CachedUserList)
-            .where(CachedUserList.vndb_uid != vndb_uid)
-            .where(CachedUserList.fetched_at > datetime.utcnow() - timedelta(days=90))
+        # Phase 1: Find candidate users who share rated VNs with the target.
+        # Uses idx_ulist_vns_vid index for fast lookup.
+        candidate_query = (
+            select(UlistVN.uid, func.count().label("shared_count"))
+            .where(UlistVN.vid.in_(target_voted_vids))
+            .where(UlistVN.vote.isnot(None))
+            .where(UlistVN.uid != vndb_uid)
+            .group_by(UlistVN.uid)
+            .having(func.count() >= MIN_SHARED)
+            .order_by(func.count().desc())
+            .limit(MAX_CANDIDATES)
         )
-        cached_users = result.scalars().all()
+        result = await self.db.execute(candidate_query)
+        candidates = result.all()  # list of (uid, shared_count)
 
-        if not cached_users:
+        if not candidates:
             return []
 
-        # Calculate similarity for each cached user
-        similarities = []
-        for cached_user in cached_users:
-            try:
-                # Extract VN IDs from cached list_data (it's a dict, not a list)
-                list_data = cached_user.list_data or {}
-                other_vn_ids = set(list_data.get("vn_ids", []))
+        candidate_uids = [row[0] for row in candidates]
 
-                if not other_vn_ids:
+        # Phase 2: Batch-fetch all vote data for candidates
+        votes_result = await self.db.execute(
+            select(UlistVN.uid, UlistVN.vid, UlistVN.vote)
+            .where(UlistVN.uid.in_(candidate_uids))
+            .where(UlistVN.vote.isnot(None))
+        )
+        # Build per-user vote dicts: {uid: {vid: vote, ...}}
+        user_votes: dict[str, dict[str, int]] = defaultdict(dict)
+        for uid, vid, vote in votes_result.all():
+            user_votes[uid][vid] = vote
+
+        # Batch-fetch finished counts (label=2) for candidates
+        finished_result = await self.db.execute(
+            select(UlistLabel.uid, func.count(distinct(UlistLabel.vid)))
+            .where(UlistLabel.uid.in_(candidate_uids))
+            .where(UlistLabel.label == 2)
+            .group_by(UlistLabel.uid)
+        )
+        finished_counts: dict[str, int] = {
+            uid: count for uid, count in finished_result.all()
+        }
+
+        # Phase 3: Compute similarity for each candidate
+        similarities = []
+        for candidate_uid in candidate_uids:
+            try:
+                other_votes = user_votes.get(candidate_uid, {})
+                if not other_votes:
                     continue
 
-                # Extract votes from list_data (votes are stored in the same dict)
-                other_votes = {}
-                for vote in list_data.get("votes", []):
-                    vn_id = vote.get("vn_id")
-                    score = vote.get("score")
-                    if vn_id and score:
-                        other_votes[vn_id] = score
+                other_vn_ids = set(other_votes.keys())
 
-                # Calculate Jaccard similarity (fast) - raw and scaled
+                # Jaccard similarity (list overlap) - raw and scaled
                 shared = target_vn_ids & other_vn_ids
                 union = target_vn_ids | other_vn_ids
                 raw_jaccard = len(shared) / len(union) if union else 0.0
                 scaled_jaccard = min(1.0, raw_jaccard * 5)  # 20%+ raw → full credit
 
-                # Calculate Pearson correlation for shared voted VNs
-                shared_voted = set(target_votes.keys()) & set(other_votes.keys())
+                # Pearson correlation for shared voted VNs
+                shared_voted = target_voted_vids & set(other_votes.keys())
                 if len(shared_voted) >= 2:
                     scores1 = [target_votes[vid] for vid in shared_voted]
                     scores2 = [other_votes[vid] for vid in shared_voted]
@@ -2018,7 +2048,7 @@ class StatsService:
                 else:
                     rating_agreement = 0.0
 
-                # Adaptive compatibility formula (no tag data available)
+                # Adaptive compatibility formula
                 if len(shared_voted) >= 5:
                     compatibility = (
                         0.50 * rating_agreement +
@@ -2034,33 +2064,41 @@ class StatsService:
                 else:
                     compatibility = scaled_jaccard
 
-                # Calculate basic stats for the user
-                # Use "Finished" label count when available, fall back to vote count
-                # (some users only have votes without labeling VNs as Finished)
-                other_labels = list_data.get("labels", {})
-                finished_count = len(other_labels.get("2", []))
-                total_vns = finished_count if finished_count > 0 else len(other_votes)
+                # Stats for display
+                finished = finished_counts.get(candidate_uid, 0)
+                total_vns = finished if finished > 0 else len(other_votes)
                 avg_score = None
                 if other_votes:
                     vote_values = list(other_votes.values())
                     avg_score = sum(vote_values) / len(vote_values) / 10  # Convert to 1-10 scale
 
                 similarities.append({
-                    "uid": cached_user.vndb_uid,
-                    "username": cached_user.username or cached_user.vndb_uid,
+                    "uid": candidate_uid,
+                    "username": candidate_uid,  # Dump data has no usernames
                     "compatibility": compatibility,
                     "shared_vns": len(shared_voted),
-                    "tag_similarity": None,  # Would need tag data
+                    "tag_similarity": None,
                     "total_vns": total_vns,
                     "avg_score": round(avg_score, 2) if avg_score else None,
                 })
             except Exception as e:
-                logger.warning(f"Error calculating similarity for user {cached_user.vndb_uid}: {e}")
+                logger.warning(f"Error calculating similarity for user {candidate_uid}: {e}")
                 continue
 
         # Sort by compatibility (descending) and return top N
         similarities.sort(key=lambda x: x["compatibility"], reverse=True)
         top_similar = similarities[:limit]
+
+        # Resolve usernames from the vndb_users table (imported from dumps)
+        top_uids = [s["uid"] for s in top_similar]
+        if top_uids:
+            username_result = await self.db.execute(
+                select(VndbUser.uid, VndbUser.username)
+                .where(VndbUser.uid.in_(top_uids))
+            )
+            uid_to_name = {uid: name for uid, name in username_result.all()}
+            for s in top_similar:
+                s["username"] = uid_to_name.get(s["uid"], s["uid"])
 
         return [SimilarUserResponse(**s) for s in top_similar]
 

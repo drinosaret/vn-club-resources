@@ -1084,10 +1084,7 @@ async def get_similar_users(
     Find users with similar VN tastes.
 
     Returns a list of users sorted by compatibility score (highest first).
-    Only compares against users who have been previously viewed (cached).
-
-    Note: This is limited to users whose data has been cached by the system.
-    The pool of comparable users grows as more users are looked up.
+    Compares against all users in the database who share rated VNs with the target user.
     """
     user_service = UserService(db)
     stats_service = StatsService(db)

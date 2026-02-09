@@ -176,7 +176,7 @@ export default function CompareContent() {
     setSimilarUsers(null);
 
     try {
-      const similar = await vndbStatsApi.getSimilarUsers(uid, 30);
+      const similar = await vndbStatsApi.getSimilarUsers(uid, 12);
       setSimilarUsers(similar);
     } catch {
       setError('Failed to load similar users.');
@@ -546,8 +546,8 @@ function SimilarUsersResults({
           No Similar Users Found
         </h3>
         <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-          This feature compares against users who have been previously looked up.
-          As more users view their stats, the pool of comparable users grows.
+          No users with enough shared rated VNs were found.
+          Try a user with more rated VNs for better results.
         </p>
       </div>
     );

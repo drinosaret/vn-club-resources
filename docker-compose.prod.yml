@@ -45,12 +45,12 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_VNDB_STATS_API: ${NEXT_PUBLIC_VNDB_STATS_API}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_VNDB_STATS_API: ${NEXT_PUBLIC_VNDB_STATS_API:-}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     environment:
       - NODE_ENV=production
-      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
-      - NEXT_PUBLIC_VNDB_STATS_API=${NEXT_PUBLIC_VNDB_STATS_API}
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
+      - NEXT_PUBLIC_VNDB_STATS_API=${NEXT_PUBLIC_VNDB_STATS_API:-}
       - API_URL_INTERNAL=http://api:8000
       - VNDB_CACHE_DIR=/data/vndb-cache
     volumes:
@@ -78,17 +78,17 @@ services:
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
     environment:
-      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
       - DEBUG=false
       - CORS_ORIGINS=["https://vnclub.org","https://api.vnclub.org","https://beta.vnclub.org"]
       - VNDB_API_URL=https://api.vndb.org/kana
       - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
       - DUMP_STORAGE_PATH=/app/data
       - FRONTEND_URL=https://vnclub.org
-      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
       - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
@@ -117,7 +117,7 @@ services:
     image: postgres:15.13-alpine
     environment:
       - POSTGRES_USER=vndb
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
       - POSTGRES_DB=vndb_stats
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -138,7 +138,7 @@ services:
   # Redis
   redis:
     image: redis:7.4-alpine
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redisdata:/data
     deploy:
@@ -158,13 +158,13 @@ services:
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/run_bot.py"]
     environment:
-      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
-      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
       - DISCORD_ADMIN_USER_IDS=${DISCORD_ADMIN_USER_IDS:-}
       - FRONTEND_URL=https://vnclub.org
-      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET}
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
@@ -224,8 +224,8 @@ services:
         limits:
           memory: 8G
     environment:
-      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD}@db:5432/vndb_stats
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
       - DEV_MODE=false
       - DUMP_STORAGE_PATH=/app/data
       - VNDB_API_URL=https://api.vndb.org/kana
