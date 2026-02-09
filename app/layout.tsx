@@ -131,6 +131,11 @@ export default function RootLayout({
             `,
           }}
         />
+        <script
+          data-goatcounter="https://vnclub.goatcounter.com/count"
+          async
+          src="//gc.zgo.at/count.js"
+        />
       </head>
       <body className={roboto.className} suppressHydrationWarning>
         <Suspense fallback={null}>

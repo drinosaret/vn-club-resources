@@ -17,8 +17,8 @@ const sanitizeSchema = {
     '*': [...(defaultSchema.attributes?.['*'] || []), 'className', 'class'],
     // Allow target and rel on links for external links
     a: [...(defaultSchema.attributes?.a || []), 'target', 'rel'],
-    // Allow src and alt on images
-    img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'loading'],
+    // Allow src, alt, and sizing on images (content is from our own MDX files)
+    img: [...(defaultSchema.attributes?.img || []), 'src', 'alt', 'loading', 'width', 'height', 'style'],
   },
   // Block dangerous protocols
   protocols: {
