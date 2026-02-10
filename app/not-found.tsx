@@ -28,6 +28,18 @@ export default function NotFound() {
           >
             Browse VNs
           </Link>
+          <Link
+            href="/guide"
+            className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Getting Started
+          </Link>
+          <Link
+            href="/stats"
+            className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Stats
+          </Link>
         </div>
       </div>
     </div>

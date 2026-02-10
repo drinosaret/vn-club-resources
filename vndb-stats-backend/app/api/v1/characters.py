@@ -18,6 +18,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/sitemap-ids")
+async def get_character_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get character IDs for sitemap generation.
+
+    Lightweight endpoint that returns only the data needed to build sitemaps.
+    Use limit=0 to get just the total count.
+    """
+    count_result = await db.execute(select(func.count(Character.id)))
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Character.id)
+            .order_by(Character.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
+
 @router.get("/{char_id}", response_model=schemas.CharacterDetailResponse)
 async def get_character(
     char_id: str,

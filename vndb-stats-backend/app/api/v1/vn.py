@@ -59,6 +59,36 @@ def _escape_like(value: str) -> str:
 # More specific routes must be defined BEFORE parameterized routes like /{vn_id}
 
 
+@router.get("/sitemap-ids")
+async def get_vn_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get VN IDs and updated_at timestamps for sitemap generation.
+
+    Lightweight endpoint that returns only the data needed to build sitemaps.
+    Use limit=0 to get just the total count.
+    """
+    count_result = await db.execute(select(func.count(VisualNovel.id)))
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(VisualNovel.id, VisualNovel.updated_at)
+            .order_by(VisualNovel.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [
+            {"id": row.id, "updated_at": row.updated_at.isoformat() if row.updated_at else None}
+            for row in result
+        ]
+
+    return {"items": items, "total": total}
+
+
 @router.get("/search/", response_model=schemas.VNSearchResponse)
 async def search_vns(
     # Text search
