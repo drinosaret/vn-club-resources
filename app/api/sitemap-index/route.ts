@@ -1,13 +1,5 @@
-/**
- * Manual sitemap index route handler.
- *
- * Next.js has a known bug where `generateSitemaps()` does NOT auto-generate
- * a sitemap index at `/sitemap.xml` (GitHub issue #77304). This route handler
- * fills that gap by generating a proper sitemapindex that references all chunks
- * produced by `app/sitemap.ts`.
- *
- * Served at `/sitemap.xml` via a rewrite in next.config.mjs.
- */
+// Sitemap index is served at /sitemap.xml via rewrite in next.config.mjs.
+// Workaround for Next.js bug #77304 (generateSitemaps doesn't create an index).
 
 import { NextResponse } from 'next/server';
 import { getBackendUrlOptional } from '@/lib/config';
@@ -17,7 +9,7 @@ const URLS_PER_SITEMAP = 50000;
 const VN_BASE_ID = 1000;
 const CHAR_BASE_ID = 2000;
 
-export const revalidate = 86400;
+export const dynamic = 'force-dynamic';
 
 async function fetchTotal(path: string): Promise<number> {
   const backendUrl = getBackendUrlOptional();
@@ -25,7 +17,7 @@ async function fetchTotal(path: string): Promise<number> {
 
   try {
     const url = `${backendUrl}/api/v1${path}?offset=0&limit=0`;
-    const res = await fetch(url, { next: { revalidate: 86400 } });
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return 0;
     const data = await res.json();
     return data.total ?? 0;
