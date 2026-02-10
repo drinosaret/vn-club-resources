@@ -1133,6 +1133,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
         {activeTab === 'seiyuu' && <BrowseSeiyuuTab isActive />}
         {activeTab === 'producers' && <BrowseProducerTab isActive />}
 
+        {/* VNDB Attribution for entity tabs (non-VN) */}
+        {activeTab !== 'novels' && <VNDBAttribution />}
+
         {/* VN Browse Content (novels tab) */}
         {activeTab === 'novels' && (<>
         {/* MOBILE: Collapsible Filter Panel */}

@@ -62,10 +62,8 @@ export function FadeIn({
         transitionDuration: `${duration}ms`,
         transitionTimingFunction: 'ease-out',
         opacity: isVisible ? 1 : 0,
-        transform: slideUp
-          ? isVisible
-            ? 'translateY(0)'
-            : 'translateY(8px)'
+        transform: slideUp && !isVisible
+          ? 'translateY(8px)'
           : undefined,
       }}
     >

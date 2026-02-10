@@ -70,12 +70,12 @@ export interface NewsListResponse {
 }
 
 export const newsSources: NewsSourceConfig[] = [
-  { id: 'all', label: 'All Sources', color: 'bg-gray-100 text-gray-800', darkColor: 'dark:bg-gray-700 dark:text-gray-200' },
-  { id: 'vndb', label: 'Recently Added to VNDB', color: 'bg-blue-100 text-blue-800', darkColor: 'dark:bg-blue-900/50 dark:text-blue-200' },
-  { id: 'vndb_release', label: 'VNDB Releases', color: 'bg-indigo-100 text-indigo-800', darkColor: 'dark:bg-indigo-900/50 dark:text-indigo-200' },
-  { id: 'rss', label: 'RSS Feeds', color: 'bg-orange-100 text-orange-800', darkColor: 'dark:bg-orange-900/50 dark:text-orange-200' },
-  { id: 'twitter', label: 'Twitter', color: 'bg-sky-100 text-sky-800', darkColor: 'dark:bg-sky-900/50 dark:text-sky-200' },
-  { id: 'announcement', label: 'Announcements', color: 'bg-purple-100 text-purple-800', darkColor: 'dark:bg-purple-900/50 dark:text-purple-200' },
+  { id: 'all', label: 'All Sources', color: 'bg-gray-100 text-gray-800', darkColor: 'dark:bg-gray-500/20 dark:text-gray-300' },
+  { id: 'vndb', label: 'Recently Added to VNDB', color: 'bg-blue-100 text-blue-800', darkColor: 'dark:bg-blue-500/20 dark:text-blue-300' },
+  { id: 'vndb_release', label: 'VNDB Releases', color: 'bg-indigo-100 text-indigo-800', darkColor: 'dark:bg-indigo-500/20 dark:text-indigo-300' },
+  { id: 'rss', label: 'RSS Feeds', color: 'bg-orange-100 text-orange-800', darkColor: 'dark:bg-orange-500/20 dark:text-orange-300' },
+  { id: 'twitter', label: 'Twitter', color: 'bg-sky-100 text-sky-800', darkColor: 'dark:bg-sky-500/20 dark:text-sky-300' },
+  { id: 'announcement', label: 'Announcements', color: 'bg-purple-100 text-purple-800', darkColor: 'dark:bg-purple-500/20 dark:text-purple-300' },
 ];
 
 // API base URL - can be overridden via environment variable

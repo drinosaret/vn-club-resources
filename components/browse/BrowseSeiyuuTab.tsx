@@ -310,6 +310,7 @@ export function BrowseSeiyuuTab({ isActive = true }: BrowseSeiyuuTabProps) {
           scrollTargetRef={resultsRef}
         />
       )}
+
     </div>
   );
 }

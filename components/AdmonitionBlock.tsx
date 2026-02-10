@@ -95,9 +95,10 @@ export function AdmonitionBlock({ type, title, children }: AdmonitionBlockProps)
                 strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                 em: ({ children }) => <em className="italic">{children}</em>,
                 a: ({ href, children }) => {
-                  const safeHref = href && /^https?:\/\//.test(href) ? href : undefined;
+                  const isExternal = href?.startsWith('http');
+                  const safeHref = href && (/^https?:\/\//.test(href) || href.startsWith('/')) ? href : undefined;
                   return (
-                    <a href={safeHref} className="text-indigo-600 dark:text-indigo-400 hover:underline" rel="noopener noreferrer">
+                    <a href={safeHref} className="text-indigo-600 dark:text-indigo-400 hover:underline" {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
                       {children}
                     </a>
                   );

@@ -326,6 +326,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
           scrollTargetRef={resultsRef}
         />
       )}
+
     </div>
   );
 }

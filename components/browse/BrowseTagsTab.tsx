@@ -283,6 +283,7 @@ export function BrowseTagsTab({ isActive = true }: BrowseTagsTabProps) {
           scrollTargetRef={resultsRef}
         />
       )}
+
     </div>
   );
 }

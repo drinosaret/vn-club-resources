@@ -289,6 +289,7 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
           scrollTargetRef={resultsRef}
         />
       )}
+
     </div>
   );
 }

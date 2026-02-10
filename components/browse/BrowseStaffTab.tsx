@@ -320,6 +320,7 @@ export function BrowseStaffTab({ isActive = true }: BrowseStaffTabProps) {
           scrollTargetRef={resultsRef}
         />
       )}
+
     </div>
   );
 }

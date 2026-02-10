@@ -79,7 +79,7 @@ export default function TagTraitAutocomplete({
           }
           // Filter out results with missing required fields
           const validResults = data.results.filter(
-            (item: Record<string, unknown>) => item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.type === 'string'
+            (item: Record<string, unknown>) => item && typeof item.id === 'number' && typeof item.name === 'string' && typeof item.type === 'string'
           );
           // Filter out already selected items
           const selectedIds = new Set(

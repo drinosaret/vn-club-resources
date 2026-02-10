@@ -105,6 +105,11 @@ deploy/.env.prod
 # SSL certificates (Cloudflare Origin CA)
 deploy/nginx/ssl/
 
+# Syncthing
+.stignore
+.stfolder/
+*sync-conflict*
+
 # Vercel
 .vercel/
 

@@ -876,7 +876,7 @@ async def get_trait_counts(
     Returns a map of trait_id -> char_count.
     """
     # Parse trait IDs, handling both "i123" and "123" formats
-    raw_ids = _parse_str_list(ids, max_items=200)
+    raw_ids = _parse_str_list(ids, max_items=1200)
     trait_ids = []
     for id_str in raw_ids:
         if id_str.startswith("i"):
@@ -897,11 +897,11 @@ async def get_trait_counts(
 
     # Get total characters in database for IDF calculation
     total_result = await db.execute(
-        select(func.sum(Trait.char_count))
+        select(func.count(Character.id))
     )
     total_characters = total_result.scalar_one_or_none() or 0
 
-    return {"counts": counts, "total_characters": total_characters // len(trait_ids) if trait_ids else 0}
+    return {"counts": counts, "total_characters": total_characters}
 
 
 # VNDB dump stores abbreviated tag category codes
