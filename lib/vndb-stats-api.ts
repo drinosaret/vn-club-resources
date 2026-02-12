@@ -1524,13 +1524,12 @@ class VNDBStatsAPI {
    * Get similar VNs.
    * ALL data comes from local database.
    */
-  async getSimilarVNs(vnId: string, limit: number = 10): Promise<SimilarVNsResponse | null> {
-    try {
-      const normalizedId = vnId.startsWith('v') ? vnId : `v${vnId}`;
-      return await this.fetch<SimilarVNsResponse>(`/api/v1/vn/${normalizedId}/similar?limit=${limit}`);
-    } catch {
-      return null;
-    }
+  async getSimilarVNs(vnId: string, limit: number = 10): Promise<SimilarVNsResponse> {
+    const normalizedId = vnId.startsWith('v') ? vnId : `v${vnId}`;
+    return await this.fetch<SimilarVNsResponse>(
+      `/api/v1/vn/${normalizedId}/similar?limit=${limit}`,
+      { timeout: 30000 }
+    );
   }
 
   async getVNCharacters(vnId: string): Promise<VNCharacter[]> {

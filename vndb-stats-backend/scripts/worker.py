@@ -156,7 +156,7 @@ async def run_daily_update():
         async with asyncio.timeout(max_duration):
             # Phase 1: Import data
             logger.info("\n>>> PHASE 1/3: DATA IMPORT <<<")
-            await run_full_import(settings.dump_storage_path, max_age_hours=24)
+            await run_full_import(settings.dump_storage_path, max_age_hours=24, force=True)
 
             # Phase 2: Compute models
             logger.info("\n>>> PHASE 2/3: COMPUTING MODELS <<<")

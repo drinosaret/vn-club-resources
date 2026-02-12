@@ -4283,6 +4283,7 @@ async def run_full_import(
     dump_dir: str,
     skip_download: bool = False,
     max_age_hours: int = 168,  # 1 week default
+    force: bool = False,
 ):
     """Run a full import of all dump files.
 
@@ -4295,6 +4296,7 @@ async def run_full_import(
         dump_dir: Directory to store/read dump files
         skip_download: If True, use existing dumps without downloading
         max_age_hours: Re-download if dumps are older than this (default: 168 = 1 week)
+        force: If True, bypass mtime checks and re-import all tables
     """
     import time
     from app.ingestion.dump_downloader import download_dumps
@@ -4344,112 +4346,112 @@ async def run_full_import(
     # Step 3: Tags
     if "tags" in paths:
         log_step(3, total_steps, "Importing tags")
-        await import_tags(paths["tags"])
+        await import_tags(paths["tags"], force=force)
 
     # Step 4: Traits
     if "traits" in paths:
         log_step(4, total_steps, "Importing traits")
-        await import_traits(paths["traits"])
+        await import_traits(paths["traits"], force=force)
 
     # Step 5: Producers
     if "db" in paths:
         log_step(5, total_steps, "Importing producers")
-        await import_producers(extract_dir)
+        await import_producers(extract_dir, force=force)
 
     # Step 6: Staff
     if "db" in paths:
         log_step(6, total_steps, "Importing staff")
-        await import_staff(extract_dir)
+        await import_staff(extract_dir, force=force)
 
     # Step 7: Visual Novels (main data - takes longest)
     if "db" in paths:
         log_step(7, total_steps, "Importing visual novels", "this is the largest table")
-        await import_visual_novels(paths["db"], extract_dir)
+        await import_visual_novels(paths["db"], extract_dir, force=force)
 
     # Step 8: VN-Staff relationships
     if "db" in paths:
         log_step(8, total_steps, "Importing VN-Staff relationships")
-        await import_vn_staff(extract_dir)
+        await import_vn_staff(extract_dir, force=force)
 
     # Step 9: Seiyuu relationships
     if "db" in paths:
         log_step(9, total_steps, "Importing seiyuu data")
-        await import_seiyuu(extract_dir)
+        await import_seiyuu(extract_dir, force=force)
 
     # Step 10: VN relations (sequel, prequel, shares characters, etc.)
     if "db" in paths:
         log_step(10, total_steps, "Importing VN relations")
-        await import_vn_relations(extract_dir)
+        await import_vn_relations(extract_dir, force=force)
 
     # Step 11: Characters
     if "db" in paths:
         log_step(11, total_steps, "Importing characters")
-        await import_characters(extract_dir)
+        await import_characters(extract_dir, force=force)
 
     # Step 12: Character-VN relationships
     if "db" in paths:
         log_step(12, total_steps, "Importing character-VN relationships")
-        await import_character_vns(extract_dir)
+        await import_character_vns(extract_dir, force=force)
 
     # Step 13: Character-Traits
     if "db" in paths:
         log_step(13, total_steps, "Importing character traits")
-        await import_character_traits(extract_dir)
+        await import_character_traits(extract_dir, force=force)
 
     # Step 14: Releases
     if "db" in paths:
         log_step(14, total_steps, "Importing releases")
-        await import_releases(extract_dir)
+        await import_releases(extract_dir, force=force)
 
     # Step 15: Release-VN relationships
     if "db" in paths:
         log_step(15, total_steps, "Importing release-VN relationships")
-        await import_release_vns(extract_dir)
+        await import_release_vns(extract_dir, force=force)
 
     # Step 16: Release-Producer relationships
     if "db" in paths:
         log_step(16, total_steps, "Importing release-producer relationships")
-        await import_release_producers(extract_dir)
+        await import_release_producers(extract_dir, force=force)
 
     # Step 17: Release platforms
     if "db" in paths:
         log_step(17, total_steps, "Importing release platforms")
-        await import_release_platforms(extract_dir)
+        await import_release_platforms(extract_dir, force=force)
 
     # Step 18: Release media
     if "db" in paths:
         log_step(18, total_steps, "Importing release media")
-        await import_release_media(extract_dir)
+        await import_release_media(extract_dir, force=force)
 
     # Step 19: Release external links
     if "db" in paths:
         log_step(19, total_steps, "Importing release links")
-        await import_release_extlinks(extract_dir)
+        await import_release_extlinks(extract_dir, force=force)
 
     # Step 20: Votes (uses COPY for fast bulk loading)
     if "votes" in paths:
         log_step(20, total_steps, "Importing votes", "uses COPY for fast bulk loading")
-        await import_votes(paths["votes"])
+        await import_votes(paths["votes"], force=force)
 
     # Step 21: Length votes (user-submitted playtime data)
     if "db" in paths:
         log_step(21, total_steps, "Importing length votes", "user playtime averages for length_minutes")
-        await import_length_votes(extract_dir)
+        await import_length_votes(extract_dir, force=force)
 
     # Step 22: VNDB users (uid → username mapping)
     if "db" in paths:
         log_step(22, total_steps, "Importing VNDB users", "uid to username mapping")
-        await import_vndb_users(extract_dir)
+        await import_vndb_users(extract_dir, force=force)
 
     # Step 23: User VN lists (for user stats - replaces VNDB API calls)
     if "db" in paths:
         log_step(23, total_steps, "Importing user VN lists", "used for user stats page")
-        await import_ulist_vns(extract_dir)
+        await import_ulist_vns(extract_dir, force=force)
 
     # Step 24: User VN list labels (Playing, Finished, etc.)
     if "db" in paths:
         log_step(24, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
-        await import_ulist_labels(extract_dir)
+        await import_ulist_labels(extract_dir, force=force)
 
     # Step 25: Compute average ratings from votes
     log_step(25, total_steps, "Computing average ratings", "raw averages for quality signal")

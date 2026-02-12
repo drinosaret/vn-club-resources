@@ -160,6 +160,8 @@ export default function RecommendationsContent() {
   const [frontendTime, setFrontendTime] = useState<number | null>(null);
   const [loadingElapsed, setLoadingElapsed] = useState(0);
   const loadingStartRef = useRef<number | null>(null);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filter state
   const [minRating, setMinRating] = useState<string>('');
@@ -173,6 +175,13 @@ export default function RecommendationsContent() {
 
   // Track last processed search params to avoid duplicate fetches
   const lastProcessedParams = useRef<string>('');
+
+  // Clean up retry timer on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, []);
 
   // Track elapsed time during loading
   useEffect(() => {
@@ -359,6 +368,12 @@ export default function RecommendationsContent() {
   };
 
   const fetchRecommendations = async (uid: string, filterOverrides?: { tagTraitFilters?: SelectedItem[] }) => {
+    // Clear any pending retry timer on fresh user-initiated fetch
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+      retryCountRef.current = 0;
+    }
     setIsLoading(true);
     setError(null);
     setFrontendTime(null);
@@ -420,6 +435,19 @@ export default function RecommendationsContent() {
       setFrontendTime((endTime - startTime) / 1000);
     } catch (err) {
       clearTimeout(timeoutHandle);
+
+      // Auto-retry up to 2 times with 10s delay (handles import-in-progress)
+      if (retryCountRef.current < 2) {
+        retryCountRef.current++;
+        console.log(`Recommendations fetch failed, retrying (${retryCountRef.current}/2) in 10s...`);
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
+          fetchRecommendations(uid, filterOverrides);
+        }, 10000);
+        return; // Keep loading state active
+      }
+
+      retryCountRef.current = 0;
       if (err instanceof Error && err.name === 'AbortError') {
         setError('Request timed out. The server may be busy - please try again.');
       } else {
@@ -427,7 +455,10 @@ export default function RecommendationsContent() {
         setError('Failed to load recommendations. Data may be refreshing — please try again in a few minutes.');
       }
     } finally {
-      setIsLoading(false);
+      // Only clear loading if we're not auto-retrying
+      if (retryCountRef.current === 0) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -682,7 +713,7 @@ export default function RecommendationsContent() {
           <div className="text-center py-12">
             <p className="text-red-500 mb-4">{error}</p>
             <button
-              onClick={() => userId && fetchRecommendations(userId)}
+              onClick={() => { retryCountRef.current = 0; userId && fetchRecommendations(userId); }}
               className="px-4 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
             >
               Try Again

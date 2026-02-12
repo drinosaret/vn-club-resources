@@ -179,9 +179,7 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
     setSimilarError(false);
     try {
       const result = await vndbStatsApi.getSimilarVNs(vnId, 10);
-      if (result) {
-        setSimilarData(result);
-      }
+      setSimilarData(result);
     } catch {
       setSimilarError(true);
     } finally {
