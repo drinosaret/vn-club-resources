@@ -226,6 +226,8 @@ function MinRatingSlider({
   const [localValue, setLocalValue] = useState(value ?? min);
   const [isDragging, setIsDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  // Cache getBoundingClientRect on drag start to avoid layout thrashing on every move
+  const cachedRectRef = useRef<DOMRect | null>(null);
 
   // Sync with external value
   useEffect(() => {
@@ -236,8 +238,8 @@ function MinRatingSlider({
 
   const getValueFromPosition = useCallback(
     (clientX: number) => {
-      if (!trackRef.current) return min;
-      const rect = trackRef.current.getBoundingClientRect();
+      const rect = cachedRectRef.current;
+      if (!rect) return min;
       const percentage = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       const rawValue = min + percentage * (max - min);
       return Math.round(rawValue / step) * step;
@@ -247,6 +249,7 @@ function MinRatingSlider({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
     setIsDragging(true);
     const val = getValueFromPosition(e.clientX);
     setLocalValue(val);
@@ -282,6 +285,7 @@ function MinRatingSlider({
 
   // Touch support
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
     setIsDragging(true);
     if (e.touches[0]) {
       const val = getValueFromPosition(e.touches[0].clientX);
@@ -308,8 +312,8 @@ function MinRatingSlider({
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener('touchmove', handleTouchMove);
-      window.addEventListener('touchend', handleTouchEnd);
+      window.addEventListener('touchmove', handleTouchMove, { passive: true });
+      window.addEventListener('touchend', handleTouchEnd, { passive: true });
       return () => {
         window.removeEventListener('touchmove', handleTouchMove);
         window.removeEventListener('touchend', handleTouchEnd);

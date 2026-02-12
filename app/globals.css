@@ -63,6 +63,7 @@ html, body {
 /* Prevent horizontal scrolling without breaking sticky positioning */
 body {
   overflow-x: clip;
+  overscroll-behavior-y: contain; /* Prevent pull-to-refresh and scroll chaining on mobile */
 }
 
 @layer utilities {
@@ -414,9 +415,12 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   box-shadow: 0 0 10px #818cf8, 0 0 5px #818cf8;
 }
 
-/* GPU-accelerated transitions for smoother animations */
+/* NSFW blur transition — will-change: filter intentionally omitted.
+   It creates a permanent GPU compositor layer per blurred image, and on browse
+   grids with many NSFW items this exceeds mobile GPU memory budgets (same issue
+   as the loading-overlay below). The blur-lg filter itself forces GPU compositing
+   during the transition, and transition-[filter] on the img handles smoothness. */
 .nsfw-blur-transition {
-  will-change: filter;
 }
 
 /* loading-overlay intentionally has NO will-change — the overlay covers the

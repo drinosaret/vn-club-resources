@@ -343,7 +343,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
       style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px 300px', ...cascadeStyle }}
     >
       {/* Cover image container */}
-      <div className="relative aspect-[3/4] rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-shadow bg-gray-200 dark:bg-gray-700">
+      <div className="relative aspect-[3/4] rounded-lg overflow-hidden sm:shadow-sm sm:group-hover:shadow-md sm:transition-shadow bg-gray-200 dark:bg-gray-700">
         {/* Shimmer placeholder — unmounted once image loads (no flash for preloaded images) */}
         {showImage && !imageLoaded && (
           <div className="absolute inset-0 image-placeholder" />

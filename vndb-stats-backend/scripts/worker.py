@@ -168,6 +168,13 @@ async def run_daily_update():
             await compute_vn_similarities()
             await compute_item_item_similarity()
 
+            # Flush stale user caches so fresh data is served immediately
+            from app.core.cache import get_cache
+            cache = get_cache()
+            flushed_lists = await cache.flush_pattern("user:list:*")
+            flushed_stats = await cache.flush_pattern("user:stats:*")
+            logger.info(f"Flushed {flushed_lists} user list caches and {flushed_stats} user stats caches")
+
             # Update last import time
             async with async_session_maker() as session:
                 result = await session.execute(

@@ -57,7 +57,7 @@ export function FadeIn({
 
   return (
     <div
-      className={`transition-all ${gpuClass} ${className}`}
+      className={`transition-[opacity,transform] ${gpuClass} ${className}`}
       style={{
         transitionDuration: `${duration}ms`,
         transitionTimingFunction: 'ease-out',

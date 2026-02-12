@@ -52,12 +52,13 @@ export function DigestCard({ item }: DigestCardProps) {
                 src={getNewsImageUrl(previewImages[0])!}
                 alt=""
                 fill
+                loading="lazy"
                 className={`object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setImageLoaded(true)}
                 unoptimized
               />
               {/* Count badge */}
-              <div className="absolute bottom-3 right-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-md flex items-center gap-1.5 z-10">
+              <div className="absolute bottom-3 right-3 bg-white/95 dark:bg-gray-800/95 px-3 py-1 rounded-full shadow-md flex items-center gap-1.5 z-10">
                 <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">
                   {item.count} items

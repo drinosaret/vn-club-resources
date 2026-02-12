@@ -31,6 +31,8 @@ export function RangeSlider({
   const [localMax, setLocalMax] = useState(maxValue ?? max);
   const [isDragging, setIsDragging] = useState<'min' | 'max' | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  // Cache getBoundingClientRect on drag start to avoid layout thrashing on every move
+  const cachedRectRef = useRef<DOMRect | null>(null);
 
   // Sync with external values
   useEffect(() => {
@@ -43,8 +45,8 @@ export function RangeSlider({
   };
 
   const getValueFromPosition = useCallback((clientX: number) => {
-    if (!trackRef.current) return min;
-    const rect = trackRef.current.getBoundingClientRect();
+    const rect = cachedRectRef.current;
+    if (!rect) return min;
     const percentage = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const rawValue = min + percentage * (max - min);
     // Round to step
@@ -53,6 +55,7 @@ export function RangeSlider({
 
   const handleMouseDown = (type: 'min' | 'max') => (e: React.MouseEvent) => {
     e.preventDefault();
+    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
     setIsDragging(type);
   };
 
@@ -92,6 +95,7 @@ export function RangeSlider({
 
   // Touch support
   const handleTouchStart = (type: 'min' | 'max') => (e: React.TouchEvent) => {
+    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
     setIsDragging(type);
   };
 
@@ -119,9 +123,9 @@ export function RangeSlider({
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener('touchmove', handleTouchMove);
-      window.addEventListener('touchend', handleTouchEnd);
-      window.addEventListener('touchcancel', handleTouchEnd);
+      window.addEventListener('touchmove', handleTouchMove, { passive: true });
+      window.addEventListener('touchend', handleTouchEnd, { passive: true });
+      window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
       return () => {
         window.removeEventListener('touchmove', handleTouchMove);
         window.removeEventListener('touchend', handleTouchEnd);
@@ -147,6 +151,7 @@ export function RangeSlider({
     if (isDragging) return;
     if ((e.target as HTMLElement).closest('[data-thumb]')) return;
 
+    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
     const clickedValue = getValueFromPosition(e.clientX);
     const distToMin = Math.abs(clickedValue - localMin);
     const distToMax = Math.abs(clickedValue - localMax);

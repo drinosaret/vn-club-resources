@@ -63,6 +63,7 @@ export function NewsCard({ item }: NewsCardProps) {
             src={getNewsImageUrl(item.imageUrl)!}
             alt={item.title}
             fill
+            loading="lazy"
             className={`object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             onError={() => setImageError(true)}
             onLoad={() => setImageLoaded(true)}

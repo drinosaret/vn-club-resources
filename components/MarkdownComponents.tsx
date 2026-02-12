@@ -126,6 +126,7 @@ export const markdownComponents: Components = {
           src={src}
           alt={alt}
           className="rounded-lg shadow-sm"
+          decoding="async"
           style={props.style}
         />
       );

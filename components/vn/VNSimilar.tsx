@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Star, Users, HelpCircle } from 'lucide-react';
+import { BookOpen, Star, Users, HelpCircle, RefreshCw } from 'lucide-react';
 import type { SimilarVN } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { useDisplayTitle } from '@/lib/title-preference';
@@ -11,10 +11,11 @@ import { useImageFade } from '@/hooks/useImageFade';
 interface VNSimilarProps {
   similar: SimilarVN[];
   isLoading?: boolean;
+  error?: boolean;
 }
 
-export function VNSimilar({ similar, isLoading }: VNSimilarProps) {
-  const getDisplayTitle = useDisplayTitle();
+export function VNSimilar({ similar, isLoading, error }: VNSimilarProps) {
+  useDisplayTitle();
 
   if (isLoading) {
     return (
@@ -33,6 +34,23 @@ export function VNSimilar({ similar, isLoading }: VNSimilarProps) {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Users Also Read
+          </h2>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Similarity data is currently being refreshed. Check back in a few minutes.
+        </p>
       </div>
     );
   }

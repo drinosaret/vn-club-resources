@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Star, Sparkles, HelpCircle } from 'lucide-react';
+import { BookOpen, Star, Sparkles, HelpCircle, RefreshCw } from 'lucide-react';
 import type { SimilarVN } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { useDisplayTitle } from '@/lib/title-preference';
@@ -11,9 +11,10 @@ import { useImageFade } from '@/hooks/useImageFade';
 interface VNContentSimilarProps {
   similar: SimilarVN[];
   isLoading?: boolean;
+  error?: boolean;
 }
 
-export function VNContentSimilar({ similar, isLoading }: VNContentSimilarProps) {
+export function VNContentSimilar({ similar, isLoading, error }: VNContentSimilarProps) {
   // Subscribe to title preference context to ensure re-render when preference changes
   useDisplayTitle();
 
@@ -34,6 +35,23 @@ export function VNContentSimilar({ similar, isLoading }: VNContentSimilarProps) 
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="w-5 h-5 text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Similar Games
+          </h2>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" />
+          Similarity data is currently being refreshed. Check back in a few minutes.
+        </p>
       </div>
     );
   }

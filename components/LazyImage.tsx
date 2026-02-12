@@ -44,6 +44,7 @@ export function LazyImage({ src, alt, className = '', style }: LazyImageProps) {
           src={src}
           alt={alt}
           className={`${className} transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          decoding="async"
           style={style}
           onLoad={handleLoad}
         />

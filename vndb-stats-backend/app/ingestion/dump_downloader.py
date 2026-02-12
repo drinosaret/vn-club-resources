@@ -104,7 +104,9 @@ async def download_dumps(
     Args:
         output_dir: Directory to store downloads (default: settings.dump_storage_path)
         force_download: If True, always download even if file exists
-        max_age_hours: Re-download if file is older than this (default: 24 hours)
+        max_age_hours: Re-download if file is older than this.
+            A 1-hour buffer is applied (actual threshold = max_age_hours - 1)
+            to prevent race conditions when cron fires at the same interval.
 
     Returns:
         Dict mapping dump name to file path
@@ -128,14 +130,17 @@ async def download_dumps(
         output_path = os.path.join(output_dir, f"{name}_latest{ext}")
 
         # Check if we need to download
+        # Apply 1-hour buffer to prevent race condition when cron interval == max_age_hours
+        # (e.g., 24h cron with 24h max_age means files at 23.99h would be reused)
+        effective_max_age = max(max_age_hours - 1, 1)
         if not force_download and os.path.exists(output_path):
             age = get_file_age_hours(output_path)
-            if age is not None and age < max_age_hours:
+            if age is not None and age < effective_max_age:
                 logger.info(f"Using existing dump: {output_path} ({age:.1f}h old)")
                 paths[name] = output_path
                 continue
             else:
-                logger.info(f"Dump {output_path} is stale ({age:.1f}h old), re-downloading")
+                logger.info(f"Dump {output_path} is stale ({age:.1f}h old, threshold: {effective_max_age}h), re-downloading")
 
         success = await download_file(url, output_path)
         if success:

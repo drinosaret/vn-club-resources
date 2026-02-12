@@ -424,7 +424,7 @@ export default function RecommendationsContent() {
         setError('Request timed out. The server may be busy - please try again.');
       } else {
         console.error('Failed to load recommendations:', err);
-        setError('Failed to load recommendations. Please try again.');
+        setError('Failed to load recommendations. Data may be refreshing — please try again in a few minutes.');
       }
     } finally {
       setIsLoading(false);

@@ -47,7 +47,7 @@ export function MobileFilterPanel({
 
       {/* Collapsible Filter Content */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out
+        className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 ease-in-out
                    ${isExpanded ? 'max-h-[2000px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}
       >
         <div className="bg-white dark:bg-gray-800 rounded-lg border

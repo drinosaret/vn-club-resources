@@ -51,7 +51,7 @@ export function VNCover({ imageUrl, imageSexual, title, rating, votecount, vnId 
 
           {/* Rating badge overlay */}
           {rating != null && (
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/80 backdrop-blur-sm text-white rounded-lg shadow-lg">
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/85 text-white rounded-lg shadow-lg">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               <span className="font-bold">{rating.toFixed(2)}</span>
             </div>
@@ -59,7 +59,7 @@ export function VNCover({ imageUrl, imageSexual, title, rating, votecount, vnId 
 
           {/* Vote count at bottom */}
           {votecount !== undefined && votecount > 0 && (
-            <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-black/70 backdrop-blur-sm text-white text-xs rounded-lg">
+            <div className="absolute bottom-3 left-3 px-2.5 py-1 bg-black/75 text-white text-xs rounded-lg">
               {votecount.toLocaleString()} votes
             </div>
           )}

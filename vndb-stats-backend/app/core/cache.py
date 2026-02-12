@@ -83,6 +83,19 @@ class CacheService:
             logger.warning(f"Cache exists error for {key}: {e}")
             return False
 
+    async def flush_pattern(self, pattern: str) -> int:
+        """Delete all keys matching a pattern. Returns count of deleted keys."""
+        try:
+            client = await self._get_redis()
+            deleted = 0
+            async for key in client.scan_iter(match=pattern, count=500):
+                await client.delete(key)
+                deleted += 1
+            return deleted
+        except Exception as e:
+            logger.warning(f"Cache flush_pattern error for {pattern}: {e}")
+            return 0
+
     # Key patterns for different data types
     @staticmethod
     def user_list_key(uid: str) -> str:

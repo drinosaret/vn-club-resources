@@ -36,7 +36,7 @@ export function ScrollToTopButton() {
         bg-primary-600 hover:bg-primary-700
         text-white shadow-lg hover:shadow-xl
         flex items-center justify-center
-        transition-all duration-300 ease-out
+        transition-[opacity,transform,box-shadow,background-color] duration-300 ease-out
         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
         dark:focus:ring-offset-gray-900
         ${isVisible

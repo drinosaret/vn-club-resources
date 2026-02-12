@@ -208,6 +208,17 @@ class StatsService:
 
         # Early return for users with 0 completed VNs
         if not completed_vn_ids:
+            # Still calculate score stats from all votes (even without completed VNs)
+            all_scores = [v["score"] / 10 for v in all_votes]
+            avg = round(mean(all_scores), 2) if all_scores else 0
+            std = round(stdev(all_scores), 2) if len(all_scores) > 1 else 0
+
+            # Build score distribution from all votes
+            score_dist = {str(i): 0 for i in range(1, 11)}
+            for s in all_scores:
+                bucket = str(max(1, min(10, int(round(s)))))
+                score_dist[bucket] = score_dist.get(bucket, 0) + 1
+
             return UserStatsResponse(
                 user=UserInfo(uid=vndb_uid, username=user_data.get("username", vndb_uid)),
                 summary=StatsSummary(
@@ -216,12 +227,12 @@ class StatsService:
                     playing=len(labels.get("1", [])),
                     dropped=len(labels.get("4", [])),
                     wishlist=len(labels.get("5", [])),
-                    total_votes=0,
-                    average_score=0,
-                    score_stddev=0,
+                    total_votes=len(all_votes),
+                    average_score=avg,
+                    score_stddev=std,
                     estimated_hours=0,
                 ),
-                score_distribution={str(i): 0 for i in range(1, 11)},
+                score_distribution=score_dist,
                 release_year_distribution={},
                 monthly_activity=[],
                 length_distribution={"very_short": 0, "short": 0, "medium": 0, "long": 0, "very_long": 0},

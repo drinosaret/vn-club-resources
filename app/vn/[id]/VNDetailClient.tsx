@@ -55,6 +55,7 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
   // Similar VNs
   const [similarData, setSimilarData] = useState<SimilarVNsResponse | null>(null);
   const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState(false);
 
   // Characters/Traits
   const [characters, setCharacters] = useState<VNCharacter[]>([]);
@@ -175,13 +176,14 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
 
   const loadSimilarVNs = async () => {
     setSimilarLoading(true);
+    setSimilarError(false);
     try {
       const result = await vndbStatsApi.getSimilarVNs(vnId, 10);
       if (result) {
         setSimilarData(result);
       }
     } catch {
-      // Similar VNs are optional, silently fail
+      setSimilarError(true);
     } finally {
       setSimilarLoading(false);
     }
@@ -327,7 +329,7 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
               <VNDescription description={vn.description} />
               <VNTags tags={vn.tags} />
               {/* Language filter - applies to relations and similar VNs */}
-              {((vn.relations && vn.relations.length > 0) || similarLoading || (similarData?.content_similar?.length || 0) > 0 || (similarData?.users_also_read?.length || 0) > 0) && (
+              {((vn.relations && vn.relations.length > 0) || similarLoading || similarError || (similarData?.content_similar?.length || 0) > 0 || (similarData?.users_also_read?.length || 0) > 0) && (
                 <div className="flex items-center justify-end gap-2 text-sm">
                   <Globe className="w-4 h-4 text-gray-500" />
                   <span className="text-gray-600 dark:text-gray-400">Show:</span>
@@ -361,12 +363,14 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
                   vn => !japaneseOnly || vn.olang === 'ja'
                 )}
                 isLoading={similarLoading}
+                error={similarError}
               />
               <VNSimilar
                 similar={(similarData?.users_also_read || []).filter(
                   vn => !japaneseOnly || vn.olang === 'ja'
                 )}
                 isLoading={similarLoading}
+                error={similarError}
               />
             </div>
             </FadeIn>

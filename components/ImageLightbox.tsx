@@ -138,6 +138,7 @@ export function ImageLightbox({ children, src, alt, imageSexual, vnId }: ImageLi
             src={src}
             alt={alt}
             className={`max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl transition-opacity duration-300 ${lightboxLoaded ? 'opacity-100' : 'opacity-0'}`}
+            decoding="async"
             onClick={(e) => e.stopPropagation()}
             onLoad={() => setLightboxLoaded(true)}
           />

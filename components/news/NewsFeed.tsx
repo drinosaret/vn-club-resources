@@ -53,8 +53,8 @@ export function NewsFeed() {
   }, [activeSource]);
 
   const handleSourceChange = (source: NewsSource | 'all') => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setActiveSource(source);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRefresh = () => {
@@ -62,9 +62,11 @@ export function NewsFeed() {
   };
 
   const handlePageChange = (newPage: number) => {
+    // Scroll first with 'instant' — smooth scroll gets cancelled by the layout
+    // shift when React swaps content to skeleton cards mid-animation
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setPage(newPage);
     loadNews(activeSource, newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
