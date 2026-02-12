@@ -341,7 +341,7 @@ async def check_and_update_if_stale():
         await recompute_models_only()
         return
 
-    if status["hours_since_import"] is not None and status["hours_since_import"] > 24:
+    if status["hours_since_import"] is not None and status["hours_since_import"] > 23:
         logger.info(f"Data is {status['hours_since_import']:.1f} hours old - triggering update")
         await run_daily_update()
     else:
