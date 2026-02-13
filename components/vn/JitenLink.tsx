@@ -8,9 +8,7 @@ interface JitenLinkProps {
 }
 
 const fetchDeckId = async (vnId: string): Promise<number | null> => {
-  const res = await fetch(
-    `https://api.jiten.moe/api/media-deck/by-link-id/2/${vnId}`
-  );
+  const res = await fetch(`/api/jiten/${vnId}/`);
   if (!res.ok) return null;
   const data: number[] = await res.json();
   return data.length > 0 ? data[0] : null;
