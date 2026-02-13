@@ -888,7 +888,24 @@ async def import_visual_novels(db_dump_path: str, extract_dir: str, force: bool 
         logger.info(f"Sample extracted paths: {extracted[:5]}")
         return
 
-    await _import_vn_table(vn_file, vn_titles_file, images_file)
+    imported_ids = await _import_vn_table(vn_file, vn_titles_file, images_file)
+
+    # Clean up ghost VNs that are no longer in the dump
+    # (Upsert-only imports accumulate deleted/hidden VNs over time)
+    if imported_ids:
+        async with async_session() as db:
+            result = await db.execute(text("SELECT id FROM visual_novels"))
+            db_ids = {row[0] for row in result.fetchall()}
+            ghost_ids = list(db_ids - imported_ids)
+            if ghost_ids:
+                await db.execute(
+                    text("DELETE FROM visual_novels WHERE id = ANY(:ids)"),
+                    {"ids": ghost_ids},
+                )
+                await db.commit()
+                logger.info(f"Cleaned up {len(ghost_ids)} ghost VNs no longer in dump: {ghost_ids[:10]}{'...' if len(ghost_ids) > 10 else ''}")
+            else:
+                logger.info("No ghost VNs found - database is clean")
 
     # Update minage from releases table
     if releases_file and releases_vn_file:
@@ -1000,8 +1017,12 @@ def _load_image_sexual_ratings(images_file: str | None) -> dict[str, float]:
     return ratings
 
 
-async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, images_file: str | None = None):
-    """Import VN records from dump file."""
+async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, images_file: str | None = None) -> set[str]:
+    """Import VN records from dump file.
+
+    Returns:
+        Set of VN IDs that were imported from the dump.
+    """
     logger.info(f"Importing VN table from {vn_file}")
 
     # Load titles first
@@ -1026,6 +1047,7 @@ async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, imag
     count = 0
     errors = 0
     skipped_no_title = 0
+    imported_ids: set[str] = set()
 
     async with async_session() as db:
         batch = []
@@ -1127,6 +1149,7 @@ async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, imag
                         except (ValueError, TypeError):
                             pass
 
+                    imported_ids.add(vn_id)
                     batch.append({
                         "id": vn_id,
                         "title": title,
@@ -1173,6 +1196,8 @@ async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, imag
 
     # Validation: Check for invalid ratings and fix them
     await _validate_and_fix_ratings()
+
+    return imported_ids
 
 
 async def _validate_and_fix_ratings():

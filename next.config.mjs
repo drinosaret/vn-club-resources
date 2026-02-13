@@ -17,6 +17,7 @@ const connectSrc = [
   "'self'",
   'https://vnclub.org',
   'https://api.vnclub.org',
+  'https://api.jiten.moe',
   'https://gc.zgo.at',
   'https://vnclub.goatcounter.com',
   ...(backendUrl ? [backendUrl] : []),
