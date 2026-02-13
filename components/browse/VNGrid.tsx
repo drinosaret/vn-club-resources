@@ -305,7 +305,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     <Link
       href={`/vn/${vnId}`}
       className={`group block ${itemClass || ''}`}
-      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px 300px' }}
     >
       {/* Cover image container */}
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden sm:shadow-sm sm:group-hover:shadow-md sm:transition-shadow bg-gray-200 dark:bg-gray-700">
