@@ -15,6 +15,8 @@ const MIN_YEAR = 1990;
 const MAX_YEAR = new Date().getFullYear();
 const MIN_RATING = 1;
 const MAX_RATING = 10;
+const MIN_VOTES = 0;
+const MAX_VOTES = 5000;
 
 export function InlineRangeSliders({ filters, onChange, layout = 'horizontal', compact }: InlineRangeSlidersProps) {
   return (
@@ -41,6 +43,18 @@ export function InlineRangeSliders({ filters, onChange, layout = 'horizontal', c
         minValue={filters.min_rating}
         maxValue={filters.max_rating}
         onChange={(minVal, maxVal) => onChange({ min_rating: minVal, max_rating: maxVal })}
+        compact={compact}
+      />
+
+      <RangeSlider
+        label="Votes"
+        min={MIN_VOTES}
+        max={MAX_VOTES}
+        step={10}
+        minValue={filters.min_votecount}
+        maxValue={filters.max_votecount}
+        onChange={(minVal, maxVal) => onChange({ min_votecount: minVal, max_votecount: maxVal })}
+        formatValue={(v) => v >= MAX_VOTES ? `${MAX_VOTES.toLocaleString()}+` : v.toLocaleString()}
         compact={compact}
       />
     </div>

@@ -475,9 +475,11 @@ export interface DeveloperRankContext {
 }
 
 export interface GenrePercentileContext {
+  tag_id: number;
   tag_name: string;
   percentile: number;
   total_in_genre: number;
+  jp_count: number;
 }
 
 export interface LengthComparisonContext {
@@ -485,6 +487,7 @@ export interface LengthComparisonContext {
   length_avg_score: number;
   length_label: string;
   count_in_length: number;
+  jp_count: number;
 }
 
 export interface ComparativeContext {
@@ -627,6 +630,8 @@ export interface BrowseFilters {
   year_max?: number;
   min_rating?: number;
   max_rating?: number;
+  min_votecount?: number;
+  max_votecount?: number;
   // Multi-select filters (comma-separated values)
   length?: string;               // very_short, short, medium, long, very_long (comma-separated)
   exclude_length?: string;       // Exclude lengths (comma-separated)
@@ -1512,6 +1517,8 @@ class VNDBStatsAPI {
     if (filters.year_max !== undefined) params.set('year_max', String(filters.year_max));
     if (filters.min_rating !== undefined) params.set('min_rating', String(filters.min_rating));
     if (filters.max_rating !== undefined) params.set('max_rating', String(filters.max_rating));
+    if (filters.min_votecount !== undefined) params.set('min_votecount', String(filters.min_votecount));
+    if (filters.max_votecount !== undefined) params.set('max_votecount', String(filters.max_votecount));
     if (filters.length) params.set('length', filters.length);
     if (filters.exclude_length) params.set('exclude_length', filters.exclude_length);
     if (filters.minage) params.set('minage', filters.minage);

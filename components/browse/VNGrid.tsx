@@ -43,10 +43,6 @@ const PRELOAD_THRESHOLD = 0.4;
 // Maximum time to wait for preloading before swapping anyway
 const PRELOAD_TIMEOUT_MS = 800;
 
-// Cascade reveal: above-fold cards fade/slide in sequentially after grid swap
-const CASCADE_LIMIT = 12;     // Only first N cards get staggered delay
-const CASCADE_STEP_MS = 30;   // Delay between each card (12 × 30 = 360ms total)
-
 interface VNGridProps {
   results: VNSearchResult[];
   isLoading: boolean;
@@ -64,12 +60,10 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   const [displayResults, setDisplayResults] = useState<VNSearchResult[]>(results);
   // True while preloading images before a grid swap
   const [isSwapping, setIsSwapping] = useState(false);
-  // Incremented after each preload-based grid swap to trigger cascade reveal
-  const [cascadeGen, setCascadeGen] = useState(0);
   // Cleanup ref for cancelling in-progress preloads
   const preloadCleanupRef = useRef<(() => void) | null>(null);
   // Track whether we've ever displayed results (to skip preload on initial render)
-  const hasDisplayedRef = useRef(results.length > 0);
+  const hasDisplayedRef = useRef(false);
 
   // Set mounted state after hydration
   useEffect(() => {
@@ -121,7 +115,6 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       cancelled = true;
       setDisplayResults(results);
       setIsSwapping(false);
-      setCascadeGen(prev => prev + 1);
     };
 
     // No images to preload → swap immediately
@@ -192,12 +185,6 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   // Stale detection only needed for non-pagination preload transitions
   const isStale = !skipPreload && results !== displayResults && displayResults.length > 0 && results.length > 0;
 
-  // Cascade: stagger above-fold card reveals after filter/search grid swaps.
-  // cascadeGen > 0 ensures no cascade on initial SSR render (avoids FOUC).
-  // skipPreload (pagination) skips cascade — cards appear immediately.
-  const reducedMotion = hasMounted && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const shouldCascade = !skipPreload && !reducedMotion && cascadeGen > 0;
-
   // Show grid — keeps old results visible during loading and image preloading
   return (
     <div className="relative">
@@ -221,7 +208,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       {/* Flexbox layout centers incomplete last row like VNDB */}
       <div className={`flex flex-wrap justify-center gap-x-3 gap-y-5 my-6 transition-opacity duration-150 ease-out ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-80' : ''}`}>
         {displayResults.map((vn, index) => (
-          <VNCover key={vn.id} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} cascadeDelay={shouldCascade && index < CASCADE_LIMIT ? index * CASCADE_STEP_MS : undefined} />
+          <VNCover key={vn.id} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
         ))}
       </div>
     </div>
@@ -242,14 +229,11 @@ interface VNCoverProps {
   srcsetWidths?: ImageWidth[];
   imageSizes?: string;
   itemClass?: string;
-  cascadeDelay?: number;
 }
 
-const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass, cascadeDelay }: VNCoverProps) {
+const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass }: VNCoverProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  // Cascade reveal: starts false when cascade is active, becomes true after delay
-  const [cascadeReady, setCascadeReady] = useState(cascadeDelay === undefined);
   const [retryKey, setRetryKey] = useState(0);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -288,17 +272,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
   }, []);
 
-  // Cascade reveal timer: delay each card's appearance after grid swap
-  useEffect(() => {
-    if (cascadeDelay !== undefined) {
-      setCascadeReady(false);
-      const timer = setTimeout(() => setCascadeReady(true), cascadeDelay);
-      return () => clearTimeout(timer);
-    } else {
-      setCascadeReady(true);
-    }
-  }, [cascadeDelay]);
-
   // Skip shimmer for images already in browser cache (from preload links).
   // useLayoutEffect fires before paint, so the shimmer is never visible for cached images.
   useLayoutEffect(() => {
@@ -328,19 +301,11 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     setImageLoaded(true);
   }, []);
 
-  const cascadeStyle: React.CSSProperties = cascadeDelay !== undefined
-    ? {
-        opacity: cascadeReady ? 1 : 0,
-        transform: cascadeReady ? 'none' : 'translateY(8px)',
-        transition: 'opacity 200ms ease-out, transform 200ms ease-out',
-      }
-    : {};
-
   return (
     <Link
       href={`/vn/${vnId}`}
       className={`group block ${itemClass || ''}`}
-      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px 300px', ...cascadeStyle }}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px 300px' }}
     >
       {/* Cover image container */}
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden sm:shadow-sm sm:group-hover:shadow-md sm:transition-shadow bg-gray-200 dark:bg-gray-700">
@@ -403,7 +368,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     prevProps.imageWidth === nextProps.imageWidth &&
     prevProps.srcsetWidths === nextProps.srcsetWidths &&
     prevProps.imageSizes === nextProps.imageSizes &&
-    prevProps.itemClass === nextProps.itemClass &&
-    prevProps.cascadeDelay === nextProps.cascadeDelay
+    prevProps.itemClass === nextProps.itemClass
   );
 });

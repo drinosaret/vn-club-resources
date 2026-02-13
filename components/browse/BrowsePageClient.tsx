@@ -160,6 +160,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     year_max: searchParams.get('year_max') ? Number(searchParams.get('year_max')) : undefined,
     min_rating: searchParams.get('min_rating') ? Number(searchParams.get('min_rating')) : undefined,
     max_rating: searchParams.get('max_rating') ? Number(searchParams.get('max_rating')) : undefined,
+    min_votecount: searchParams.get('min_votecount') ? Number(searchParams.get('min_votecount')) : undefined,
+    max_votecount: searchParams.get('max_votecount') ? Number(searchParams.get('max_votecount')) : undefined,
     // Multi-select filters (comma-separated)
     // Empty string in URL means "no filter" (user explicitly cleared it)
     // Absent param means "use default" (for olang, defaults to 'ja')
@@ -525,6 +527,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     if (newFilters.year_max) params.set('year_max', String(newFilters.year_max));
     if (newFilters.min_rating) params.set('min_rating', String(newFilters.min_rating));
     if (newFilters.max_rating) params.set('max_rating', String(newFilters.max_rating));
+    if (newFilters.min_votecount) params.set('min_votecount', String(newFilters.min_votecount));
+    if (newFilters.max_votecount) params.set('max_votecount', String(newFilters.max_votecount));
     // Multi-select filters: when there's an exclude but no include, explicitly set empty string
     // to signal "no include filter" (prevents default from being applied on reload)
     if (newFilters.length) params.set('length', newFilters.length);
@@ -1023,6 +1027,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
         handleFilterChange({ year_min: undefined, year_max: undefined }); // Clear both ends of range
       } else if (filterKey === 'min_rating' || filterKey === 'max_rating') {
         handleFilterChange({ min_rating: undefined, max_rating: undefined }); // Clear both ends of range
+      } else if (filterKey === 'min_votecount' || filterKey === 'max_votecount') {
+        handleFilterChange({ min_votecount: undefined, max_votecount: undefined }); // Clear both ends of range
       } else {
         handleFilterChange({ [filterKey]: undefined });
       }
@@ -1049,6 +1055,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
       filters.year_max ||
       filters.min_rating ||
       filters.max_rating ||
+      filters.min_votecount ||
+      filters.max_votecount ||
       filters.length ||
       filters.exclude_length ||
       filters.minage ||
@@ -1095,6 +1103,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     // Range filters (count as 1 each if set)
     if (filters.year_min || filters.year_max) count++;
     if (filters.min_rating || filters.max_rating) count++;
+    if (filters.min_votecount || filters.max_votecount) count++;
 
     // Tags/traits/entities
     count += selectedTags.length;

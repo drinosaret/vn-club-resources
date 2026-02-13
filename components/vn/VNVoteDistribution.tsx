@@ -5,12 +5,11 @@ import { ChartHelpTooltip } from '@/components/stats/ChartHelpTooltip';
 
 interface VNVoteDistributionProps {
   distribution: Record<string, number>;
-  average: number | null;
   totalVotes: number;
   publicVotes?: number;
 }
 
-export function VNVoteDistribution({ distribution, average, totalVotes, publicVotes }: VNVoteDistributionProps) {
+export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VNVoteDistributionProps) {
   const data = useMemo(() => {
     const scores = [];
     for (let i = 1; i <= 10; i++) {
@@ -44,19 +43,12 @@ export function VNVoteDistribution({ distribution, average, totalVotes, publicVo
           </h3>
           <ChartHelpTooltip text="VNDB votes are on a 10–100 scale. Each bar groups votes rounded to the nearest 10 (e.g. Score 8 = votes 75–84)." />
         </div>
-        {average !== null && (
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Avg: <span className="font-semibold text-primary-600 dark:text-primary-400">{average.toFixed(1)}</span>
-          </div>
-        )}
       </div>
 
       <div className="flex items-end gap-2 h-48">
         {data.map((d) => {
           const heightPx = (d.count / maxCount) * 160;
           const percentage = ((d.count / totalVotes) * 100).toFixed(0);
-          const isAverage = average !== null && Math.round(average) === d.score;
-
           return (
             <div
               key={d.score}
@@ -66,11 +58,7 @@ export function VNVoteDistribution({ distribution, average, totalVotes, publicVo
                 {d.count > 0 && <div>{d.count}</div>}
               </div>
               <div
-                className={`w-full rounded-t transition-colors relative ${
-                  isAverage
-                    ? 'bg-gradient-to-t from-primary-600 to-primary-400'
-                    : 'bg-gradient-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
-                }`}
+                className="w-full rounded-t transition-colors relative bg-gradient-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600"
                 style={{ height: `${Math.max(heightPx, 4)}px` }}
               >
                 {/* Tooltip */}
@@ -78,13 +66,7 @@ export function VNVoteDistribution({ distribution, average, totalVotes, publicVo
                   {d.count} votes ({percentage}%)
                 </div>
               </div>
-              <div
-                className={`text-xs font-medium ${
-                  isAverage
-                    ? 'text-primary-600 dark:text-primary-400'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
-              >
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
                 {d.score}
               </div>
             </div>

@@ -37,6 +37,15 @@ _GENRE_TAGS = [
 # VN length category labels (matches VNDB length field values 1-5)
 _LENGTH_LABELS = {1: "Very Short", 2: "Short", 3: "Medium", 4: "Long", 5: "Very Long"}
 
+# Minute ranges for each length category — must match get_length_filter() in search_vns
+_LENGTH_RANGES = {
+    1: (None, 120),      # Very Short: < 2h
+    2: (120, 600),       # Short: 2-10h
+    3: (600, 1800),      # Medium: 10-30h
+    4: (1800, 3000),     # Long: 30-50h
+    5: (3000, None),     # Very Long: 50h+
+}
+
 
 def _parse_id_list(value: str, max_items: int = MAX_FILTER_IDS) -> list[int]:
     """Parse a comma-separated string of numeric IDs with a safety cap."""
@@ -141,6 +150,8 @@ async def search_vns(
     year_max: int | None = Query(default=None, description="Maximum release year"),
     min_rating: float | None = Query(default=None, ge=0, le=10, description="Minimum rating"),
     max_rating: float | None = Query(default=None, ge=0, le=10, description="Maximum rating"),
+    min_votecount: int | None = Query(default=None, ge=0, description="Minimum vote count"),
+    max_votecount: int | None = Query(default=None, ge=0, description="Maximum vote count"),
 
     # Category filters (support comma-separated values for multi-select)
     length: str | None = Query(default=None, description="Length: very_short, short, medium, long, very_long (comma-separated)"),
@@ -197,7 +208,7 @@ async def search_vns(
     cache = get_cache()
     cache_params = (
         q, first_char, tags, exclude_tags, tag_mode, traits, exclude_traits,
-        include_children, year_min, year_max, min_rating, max_rating,
+        include_children, year_min, year_max, min_rating, max_rating, min_votecount, max_votecount,
         length, minage, devstatus, olang, platform,
         exclude_length, exclude_minage, exclude_devstatus, exclude_olang, exclude_platform,
         staff, seiyuu, developer, publisher, producer,
@@ -268,6 +279,15 @@ async def search_vns(
     if max_rating is not None:
         query = query.where(VisualNovel.rating < max_rating)
         count_query = count_query.where(VisualNovel.rating < max_rating)
+
+    # Vote count range
+    if min_votecount is not None:
+        query = query.where(VisualNovel.votecount >= min_votecount)
+        count_query = count_query.where(VisualNovel.votecount >= min_votecount)
+
+    if max_votecount is not None:
+        query = query.where(VisualNovel.votecount <= max_votecount)
+        count_query = count_query.where(VisualNovel.votecount <= max_votecount)
 
     # Length filter (using length_minutes when available)
     # Helper function for length filter conditions
@@ -667,6 +687,10 @@ async def search_vns(
             spoiler_count_query = spoiler_count_query.where(VisualNovel.rating >= min_rating)
         if max_rating is not None:
             spoiler_count_query = spoiler_count_query.where(VisualNovel.rating < max_rating)
+        if min_votecount is not None:
+            spoiler_count_query = spoiler_count_query.where(VisualNovel.votecount >= min_votecount)
+        if max_votecount is not None:
+            spoiler_count_query = spoiler_count_query.where(VisualNovel.votecount <= max_votecount)
         if length:
             length_values = [v.strip() for v in length.split(",") if v.strip()]
             if length_values:
@@ -1613,11 +1637,12 @@ async def get_vn_vote_stats(
 
     # Fetch VN rating + length once for use across comparative sections
     vn_extra_result = await db.execute(
-        select(VisualNovel.rating, VisualNovel.length).where(VisualNovel.id == normalized_id)
+        select(VisualNovel.rating, VisualNovel.length, VisualNovel.length_minutes).where(VisualNovel.id == normalized_id)
     )
     vn_extra_row = vn_extra_result.one_or_none()
     this_vn_rating = vn_extra_row[0] if vn_extra_row else None
     this_vn_length = vn_extra_row[1] if vn_extra_row else None
+    this_vn_length_minutes = vn_extra_row[2] if vn_extra_row else None
 
     # 5a. Developer rank — find developer, rank this VN among their works
     try:
@@ -1703,18 +1728,20 @@ async def get_vn_vote_stats(
                             WHERE tt.depth < 10
                         ),
                         genre_vns AS (
-                            SELECT DISTINCT vn.id, vn.rating
+                            SELECT DISTINCT vn.id, vn.rating, vn.olang
                             FROM vn_tags vt
                             JOIN visual_novels vn ON vt.vn_id = vn.id
                             WHERE vt.tag_id IN (SELECT id FROM tag_tree)
                               AND vn.rating IS NOT NULL
                               AND vn.votecount >= 10
+                              AND vt.score >= 0
                               AND vt.lie = false
                         )
                         SELECT
                             COUNT(*) AS total,
                             ROUND(100.0 * SUM(CASE WHEN rating <= :vn_rating THEN 1 ELSE 0 END)
-                                  / GREATEST(COUNT(*), 1), 1) AS percentile
+                                  / GREATEST(COUNT(*), 1), 1) AS percentile,
+                            SUM(CASE WHEN olang = 'ja' THEN 1 ELSE 0 END) AS jp_count
                         FROM genre_vns
                     """),
                     {"tag_id": tag_id, "vn_rating": float(this_vn_rating)}
@@ -1722,33 +1749,64 @@ async def get_vn_vote_stats(
                 pct_row = pct_result.one_or_none()
                 if pct_row and pct_row[0] >= 10:
                     genre_percentile = schemas.GenrePercentileContext(
+                        tag_id=tag_id,
                         tag_name=tag_name,
                         percentile=float(pct_row[1]),
                         total_in_genre=int(pct_row[0]),
+                        jp_count=int(pct_row[2]) if pct_row[2] else 0,
                     )
     except Exception:
         logger.warning(f"Failed to compute genre percentile for {normalized_id}", exc_info=True)
 
     # 5c. Length comparison — average rating for VNs with same length category
+    # Uses length_minutes ranges (matching browse page logic) with fallback to categorical length
     try:
-        if this_vn_length is not None and this_vn_rating is not None and this_vn_length in _LENGTH_LABELS:
+        # Determine effective length category from length_minutes if available
+        effective_length = this_vn_length
+        if this_vn_length_minutes and this_vn_length_minutes > 0:
+            for cat, (min_m, max_m) in _LENGTH_RANGES.items():
+                above_min = min_m is None or this_vn_length_minutes >= min_m
+                below_max = max_m is None or this_vn_length_minutes < max_m
+                if above_min and below_max:
+                    effective_length = cat
+                    break
+
+        if effective_length is not None and this_vn_rating is not None and effective_length in _LENGTH_LABELS:
+            min_m, max_m = _LENGTH_RANGES[effective_length]
+            # Build minutes condition to match browse page get_length_filter()
+            if min_m is not None and max_m is not None:
+                minutes_cond = "length_minutes > 0 AND length_minutes >= :min_m AND length_minutes < :max_m"
+            elif min_m is not None:
+                minutes_cond = "length_minutes > 0 AND length_minutes >= :min_m"
+            else:
+                minutes_cond = "length_minutes > 0 AND length_minutes < :max_m"
+
             len_avg_result = await db.execute(
-                text("""
-                    SELECT AVG(rating) AS avg_rating, COUNT(*) AS cnt
+                text(f"""
+                    SELECT AVG(rating) AS avg_rating, COUNT(*) AS cnt,
+                           SUM(CASE WHEN olang = 'ja' THEN 1 ELSE 0 END) AS jp_count
                     FROM visual_novels
-                    WHERE length = :length
+                    WHERE (
+                        ({minutes_cond})
+                        OR ((length_minutes IS NULL OR length_minutes <= 0) AND length = :length_cat)
+                    )
                       AND rating IS NOT NULL
                       AND votecount >= 10
                 """),
-                {"length": this_vn_length}
+                {
+                    "length_cat": effective_length,
+                    **({"min_m": min_m} if min_m is not None else {}),
+                    **({"max_m": max_m} if max_m is not None else {}),
+                }
             )
             len_row = len_avg_result.one_or_none()
             if len_row and len_row[1] >= 5:
                 length_comparison = schemas.LengthComparisonContext(
                     vn_score=round(float(this_vn_rating), 2),
                     length_avg_score=round(float(len_row[0]), 2),
-                    length_label=_LENGTH_LABELS[this_vn_length],
+                    length_label=_LENGTH_LABELS[effective_length],
                     count_in_length=int(len_row[1]),
+                    jp_count=int(len_row[2]) if len_row[2] else 0,
                 )
     except Exception:
         logger.warning(f"Failed to compute length comparison for {normalized_id}", exc_info=True)

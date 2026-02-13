@@ -41,6 +41,8 @@ function parseSearchParams(
     year_max: getNumber('year_max'),
     min_rating: getNumber('min_rating'),
     max_rating: getNumber('max_rating'),
+    min_votecount: getNumber('min_votecount'),
+    max_votecount: getNumber('max_votecount'),
     length: getString('length'),
     exclude_length: getString('exclude_length'),
     minage: getString('minage'),

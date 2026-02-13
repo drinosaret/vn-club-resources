@@ -340,9 +340,11 @@ class DeveloperRankContext(BaseModel):
 
 class GenrePercentileContext(BaseModel):
     """How this VN's rating compares within its dominant genre."""
+    tag_id: int
     tag_name: str
     percentile: float
     total_in_genre: int
+    jp_count: int = 0
 
 
 class LengthComparisonContext(BaseModel):
@@ -351,6 +353,7 @@ class LengthComparisonContext(BaseModel):
     length_avg_score: float
     length_label: str
     count_in_length: int
+    jp_count: int = 0
 
 
 class ComparativeContext(BaseModel):

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { ComparativeContext } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';
 
@@ -45,7 +46,13 @@ export function VNComparativeContext({ context }: VNComparativeContextProps) {
               })()}%
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              among {genre_percentile.total_in_genre.toLocaleString()} {genre_percentile.tag_name} VNs
+              among{' '}
+              <Link
+                href={`/browse/?tags=${genre_percentile.tag_id}&include_children=true&min_votecount=10&tag_names=${encodeURIComponent(`tag:${genre_percentile.tag_id}:${genre_percentile.tag_name}`)}`}
+                className="text-sky-600 dark:text-sky-400 hover:underline"
+              >
+                {genre_percentile.total_in_genre.toLocaleString()}{genre_percentile.jp_count > 0 ? ` (${genre_percentile.jp_count.toLocaleString()} JP)` : ''} {genre_percentile.tag_name} VNs with 10+ votes
+              </Link>
             </div>
           </div>
         )}
@@ -58,7 +65,7 @@ export function VNComparativeContext({ context }: VNComparativeContextProps) {
               </span>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              for {length_comparison.length_label} VNs ({length_comparison.count_in_length.toLocaleString()} rated)
+              for {length_comparison.count_in_length.toLocaleString()}{length_comparison.jp_count > 0 ? ` (${length_comparison.jp_count.toLocaleString()} JP)` : ''} {length_comparison.length_label} VNs with 10+ votes
             </div>
           </div>
         )}

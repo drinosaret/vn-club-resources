@@ -101,7 +101,6 @@ export function VNVoteStats({ data, isLoading, error, totalVotecount }: VNVoteSt
       {/* 2. Vote Distribution */}
       <VNVoteDistribution
         distribution={data.score_distribution}
-        average={data.average_score}
         totalVotes={totalVotecount ?? data.total_votes}
         publicVotes={data.total_votes}
       />

@@ -239,6 +239,20 @@ export function ActiveFilterChips({
     );
   }
 
+  // Vote Count Range
+  if (filters.min_votecount || filters.max_votecount) {
+    const voteLabel = filters.min_votecount === filters.max_votecount
+      ? `Votes: ${filters.min_votecount}`
+      : `Votes: ${filters.min_votecount || '0'}${filters.max_votecount ? ` - ${filters.max_votecount}` : '+'}`;
+    chips.push(
+      <Chip
+        key="votecount"
+        label={voteLabel}
+        onRemove={() => onRemoveFilter('min_votecount')}
+      />
+    );
+  }
+
   // Spoiler level (only if not default 0)
   if (filters.spoiler_level && filters.spoiler_level > 0) {
     const spoilerLabel = filters.spoiler_level === 1 ? 'Minor Spoilers' : 'All Spoilers';
