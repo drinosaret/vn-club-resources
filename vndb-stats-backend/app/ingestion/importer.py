@@ -898,6 +898,12 @@ async def import_visual_novels(db_dump_path: str, extract_dir: str, force: bool 
             db_ids = {row[0] for row in result.fetchall()}
             ghost_ids = list(db_ids - imported_ids)
             if ghost_ids:
+                # Delete from computed tables that lack ON DELETE CASCADE
+                for table in ("tag_vn_vectors", "cf_vn_factors", "vn_graph_embeddings"):
+                    await db.execute(
+                        text(f"DELETE FROM {table} WHERE vn_id = ANY(:ids)"),
+                        {"ids": ghost_ids},
+                    )
                 await db.execute(
                     text("DELETE FROM visual_novels WHERE id = ANY(:ids)"),
                     {"ids": ghost_ids},
