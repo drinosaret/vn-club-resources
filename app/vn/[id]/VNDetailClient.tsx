@@ -10,6 +10,7 @@ import {
   VNCharacter,
   SimilarVNsResponse,
   getVNDBUrl,
+  type VNVoteStats as VNVoteStatsData,
 } from '@/lib/vndb-stats-api';
 import { VNCover } from '@/components/vn/VNCover';
 import { VNMetadata } from '@/components/vn/VNMetadata';
@@ -25,13 +26,15 @@ import { VNCharacters } from '@/components/vn/VNCharacters';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { FadeIn } from '@/components/FadeIn';
+import JitenLink from '@/components/vn/JitenLink';
+import { VNVoteStats } from '@/components/vn/VNVoteStats';
 
 interface VNDetailClientProps {
   vnId: string;
   initialVN: VNDetail | null;
 }
 
-const VALID_TABS: VNTabId[] = ['summary', 'tags', 'traits', 'characters'];
+const VALID_TABS: VNTabId[] = ['summary', 'tags', 'traits', 'characters', 'stats'];
 
 export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps) {
   // Subscribe to title preference to ensure re-render when user changes language setting
@@ -71,6 +74,12 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
   const [showTraitSpoilers, setShowTraitSpoilers] = useState(false);
   const [showCharacterSpoilers, setShowCharacterSpoilers] = useState(false);
 
+  // Vote stats (lazy-loaded when Stats tab is selected)
+  const [voteStats, setVoteStats] = useState<VNVoteStatsData | null>(null);
+  const [voteStatsLoading, setVoteStatsLoading] = useState(false);
+  const [voteStatsLoaded, setVoteStatsLoaded] = useState(false);
+  const [voteStatsError, setVoteStatsError] = useState(false);
+
   // Handle tab change - update URL without triggering RSC re-render
   const handleTabChange = useCallback((newTab: VNTabId) => {
     setActiveTab(newTab);
@@ -104,6 +113,10 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
       setCharacters([]);
       setCharactersLoaded(false);
       setCharactersLoading(false);
+      setVoteStats(null);
+      setVoteStatsLoaded(false);
+      setVoteStatsLoading(false);
+      setVoteStatsError(false);
       const title = getDisplayTitle({ title: initialVN.title, title_jp: initialVN.title_jp, title_romaji: initialVN.title_romaji }, preference);
       document.title = `${title} | VN Club`;
     }
@@ -122,6 +135,13 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
       loadCharacters();
     }
   }, [vn, charactersLoaded]);
+
+  // Load vote stats when Stats tab is selected
+  useEffect(() => {
+    if (vn && activeTab === 'stats' && !voteStatsLoaded && !voteStatsLoading) {
+      loadVoteStats();
+    }
+  }, [vn, activeTab, voteStatsLoaded]);
 
   // Update document title when preference changes (for client-side navigation)
   useEffect(() => {
@@ -166,6 +186,10 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
         setCharacters([]);
         setCharactersLoaded(false);
         setCharactersLoading(false);
+        setVoteStats(null);
+        setVoteStatsLoaded(false);
+        setVoteStatsLoading(false);
+        setVoteStatsError(false);
       }
     } catch {
       // Don't replace the page — VN data is already displayed
@@ -184,6 +208,20 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
       setSimilarError(true);
     } finally {
       setSimilarLoading(false);
+    }
+  };
+
+  const loadVoteStats = async () => {
+    setVoteStatsLoading(true);
+    setVoteStatsError(false);
+    try {
+      const result = await vndbStatsApi.getVNVoteStats(vnId);
+      setVoteStats(result);
+      setVoteStatsLoaded(true);
+    } catch {
+      setVoteStatsError(true);
+    } finally {
+      setVoteStatsLoading(false);
     }
   };
 
@@ -260,6 +298,7 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
           <span className="hidden sm:inline">Back</span>
         </button>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <JitenLink vnId={vn.id} />
           <a
             href={vndbUrl}
             target="_blank"
@@ -375,7 +414,7 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
           )}
 
           {activeTab === 'tags' && (
-            <div key="tags" className="animate-fade-in">
+            <div key="tags">
             <VNTagsTable
               tags={vn.tags}
               showSpoilers={showTagSpoilers}
@@ -385,7 +424,7 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
           )}
 
           {activeTab === 'traits' && (
-            <div key="traits" className="animate-fade-in">
+            <div key="traits">
             <VNTraits
               characters={characters}
               isLoading={charactersLoading}
@@ -397,12 +436,23 @@ export default function VNDetailClient({ vnId, initialVN }: VNDetailClientProps)
           )}
 
           {activeTab === 'characters' && (
-            <div key="characters" className="animate-fade-in">
+            <div key="characters">
             <VNCharacters
               characters={characters}
               isLoading={charactersLoading}
               showSpoilers={showCharacterSpoilers}
               onShowSpoilersChange={setShowCharacterSpoilers}
+            />
+            </div>
+          )}
+
+          {activeTab === 'stats' && (
+            <div key="stats">
+            <VNVoteStats
+              data={voteStats}
+              isLoading={voteStatsLoading || (!voteStatsLoaded && !voteStatsError)}
+              error={voteStatsError}
+              totalVotecount={vn.votecount}
             />
             </div>
           )}

@@ -20,6 +20,7 @@ import { SidebarFilters } from './SidebarFilters';
 import { AlphabetFilter } from './AlphabetFilter';
 import { BrowseTabs, BrowseTab } from './BrowseTabs';
 import { SimpleSelect } from './SimpleSelect';
+import { RandomButton } from './RandomButton';
 
 // Skeleton fallback for entity tabs — matches the structure of the real tab content
 // (search bar + filter + alphabet row + results header + pagination + table + pagination)
@@ -565,10 +566,14 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     }
 
     const queryString = params.toString();
-    // Use startTransition and replace to prevent UI flickering during URL updates
-    startTransition(() => {
-      router.replace(queryString ? `/browse?${queryString}` : '/browse', { scroll: false });
-    });
+    // Defer router.replace to avoid "Cannot update Router while rendering" errors.
+    // This is necessary because updateURL may be called from event handlers that
+    // trigger during React's render phase (e.g., state updaters).
+    setTimeout(() => {
+      startTransition(() => {
+        router.replace(queryString ? `/browse?${queryString}` : '/browse', { scroll: false });
+      });
+    }, 0);
   }, [router, selectedTags]);
 
   // Fetch results (with prefetch cache support)
@@ -868,13 +873,11 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     setSkipPreload(false); // Filter change — use preload buffer for smooth transition
     setIsPaginatingOnly(false); // This is a filter change, not pagination-only
     pendingScrollRestoreRef.current = null; // Clear pending scroll restore on filter change
-    // Use functional update to avoid stale closure when rapid changes occur
-    setFilters(prev => {
-      const updated = { ...prev, ...newFilters, page: 1 };
-      pendingFiltersRef.current = updated;
-      updateURL(updated, selectedTags);
-      return updated;
-    });
+    // Compute from ref (always current) to avoid stale closure
+    const updated = { ...pendingFiltersRef.current, ...newFilters, page: 1 };
+    pendingFiltersRef.current = updated;
+    setFilters(updated);
+    updateURL(updated, selectedTags);
 
     // Debounce the fetch to batch rapid filter changes
     if (filterDebounceRef.current) {
@@ -901,24 +904,22 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     const seiyuuIds = newTags.filter(t => t.type === 'seiyuu' && t.mode === 'include').map(t => t.id);
     const devIds = newTags.filter(t => t.type === 'developer' && t.mode === 'include').map(t => t.id);
     const pubIds = newTags.filter(t => t.type === 'publisher' && t.mode === 'include').map(t => t.id);
-    // Use functional update to avoid stale closure
-    setFilters(prev => {
-      const updated = {
-        ...prev,
-        tags: includeTags.length > 0 ? includeTags.join(',') : undefined,
-        exclude_tags: excludeTags.length > 0 ? excludeTags.join(',') : undefined,
-        traits: includeTraits.length > 0 ? includeTraits.join(',') : undefined,
-        exclude_traits: excludeTraits.length > 0 ? excludeTraits.join(',') : undefined,
-        staff: staffIds.length > 0 ? staffIds.join(',') : undefined,
-        seiyuu: seiyuuIds.length > 0 ? seiyuuIds.join(',') : undefined,
-        developer: devIds.length > 0 ? devIds.join(',') : undefined,
-        publisher: pubIds.length > 0 ? pubIds.join(',') : undefined,
-        page: 1,
-      };
-      pendingFiltersRef.current = updated;
-      updateURL(updated, newTags);
-      return updated;
-    });
+    // Compute from ref (always current) to avoid stale closure
+    const updated = {
+      ...pendingFiltersRef.current,
+      tags: includeTags.length > 0 ? includeTags.join(',') : undefined,
+      exclude_tags: excludeTags.length > 0 ? excludeTags.join(',') : undefined,
+      traits: includeTraits.length > 0 ? includeTraits.join(',') : undefined,
+      exclude_traits: excludeTraits.length > 0 ? excludeTraits.join(',') : undefined,
+      staff: staffIds.length > 0 ? staffIds.join(',') : undefined,
+      seiyuu: seiyuuIds.length > 0 ? seiyuuIds.join(',') : undefined,
+      developer: devIds.length > 0 ? devIds.join(',') : undefined,
+      publisher: pubIds.length > 0 ? pubIds.join(',') : undefined,
+      page: 1,
+    };
+    pendingFiltersRef.current = updated;
+    setFilters(updated);
+    updateURL(updated, newTags);
 
     // Debounce the fetch to batch rapid filter changes
     if (filterDebounceRef.current) {
@@ -1314,6 +1315,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
                   {filters.sort_order === 'desc' ? '↓' : '↑'}
                   <span className="hidden sm:inline text-xs ml-1">{filters.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
                 </button>
+                <RandomButton entityType="vn" />
                 <ViewModeToggle size={gridSize} onChange={setGridSize} />
               </div>
             </div>

@@ -533,7 +533,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
             <div className="relative w-16 h-20 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
               {image_url ? (
                 <NSFWNextImage
-                  src={getProxiedImageUrl(image_url, { vnId: vn_id }) ?? image_url}
+                  src={getProxiedImageUrl(image_url, { width: 128, vnId: vn_id }) ?? image_url}
                   alt={title}
                   imageSexual={image_sexual}
                   fill

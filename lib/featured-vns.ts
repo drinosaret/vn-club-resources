@@ -56,7 +56,7 @@ export async function getFeaturedVNsData(): Promise<FeaturedVNData[]> {
             title: data.title,
             title_jp: data.title_jp,
             title_romaji: data.title_romaji,
-            imageUrl: data.image_url ? getProxiedImageUrl(data.image_url) : null,
+            imageUrl: data.image_url ? getProxiedImageUrl(data.image_url, { width: 256 }) : null,
           };
         } catch {
           return null;

@@ -55,7 +55,7 @@ export default async function VNDetailPage({ params }: PageProps) {
   // Preload the cover image so it starts fetching during HTML parsing
   const vnId = id.startsWith('v') ? id : `v${id}`;
   const coverPreloadUrl = vn?.image_url
-    ? getProxiedImageUrl(vn.image_url, { vnId })
+    ? getProxiedImageUrl(vn.image_url, { width: 512, vnId })
     : null;
 
   return (

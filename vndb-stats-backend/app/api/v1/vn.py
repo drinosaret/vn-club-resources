@@ -27,6 +27,16 @@ limiter = Limiter(key_func=get_remote_address)
 # to prevent DoS via excessively complex queries (each ID can generate a subquery)
 MAX_FILTER_IDS = 30
 
+# Genre tags used for percentile ranking in vote-stats endpoint
+_GENRE_TAGS = [
+    "Romance", "Drama", "Mystery", "Horror", "Action", "Fantasy", "Comedy",
+    "Science Fiction", "Thriller", "Slice of Life", "Nakige", "Utsuge",
+    "Adventure", "Supernatural", "Tragedy", "War", "Nukige", "Otome Game",
+]
+
+# VN length category labels (matches VNDB length field values 1-5)
+_LENGTH_LABELS = {1: "Very Short", 2: "Short", 3: "Medium", 4: "Long", 5: "Very Long"}
+
 
 def _parse_id_list(value: str, max_items: int = MAX_FILTER_IDS) -> list[int]:
     """Parse a comma-separated string of numeric IDs with a safety cap."""
@@ -87,6 +97,25 @@ async def get_vn_sitemap_ids(
         ]
 
     return {"items": items, "total": total}
+
+
+@router.get("/random/")
+async def random_vn(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a random visual novel ID (Japanese, rated, with 10+ votes)."""
+    result = await db.execute(
+        select(VisualNovel.id)
+        .where(VisualNovel.olang == "ja")
+        .where(VisualNovel.rating.isnot(None))
+        .where(VisualNovel.votecount >= 10)
+        .order_by(func.random())
+        .limit(1)
+    )
+    vn_id = result.scalar_one_or_none()
+    if not vn_id:
+        return {"id": None}
+    return {"id": vn_id}
 
 
 @router.get("/search/", response_model=schemas.VNSearchResponse)
@@ -1451,6 +1480,298 @@ async def get_vn_characters(
         ))
 
     return characters
+
+
+@router.get("/{vn_id}/vote-stats", response_model=schemas.VNVoteStatsResponse)
+async def get_vn_vote_stats(
+    vn_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get vote statistics for a VN: distribution, votes over time, score over time."""
+    normalized_id = vn_id if vn_id.startswith("v") else f"v{vn_id}"
+
+    # Redis cache (1 hour — data changes daily)
+    cache = get_cache()
+    cache_key = f"vn:vote-stats:{normalized_id}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return schemas.VNVoteStatsResponse(**cached)
+
+    # Verify VN exists and get its official votecount (includes private votes)
+    vn_check = await db.execute(
+        select(VisualNovel.id, VisualNovel.votecount).where(VisualNovel.id == normalized_id)
+    )
+    vn_row = vn_check.one_or_none()
+    if not vn_row:
+        raise HTTPException(status_code=404, detail=f"VN {vn_id} not found")
+    official_votecount = vn_row[1] or 0
+
+    # 1. Score distribution (10 buckets, 1-10)
+    # Use round() to match VNDB's bucketing (e.g. vote 95 = 9.5 → bucket 10)
+    # Integer division (floor) would put 95-99 in bucket 9, only 100 in bucket 10
+    dist_result = await db.execute(
+        text("""
+            SELECT
+                LEAST(GREATEST(round(vote / 10.0)::int, 1), 10) AS bucket,
+                COUNT(*) AS cnt
+            FROM global_votes
+            WHERE vn_id = :vn_id
+            GROUP BY bucket
+            ORDER BY bucket
+        """),
+        {"vn_id": normalized_id}
+    )
+    distribution = {str(i): 0 for i in range(1, 11)}
+    total_votes = 0
+    weighted_sum = 0
+    for row in dist_result.fetchall():
+        bucket = int(row[0])
+        count = int(row[1])
+        distribution[str(bucket)] = count
+        total_votes += count
+        weighted_sum += bucket * count
+
+    average_score = round(weighted_sum / total_votes, 2) if total_votes > 0 else None
+
+    # 2+3. Monthly vote counts and average scores (combined into single query)
+    monthly_result = await db.execute(
+        text("""
+            SELECT
+                to_char(date, 'YYYY-MM') AS month,
+                COUNT(*) AS cnt,
+                AVG(vote::float / 10.0) AS avg_score
+            FROM global_votes
+            WHERE vn_id = :vn_id AND date IS NOT NULL
+            GROUP BY month
+            ORDER BY month
+        """),
+        {"vn_id": normalized_id}
+    )
+    votes_over_time = []
+    score_over_time = []
+    cumulative = 0
+    running_sum = 0.0
+    running_count = 0
+    for row in monthly_result.fetchall():
+        month, count, avg_score = row[0], int(row[1]), round(float(row[2]), 2)
+        # Votes
+        cumulative += count
+        votes_over_time.append(schemas.VNMonthlyVotes(
+            month=month, count=count, cumulative=cumulative,
+        ))
+        # Scores
+        running_sum += avg_score * count
+        running_count += count
+        score_over_time.append(schemas.VNMonthlyScore(
+            month=month,
+            avg_score=avg_score,
+            cumulative_avg=round(running_sum / running_count, 2),
+            vote_count=count,
+        ))
+
+    # Scale cumulative values to match official votecount (includes private votes)
+    if votes_over_time and official_votecount > cumulative > 0:
+        scale = official_votecount / cumulative
+        for entry in votes_over_time:
+            entry.cumulative = round(entry.cumulative * scale)
+
+    # 4. Global medians for niche quadrant (24-hour cache)
+    global_medians = None
+    gm_cache_key = "global:medians"
+    gm_cached = await cache.get(gm_cache_key)
+    if gm_cached:
+        global_medians = schemas.GlobalMedians(**gm_cached)
+    else:
+        try:
+            gm_result = await db.execute(
+                text("""
+                    SELECT
+                        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY rating) AS median_rating,
+                        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY votecount) AS median_votecount,
+                        PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY rating) AS p75_rating,
+                        PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY votecount) AS p75_votecount
+                    FROM visual_novels
+                    WHERE rating IS NOT NULL AND votecount >= 10
+                """)
+            )
+            gm_row = gm_result.one_or_none()
+            if gm_row and gm_row[0] is not None:
+                global_medians = schemas.GlobalMedians(
+                    median_rating=round(float(gm_row[0]), 2),
+                    median_votecount=round(float(gm_row[1]), 0),
+                    p75_rating=round(float(gm_row[2]), 2),
+                    p75_votecount=round(float(gm_row[3]), 0),
+                )
+                await cache.set(gm_cache_key, global_medians.model_dump(mode="json"), ttl=86400)
+        except Exception:
+            logger.warning("Failed to compute global medians", exc_info=True)
+
+    # 5. Comparative context
+    developer_rank = None
+    genre_percentile = None
+    length_comparison = None
+
+    # Fetch VN rating + length once for use across comparative sections
+    vn_extra_result = await db.execute(
+        select(VisualNovel.rating, VisualNovel.length).where(VisualNovel.id == normalized_id)
+    )
+    vn_extra_row = vn_extra_result.one_or_none()
+    this_vn_rating = vn_extra_row[0] if vn_extra_row else None
+    this_vn_length = vn_extra_row[1] if vn_extra_row else None
+
+    # 5a. Developer rank — find developer, rank this VN among their works
+    try:
+        dev_result = await db.execute(
+            text("""
+                SELECT DISTINCT rp.producer_id, p.name, p.original
+                FROM release_producers rp
+                JOIN release_vn rv ON rp.release_id = rv.release_id
+                JOIN producers p ON p.id = rp.producer_id
+                WHERE rv.vn_id = :vn_id AND rp.developer = true
+                LIMIT 1
+            """),
+            {"vn_id": normalized_id}
+        )
+        dev_row = dev_result.one_or_none()
+        if dev_row:
+            dev_id, dev_name, dev_original = dev_row[0], dev_row[1], dev_row[2]
+            rank_result = await db.execute(
+                text("""
+                    WITH all_dev_vns AS (
+                        SELECT DISTINCT rv.vn_id, vn.rating
+                        FROM release_vn rv
+                        JOIN release_producers rp ON rv.release_id = rp.release_id
+                        JOIN visual_novels vn ON rv.vn_id = vn.id
+                        WHERE rp.producer_id = :dev_id
+                          AND rp.developer = true
+                    ),
+                    dev_vns AS (
+                        SELECT * FROM all_dev_vns WHERE rating IS NOT NULL
+                    )
+                    SELECT
+                        (SELECT COUNT(*) FROM dev_vns) AS total,
+                        (SELECT COUNT(*) FROM dev_vns
+                         WHERE rating > COALESCE(
+                             (SELECT rating FROM dev_vns WHERE vn_id = :vn_id), 0
+                         )) + 1 AS rank,
+                        (SELECT COUNT(*) FROM all_dev_vns) AS total_all
+                """),
+                {"dev_id": dev_id, "vn_id": normalized_id}
+            )
+            rank_row = rank_result.one_or_none()
+            if rank_row and rank_row[0] >= 2:
+                total_all = int(rank_row[2])
+                developer_rank = schemas.DeveloperRankContext(
+                    developer_id=dev_id,
+                    developer_name=dev_name,
+                    developer_name_original=dev_original,
+                    rank=int(rank_row[1]),
+                    total=int(rank_row[0]),
+                    total_all=total_all if total_all > int(rank_row[0]) else None,
+                )
+    except Exception:
+        logger.warning(f"Failed to compute developer rank for {normalized_id}", exc_info=True)
+
+    # 5b. Genre percentile — pick best genre tag, compute percentile among VNs with that tag
+    try:
+        if this_vn_rating is not None:
+            top_tag_result = await db.execute(
+                text("""
+                    SELECT vt.tag_id, t.name
+                    FROM vn_tags vt
+                    JOIN tags t ON t.id = vt.tag_id
+                    WHERE vt.vn_id = :vn_id
+                      AND vt.lie = false
+                      AND vt.score > 0
+                      AND t.name = ANY(:genre_names)
+                    ORDER BY vt.score DESC
+                    LIMIT 1
+                """),
+                {"vn_id": normalized_id, "genre_names": _GENRE_TAGS}
+            )
+            top_tag_row = top_tag_result.one_or_none()
+            if top_tag_row:
+                tag_id, tag_name = top_tag_row[0], top_tag_row[1]
+                pct_result = await db.execute(
+                    text("""
+                        WITH RECURSIVE tag_tree AS (
+                            SELECT CAST(:tag_id AS INTEGER) AS id, 0 AS depth
+                            UNION
+                            SELECT tp.tag_id, tt.depth + 1
+                            FROM tag_parents tp
+                            JOIN tag_tree tt ON tp.parent_id = tt.id
+                            WHERE tt.depth < 10
+                        ),
+                        genre_vns AS (
+                            SELECT DISTINCT vn.id, vn.rating
+                            FROM vn_tags vt
+                            JOIN visual_novels vn ON vt.vn_id = vn.id
+                            WHERE vt.tag_id IN (SELECT id FROM tag_tree)
+                              AND vn.rating IS NOT NULL
+                              AND vn.votecount >= 10
+                              AND vt.lie = false
+                        )
+                        SELECT
+                            COUNT(*) AS total,
+                            ROUND(100.0 * SUM(CASE WHEN rating <= :vn_rating THEN 1 ELSE 0 END)
+                                  / GREATEST(COUNT(*), 1), 1) AS percentile
+                        FROM genre_vns
+                    """),
+                    {"tag_id": tag_id, "vn_rating": float(this_vn_rating)}
+                )
+                pct_row = pct_result.one_or_none()
+                if pct_row and pct_row[0] >= 10:
+                    genre_percentile = schemas.GenrePercentileContext(
+                        tag_name=tag_name,
+                        percentile=float(pct_row[1]),
+                        total_in_genre=int(pct_row[0]),
+                    )
+    except Exception:
+        logger.warning(f"Failed to compute genre percentile for {normalized_id}", exc_info=True)
+
+    # 5c. Length comparison — average rating for VNs with same length category
+    try:
+        if this_vn_length is not None and this_vn_rating is not None and this_vn_length in _LENGTH_LABELS:
+            len_avg_result = await db.execute(
+                text("""
+                    SELECT AVG(rating) AS avg_rating, COUNT(*) AS cnt
+                    FROM visual_novels
+                    WHERE length = :length
+                      AND rating IS NOT NULL
+                      AND votecount >= 10
+                """),
+                {"length": this_vn_length}
+            )
+            len_row = len_avg_result.one_or_none()
+            if len_row and len_row[1] >= 5:
+                length_comparison = schemas.LengthComparisonContext(
+                    vn_score=round(float(this_vn_rating), 2),
+                    length_avg_score=round(float(len_row[0]), 2),
+                    length_label=_LENGTH_LABELS[this_vn_length],
+                    count_in_length=int(len_row[1]),
+                )
+    except Exception:
+        logger.warning(f"Failed to compute length comparison for {normalized_id}", exc_info=True)
+
+    context = schemas.ComparativeContext(
+        developer_rank=developer_rank,
+        genre_percentile=genre_percentile,
+        length_comparison=length_comparison,
+    ) if any([developer_rank, genre_percentile, length_comparison]) else None
+
+    response = schemas.VNVoteStatsResponse(
+        vn_id=normalized_id,
+        total_votes=total_votes,
+        average_score=average_score,
+        score_distribution=distribution,
+        votes_over_time=votes_over_time,
+        score_over_time=score_over_time,
+        context=context,
+        global_medians=global_medians,
+    )
+
+    await cache.set(cache_key, response.model_dump(mode="json"), ttl=3600)
+    return response
 
 
 @router.get("/{vn_id}", response_model=schemas.VNDetailResponse)

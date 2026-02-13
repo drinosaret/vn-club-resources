@@ -19,7 +19,7 @@ interface VNCoverProps {
 export function VNCover({ imageUrl, imageSexual, title, rating, votecount, vnId }: VNCoverProps) {
   const { onLoad, shimmerClass, fadeClass } = useImageFade();
   // Build proxied URL with VN ID for blacklist checking
-  const proxiedUrl = imageUrl ? getProxiedImageUrl(imageUrl, { vnId }) : null;
+  const proxiedUrl = imageUrl ? getProxiedImageUrl(imageUrl, { width: 512, vnId }) : null;
 
   return (
     <div className="relative w-full max-w-[280px] mx-auto lg:mx-0">

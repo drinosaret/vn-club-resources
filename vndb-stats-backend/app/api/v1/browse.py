@@ -7,7 +7,9 @@ already use. This eliminates expensive subquery joins on every request.
 
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, and_
 
@@ -18,6 +20,30 @@ from app.db.models import Tag, Trait, Staff, Producer
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+EntityType = Literal["tags", "traits", "staff", "seiyuu", "producers"]
+
+
+@router.get("/random/{entity_type}")
+async def random_entity(
+    entity_type: EntityType,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a random entity ID. entity_type: tags, traits, staff, seiyuu, producers."""
+    if entity_type == "tags":
+        query = select(Tag.id).where(Tag.vn_count > 0).order_by(func.random()).limit(1)
+    elif entity_type == "traits":
+        query = select(Trait.id).where(Trait.char_count > 0).order_by(func.random()).limit(1)
+    elif entity_type == "staff":
+        query = select(Staff.id).where(Staff.vn_count > 0).where(Staff.lang == "ja").order_by(func.random()).limit(1)
+    elif entity_type == "seiyuu":
+        query = select(Staff.id).where(Staff.seiyuu_vn_count > 0).where(Staff.lang == "ja").order_by(func.random()).limit(1)
+    else:  # producers
+        query = select(Producer.id).where(Producer.vn_count > 0).where(Producer.lang == "ja").order_by(func.random()).limit(1)
+
+    result = await db.execute(query)
+    entity_id = result.scalar_one_or_none()
+    return {"id": entity_id}
 
 
 def _escape_like(value: str) -> str:

@@ -11,8 +11,10 @@ import {
   CharacterDetail,
   SimilarCharacter,
 } from '@/lib/vndb-stats-api';
+import { useSimilarCharacters } from '@/lib/vndb-stats-cached';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from '@/components/vn/card-image-utils';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { LanguageFilter, LanguageFilterValue } from '@/components/stats/LanguageFilter';
 import { parseBBCode, hasSpoilerContent } from '@/lib/bbcode';
@@ -68,18 +70,18 @@ export default function CharacterDetailPage({ params }: PageProps) {
   const { preference } = useTitlePreference();
 
   const [character, setCharacter] = useState<CharacterDetail | null>(null);
-  const [similarCharacters, setSimilarCharacters] = useState<SimilarCharacter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSimilarLoading, setIsSimilarLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSpoilers, setShowSpoilers] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [similarLanguageFilter, setSimilarLanguageFilter] = useState<LanguageFilterValue>('ja');
   const { onLoad: onMainImageLoad, shimmerClass: mainImageShimmer, fadeClass: mainImageFade } = useImageFade();
 
+  // SWR for similar characters — cached across navigations, instant on revisit
+  const { data: similarCharacters = [], isLoading: isSimilarLoading } = useSimilarCharacters(charId);
+
   useEffect(() => {
     loadCharacter();
-    loadSimilarCharacters();
   }, [charId]);
 
   // Set page title
@@ -105,18 +107,6 @@ export default function CharacterDetailPage({ params }: PageProps) {
       setError('Failed to load character data.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadSimilarCharacters = async () => {
-    setIsSimilarLoading(true);
-    try {
-      const similar = await vndbStatsApi.getSimilarCharacters(charId, 10);
-      setSimilarCharacters(similar);
-    } catch {
-      // Similar characters are optional, silently fail
-    } finally {
-      setIsSimilarLoading(false);
     }
   };
 
@@ -497,12 +487,14 @@ function SimilarCharactersSection({
 function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number]; preference: 'japanese' | 'romaji' }) {
   const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const vnDisplayTitle = getDisplayTitle(vn, preference);
-  const vnImageUrl = getProxiedImageUrl(vn.image_url);
+  const vnImageUrl = getProxiedImageUrl(vn.image_url, { width: CARD_IMAGE_WIDTH });
+  const vnSrcSet = vn.image_url ? buildCardSrcSet(vn.image_url) : undefined;
 
   return (
     <Link
       href={`/vn/${vn.id}`}
       className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
       <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
         {vnImageUrl ? (
@@ -514,6 +506,8 @@ function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number];
               imageSexual={vn.image_sexual}
               className={`w-full h-full object-cover ${fadeClass}`}
               loading="lazy"
+              srcSet={vnSrcSet}
+              sizes={CARD_IMAGE_SIZES}
               onLoad={onLoad}
             />
           </>
@@ -538,12 +532,14 @@ function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number];
 function SimilarCharacterCard({ char, preference }: { char: SimilarCharacter; preference: 'japanese' | 'romaji' }) {
   const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const charDisplayName = preference === 'romaji' && char.original ? char.original : char.name;
-  const charImageUrl = getProxiedImageUrl(char.image_url);
+  const charImageUrl = getProxiedImageUrl(char.image_url, { width: CARD_IMAGE_WIDTH });
+  const charSrcSet = char.image_url ? buildCardSrcSet(char.image_url) : undefined;
 
   return (
     <Link
       href={`/character/${char.id}`}
       className="group block relative bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
       <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
         {charImageUrl ? (
@@ -555,6 +551,8 @@ function SimilarCharacterCard({ char, preference }: { char: SimilarCharacter; pr
               imageSexual={char.image_sexual}
               className={`w-full h-full object-cover ${fadeClass}`}
               loading="lazy"
+              srcSet={charSrcSet}
+              sizes={CARD_IMAGE_SIZES}
               onLoad={onLoad}
             />
           </>

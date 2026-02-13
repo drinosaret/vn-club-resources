@@ -13,6 +13,7 @@ import { EntityTable, EntityColumn, NameCell, CountCell, RoleBadges } from './En
 import { EntityCards, EntityCard } from './EntityCards';
 import { SimpleSelect } from './SimpleSelect';
 import { EntityViewToggle, ViewMode } from './EntityViewToggle';
+import { RandomButton } from './RandomButton';
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All Roles' },
@@ -253,6 +254,7 @@ export function BrowseStaffTab({ isActive = true }: BrowseStaffTabProps) {
             {params.sort_order === 'desc' ? '↓' : '↑'}
             <span className="hidden sm:inline text-xs ml-1">{params.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
           </button>
+          <RandomButton entityType="staff" />
           <EntityViewToggle mode={viewMode} onChange={setViewMode} />
         </div>
       </div>

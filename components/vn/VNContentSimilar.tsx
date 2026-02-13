@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { BookOpen, Star, Sparkles, HelpCircle, RefreshCw } from 'lucide-react';
 import type { SimilarVN } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from './card-image-utils';
 import { useDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
 import { useImageFade } from '@/hooks/useImageFade';
@@ -90,10 +91,14 @@ function SimilarVNCard({ vn }: { vn: SimilarVN }) {
   const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const displayTitle = getDisplayTitle({ title: vn.title, title_jp: vn.title_jp, title_romaji: vn.title_romaji });
 
+  const imageUrl = getProxiedImageUrl(vn.image_url, { width: CARD_IMAGE_WIDTH, vnId: vn.vn_id });
+  const srcSet = vn.image_url ? buildCardSrcSet(vn.image_url, vn.vn_id) : undefined;
+
   return (
     <Link
       href={`/vn/${vn.vn_id}`}
       className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
       {/* Cover Image */}
       <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
@@ -101,12 +106,14 @@ function SimilarVNCard({ vn }: { vn: SimilarVN }) {
           <>
             <div className={shimmerClass} />
             <NSFWImage
-              src={getProxiedImageUrl(vn.image_url, { vnId: vn.vn_id })}
+              src={imageUrl}
               alt={displayTitle}
               vnId={vn.vn_id}
               imageSexual={vn.image_sexual}
               className={`w-full h-full object-cover object-top ${fadeClass}`}
               loading="lazy"
+              srcSet={srcSet}
+              sizes={CARD_IMAGE_SIZES}
               onLoad={onLoad}
             />
           </>

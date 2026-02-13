@@ -43,7 +43,7 @@ function preloadVNImages(vns: Array<{ image_url?: string | null; id: string }>) 
   vns.forEach(vn => {
     if (vn.image_url) {
       const img = new Image();
-      const url = getProxiedImageUrl(vn.image_url, { vnId: vn.id });
+      const url = getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id });
       if (url) img.src = url;
     }
   });
@@ -54,7 +54,7 @@ function preloadCharacterImages(chars: Array<{ image_url?: string | null }>) {
   chars.forEach(c => {
     if (c.image_url) {
       const img = new Image();
-      const url = getProxiedImageUrl(c.image_url);
+      const url = getProxiedImageUrl(c.image_url, { width: 128 });
       if (url) img.src = url;
     }
   });
@@ -887,7 +887,7 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
         <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
         {character.image_url ? (
           <NSFWImage
-            src={getProxiedImageUrl(character.image_url)}
+            src={getProxiedImageUrl(character.image_url, { width: 128 })}
             alt={character.name}
             vnId={character.id}
             imageSexual={character.image_sexual}
@@ -956,7 +956,7 @@ function VNCard({ vn }: { vn: TagVN }) {
         <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
         {vn.image_url ? (
           <NSFWImage
-            src={getProxiedImageUrl(vn.image_url, { vnId: vn.id })}
+            src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
             alt={displayTitle}
             vnId={vn.id}
             imageSexual={vn.image_sexual}

@@ -1,5 +1,6 @@
 """Permission checks for Ichijou (Discord bot) commands."""
 
+import discord
 from discord import app_commands
 
 from discord_bot.config import get_bot_settings
@@ -13,7 +14,7 @@ def is_admin():
     but visibility alone does not grant execution access.
     """
 
-    async def predicate(interaction: app_commands.Interaction) -> bool:
+    async def predicate(interaction: discord.Interaction) -> bool:
         settings = get_bot_settings()
         return interaction.user.id in settings.admin_user_ids
 

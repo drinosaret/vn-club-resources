@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { BookOpen, Star, GitBranch } from 'lucide-react';
 import type { VNRelation } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from './card-image-utils';
 import { useDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
 import { useImageFade } from '@/hooks/useImageFade';
@@ -55,22 +56,28 @@ function RelationCard({ rel }: { rel: VNRelation }) {
   const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const displayTitle = getDisplayTitle({ title: rel.title, title_jp: rel.title_jp, title_romaji: rel.title_romaji });
 
+  const imageUrl = getProxiedImageUrl(rel.image_url, { width: CARD_IMAGE_WIDTH, vnId: rel.id });
+  const srcSet = rel.image_url ? buildCardSrcSet(rel.image_url, rel.id) : undefined;
+
   return (
     <Link
       href={`/vn/${rel.id}`}
       className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
       <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
         {rel.image_url ? (
           <>
             <div className={shimmerClass} />
             <NSFWImage
-              src={getProxiedImageUrl(rel.image_url, { vnId: rel.id })}
+              src={imageUrl}
               alt={displayTitle}
               vnId={rel.id}
               imageSexual={rel.image_sexual}
               className={`w-full h-full object-cover object-top ${fadeClass}`}
               loading="lazy"
+              srcSet={srcSet}
+              sizes={CARD_IMAGE_SIZES}
               onLoad={onLoad}
             />
           </>

@@ -167,7 +167,7 @@ function DigestItemCard({ item }: { item: NewsItem }) {
         >
           {hasValidImage ? (
             <Image
-              src={getProxiedImageUrl(item.imageUrl)!}
+              src={getProxiedImageUrl(item.imageUrl, { width: 128 })!}
               alt={item.title}
               fill
               className="object-cover"

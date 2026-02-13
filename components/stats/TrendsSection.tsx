@@ -168,7 +168,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
           dataKey={vnsChartMode === 'cumulative' ? 'cumulativeVns' : 'completed'}
           xAxisKey="month"
           title="Visual Novels Read Over Time"
-          subtitle="Based on finish dates or vote timestamps"
+          subtitle="Only includes VNs with a finish date or vote timestamp"
           color="#8b5cf6"
           areaFill={true}
           formatValue={(v) => `${v}`}
@@ -193,7 +193,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
           dataKey={hoursChartMode === 'cumulative' ? 'cumulativeHours' : 'hours'}
           xAxisKey="month"
           title="Estimated Reading Hours Over Time"
-          subtitle="Based on finish dates or vote timestamps"
+          subtitle="Only includes VNs with a finish date or vote timestamp"
           color="#06b6d4"
           areaFill={true}
           yAxisLabel="hours"
@@ -223,7 +223,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
             dataKey="score"
             xAxisKey="month"
             title="Average Score Over Time"
-            subtitle="Based on finish dates or vote timestamps"
+            subtitle="Only includes VNs with a finish date or vote timestamp"
             color="#f59e0b"
             areaFill={false}
             formatValue={(v) => v.toFixed(2)}
@@ -240,8 +240,8 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
         <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
         <div>
           <p className="mb-1">
-            <strong>How trends are calculated:</strong> The reading timeline requires start and/or finish dates.
-            The other charts (VNs, Hours, Score) are based on finish dates you've set on VNDB.
+            <strong>How trends are calculated:</strong> All charts use finish dates or vote timestamps to place VNs on the timeline.
+            VNs without either date are excluded from these charts but still counted in the Summary tab.
           </p>
           <p>
             Reading hours are estimated based on VNDB's length categories (Very Short = ~1h, Short = ~6h, Medium = ~20h, Long = ~40h, Very Long = ~60h).

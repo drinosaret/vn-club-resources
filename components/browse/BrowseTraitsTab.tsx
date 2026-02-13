@@ -12,6 +12,7 @@ import { EntityTable, EntityColumn, BadgeCell, CountCell } from './EntityTable';
 import { EntityCards, EntityCard } from './EntityCards';
 import { SimpleSelect } from './SimpleSelect';
 import { EntityViewToggle, ViewMode } from './EntityViewToggle';
+import { RandomButton } from './RandomButton';
 
 const GROUP_OPTIONS = [
   { value: '', label: 'All Groups' },
@@ -224,6 +225,7 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
             {params.sort_order === 'desc' ? '↓' : '↑'}
             <span className="hidden sm:inline text-xs ml-1">{params.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
           </button>
+          <RandomButton entityType="traits" />
           <EntityViewToggle mode={viewMode} onChange={setViewMode} />
         </div>
       </div>

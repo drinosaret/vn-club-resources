@@ -27,9 +27,11 @@ interface TrendLineChartProps<T> {
   formatXAxis?: (value: string) => string;
   height?: number;
   cumulative?: boolean;
+  headerRight?: React.ReactNode;
 }
 
-export function TrendLineChart<T extends Record<string, unknown>>({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function TrendLineChart<T extends Record<string, any>>({
   data,
   dataKey,
   xAxisKey,
@@ -42,6 +44,7 @@ export function TrendLineChart<T extends Record<string, unknown>>({
   formatXAxis = (v) => v,
   height = 200,
   cumulative = false,
+  headerRight,
 }: TrendLineChartProps<T>) {
   // Process data for cumulative if needed
   const chartData = useMemo(() => {
@@ -98,13 +101,16 @@ export function TrendLineChart<T extends Record<string, unknown>>({
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <div className="mb-4 pr-24">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">{title}</h3>
-        {subtitle && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>
-        )}
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">{title}</h3>
+          {subtitle && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>
+          )}
+        </div>
+        {headerRight}
       </div>
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height={height} className="[&_svg]:outline-none [&_svg_*]:outline-none [&_svg]:[-webkit-tap-highlight-color:transparent]">
         <ChartComponent data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id={`gradient-${dataKey as string}`} x1="0" y1="0" x2="0" y2="1">

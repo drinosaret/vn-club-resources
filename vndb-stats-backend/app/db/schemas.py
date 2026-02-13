@@ -313,6 +313,73 @@ class VNDetailResponse(BaseModel):
     updated_at: datetime | None = None
 
 
+class VNMonthlyVotes(BaseModel):
+    """Monthly vote count for time series."""
+    month: str  # "YYYY-MM" format
+    count: int
+    cumulative: int
+
+
+class VNMonthlyScore(BaseModel):
+    """Monthly average score for time series."""
+    month: str  # "YYYY-MM" format
+    avg_score: float
+    cumulative_avg: float
+    vote_count: int
+
+
+class DeveloperRankContext(BaseModel):
+    """How this VN ranks among its developer's catalog."""
+    developer_id: str
+    developer_name: str
+    developer_name_original: str | None = None
+    rank: int
+    total: int
+    total_all: int | None = None
+
+
+class GenrePercentileContext(BaseModel):
+    """How this VN's rating compares within its dominant genre."""
+    tag_name: str
+    percentile: float
+    total_in_genre: int
+
+
+class LengthComparisonContext(BaseModel):
+    """How this VN's rating compares to VNs of similar length."""
+    vn_score: float
+    length_avg_score: float
+    length_label: str
+    count_in_length: int
+
+
+class ComparativeContext(BaseModel):
+    """Contextual comparisons for a VN's rating."""
+    developer_rank: DeveloperRankContext | None = None
+    genre_percentile: GenrePercentileContext | None = None
+    length_comparison: LengthComparisonContext | None = None
+
+
+class GlobalMedians(BaseModel):
+    """Global percentile data for niche quadrant positioning."""
+    median_rating: float
+    median_votecount: float
+    p75_rating: float
+    p75_votecount: float
+
+
+class VNVoteStatsResponse(BaseModel):
+    """Vote statistics for a single VN."""
+    vn_id: str
+    total_votes: int
+    average_score: float | None
+    score_distribution: dict[str, int]
+    votes_over_time: list[VNMonthlyVotes]
+    score_over_time: list[VNMonthlyScore]
+    context: ComparativeContext | None = None
+    global_medians: GlobalMedians | None = None
+
+
 class VNSearchResponse(BaseModel):
     """Search results for VNs."""
     results: list[VNSummary]

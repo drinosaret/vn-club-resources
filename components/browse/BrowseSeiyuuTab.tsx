@@ -13,6 +13,7 @@ import { EntityTable, EntityColumn, NameCell, CountCell } from './EntityTable';
 import { EntityCards, EntityCard } from './EntityCards';
 import { SimpleSelect } from './SimpleSelect';
 import { EntityViewToggle, ViewMode } from './EntityViewToggle';
+import { RandomButton } from './RandomButton';
 
 const GENDER_OPTIONS = [
   { value: '', label: 'Any Gender' },
@@ -239,6 +240,7 @@ export function BrowseSeiyuuTab({ isActive = true }: BrowseSeiyuuTabProps) {
             {params.sort_order === 'desc' ? '↓' : '↑'}
             <span className="hidden sm:inline text-xs ml-1">{params.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
           </button>
+          <RandomButton entityType="seiyuu" />
           <EntityViewToggle mode={viewMode} onChange={setViewMode} />
         </div>
       </div>

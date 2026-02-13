@@ -450,6 +450,67 @@ export interface SimilarVNsResponse {
   users_also_read: SimilarVN[]; // Collaborative filtering based on user ratings
 }
 
+// ============ VN Vote Stats Types ============
+
+export interface VNMonthlyVotes {
+  month: string;
+  count: number;
+  cumulative: number;
+}
+
+export interface VNMonthlyScore {
+  month: string;
+  avg_score: number;
+  cumulative_avg: number;
+  vote_count: number;
+}
+
+export interface DeveloperRankContext {
+  developer_id: string;
+  developer_name: string;
+  developer_name_original?: string | null;
+  rank: number;
+  total: number;
+  total_all?: number | null;
+}
+
+export interface GenrePercentileContext {
+  tag_name: string;
+  percentile: number;
+  total_in_genre: number;
+}
+
+export interface LengthComparisonContext {
+  vn_score: number;
+  length_avg_score: number;
+  length_label: string;
+  count_in_length: number;
+}
+
+export interface ComparativeContext {
+  developer_rank?: DeveloperRankContext | null;
+  genre_percentile?: GenrePercentileContext | null;
+  length_comparison?: LengthComparisonContext | null;
+}
+
+export interface GlobalMedians {
+  median_rating: number;
+  median_votecount: number;
+  p75_rating: number;
+  p75_votecount: number;
+}
+
+export interface VNVoteStats {
+  vn_id: string;
+  total_votes: number;
+  average_score: number | null;
+  score_distribution: Record<string, number>;
+  votes_over_time: VNMonthlyVotes[];
+  score_over_time: VNMonthlyScore[];
+  context?: ComparativeContext | null;
+  global_medians?: GlobalMedians | null;
+}
+
 // ============ Character & Traits Types ============
 
 export interface CharacterTrait {
@@ -1553,6 +1614,18 @@ class VNDBStatsAPI {
     return [];
   }
 
+  async getVNVoteStats(vnId: string): Promise<VNVoteStats | null> {
+    const normalizedId = vnId.startsWith('v') ? vnId : `v${vnId}`;
+    try {
+      return await this.fetch<VNVoteStats>(
+        `/api/v1/vn/${normalizedId}/vote-stats`,
+        { timeout: 15000 }
+      );
+    } catch {
+      return null;
+    }
+  }
+
   async getCharacter(charId: string): Promise<CharacterDetail | null> {
     // Use backend database dump only
     const normalizedId = charId.startsWith('c') ? charId : `c${charId}`;
@@ -1581,7 +1654,6 @@ class VNDBStatsAPI {
     try {
       const response = await fetch(`${this.getBaseUrl()}/api/v1/characters/${normalizedId}/similar?limit=${limit}`, {
         method: 'GET',
-        cache: 'no-store',
         signal: AbortSignal.timeout(15000),
       });
 
@@ -2663,6 +2735,24 @@ class VNDBStatsAPI {
       return { items: [], total: 0, page: 1, pages: 1 };
     }
   }
+
+  async getRandomVN(): Promise<string | null> {
+    try {
+      const result = await this.fetch<{ id: string | null }>('/api/v1/vn/random/', { signal: AbortSignal.timeout(10000) });
+      return result.id;
+    } catch {
+      return null;
+    }
+  }
+
+  async getRandomEntity(entityType: 'tags' | 'traits' | 'staff' | 'seiyuu' | 'producers'): Promise<string | null> {
+    try {
+      const result = await this.fetch<{ id: string | null }>(`/api/v1/browse/random/${entityType}`, { signal: AbortSignal.timeout(10000) });
+      return result.id;
+    } catch {
+      return null;
+    }
+  }
 }
 
 // Singleton instance
@@ -2676,10 +2766,7 @@ export function formatScore(score: number): string {
 }
 
 export function formatHours(hours: number): string {
-  if (hours < 100) {
-    return `${hours}h`;
-  }
-  return `${Math.round(hours / 10) * 10}h+`;
+  return `${hours.toLocaleString()}h`;
 }
 
 export function getVNDBUrl(vnId: string): string {

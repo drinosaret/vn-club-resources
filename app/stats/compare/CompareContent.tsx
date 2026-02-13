@@ -920,7 +920,7 @@ function VNComparisonCard({
       <div className="w-16 h-20 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
         {vn.image_url ? (
           <img
-            src={getProxiedImageUrl(vn.image_url, { vnId: vn.vn_id }) ?? undefined}
+            src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.vn_id }) ?? undefined}
             alt={displayTitle}
             className="w-full h-full object-cover"
             loading="lazy"

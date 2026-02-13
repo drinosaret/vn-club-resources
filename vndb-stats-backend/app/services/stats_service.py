@@ -778,7 +778,7 @@ class StatsService:
             # Get VN metadata for hour estimation
             meta = vn_metadata.get(vn_id, {}) if vn_id else {}
             vn_length = meta.get("length")
-            categories = length_to_categories(vn_length)
+            categories = length_to_categories(vn_length, meta.get("length_minutes"))
             hours = category_hours.get(categories[0], 0) if categories else 0
 
             # Track by finished date (for completed VNs)

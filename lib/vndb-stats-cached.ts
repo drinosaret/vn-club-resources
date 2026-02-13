@@ -9,6 +9,7 @@ import {
   BrowseSeiyuuResponse,
   BrowseProducerParams,
   BrowseProducersResponse,
+  SimilarCharacter,
 } from './vndb-stats-api';
 
 // Default SWR options for API caching
@@ -76,6 +77,17 @@ export function useCharacter(charId: string | null) {
   return useSWR(
     charId ? ['character', charId] : null,
     () => vndbStatsApi.getCharacter(charId!),
+    DEFAULT_SWR_OPTIONS
+  );
+}
+
+/**
+ * Hook for getting similar characters with caching
+ */
+export function useSimilarCharacters(charId: string | null, limit: number = 10) {
+  return useSWR<SimilarCharacter[]>(
+    charId ? ['similar-characters', charId, limit] : null,
+    () => vndbStatsApi.getSimilarCharacters(charId!, limit),
     DEFAULT_SWR_OPTIONS
   );
 }

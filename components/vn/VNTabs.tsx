@@ -1,6 +1,6 @@
 'use client';
 
-export type VNTabId = 'summary' | 'tags' | 'traits' | 'characters';
+export type VNTabId = 'summary' | 'tags' | 'traits' | 'characters' | 'stats';
 
 interface VNTabsProps {
   activeTab: VNTabId;
@@ -13,6 +13,7 @@ interface VNTabsProps {
 export function VNTabs({ activeTab, onTabChange, tagCount, traitCount, characterCount }: VNTabsProps) {
   const tabs: Array<{ id: VNTabId; label: string; count?: number }> = [
     { id: 'summary', label: 'Summary' },
+    { id: 'stats', label: 'Stats' },
     { id: 'tags', label: 'Tags', count: tagCount },
     { id: 'traits', label: 'Traits', count: traitCount },
     { id: 'characters', label: 'Characters', count: characterCount },
@@ -33,7 +34,7 @@ export function VNTabs({ activeTab, onTabChange, tagCount, traitCount, character
           >
             <span className="flex items-center gap-1.5">
               {tab.label}
-              {tab.id !== 'summary' && (
+              {tab.id !== 'summary' && tab.id !== 'stats' && (
                 <span
                   suppressHydrationWarning
                   className={`text-xs px-1.5 py-0.5 rounded-full min-w-[1.5rem] text-center transition-all duration-300 ${

@@ -8,6 +8,7 @@ import { Sparkles, Search, Star, ChevronDown, ChevronUp, X, TrendingUp, Users, B
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import { getBackendUrl } from '@/lib/config';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from '@/components/vn/card-image-utils';
 import { useTitlePreference, getDisplayTitle, TitlePreference } from '@/lib/title-preference';
 import { HowItWorksAccordion } from '@/components/recommendations/HowItWorksAccordion';
 import TagTraitAutocomplete, { SelectedItem } from '@/components/recommendations/TagTraitAutocomplete';
@@ -74,9 +75,14 @@ interface RecommendationCardProps {
 
 function RecommendationCard({ rec, index, titlePreference, onInfoClick }: RecommendationCardProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const imageUrl = getProxiedImageUrl(rec.image_url, { width: CARD_IMAGE_WIDTH, vnId: rec.vn_id });
+  const srcSet = rec.image_url ? buildCardSrcSet(rec.image_url, rec.vn_id) : undefined;
 
   return (
-    <div className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 transition-all border border-gray-100 dark:border-gray-700">
+    <div
+      className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 transition-all border border-gray-100 dark:border-gray-700"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
+    >
       <Link
         href={`/vn/${rec.vn_id.replace('v', '')}`}
         className="block"
@@ -87,11 +93,13 @@ function RecommendationCard({ rec, index, titlePreference, onInfoClick }: Recomm
           <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${isImageLoaded ? 'opacity-0' : 'opacity-100'}`} />
           {rec.image_url ? (
             <NSFWImage
-              src={getProxiedImageUrl(rec.image_url, { vnId: rec.vn_id }) || rec.image_url}
+              src={imageUrl || rec.image_url}
               alt={rec.title}
               imageSexual={rec.image_sexual}
               className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
               loading="lazy"
+              srcSet={srcSet}
+              sizes={CARD_IMAGE_SIZES}
               onLoad={() => setIsImageLoaded(true)}
             />
           ) : (

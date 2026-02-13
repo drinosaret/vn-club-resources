@@ -6,6 +6,7 @@ import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } fro
 import { Pagination } from '@/components/browse/Pagination';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from '@/components/vn/card-image-utils';
 import { LanguageFilter, LanguageFilterValue } from './LanguageFilter';
 import { useDisplayTitle, useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
@@ -142,7 +143,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       nextPageItems.forEach(novel => {
         if (novel.vn?.image?.url) {
           const img = new Image();
-          const url = getProxiedImageUrl(novel.vn.image.url, { vnId: novel.id });
+          const url = getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id });
           if (url) img.src = url;
         }
       });
@@ -422,7 +423,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
         <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
         {novel.vn?.image?.url ? (
           <NSFWImage
-            src={getProxiedImageUrl(novel.vn.image.url, { vnId: novel.id })}
+            src={getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id })}
             alt=""
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
@@ -477,21 +478,28 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : null;
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : null;
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
+  const imageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: CARD_IMAGE_WIDTH, vnId: novel.id }) : null;
+  const srcSet = novel.vn?.image?.url ? buildCardSrcSet(novel.vn.image.url, novel.id) : undefined;
 
   return (
-    <div className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-300/50 dark:hover:shadow-none hover:-translate-y-1 transition-all duration-200">
+    <div
+      className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-300/50 dark:hover:shadow-none hover:-translate-y-1 transition-all duration-200"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}
+    >
       {/* Image */}
       <Link href={`/vn/${novel.id}`} className="block relative aspect-[3/4]">
         {/* Shimmer placeholder */}
         <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
-        {novel.vn?.image?.url ? (
+        {imageUrl ? (
           <NSFWImage
-            src={getProxiedImageUrl(novel.vn.image.url, { vnId: novel.id })}
+            src={imageUrl}
             alt={displayTitle}
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
             className={`w-full h-full object-cover object-top transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
+            srcSet={srcSet}
+            sizes={CARD_IMAGE_SIZES}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageLoaded(true)}
           />

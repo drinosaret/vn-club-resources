@@ -81,7 +81,7 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
           <>
             <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
             <NSFWImage
-              src={getProxiedImageUrl(vn.image_url, { vnId: vn.id })}
+              src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
               alt=""
               vnId={vn.id}
               imageSexual={vn.image_sexual}

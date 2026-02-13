@@ -213,7 +213,7 @@ function CharacterCard({ character, preference, showSpoilers, eager }: Character
     return groups;
   }, [visibleTraits]);
 
-  const imageUrl = getProxiedImageUrl(character.image_url);
+  const imageUrl = getProxiedImageUrl(character.image_url, { width: 128 });
 
   const isSpoilerCharacter = (character.spoiler ?? 0) > 0;
 

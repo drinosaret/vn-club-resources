@@ -13,6 +13,7 @@ import { EntityTable, EntityColumn, NameCell, BadgeCell, CountCell } from './Ent
 import { EntityCards, EntityCard } from './EntityCards';
 import { SimpleSelect } from './SimpleSelect';
 import { EntityViewToggle, ViewMode } from './EntityViewToggle';
+import { RandomButton } from './RandomButton';
 
 const TYPE_OPTIONS = [
   { value: '', label: 'All Types' },
@@ -255,6 +256,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
             {params.sort_order === 'desc' ? '↓' : '↑'}
             <span className="hidden sm:inline text-xs ml-1">{params.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
           </button>
+          <RandomButton entityType="producers" />
           <EntityViewToggle mode={viewMode} onChange={setViewMode} />
         </div>
       </div>
