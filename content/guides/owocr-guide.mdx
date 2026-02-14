@@ -9,11 +9,22 @@ sitemap:
 
 A simple guide on how to quickly set up and use [OwOCR](https://github.com/AuroraWright/owocr), an optical character recognition program that can make reading Japanese text from visual novels much easier.
 
-> **Note:** This program uses a command line interface. If you're looking for something with a GUI, consider using [GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner) which runs a fork of OwOCR.
+> **Note:** OwOCR is now available as a standalone GUI application, but it is still available as a terminal tool via pip on all platforms. Alternatively, you can use [GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner), which also uses a fork of OwOCR as a part of its comprehensive all-in-one mining setup.
 
 ![OwOCR in action](assets/owocr-main.webp)
 
 ## Installation
+
+### Windows / macOS (Recommended)
+
+- Download the binary from the [releases page](https://github.com/AuroraWright/owocr/releases)
+- On Windows, extract the zip and double-click on `owocr.exe`
+- On macOS, open the dmg, drag it to Applications, then grant permissions on first launch
+- Once you open the application, a log viewer and a tray application will appear, allowing you to easily change the configuration and monitor the application
+
+![OwOCR Log Viewer](assets/owocr-log.webp)
+
+### Terminal / Python (All Platforms)
 
 1. Install **[Python](https://www.python.org/downloads/)** (3.11, 3.12, or 3.13)
    > **Warning:** During installation, make sure to select "Add to Path". If you skip this step, OwOCR will not work.
@@ -28,23 +39,49 @@ A simple guide on how to quickly set up and use [OwOCR](https://github.com/Auror
 
 Other providers:
 - **Bing:** pre-installed → key: `b` (close second best, recommended)
-- **Apple Live Text:** pre-installed → key: `d` (macOS only, includes vertical text support on Sonoma+)
-- **Apple Vision:** pre-installed → key: `a` (macOS only, best local engine on Mac)
-- **OneOCR:** `pip install "owocr[oneocr]"` → key: `o` (Windows 10/11, fast and accurate)
-- **Manga OCR:** `pip install "owocr[mangaocr]"` → key: `m` (good for vertical text)
+- **Apple Live Text:** pre-installed → key: `d` (macOS only, best local engine on Mac, vertical text support on Sonoma+)
+- **Apple Vision:** pre-installed → key: `a` (macOS only, older version of Live Text)
+- **OneOCR:** `pip install "owocr[oneocr]"` → key: `z` (Windows 10/11, fast and accurate)
+- **Manga OCR:** `pip install "owocr[mangaocr]"` → key: `m` (ideal for small text areas)
 - **EasyOCR:** `pip install "owocr[easyocr]"` → key: `e`
 - **RapidOCR:** `pip install "owocr[rapidocr]"` → key: `r`
-- **meikiocr:** `pip install "owocr[meikiocr]"` → key: `k` (fast local option, best for Linux, supports GPU acceleration with `onnxruntime-gpu`)
+- **WinRT OCR:** `pip install "owocr[winocr]"` → key: `w` (Windows 10/11)
+- **meikiocr:** `pip install "owocr[meikiocr]"` → key: `k` (fast local option, best for Linux, supports GPU acceleration with `onnxruntime-gpu`. Cannot process vertical text)
 
-> **From the GitHub:** If using an online engine like Lens, the developer recommends setting a secondary local engine with `-es`: `-es=oneocr` on Windows, `-es=alivetext` on macOS.
-
-![OwOCR startup window](assets/owocr1.webp)
+> **From the GitHub:** If using an online engine like Lens, the developer recommends setting a secondary local engine with `-es`: `-es=oneocr` on Windows, `-es=alivetext` on macOS, `-es=meikiocr` on Linux.
 
 ## Getting Started
 
-There are two ways to use OwOCR: **screen capture mode** (recommended) or **clipboard mode**.
+### GUI (Recommended)
 
-### Screen Capture Mode (Recommended)
+First, open OwOCR, and you'll see a log viewer window and tray icon appear. To get started with some basic configuration, right click on the tray icon and access the menu. From here you can change settings like the OCR engine and more.
+
+![OwOCR tray menu](assets/owocr-tray.webp)
+
+Click **Configure** from the tray menu to open the settings. Here are some suggested settings for use with visual novels:
+
+Under the **General** tab:
+- **read_from:** `screencapture`
+- **write_to:** `websocket` (see the [Textractor Guide](/textractor-guide) if you need help setting up a texthooker page for WebSocket output)
+
+Under the **Engines** tab:
+- **engine:** `Google Lens` (best accuracy, set as your primary engine)
+- **engine_secondary:** `oneocr` on Windows, `alivetext` on macOS, `meikiocr` on Linux
+
+Under the **Screen capture** tab:
+- **screen_capture_area** controls what OwOCR captures. By default it's set to automatic selection, which prompts you to select a capture area on startup. You can also set it to capture the entire screen, or set it to window, which will let you enter a window name to lock onto.
+
+![OwOCR Configuration Editor](assets/owocr-config.webp)
+
+You can also quickly switch between engines at any time from the tray menu under **Change engine**.
+
+To start and stop OCR, left click on the tray icon (Windows) or select **Pause/Unpause** from the tray menu.
+
+### Terminal
+
+> **Tip:** You can run `owocr_config` from the terminal to open the same configuration editor shown above.
+
+#### Screen Capture Mode
 
 This is the easiest way to get started. OwOCR captures directly from your screen with a hotkey.
 
@@ -68,57 +105,114 @@ owocr -r=screencapture -sa=YourWindowTitle -swa="" --engine=glens
 
 Adding `-swa=""` opens a selector to choose a specific area within that window. Useful when you only want to OCR the text box.
 
-### Recommended Command
+#### Launcher Script (Recommended)
 
-For the best experience with texthooker page integration and window targeting:
-
-```bash
-owocr -r=screencapture --engine=glens -es=oneocr -w=websocket -wp=6677 -sa="YourWindowTitle" -swa=""
-```
-
-| Flag | What it does |
-|------|--------------|
-| `-r=screencapture` | Use screen capture mode instead of clipboard monitoring |
-| `--engine=glens` | Use Google Lens as the primary OCR engine (best accuracy) |
-| `-es=oneocr` | Use OneOCR as a secondary fallback engine for faster local processing. Windows only, use `-es=alivetext` on macOS |
-| `-w=websocket` | Output text via WebSocket instead of clipboard |
-| `-wp=6677` | Use port 6677 (same as Textractor, so your texthooker page works with both) |
-| `-sa="YourWindowTitle"` | Target a window containing this text in its title (locks onto the window) |
-| `-swa=""` | Opens a selector to choose a specific area within that window |
-
-Replace `YourWindowTitle` with part of your game's window title.
-
-#### Launcher Script
-
-Create a batch file (e.g., `owocr-launcher.bat`) for easy one-click launching with window targeting:
+Create a batch file (e.g., `run_owocr.bat`) for easy one-click launching. This script lets you choose between screen capture and clipboard mode, pick your output destination, and optionally target a specific window from a list of open windows.
 
 > **Warning:** Don't name the file `owocr.bat` or it will call itself instead of the actual program.
 
 ```batch
 @echo off
-set "WINDOW="
-echo OwOCR Launcher
+setlocal enabledelayedexpansion
+set "OWOCR_CMD=owocr"
+set "WEBSOCKET_PORT=6677"
+
+echo === OwOCR Launcher ===
+echo.
+echo Choose input mode:
+echo   1: Screen capture (auto-capture window/region)
+echo   2: Clipboard (manual screenshots)
+echo.
+set /p "input_mode=Enter 1 or 2: "
+
+echo.
+echo Choose output mode:
+echo   1: Clipboard (default)
+echo   2: Websocket (for Agent/other tools)
+echo.
+set /p "output_mode=Enter 1 or 2: "
+
+if "%output_mode%"=="2" (
+    set "OUTPUT_ARGS=-w websocket -wp %WEBSOCKET_PORT%"
+) else (
+    set "OUTPUT_ARGS=-w clipboard"
+)
+
+if "%input_mode%"=="2" (
+    echo.
+    echo Launching in clipboard mode...
+    %OWOCR_CMD% -r clipboard --engine glens -es oneocr %OUTPUT_ARGS%
+    goto end
+)
+
+:: Screen capture mode
 echo.
 choice /C YN /M "Target a specific window"
-if errorlevel 2 goto skip
+if errorlevel 2 goto fullscreen
 
-set /p WINDOW=Enter window title:
-if not defined WINDOW goto skip
-echo Starting with window: %WINDOW%
-call owocr -r=screencapture --engine=glens -es=oneocr -w=websocket -wp=6677 -sa="%WINDOW%" -swa=""
+echo.
+echo Available windows:
+echo ---------------------------------
+set i=0
+for /f "delims=" %%A in ('powershell -NoProfile -Command ^
+    "Get-Process | Where-Object { $_.MainWindowTitle -and $_.MainWindowTitle.Trim() } | ForEach-Object { $_.MainWindowTitle } | Sort-Object -Unique"') do (
+    set /a i+=1
+    set "win[!i!]=%%A"
+    echo !i!: %%A
+)
+echo ---------------------------------
+
+if %i%==0 (
+    echo No windows found.
+    goto fullscreen
+)
+
+set /p "choice=Enter number: "
+if not defined win[%choice%] (
+    echo Invalid selection.
+    goto fullscreen
+)
+
+set "WINDOW=!win[%choice%]!"
+echo.
+echo Full title: !WINDOW!
+
+:: Extract safe search term
+for /f "delims=" %%S in ('powershell -NoProfile -Command ^
+    "$t = '!WINDOW!'; $m = [regex]::Match($t, '^[^/:()]+'); if($m.Success -and $m.Value.Trim().Length -gt 3){$m.Value.Trim()}else{$t.Substring(0,[Math]::Min(20,$t.Length))}"') do set "SAFE_WINDOW=%%S"
+
+echo Using search term: !SAFE_WINDOW!
+echo.
+
+echo Choose OCR mode:
+echo   1: Pick region within window (recommended)
+echo   2: Capture whole window
+echo.
+set /p "mode=Enter 1 or 2: "
+
+if "%mode%"=="1" (
+    echo.
+    echo Launching with region picker...
+    %OWOCR_CMD% -r screencapture --engine glens -es oneocr %OUTPUT_ARGS% -sa "!SAFE_WINDOW!" -swa ""
+) else (
+    echo.
+    echo Launching for whole window capture...
+    %OWOCR_CMD% -r screencapture --engine glens -es oneocr %OUTPUT_ARGS% -sa "!SAFE_WINDOW!" -swa "window"
+)
 goto end
 
-:skip
-echo Starting without window targeting...
-call owocr -r=screencapture --engine=glens -es=oneocr -w=websocket -wp=6677
+:fullscreen
+echo.
+echo Starting full-screen mode...
+%OWOCR_CMD% -r screencapture --engine glens -es oneocr %OUTPUT_ARGS%
 
 :end
+echo.
+echo OwOCR exited with code: %ERRORLEVEL%
 pause
 ```
 
-This script prompts you to optionally enter a window title, then launches OwOCR with the recommended settings.
-
-### Clipboard Mode
+#### Clipboard Mode
 
 If you prefer using a screenshot tool like ShareX, OwOCR can monitor your clipboard instead:
 
@@ -158,6 +252,8 @@ If you prefer clipboard mode with ShareX instead of OwOCR's built-in screen capt
 
 These settings let you OCR text and immediately see the definition without any extra clicks.
 
+**For a more seamless experience**, consider using [Tsukikage](/jl-guide#tsukikage-owocr-integration), which sends text to JL only when you hover over the corresponding region on your screen.
+
 ### Yomitan
 
 Enable clipboard monitor in Yomitan, then click the magnifying glass to access the search page.
@@ -183,8 +279,12 @@ While OwOCR is running, you can use these keys:
 | Key | Action |
 |-----|--------|
 | `l` | Switch to Google Lens |
-| `m` | Switch to Manga OCR |
 | `b` | Switch to Bing |
+| `z` | Switch to OneOCR |
+| `m` | Switch to Manga OCR |
+| `n` | Switch to Manga OCR (segmented) |
+| `k` | Switch to meikiocr |
+| `w` | Switch to WinRT OCR |
 | `s` | Cycle through available engines |
 | `p` | Pause/resume OCR |
 | `t` or `q` | Quit the program |
@@ -198,14 +298,14 @@ While OwOCR is running, you can use these keys:
 | `-r`, `--read_from` | Where to read images from: `clipboard`, `websocket`, `unixsocket`, `screencapture`, or a directory path |
 | `-rs`, `--read_from_secondary` | Optional secondary input source |
 | `-w`, `--write_to` | Where to save text: `clipboard`, `websocket`, or a file path |
-| `-e`, `--engine` | OCR engine: `glens`, `bing`, `mangaocr`, `mangaocrs`, `gvision`, `avision`, `alivetext`, `azure`, `winrtocr`, `oneocr`, `easyocr`, `rapidocr`, `ocrspace` |
+| `-e`, `--engine` | OCR engine: `glens`, `bing`, `mangaocr`, `mangaocrs`, `gvision`, `avision`, `alivetext`, `azure`, `winrtocr`, `oneocr`, `easyocr`, `rapidocr`, `ocrspace`, `meikiocr` |
 | `-es`, `--engine_secondary` | Secondary local engine for two-pass processing |
 
 ### Screen Capture Options
 
 | Option | Description |
 |--------|-------------|
-| `-sa`, `--screen_capture_area` | Target area: empty (selector), coordinates (`x,y,width,height`), `screen_N`, or window name |
+| `-sa`, `--screen_capture_area` | Target area: empty (selector), coordinates (`x1,y1,x2,y2`), `screen_N`, or window name |
 | `-swa`, `--screen_capture_window_area` | Subsection of window: empty (selector), coordinates, or `window` for whole window |
 | `-sd`, `--screen_capture_delay_secs` | Delay between screenshots. `-1` to disable periodic capture |
 | `-sw`, `--screen_capture_only_active_windows` | Only capture when target window is active |
@@ -225,7 +325,7 @@ While OwOCR is running, you can use these keys:
 | `-ls`, `--line_separator` | Custom line separator (supports `\n`) |
 | `-ps`, `--paragraph_separator` | Custom paragraph separator |
 | `-rt`, `--reorder_text` | Regroup and reorder text instead of using OCR engine order |
-| `-f`, `--furigana_filter` | Filter furigana from Japanese text (requires `-rt`) |
+| `-f`, `--furigana_filter` | Filter furigana from Japanese text (enabled by default for Japanese) |
 | `-of`, `--output_format` | Output format: `text` (default) or `json` (includes coordinates) |
 
 ### Other Options
@@ -245,10 +345,12 @@ While OwOCR is running, you can use these keys:
 ## Tips
 
 - **Use Google Lens** for best accuracy in most cases
+- **Secondary engine:** You can set up a secondary engine if you want to make use of a two-pass system. This means that only the changed areas get sent to the online engine, improving speed and accuracy
+- **Furigana** is automatically filtered for Japanese text
 - **Avoid hotkey conflicts** with game controls
 - **Mouse buttons work great** as hotkeys if your mouse has extra buttons
 - **Test your setup** on some Japanese text before starting a VN
-- **Config file:** You can store settings in `C:\Users\YourUsername\.config\owocr_config.ini` (Linux/macOS: `~/.config/owocr_config.ini`)
+- **Config:** Navigate to tray icon → Configure, or run `owocr_config`. You can also edit it directly at `C:\Users\YourUsername\.config\owocr_config.ini` (Linux/macOS: `~/.config/owocr_config.ini`)
 
 For more details, see the [OwOCR GitHub page](https://github.com/AuroraWright/owocr).
 
