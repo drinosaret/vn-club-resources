@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
 // Cache for 10 minutes
 const CACHE_MAX_AGE = 600;
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ vnId: string }> }
 ) {
   const { vnId } = await params;
 
   // Basic validation: vnId should look like "v" + digits
   if (!/^v\d+$/.test(vnId)) {
-    return NextResponse.json([], {
+    return NextResponse.json(null, {
       status: 400,
       headers: { 'Cache-Control': 'no-store' },
+    });
+  }
+
+  const rateLimitResult = checkRateLimit(`jiten:${getClientIp(request)}`, RATE_LIMITS.externalProxy);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(null, {
+      status: 429,
+      headers: { ...createRateLimitHeaders(rateLimitResult), 'Cache-Control': 'no-store' },
     });
   }
 
@@ -29,7 +38,7 @@ export async function GET(
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      return NextResponse.json([], {
+      return NextResponse.json(null, {
         headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
       });
     }
@@ -40,7 +49,7 @@ export async function GET(
       headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
     });
   } catch {
-    return NextResponse.json([], {
+    return NextResponse.json(null, {
       headers: { 'Cache-Control': 'public, max-age=60' },
     });
   }

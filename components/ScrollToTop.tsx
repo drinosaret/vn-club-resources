@@ -34,6 +34,36 @@ export function ScrollToTop() {
     }
   }, []);
 
+  // Handle hash fragment on initial page load (two-phase approach).
+  // Phase 1 (layout effect): Hide content before paint so the user never sees
+  // the browser's native hash scroll position (which is wrong after LazyImage
+  // layout shifts during hydration).
+  useIsomorphicLayoutEffect(() => {
+    if (window.location.hash) {
+      document.documentElement.classList.add(RESTORING_CLASS);
+    }
+  }, []);
+
+  // Phase 2 (effect): After hydration effects settle (LazyImage placeholder
+  // changes), scroll to the hash target with manual navbar offset and reveal.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const id = decodeURIComponent(hash.slice(1));
+    const timeoutId = setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        const top = element.getBoundingClientRect().top + window.scrollY - 80;
+        window.scrollTo(0, Math.max(0, top));
+      }
+      document.documentElement.classList.remove(RESTORING_CLASS);
+    }, 100);
+    return () => {
+      clearTimeout(timeoutId);
+      document.documentElement.classList.remove(RESTORING_CLASS);
+    };
+  }, []);
+
   // Save scroll position and mark forward navigation on internal link clicks
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

@@ -218,6 +218,15 @@ export function buildVNDBUrl(segments: string[]): string {
   return `https://t.vndb.org/${path}`;
 }
 
+/** Swap width param to create a 20px micro-thumbnail for NSFW mosaic censor.
+ *  Upscaled with pixelated rendering = mosaic effect, zero GPU cost vs CSS blur. */
+export function getTinySrc(src: string): string {
+  if (src.includes('w=')) {
+    return src.replace(/w=\d+/, 'w=20');
+  }
+  return src + (src.includes('?') ? '&' : '?') + 'w=20';
+}
+
 // Twitter CDN domains that need proxying
 const TWITTER_CDN_DOMAINS = [
   'pbs.twimg.com',

@@ -53,13 +53,13 @@ export function HeroSection() {
             <div className="hero-ctas flex flex-col sm:flex-row gap-3 mb-6">
               <Link
                 href="/guide"
-                className="inline-flex items-center justify-center bg-white text-primary-700 px-7 py-3.5 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-all duration-200 text-lg"
+                className="inline-flex items-center justify-center bg-white text-primary-700 px-7 py-3.5 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-[background-color,box-shadow] duration-200 text-lg"
               >
                 Get Started
               </Link>
               <Link
                 href="/browse"
-                className="inline-flex items-center justify-center gap-2 bg-primary-500/30 text-white px-7 py-3.5 rounded-xl font-semibold hover:bg-primary-500/50 transition-all duration-200 border-2 border-white/30 hover:border-white/50 text-lg backdrop-blur-sm"
+                className="inline-flex items-center justify-center gap-2 bg-primary-500/40 text-white px-7 py-3.5 rounded-xl font-semibold hover:bg-primary-500/50 transition-[background-color,border-color,box-shadow] duration-200 border-2 border-white/30 hover:border-white/50 text-lg"
               >
                 <Search className="w-5 h-5" />
                 Browse VNs

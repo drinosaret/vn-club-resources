@@ -214,7 +214,7 @@ async def search_vns(
         staff, seiyuu, developer, publisher, producer,
         spoiler_level, nsfw, sort, sort_order, page, limit,
     )
-    cache_key = f"browse:{hashlib.md5(str(cache_params).encode()).hexdigest()}"
+    cache_key = f"browse:{hashlib.sha256(str(cache_params).encode()).hexdigest()}"
     cached = await cache.get(cache_key)
     if cached:
         cached["query_time"] = round(time.time() - start_time, 3)
@@ -948,7 +948,9 @@ async def search_vns(
 
 
 @router.get("/traits/counts")
+@limiter.limit("30/minute")
 async def get_trait_counts(
+    request: Request,
     ids: str = Query(description="Comma-separated trait IDs (e.g., 'i1,i2,i3' or '1,2,3')"),
     db: AsyncSession = Depends(get_db),
 ):
@@ -970,19 +972,33 @@ async def get_trait_counts(
     if not trait_ids:
         return {"counts": {}, "total_characters": 0}
 
-    # Get trait char_counts
+    cache = get_cache()
+
+    # Cache total character count (only changes with daily dumps)
+    total_cache_key = "trait_counts:total_characters"
+    total_characters = await cache.get(total_cache_key)
+    if total_characters is None:
+        total_result = await db.execute(
+            select(func.count(Character.id))
+        )
+        total_characters = total_result.scalar_one_or_none() or 0
+        await cache.set(total_cache_key, total_characters, ttl=86400)
+
+    # Cache trait counts by sorted ID set
+    sorted_ids = sorted(trait_ids)
+    cache_key = f"trait_counts:{','.join(map(str, sorted_ids))}"
+    cached_counts = await cache.get(cache_key)
+    if cached_counts is not None:
+        return {"counts": cached_counts, "total_characters": total_characters}
+
+    # Get trait char_counts from database
     result = await db.execute(
         select(Trait.id, Trait.char_count)
         .where(Trait.id.in_(trait_ids))
     )
-
     counts = {f"i{row[0]}": row[1] or 0 for row in result.all()}
 
-    # Get total characters in database for IDF calculation
-    total_result = await db.execute(
-        select(func.count(Character.id))
-    )
-    total_characters = total_result.scalar_one_or_none() or 0
+    await cache.set(cache_key, counts, ttl=86400)
 
     return {"counts": counts, "total_characters": total_characters}
 
@@ -1473,35 +1489,41 @@ async def get_vn_characters(
         )
     )
 
-    characters = []
-    for char_vn, char in char_result.all():
-        # Get traits for this character
-        traits_result = await db.execute(
+    char_rows = char_result.all()
+    char_ids = [char.id for _, char in char_rows]
+
+    # Bulk fetch all traits for all characters in one query (avoids N+1)
+    traits_by_char: dict[str, list[schemas.CharacterTraitInfo]] = {}
+    if char_ids:
+        all_traits = await db.execute(
             select(CharacterTrait, Trait)
             .join(Trait, CharacterTrait.trait_id == Trait.id)
-            .where(CharacterTrait.character_id == char.id)
+            .where(CharacterTrait.character_id.in_(char_ids))
             .order_by(Trait.group_name, Trait.name)
         )
-        traits = [
-            schemas.CharacterTraitInfo(
-                id=f"i{trait.id}",
-                name=trait.name,
-                group_id=trait.group_id,
-                group_name=trait.group_name,
-                spoiler=char_trait.spoiler_level,
+        for char_trait, trait in all_traits.all():
+            traits_by_char.setdefault(char_trait.character_id, []).append(
+                schemas.CharacterTraitInfo(
+                    id=f"i{trait.id}",
+                    name=trait.name,
+                    group_id=trait.group_id,
+                    group_name=trait.group_name,
+                    spoiler=char_trait.spoiler_level,
+                )
             )
-            for char_trait, trait in traits_result.all()
-        ]
 
-        characters.append(schemas.VNCharacterResponse(
+    characters = [
+        schemas.VNCharacterResponse(
             id=char.id,
             name=char.name,
             original=char.original,
             image_url=char.image_url,
             role=char_vn.role or 'appears',
             spoiler=char_vn.spoiler_level or 0,
-            traits=traits,
-        ))
+            traits=traits_by_char.get(char.id, []),
+        )
+        for char_vn, char in char_rows
+    ]
 
     return characters
 
@@ -1521,14 +1543,15 @@ async def get_vn_vote_stats(
     if cached:
         return schemas.VNVoteStatsResponse(**cached)
 
-    # Verify VN exists and get its official votecount (includes private votes)
+    # Verify VN exists and get its official votecount + average (includes private votes)
     vn_check = await db.execute(
-        select(VisualNovel.id, VisualNovel.votecount).where(VisualNovel.id == normalized_id)
+        select(VisualNovel.id, VisualNovel.votecount, VisualNovel.average_rating).where(VisualNovel.id == normalized_id)
     )
     vn_row = vn_check.one_or_none()
     if not vn_row:
         raise HTTPException(status_code=404, detail=f"VN {vn_id} not found")
     official_votecount = vn_row[1] or 0
+    official_average = vn_row[2]  # From VNDB dump c_average (includes private votes)
 
     # 1. Score distribution (10 buckets, 1-10)
     # Use round() to match VNDB's bucketing (e.g. vote 95 = 9.5 → bucket 10)
@@ -1577,18 +1600,18 @@ async def get_vn_vote_stats(
     running_sum = 0.0
     running_count = 0
     for row in monthly_result.fetchall():
-        month, count, avg_score = row[0], int(row[1]), round(float(row[2]), 2)
+        month, count, avg_score_raw = row[0], int(row[1]), float(row[2])
         # Votes
         cumulative += count
         votes_over_time.append(schemas.VNMonthlyVotes(
             month=month, count=count, cumulative=cumulative,
         ))
-        # Scores
-        running_sum += avg_score * count
+        # Scores — use full precision for running sum, only round for display
+        running_sum += avg_score_raw * count
         running_count += count
         score_over_time.append(schemas.VNMonthlyScore(
             month=month,
-            avg_score=avg_score,
+            avg_score=round(avg_score_raw, 2),
             cumulative_avg=round(running_sum / running_count, 2),
             vote_count=count,
         ))
@@ -1598,6 +1621,17 @@ async def get_vn_vote_stats(
         scale = official_votecount / cumulative
         for entry in votes_over_time:
             entry.cumulative = round(entry.cumulative * scale)
+
+    # Adjust cumulative_avg to match official average (includes private votes).
+    # A constant offset is the best approximation — private vote timestamps are
+    # unknown, so we can't distribute the correction across time periods.
+    # This ensures the final cumulative_avg matches VNDB's displayed average.
+    if score_over_time and official_average and running_count > 0:
+        public_avg = running_sum / running_count
+        if abs(public_avg - official_average) > 0.001:
+            offset = official_average - public_avg
+            for entry in score_over_time:
+                entry.cumulative_avg = round(max(1.0, min(10.0, entry.cumulative_avg + offset)), 2)
 
     # 4. Global medians for niche quadrant (24-hour cache)
     global_medians = None

@@ -23,7 +23,7 @@ function BentoCard({ href, children, className = '' }: BentoCardProps) {
   return (
     <Link
       href={href}
-      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ${className}`}
+      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-[box-shadow,transform] duration-300 ${className}`}
     >
       {children}
     </Link>
@@ -63,7 +63,7 @@ function MiniStatsPreview() {
         {bars.map((height, i) => (
           <div
             key={i}
-            className="w-8 md:w-10 rounded-t-md bg-gradient-to-t from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-500 opacity-80 group-hover:opacity-100 transition-all duration-500"
+            className="w-8 md:w-10 rounded-t-md bg-gradient-to-t from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-500 opacity-80 group-hover:opacity-100 transition-opacity duration-500"
             style={{
               height: `${height}%`,
               transitionDelay: `${i * 50}ms`,

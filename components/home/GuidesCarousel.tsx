@@ -26,9 +26,9 @@ function GuideCard({ guide }: GuideCardProps) {
             src={guide.image}
             alt={guide.title}
             fill
+            loading="lazy"
             className="object-cover transition-transform duration-500 group-hover:scale-110"
             sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
-            unoptimized
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-gray-400 to-gray-600" />

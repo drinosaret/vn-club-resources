@@ -33,6 +33,7 @@ from app.ingestion.model_trainer import (
     train_collaborative_filter,
     compute_vn_similarities,
     compute_item_item_similarity,
+    swap_similarity_tables,
 )
 from app.logging import ScriptDBLogHandler
 
@@ -159,6 +160,14 @@ async def main(args):
 
         logger.info("Computing item-item similarity (collaborative)...")
         await compute_item_item_similarity()
+        await swap_similarity_tables()
+
+        # Flush stale user caches so fresh data is served immediately
+        from app.core.cache import get_cache
+        cache = get_cache()
+        flushed_lists = await cache.flush_pattern("user:list:*")
+        flushed_stats = await cache.flush_pattern("user:stats:*")
+        logger.info(f"Flushed {flushed_lists} user list caches and {flushed_stats} user stats caches")
 
         # Record import time
         await update_last_import_time()

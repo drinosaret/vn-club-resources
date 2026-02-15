@@ -25,7 +25,7 @@ export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VN
 
   if (totalVotes === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Vote Distribution
         </h3>
@@ -35,7 +35,7 @@ export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VN
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1.5">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -45,7 +45,7 @@ export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VN
         </div>
       </div>
 
-      <div className="flex items-end gap-2 h-48">
+      <div className="flex items-end gap-1 sm:gap-2 h-48">
         {data.map((d) => {
           const heightPx = (d.count / maxCount) * 160;
           const percentage = ((d.count / totalVotes) * 100).toFixed(0);
@@ -75,7 +75,7 @@ export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VN
       </div>
 
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0 text-sm text-gray-500 dark:text-gray-400">
           <span>Total votes: {totalVotes.toLocaleString()}{publicVotes != null && publicVotes < totalVotes && ` (${publicVotes.toLocaleString()} public)`}</span>
           <span>Most common: {data.reduce((max, d) => d.count > max.count ? d : max, data[0]).score}/10</span>
         </div>

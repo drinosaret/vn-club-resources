@@ -8,19 +8,21 @@ import { vndbStatsApi, type VNCharacter, type AggregatedTrait } from '@/lib/vndb
 interface VNTraitsProps {
   characters: VNCharacter[];
   isLoading?: boolean;
+  globalCounts?: { counts: Record<string, number>; total_characters: number } | null;
   showSpoilers: boolean;
   onShowSpoilersChange: (show: boolean) => void;
-  onTraitsReady?: (count: number) => void;
 }
 
 type SortField = 'name' | 'characters' | 'importance' | 'weight';
 type SortDir = 'asc' | 'desc';
 
-export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersChange, onTraitsReady }: VNTraitsProps) {
+export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp, showSpoilers, onShowSpoilersChange }: VNTraitsProps) {
   const [sortField, setSortField] = useState<SortField>('weight');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [globalCounts, setGlobalCounts] = useState<{ counts: Record<string, number>; total_characters: number } | null>(null);
-  const [isLoadingCounts, setIsLoadingCounts] = useState(true);
+  const [localGlobalCounts, setLocalGlobalCounts] = useState<VNTraitsProps['globalCounts']>(null);
+
+  // Use parent-provided counts if available, otherwise fall back to local fetch
+  const globalCounts = globalCountsProp ?? localGlobalCounts;
 
   // Collect all trait IDs from characters
   const traitIds = useMemo(() => {
@@ -33,39 +35,14 @@ export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersCh
     return Array.from(ids);
   }, [characters]);
 
-  // Fetch global trait counts for IDF calculation
+  // Only fetch locally if parent didn't provide globalCounts
   useEffect(() => {
-    if (traitIds.length > 0) {
-      setIsLoadingCounts(true);
+    if (globalCountsProp === undefined && traitIds.length > 0 && !localGlobalCounts) {
       vndbStatsApi.getTraitCounts(traitIds)
-        .then(setGlobalCounts)
-        .catch(() => { /* Trait counts failed - use fallback values */ })
-        .finally(() => setIsLoadingCounts(false));
-    } else {
-      setIsLoadingCounts(false);
+        .then(setLocalGlobalCounts)
+        .catch(() => {});
     }
-  }, [traitIds]);
-
-  // Notify parent when traits are ready (after IDF loading completes)
-  useEffect(() => {
-    if (!isLoadingCounts && !isLoading && onTraitsReady) {
-      // Calculate filtered count based on spoiler setting
-      const traitMaxSpoiler = new Map<string, number>();
-      for (const char of characters || []) {
-        for (const trait of char.traits) {
-          const existing = traitMaxSpoiler.get(trait.id) ?? 0;
-          traitMaxSpoiler.set(trait.id, Math.max(existing, trait.spoiler));
-        }
-      }
-      let count = 0;
-      for (const [, spoiler] of traitMaxSpoiler) {
-        if (showSpoilers || spoiler === 0) {
-          count++;
-        }
-      }
-      onTraitsReady(count);
-    }
-  }, [isLoadingCounts, isLoading, characters, showSpoilers, onTraitsReady]);
+  }, [globalCountsProp, traitIds, localGlobalCounts]);
 
   const { traits, totalCharacters, spoilerCount } = useMemo(() => {
     if (!characters || characters.length === 0) {
@@ -148,12 +125,12 @@ export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersCh
     }
   };
 
-  const isReady = !isLoading && !isLoadingCounts;
+  const isReady = !isLoading;
   const isEmpty = isReady && traits.length === 0;
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-opacity duration-200 ease-out ${isReady ? 'opacity-100' : 'opacity-0'}`}
+      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden ${isReady ? '' : 'opacity-0'}`}
     >
       {isEmpty ? (
         <div className="p-6">
@@ -176,14 +153,14 @@ export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersCh
             {spoilerCount > 0 && (
               <button
                 onClick={() => onShowSpoilersChange(!showSpoilers)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                   showSpoilers
                     ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                 }`}
               >
                 {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showSpoilers ? 'Hide' : 'Show'} spoilers
+                <span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers
               </button>
             )}
           </div>
@@ -192,22 +169,22 @@ export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersCh
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                  <th className="px-4 py-3 text-left">
+                  <th className="px-3 sm:px-4 py-3 text-left">
                     <button onClick={() => handleSort('name')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                       Name <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="px-4 py-3 text-right">
+                  <th className="px-2 sm:px-4 py-3 text-right">
                     <button onClick={() => handleSort('characters')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      Characters <ArrowUpDown className="w-3 h-3" />
+                      <span className="sm:hidden">Chars</span><span className="hidden sm:inline">Characters</span> <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="px-4 py-3 text-right">
+                  <th className="px-2 sm:px-4 py-3 text-right">
                     <button onClick={() => handleSort('importance')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      Importance <ArrowUpDown className="w-3 h-3" />
+                      <span className="sm:hidden">Imp.</span><span className="hidden sm:inline">Importance</span> <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="px-4 py-3 text-right">
+                  <th className="px-2 sm:px-4 py-3 text-right">
                     <button onClick={() => handleSort('weight')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
                       Weight <ArrowUpDown className="w-3 h-3" />
                     </button>
@@ -217,7 +194,7 @@ export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersCh
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filteredTraits.map((trait) => (
                   <tr key={trait.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 ${trait.spoiler > 0 ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
-                    <td className="px-4 py-2">
+                    <td className="px-3 sm:px-4 py-2">
                       <div>
                         <Link
                           href={`/stats/trait/${trait.id}`}
@@ -227,17 +204,17 @@ export function VNTraits({ characters, isLoading, showSpoilers, onShowSpoilersCh
                           {trait.spoiler > 0 && <span className="ml-1 text-red-500">!</span>}
                         </Link>
                         {trait.group_name && (
-                          <span className="ml-2 text-xs text-gray-400">{trait.group_name}</span>
+                          <span className="ml-2 text-xs text-gray-400 hidden sm:inline">{trait.group_name}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
                       {trait.character_count}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
                       {trait.importance.toFixed(2)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white">
+                    <td className="px-2 sm:px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white">
                       {trait.weight.toFixed(2)}
                     </td>
                   </tr>

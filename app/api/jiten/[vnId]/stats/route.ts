@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { resolveDeckId } from '../../resolve-deck';
+import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
+
+const CACHE_MAX_AGE = 3600;
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ vnId: string }> }
+) {
+  const { vnId } = await params;
+
+  if (!/^v\d+$/.test(vnId)) {
+    return NextResponse.json(null, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  const rateLimitResult = checkRateLimit(`jiten:${getClientIp(request)}`, RATE_LIMITS.externalProxy);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(null, {
+      status: 429,
+      headers: { ...createRateLimitHeaders(rateLimitResult), 'Cache-Control': 'no-store' },
+    });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const deckId = await resolveDeckId(vnId, controller.signal);
+    if (!deckId) {
+      clearTimeout(timeoutId);
+      return NextResponse.json(null, {
+        headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
+      });
+    }
+
+    const res = await fetch(
+      `https://api.jiten.moe/api/media-deck/${deckId}/stats`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      return NextResponse.json(null, {
+        headers: { 'Cache-Control': 'public, max-age=60' },
+      });
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
+    });
+  } catch {
+    return NextResponse.json(null, {
+      headers: { 'Cache-Control': 'public, max-age=60' },
+    });
+  }
+}

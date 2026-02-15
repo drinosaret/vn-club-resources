@@ -53,6 +53,7 @@ Thumbs.db
 .vscode/
 temp
 drafts/
+docs/plans/
 
 # Miscellaneous
 *.log

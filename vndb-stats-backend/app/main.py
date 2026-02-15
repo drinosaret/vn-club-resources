@@ -71,6 +71,7 @@ async def run_daily_update():
         train_collaborative_filter,
         compute_vn_similarities,
         compute_item_item_similarity,
+        swap_similarity_tables,
     )
 
     start_time = time.time()
@@ -93,6 +94,7 @@ async def run_daily_update():
         logger.info("This enables 'Similar Games' and 'Users Also Read' features")
         await compute_vn_similarities()  # Content-based (tag similarity)
         await compute_item_item_similarity()  # Collaborative filtering
+        await swap_similarity_tables()
 
         # Update last import time
         async with async_session_maker() as session:

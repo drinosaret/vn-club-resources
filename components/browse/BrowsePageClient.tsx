@@ -124,9 +124,11 @@ export interface BrowsePageClientProps {
   initialData: BrowseResponse | null;
   /** Initial search params from the server component */
   initialSearchParams: { [key: string]: string | string[] | undefined };
+  /** Grid size read from cookie on the server — SSR data uses this limit */
+  serverGridSize?: GridSize;
 }
 
-export default function BrowsePageClient({ initialData, initialSearchParams }: BrowsePageClientProps) {
+export default function BrowsePageClient({ initialData, initialSearchParams, serverGridSize = 'medium' }: BrowsePageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { preference } = useTitlePreference();
@@ -186,8 +188,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
     sort: (searchParams.get('sort') as BrowseFilters['sort']) || 'rating',
     sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || 'desc',
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
-    limit: ITEMS_PER_PAGE['medium'], // Default grid size
-  }), [searchParams]);
+    limit: ITEMS_PER_PAGE[serverGridSize],
+  }), [searchParams, serverGridSize]);
 
   // Parse tags from URL
   const initialTags = useMemo(() => {
@@ -217,10 +219,16 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false); // Delayed overlay for filter/search changes
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<SelectedTag[]>(initialTags);
-  const [gridSize, setGridSizeState] = useState<GridSize>('medium');
+  // Initialize from server-known grid size — SSR data already uses this limit,
+  // so server and client render identically. No useLayoutEffect needed.
+  const [gridSize, setGridSizeState] = useState<GridSize>(serverGridSize);
   const setGridSize = useCallback((size: GridSize) => {
     setGridSizeState(size);
-    try { localStorage.setItem('browse-grid-size', size); } catch {}
+    // Persist to cookie (server reads it for SSR) and localStorage (fallback)
+    try {
+      document.cookie = `browse-grid-size=${size};path=/;max-age=31536000;SameSite=Lax`;
+      localStorage.setItem('browse-grid-size', size);
+    } catch {}
   }, []);
   const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false);
 
@@ -240,6 +248,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
   const pendingScrollRestoreRef = useRef<number | null>(null);
   // Ref to track forward navigation for defensive scroll-to-top after content renders
   const isForwardNavRef = useRef(false);
+  // Gate ref: prevents Strict Mode double-invocation from re-processing nav detection
+  // (second invocation would find the sessionStorage flag consumed and wrongly scroll to 0)
+  const didDetectNavRef = useRef(false);
   // Ref for results section - used for pagination scroll target
   const resultsContainerRef = useRef<HTMLDivElement>(null);
   // Ref tracking latest pending filters for debounced fetches (avoids stale closures)
@@ -295,7 +306,14 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
   // ScrollToTop sets 'is-popstate-navigation' flag when it detects back/forward nav
   // (via absence of forward-nav link click flag). ScrollToTop's effects run before
   // this component's mount effects due to sibling render order in the layout.
+  //
+  // Gate with didDetectNavRef: React Strict Mode double-invokes [] effects on mount.
+  // Without the gate, the 2nd invocation finds 'is-popstate-navigation' consumed,
+  // misidentifies back-nav as forward-nav, and scrolls to 0.
   useEffect(() => {
+    if (didDetectNavRef.current) return;
+    didDetectNavRef.current = true;
+
     const isBackNav = sessionStorage.getItem('is-popstate-navigation') === 'true';
     sessionStorage.removeItem('is-popstate-navigation');
 
@@ -845,16 +863,6 @@ export default function BrowsePageClient({ initialData, initialSearchParams }: B
       fetchResults(initialFilters);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Restore persisted grid size from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('browse-grid-size') as GridSize | null;
-      if (saved && ['small', 'medium', 'large'].includes(saved)) {
-        setGridSizeState(saved);
-      }
-    } catch {}
-  }, []);
 
   // Re-fetch when grid size changes (different items per page)
   // Preserve approximate scroll position by calculating equivalent page

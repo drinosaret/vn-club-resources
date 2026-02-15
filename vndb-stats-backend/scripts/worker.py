@@ -139,6 +139,7 @@ async def run_daily_update():
         train_collaborative_filter,
         compute_vn_similarities,
         compute_item_item_similarity,
+        swap_similarity_tables,
     )
 
     settings = get_settings()
@@ -167,6 +168,7 @@ async def run_daily_update():
             logger.info("\n>>> PHASE 3/3: COMPUTING SIMILARITY TABLES <<<")
             await compute_vn_similarities()
             await compute_item_item_similarity()
+            await swap_similarity_tables()
 
             # Flush stale user caches so fresh data is served immediately
             from app.core.cache import get_cache
@@ -236,6 +238,7 @@ async def recompute_models_only():
         train_collaborative_filter,
         compute_vn_similarities,
         compute_item_item_similarity,
+        swap_similarity_tables,
     )
 
     start_time = time.time()
@@ -255,6 +258,7 @@ async def recompute_models_only():
             logger.info("\n>>> PHASE 3: COMPUTING SIMILARITY TABLES <<<")
             await compute_vn_similarities()
             await compute_item_item_similarity()
+            await swap_similarity_tables()
 
             elapsed = time.time() - start_time
             logger.info("=" * 60)

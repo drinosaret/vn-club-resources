@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Roboto } from "next/font/google";
+import { Roboto, Noto_Sans_JP } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -17,6 +17,12 @@ const roboto = Roboto({
   weight: ['400', '500', '700'],
   subsets: ["latin"],
   display: 'swap',
+});
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ["latin"],
+  display: 'swap',
+  variable: '--font-jp',
 });
 
 const ALLOWED_HOSTS = new Set(['vnclub.org', 'www.vnclub.org', 'beta.vnclub.org']);
@@ -97,9 +103,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light" suppressHydrationWarning>
+    <html lang="en" className={`light ${notoSansJP.variable}`} suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
+        {process.env.NEXT_PUBLIC_VNDB_STATS_API && (
+          <link rel="preconnect" href={process.env.NEXT_PUBLIC_VNDB_STATS_API} />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(organizationSchema) }}
@@ -110,23 +119,10 @@ export default function RootLayout({
               (function() {
                 try {
                   var theme = localStorage.getItem('theme') || 'light';
-                  document.documentElement.className = theme;
+                  var el = document.documentElement;
+                  el.classList.remove('light', 'dark');
+                  el.classList.add(theme);
                 } catch (e) {}
-              })();
-            `,
-          }}
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                document.documentElement.classList.add('fonts-loading');
-                var done = false;
-                function show() {
-                  if (!done) { done = true; document.documentElement.classList.remove('fonts-loading'); }
-                }
-                document.fonts.ready.then(show);
-                setTimeout(show, 300);
               })();
             `,
           }}
@@ -146,7 +142,7 @@ export default function RootLayout({
           <ScrollToTop />
           <ScrollToTopButton />
           <ErrorBoundary>
-            <div className="flex flex-col min-h-screen">
+            <div className="flex flex-col min-h-screen overflow-x-clip">
               <Header />
               <main className="flex-grow pt-16 md:pt-[72px]">
                 {children}

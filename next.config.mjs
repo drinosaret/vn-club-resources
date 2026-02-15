@@ -13,6 +13,7 @@ const getOutputConfig = () => {
 
 // Build connect-src with backend API URL if configured
 const backendUrl = process.env.NEXT_PUBLIC_VNDB_STATS_API;
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 const connectSrc = [
   "'self'",
   'https://vnclub.org',
@@ -20,6 +21,7 @@ const connectSrc = [
   'https://gc.zgo.at',
   'https://vnclub.goatcounter.com',
   ...(backendUrl ? [backendUrl] : []),
+  ...(apiUrl && apiUrl !== backendUrl ? [apiUrl] : []),
 ].join(' ');
 
 const isDev = process.env.NODE_ENV === 'development';

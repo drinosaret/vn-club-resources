@@ -149,4 +149,6 @@ export const RATE_LIMITS = {
   imageProxy: { limit: 500, windowMs: 60000 },
   /** Heavy operations: 20 requests per minute */
   heavy: { limit: 20, windowMs: 60000 },
+  /** External proxy: 30 requests per minute (protects upstream APIs from abuse) */
+  externalProxy: { limit: 30, windowMs: 60000 },
 } as const;

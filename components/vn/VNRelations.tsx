@@ -34,7 +34,7 @@ export function VNRelations({ relations }: VNRelationsProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <GitBranch className="w-5 h-5 text-primary-500" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -42,7 +42,7 @@ export function VNRelations({ relations }: VNRelationsProps) {
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {relations.map((rel) => (
           <RelationCard key={rel.id} rel={rel} />
         ))}

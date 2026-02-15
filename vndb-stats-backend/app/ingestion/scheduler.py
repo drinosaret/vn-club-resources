@@ -38,6 +38,7 @@ from app.ingestion.model_trainer import (
     compute_tag_vectors,
     compute_vn_similarities,
     compute_item_item_similarity,
+    swap_similarity_tables,
     train_hybrid_embeddings,
 )
 from app.ingestion.precompute_user_recs import precompute_user_recommendations
@@ -71,6 +72,7 @@ async def run_daily_ingestion():
         # 4. Compute item-item CF similarity (depends on global votes)
         logger.info("Computing item-item CF similarities...")
         await compute_item_item_similarity(top_k=50)
+        await swap_similarity_tables()
 
         # 5. Train hybrid embeddings (combines CF and tag vectors)
         logger.info("Training hybrid embeddings...")

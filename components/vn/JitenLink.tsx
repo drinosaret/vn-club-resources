@@ -3,23 +3,32 @@
 import useSWR from 'swr';
 import { ExternalLink } from 'lucide-react';
 
-interface JitenLinkProps {
-  vnId: string;
-}
-
 const fetchDeckId = async (vnId: string): Promise<number | null> => {
   const res = await fetch(`/api/jiten/${vnId}/`);
   if (!res.ok) return null;
-  const data: number[] = await res.json();
-  return data.length > 0 ? data[0] : null;
+  const data: number[] | null = await res.json();
+  return data && data.length > 0 ? data[0] : null;
 };
 
-export default function JitenLink({ vnId }: JitenLinkProps) {
+/** Shared hook to look up the jiten.moe deck ID for a VN.
+ *  Returns: undefined (loading), null (no deck), or number (deck ID). */
+export function useJitenDeck(vnId: string | undefined): number | null | undefined {
   const { data: deckId } = useSWR(
     vnId ? ['jiten-deck', vnId] : null,
-    () => fetchDeckId(vnId),
+    () => fetchDeckId(vnId!),
     { revalidateOnFocus: false }
   );
+  return deckId;
+}
+
+interface JitenLinkProps {
+  vnId: string;
+  deckId?: number | null;
+}
+
+export default function JitenLink({ vnId, deckId: externalDeckId }: JitenLinkProps) {
+  const lookedUpDeckId = useJitenDeck(externalDeckId !== undefined ? undefined : vnId);
+  const deckId = externalDeckId ?? lookedUpDeckId;
 
   if (!deckId) return null;
 

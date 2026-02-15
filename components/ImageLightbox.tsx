@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Eye } from 'lucide-react';
 import { useNSFWRevealContext } from '@/lib/nsfw-reveal';
+import { getTinySrc } from '@/lib/vndb-image-cache';
 
 const NSFW_THRESHOLD = 1.5;
 
@@ -95,16 +96,27 @@ export function ImageLightbox({ children, src, alt, imageSexual, vnId }: ImageLi
       >
         {children}
 
-        {/* NSFW reveal overlay - shown when image is blurred */}
-        {shouldBlockLightbox && (
+        {/* NSFW reveal overlay - pixelated micro-thumbnail + scrim */}
+        {shouldBlockLightbox && src && (
           <button
             onClick={handleRevealClick}
-            className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors cursor-pointer"
+            className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer"
             aria-label={`Click to reveal: ${alt}`}
           >
-            <div className="flex flex-col items-center gap-1 text-white text-xs font-medium drop-shadow-lg">
-              <Eye className="w-5 h-5" />
-              <span>Click to reveal</span>
+            {/* 32px thumbnail + pixelated rendering = mosaic censor, zero GPU cost */}
+            <img
+              src={getTinySrc(src)}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover rounded-xl"
+              style={{ imageRendering: 'pixelated' }}
+              decoding="async"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition-colors rounded-xl">
+              <div className="flex flex-col items-center gap-1 text-white text-xs font-medium drop-shadow-lg">
+                <Eye className="w-5 h-5" />
+                <span>Click to reveal</span>
+              </div>
             </div>
           </button>
         )}

@@ -3,7 +3,7 @@
  * Uses Next.js fetch caching for performance.
  */
 
-import { VNDetail, BrowseResponse, BrowseFilters } from './vndb-stats-api';
+import { VNDetail, VNCharacter, SimilarVNsResponse, BrowseResponse, BrowseFilters } from './vndb-stats-api';
 import { getBackendUrlOptional } from './config';
 
 // Default items per page (matches medium grid size: 5 cols × 7 rows at xl)
@@ -100,7 +100,7 @@ export async function browseVNsServer(
     });
 
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
   }
@@ -124,7 +124,7 @@ export async function getVNForMetadata(vnId: string): Promise<VNDetail | null> {
     });
 
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
   }
@@ -254,3 +254,49 @@ export async function getCharacterForMetadata(
     return null;
   }
 }
+
+/**
+ * Fetch VN characters server-side.
+ * Returns null on failure (characters are optional).
+ */
+export async function getVNCharactersServer(vnId: string): Promise<VNCharacter[] | null> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return null;
+
+  const normalizedId = vnId.startsWith('v') ? vnId : `v${vnId}`;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/vn/${normalizedId}/characters`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch similar VNs server-side.
+ */
+export async function getSimilarVNsServer(vnId: string, limit: number = 10): Promise<SimilarVNsResponse | null> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return null;
+
+  const normalizedId = vnId.startsWith('v') ? vnId : `v${vnId}`;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/vn/${normalizedId}/similar?limit=${limit}`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+

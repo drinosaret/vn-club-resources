@@ -60,9 +60,7 @@ html, body {
 /* Smooth scroll only for in-page anchor navigation (not page changes) */
 /* Applied via scroll-smooth class on specific elements or via JS */
 
-/* Prevent horizontal scrolling without breaking sticky positioning */
 body {
-  overflow-x: clip;
   overscroll-behavior-y: contain; /* Prevent pull-to-refresh and scroll chaining on mobile */
 }
 
@@ -70,6 +68,28 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Disable React 19 automatic View Transition animations.
+   React wraps DOM commits in startViewTransition() internally. The default
+   250ms crossfade creates visible DOM snaps when aborted, exposing Firefox
+   WebRender's async text rasterization lag. Making VTs instant prevents the
+   visual artifacts while preserving React's VT lifecycle hooks. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Exclude main content from View Transition capture entirely.
+   Prevents Firefox WebRender from deferring text rasterization
+   during React 19's automatic startViewTransition() calls. */
+main {
+  view-transition-name: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: 0s;
 }
 
 /* Custom styles for markdown content */
@@ -355,6 +375,10 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   .image-placeholder {
     animation: none;
   }
+
+  .vn-tab-indicator {
+    transition: none;
+  }
 }
 
 /* Subtle pulse animation for loading placeholders.
@@ -415,14 +439,6 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   box-shadow: 0 0 10px #818cf8, 0 0 5px #818cf8;
 }
 
-/* NSFW blur transition — will-change: filter intentionally omitted.
-   It creates a permanent GPU compositor layer per blurred image, and on browse
-   grids with many NSFW items this exceeds mobile GPU memory budgets (same issue
-   as the loading-overlay below). The blur-lg filter itself forces GPU compositing
-   during the transition, and transition-[filter] on the img handles smoothness. */
-.nsfw-blur-transition {
-}
-
 /* loading-overlay intentionally has NO will-change — the overlay covers the
    entire VN grid (potentially 1200×3000+ px) and would exceed Firefox's
    will-change memory budget even as a single element. The opacity transition
@@ -439,26 +455,6 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   animation: progress-indeterminate 1.5s ease-in-out infinite;
 }
 
-/* GPU acceleration utility classes */
-.gpu-transform {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-.preparing-animation {
-  will-change: transform, opacity;
-}
-
-.animation-complete {
-  will-change: auto;
-}
-
-/* Hide body until web fonts are loaded to prevent FOUT (flash of unstyled text).
-   Added by inline <head> script, removed by document.fonts.ready or 300ms timeout. */
-html.fonts-loading body {
-  visibility: hidden;
-}
-
 /* Hide main content during scroll restoration to prevent position-0 flash.
    Applied by ScrollToTop via useLayoutEffect (before paint), removed after scroll. */
 html.stt-restoring main {
@@ -466,14 +462,28 @@ html.stt-restoring main {
   transition: none !important;
 }
 
-/* Respect reduced motion preference for GPU animations */
-@media (prefers-reduced-motion: reduce) {
-  .preparing-animation {
-    will-change: auto;
-  }
-}
-
 /* Force-unblur NSFW images when parent lightbox has revealed them */
 [data-nsfw-revealed="true"] .blur-lg {
   filter: none !important;
+}
+
+/* ═══ VN Detail Page: Tab Indicator ═══
+   Smooth sliding underline for active tab. */
+.vn-tab-indicator {
+  transition: left 200ms ease, width 200ms ease;
+}
+
+/* Tab scroll fade edges on mobile */
+.vn-tabs-scroll {
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+}
+
+/* Only apply fade mask when scrollable */
+@media (min-width: 640px) {
+  .vn-tabs-scroll {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
 }

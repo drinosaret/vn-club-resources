@@ -142,14 +142,13 @@ function startDiscordBot() {
     return null;
   }
 
-  log('Starting Discord bot...');
-  const isWindows = process.platform === 'win32';
-  const pythonCmd = isWindows ? 'python' : 'python3';
+  log('Starting Discord bot via Docker...');
 
-  const bot = spawn(pythonCmd, ['scripts/run_bot.py'], {
+  // Run the bot inside Docker so it can reach the database on the vndb-net network.
+  // PostgreSQL port is not exposed to the host, so running locally won't work.
+  const bot = spawn('docker', ['compose', 'up', 'discord-bot'], {
     cwd: BACKEND_DIR,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: process.env,
   });
 
   bot.stdout.on('data', (data) => {

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getCharacterForMetadata } from '@/lib/vndb-server';
-import { generatePageMetadata, getOGImagePath, truncateDescription } from '@/lib/metadata-utils';
+import { generatePageMetadata, getOGImagePath, truncateDescription, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
 import CharacterDetailClient from './CharacterDetailClient';
 
 interface PageProps {
@@ -34,5 +34,29 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CharacterDetailPage({ params }: PageProps) {
-  return <CharacterDetailClient params={params} />;
+  const { id } = await params;
+  const character = await getCharacterForMetadata(id);
+
+  const characterJsonLd = character ? {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: character.original || character.name,
+    description: character.description
+      ? truncateDescription(character.description)
+      : `${character.original || character.name} — visual novel character.`,
+    url: `${SITE_URL}/character/${id}/`,
+    ...(character.image_url ? { image: getOGImagePath(character.image_url, character.image_sexual) } : {}),
+  } : null;
+
+  return (
+    <>
+      {characterJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(characterJsonLd) }}
+        />
+      )}
+      <CharacterDetailClient params={Promise.resolve({ id })} />
+    </>
+  );
 }

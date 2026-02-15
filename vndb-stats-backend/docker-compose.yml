@@ -125,9 +125,9 @@ services:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-vndb_dev_password}@db:5432/vndb_stats
       - REDIS_URL=redis://redis:6379
       - PYTHONUNBUFFERED=1
-      # DEV_MODE=true prevents automatic imports on startup
-      # Set to false in production for automatic daily updates
-      - DEV_MODE=false
+      # DEV_MODE is inherited from .env (DEV_MODE=true in dev, false in production)
+      # In dev: automatic imports disabled, entrypoint password check skipped
+      # In production: automatic daily updates at 4 AM UTC
     depends_on:
       db:
         condition: service_healthy

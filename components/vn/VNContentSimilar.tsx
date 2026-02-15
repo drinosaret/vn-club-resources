@@ -21,14 +21,14 @@ export function VNContentSimilar({ similar, isLoading, error }: VNContentSimilar
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Similar Games
           </h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {[...Array(5)].map((_, i) => (
             <div key={i}>
               <div className="aspect-[3/4] rounded-lg mb-2 image-placeholder" />
@@ -42,7 +42,7 @@ export function VNContentSimilar({ similar, isLoading, error }: VNContentSimilar
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -62,7 +62,7 @@ export function VNContentSimilar({ similar, isLoading, error }: VNContentSimilar
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-5 h-5 text-primary-500" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -77,7 +77,7 @@ export function VNContentSimilar({ similar, isLoading, error }: VNContentSimilar
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {similar.map((vn) => (
           <SimilarVNCard key={vn.vn_id} vn={vn} />
         ))}

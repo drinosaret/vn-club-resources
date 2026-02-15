@@ -15,7 +15,7 @@ export function VNComparativeContext({ context }: VNComparativeContextProps) {
   if (!developer_rank && !genre_percentile && !length_comparison) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
         In Context
       </h3>

@@ -6,9 +6,11 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 interface VNDescriptionProps {
   description?: string;
   maxLines?: number;
+  /** When true, render without card wrapper and heading */
+  bare?: boolean;
 }
 
-export function VNDescription({ description, maxLines = 4 }: VNDescriptionProps) {
+export function VNDescription({ description, maxLines = 4, bare = false }: VNDescriptionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Clean and format the VNDB description
@@ -24,14 +26,8 @@ export function VNDescription({ description, maxLines = 4 }: VNDescriptionProps)
   // Rough estimate if description needs truncation (about 80 chars per line)
   const needsTruncation = description && description.length > maxLines * 80;
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Description
-        </h2>
-      </div>
-
+  const content = (
+    <>
       <div
         className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 ${
           !isExpanded && needsTruncation ? `line-clamp-${maxLines}` : ''
@@ -61,6 +57,21 @@ export function VNDescription({ description, maxLines = 4 }: VNDescriptionProps)
           )}
         </button>
       )}
+    </>
+  );
+
+  if (bare) {
+    return <div>{content}</div>;
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Description
+        </h2>
+      </div>
+      {content}
     </div>
   );
 }

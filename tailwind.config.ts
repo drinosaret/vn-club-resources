@@ -11,6 +11,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        jp: ['var(--font-jp)', '"Hiragino Kaku Gothic Pro"', '"Hiragino Sans"', 'Meiryo', 'sans-serif'],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",

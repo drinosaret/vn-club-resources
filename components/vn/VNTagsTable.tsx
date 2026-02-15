@@ -68,7 +68,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange }: VNTags
   if (!tags || tags.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden animate-fade-in">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-primary-500" />
@@ -78,14 +78,14 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange }: VNTags
         {spoilerCount > 0 && (
           <button
             onClick={() => onShowSpoilersChange(!showSpoilers)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
               showSpoilers
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
             }`}
           >
             {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            {showSpoilers ? 'Hide' : 'Show'} spoilers ({spoilerCount})
+            <span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers ({spoilerCount})
           </button>
         )}
       </div>
@@ -94,22 +94,22 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange }: VNTags
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700/50">
             <tr>
-              <th className="px-4 py-3 text-left">
+              <th className="px-3 sm:px-4 py-3 text-left">
                 <button onClick={() => handleSort('name')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Name <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className="px-2 sm:px-4 py-3 text-right">
                 <button onClick={() => handleSort('score')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
                   Score <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className="px-2 sm:px-4 py-3 text-right">
                 <button onClick={() => handleSort('importance')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                  Importance <ArrowUpDown className="w-3 h-3" />
+                  <span className="sm:hidden">Imp.</span><span className="hidden sm:inline">Importance</span> <ArrowUpDown className="w-3 h-3" />
                 </button>
               </th>
-              <th className="px-4 py-3 text-right">
+              <th className="px-2 sm:px-4 py-3 text-right">
                 <button onClick={() => handleSort('weight')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
                   Weight <ArrowUpDown className="w-3 h-3" />
                 </button>
@@ -119,7 +119,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange }: VNTags
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {processedTags.map((tag) => (
               <tr key={tag.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 ${tag.spoiler > 0 ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
-                <td className="px-4 py-2">
+                <td className="px-3 sm:px-4 py-2">
                   <Link
                     href={`/stats/tag/${tag.id}`}
                     className="text-sm text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
@@ -128,13 +128,13 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange }: VNTags
                     {tag.spoiler > 0 && <span className="ml-1 text-red-500">!</span>}
                   </Link>
                 </td>
-                <td className="px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
                   {tag.score.toFixed(2)}
                 </td>
-                <td className="px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
                   {tag.importance.toFixed(2)}
                 </td>
-                <td className="px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white">
+                <td className="px-2 sm:px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white">
                   {tag.weight.toFixed(2)}
                 </td>
               </tr>

@@ -198,6 +198,10 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
       // Skip guides already listed as static pages above
       if (['guide', 'join', 'tools', 'sources', 'find'].includes(guide.slug)) continue;
 
+      const sitemapMeta = (guide as Record<string, unknown>).sitemap as
+        | { priority?: number; changefreq?: string }
+        | undefined;
+
       staticPages.push({
         url: `${SITE_URL}/${guide.slug}/`,
         lastModified: guide.updated
@@ -205,8 +209,8 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
           : guide.date
             ? new Date(guide.date)
             : new Date(),
-        changeFrequency: 'monthly',
-        priority: 0.7,
+        changeFrequency: (sitemapMeta?.changefreq as MetadataRoute.Sitemap[number]['changeFrequency']) || 'monthly',
+        priority: sitemapMeta?.priority || 0.7,
       });
     }
   } catch {

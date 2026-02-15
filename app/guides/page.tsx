@@ -2,25 +2,32 @@ import { getAllContent } from '@/lib/mdx';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import type { Metadata } from 'next';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generatePageMetadata({
   title: 'Guides',
   description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels.',
-  alternates: {
-    canonical: 'https://vnclub.org/guides',
-  },
-  openGraph: {
-    title: 'Guides | VN Club',
-    description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels.',
-    url: 'https://vnclub.org/guides',
-    type: 'website',
-  },
+  path: '/guides',
+});
+
+const guidesJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'VN Club Guides',
+  description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels.',
+  url: `${SITE_URL}/guides/`,
+  isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
 };
 
 export default async function GuidesPage() {
   const guides = getAllContent('guides');
 
   return (
+    <>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(guidesJsonLd) }}
+    />
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
         Guides
@@ -55,5 +62,6 @@ export default async function GuidesPage() {
         ))}
       </div>
     </div>
+    </>
   );
 }

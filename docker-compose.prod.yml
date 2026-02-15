@@ -76,7 +76,7 @@ services:
       context: ./vndb-stats-backend
       dockerfile: Dockerfile
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3"]
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
       - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
@@ -121,6 +121,8 @@ services:
       - POSTGRES_DB=vndb_stats
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     deploy:
       resources:
         limits:
@@ -138,7 +140,7 @@ services:
   # Redis
   redis:
     image: redis:7.4-alpine
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes --maxmemory 384mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redisdata:/data
     deploy:
@@ -212,7 +214,7 @@ services:
 
   # Worker for scheduled imports and heavy computation (similarity matrices, model training).
   # Memory limit set to 8GB — similarity computation needs ~6GB peak for loading 60K tag vectors.
-  # Must stay capped to avoid OOM-killing other services on the host.
+  # CPU capped at 3 cores — prevents import/ML jobs from starving live services on a 6-core VPS.
   worker:
     build:
       context: ./vndb-stats-backend
@@ -222,6 +224,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '3'
           memory: 8G
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats

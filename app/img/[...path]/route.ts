@@ -49,7 +49,7 @@ const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB max image size
 const inflightFetches = new Map<string, Promise<Buffer | null>>();
 
 // Allowed image widths for resizing
-const ALLOWED_WIDTHS = [128, 256, 512] as const;
+const ALLOWED_WIDTHS = [20, 128, 256, 512] as const;
 type AllowedWidth = typeof ALLOWED_WIDTHS[number];
 
 // Content type mapping

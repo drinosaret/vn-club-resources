@@ -1,4 +1,4 @@
-import useSWR, { SWRConfiguration } from 'swr';
+import useSWR, { SWRConfiguration, preload } from 'swr';
 import {
   vndbStatsApi,
   BrowseFilters,
@@ -10,6 +10,7 @@ import {
   BrowseProducerParams,
   BrowseProducersResponse,
   SimilarCharacter,
+  type VNVoteStats as VNVoteStatsData,
 } from './vndb-stats-api';
 
 // Default SWR options for API caching
@@ -173,4 +174,18 @@ export function useBrowseProducers(params: BrowseProducerParams = {}, enabled = 
     () => vndbStatsApi.browseProducers(params),
     { ...DEFAULT_SWR_OPTIONS, keepPreviousData: true }
   );
+}
+
+const voteStatsFetcher = (vnId: string) => vndbStatsApi.getVNVoteStats(vnId);
+
+export function useVNVoteStats(vnId: string | null) {
+  return useSWR<VNVoteStatsData | null>(
+    vnId ? ['vote-stats', vnId] : null,
+    () => voteStatsFetcher(vnId!),
+    { ...DEFAULT_SWR_OPTIONS, revalidateIfStale: false },
+  );
+}
+
+export function prefetchVoteStats(vnId: string) {
+  preload(['vote-stats', vnId], () => voteStatsFetcher(vnId));
 }

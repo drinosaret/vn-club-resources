@@ -125,7 +125,7 @@ export const markdownComponents: Components = {
         <img
           src={src}
           alt={alt}
-          className="rounded-lg shadow-sm"
+          className="rounded-lg shadow-sm mx-auto"
           decoding="async"
           style={props.style}
         />

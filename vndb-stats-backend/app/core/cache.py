@@ -103,7 +103,8 @@ class CacheService:
 
     @staticmethod
     def user_stats_key(uid: str) -> str:
-        return f"user:stats:{uid}"
+        # v2: includes developers/publishers/staff/seiyuu breakdowns
+        return f"user:stats:v2:{uid}"
 
     @staticmethod
     def vn_details_key(vn_id: str) -> str:

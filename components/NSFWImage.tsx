@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Eye } from 'lucide-react';
 import { useNSFWRevealContext } from '@/lib/nsfw-reveal';
+import { getTinySrc } from '@/lib/vndb-image-cache';
 
 const NSFW_THRESHOLD = 1.5;
 
@@ -89,16 +90,28 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
   return { shouldBlur, handleReveal, handleKeyDown, wrapperRef };
 }
 
-// Shared overlay component
-function NSFWOverlay() {
+
+// Shared overlay: pixelated micro-thumbnail + dark scrim + label
+function NSFWOverlay({ src }: { src: string }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-70 group-hover/nsfw:opacity-100 transition-opacity pointer-events-none">
-      <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
-        <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
-        <span className="sm:hidden">Tap to reveal</span>
-        <span className="hidden sm:inline">Click to reveal</span>
+    <>
+      {/* 32px thumbnail + pixelated rendering = mosaic censor, zero GPU cost */}
+      <img
+        src={getTinySrc(src)}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ imageRendering: 'pixelated' }}
+        decoding="async"
+      />
+      <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
+        <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+          <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
+          <span className="sm:hidden">Tap to reveal</span>
+          <span className="hidden sm:inline">Click to reveal</span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -162,7 +175,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         ref={imgRef}
         src={src}
         alt={alt}
-        className={`${className} ${shouldBlur ? 'blur-lg nsfw-blur-transition' : ''} transition-[filter] duration-300`}
+        className={className}
         loading={loading}
         decoding="async"
         srcSet={srcSet}
@@ -170,7 +183,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         onLoad={onLoad}
         onError={onError}
       />
-      {shouldBlur && <NSFWOverlay />}
+      {shouldBlur && <NSFWOverlay src={src} />}
     </div>
   );
 }
@@ -195,7 +208,7 @@ export function NSFWNextImage({ src, alt, imageSexual, vnId, className = '', fil
       <Image
         src={src}
         alt={alt}
-        className={`${className} ${shouldBlur ? 'blur-lg nsfw-blur-transition' : ''} transition-[filter] duration-300`}
+        className={className}
         fill={fill}
         sizes={sizes}
         priority={priority}
@@ -206,7 +219,7 @@ export function NSFWNextImage({ src, alt, imageSexual, vnId, className = '', fil
         onLoad={onLoad}
         onError={onError}
       />
-      {shouldBlur && !hideOverlay && <NSFWOverlay />}
+      {shouldBlur && !hideOverlay && <NSFWOverlay src={src} />}
     </div>
   );
 }

@@ -10,7 +10,7 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 
 import numpy as np
 from scipy import sparse
-from sqlalchemy import select, text
+from sqlalchemy import Column, DateTime, Float, Integer, MetaData, String, Table, select, text
 from sqlalchemy.dialects.postgresql import insert
 
 from app.config import get_settings
@@ -18,6 +18,27 @@ from app.db.database import async_session
 from app.db.models import (
     GlobalVote, Tag, VNTag, VisualNovel,
     CFUserFactors, CFVNFactors, TagVNVector, VNSimilarity, VNCoOccurrence,
+)
+
+# Staging table references for zero-downtime similarity updates.
+# New data is written here, then atomically swapped to live via table renames.
+_staging_meta = MetaData()
+
+_vn_sim_staging = Table(
+    'vn_similarities_staging', _staging_meta,
+    Column('vn_id', String(10), primary_key=True),
+    Column('similar_vn_id', String(10), primary_key=True),
+    Column('similarity_score', Float, nullable=False),
+    Column('computed_at', DateTime, nullable=False),
+)
+
+_vn_cooccur_staging = Table(
+    'vn_cooccurrence_staging', _staging_meta,
+    Column('vn_id', String(10), primary_key=True),
+    Column('similar_vn_id', String(10), primary_key=True),
+    Column('co_rating_score', Float, nullable=False),
+    Column('user_count', Integer, nullable=False),
+    Column('computed_at', DateTime, nullable=False),
 )
 
 logger = logging.getLogger(__name__)
@@ -346,8 +367,8 @@ async def compute_vn_similarities(top_k: int = 100):
             if loaded % 20000 == 0 or loaded == num_vns:
                 logger.info(f"Loaded {loaded}/{num_vns} vectors")
 
-        # Clear existing similarities
-        await db.execute(text("TRUNCATE TABLE vn_similarities"))
+        # Clear staging table (live table stays untouched until swap)
+        await db.execute(text("TRUNCATE TABLE vn_similarities_staging"))
 
         # Step 3: Compute similarities in batches
         batch_size = 500
@@ -384,7 +405,7 @@ async def compute_vn_similarities(top_k: int = 100):
                         })
 
             if similarity_records:
-                await _insert_vn_similarities(db, similarity_records)
+                await _insert_vn_similarities_staging(db, similarity_records)
                 total_inserted += len(similarity_records)
 
             if batch_end % 2000 == 0 or batch_end == num_vns:
@@ -398,24 +419,6 @@ async def compute_vn_similarities(top_k: int = 100):
     gc.collect()
     _log_memory("after content similarity")
     logger.info(f"Content-based similarities complete: {total_inserted} pairs stored")
-
-
-async def _insert_vn_similarities(db, batch: list[dict]):
-    """Insert VN similarities in chunks to avoid PostgreSQL parameter limit."""
-    # PostgreSQL has a 32767 parameter limit. Each record has 4 fields.
-    # Use chunks of 5000 records (20000 params) to stay safely under limit.
-    chunk_size = 5000
-    for i in range(0, len(batch), chunk_size):
-        chunk = batch[i:i + chunk_size]
-        stmt = insert(VNSimilarity).values(chunk)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["vn_id", "similar_vn_id"],
-            set_={
-                "similarity_score": stmt.excluded.similarity_score,
-                "computed_at": stmt.excluded.computed_at,
-            }
-        )
-        await db.execute(stmt)
 
 
 async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
@@ -507,8 +510,8 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
         gc.collect()
         _log_memory("after freeing candidate_counts")
 
-        # Clear existing co-occurrence data
-        await db.execute(text("TRUNCATE TABLE vn_cooccurrence"))
+        # Clear staging table (live table stays untouched until swap)
+        await db.execute(text("TRUNCATE TABLE vn_cooccurrence_staging"))
 
         # Compute PMI for valid pairs
         now = datetime.utcnow()
@@ -558,7 +561,7 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
         batch_size = 5000
         for i in range(0, len(cooccurrence_records), batch_size):
             batch = cooccurrence_records[i:i + batch_size]
-            await _insert_vn_cooccurrence(db, batch)
+            await _insert_vn_cooccurrence_staging(db, batch)
             total_inserted += len(batch)
             if (i + batch_size) % 50000 == 0 or i + batch_size >= len(cooccurrence_records):
                 logger.info(f"Inserted {total_inserted} co-occurrence records")
@@ -573,18 +576,119 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
     logger.info(f"Collaborative filtering complete: {total_inserted} pairs stored")
 
 
-async def _insert_vn_cooccurrence(db, batch: list[dict]):
-    """Insert VN co-occurrence records."""
-    stmt = insert(VNCoOccurrence).values(batch)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["vn_id", "similar_vn_id"],
-        set_={
-            "co_rating_score": stmt.excluded.co_rating_score,
-            "user_count": stmt.excluded.user_count,
-            "computed_at": stmt.excluded.computed_at,
-        }
-    )
-    await db.execute(stmt)
+async def _insert_vn_similarities_staging(db, batch: list[dict]):
+    """Insert VN similarities into staging table (plain INSERT, no conflict handling)."""
+    chunk_size = 5000
+    for i in range(0, len(batch), chunk_size):
+        chunk = batch[i:i + chunk_size]
+        await db.execute(_vn_sim_staging.insert().values(chunk))
+
+
+async def _insert_vn_cooccurrence_staging(db, batch: list[dict]):
+    """Insert VN co-occurrence records into staging table."""
+    await db.execute(_vn_cooccur_staging.insert().values(batch))
+
+
+async def swap_similarity_tables():
+    """Atomically swap staging similarity tables to live (zero downtime).
+
+    Steps:
+    1. Create indexes on staging (so reads are fast immediately after swap)
+    2. Triple-rename swap: live→old, staging→live, old→staging
+    3. Cleanup: truncate staging, normalize index names, ANALYZE
+    """
+    import time
+
+    logger.info("=" * 50)
+    logger.info("SWAPPING STAGING TABLES TO LIVE")
+    logger.info("=" * 50)
+
+    async with async_session() as db:
+        # Guard: refuse to swap empty staging tables (protects against silent early-returns
+        # in compute_vn_similarities / compute_item_item_similarity wiping live data)
+        for table in ['vn_similarities_staging', 'vn_cooccurrence_staging']:
+            result = await db.execute(text(f"SELECT EXISTS (SELECT 1 FROM {table})"))
+            has_data = result.scalar_one()
+            if not has_data:
+                logger.error(f"ABORTING SWAP: {table} is empty — refusing to replace live data with nothing")
+                return
+
+        # 1. Create indexes on staging BEFORE swap (live stays indexed throughout).
+        # Drop stale _new indexes first — if a previous cleanup crashed, these names
+        # may still exist on the old live table. Index names are database-global, so
+        # CREATE INDEX IF NOT EXISTS would silently skip, leaving staging unindexed.
+        logger.info("Creating indexes on staging tables...")
+        for idx in ['idx_vn_sim_vn_new', 'idx_vn_sim_score_new',
+                     'idx_vn_cooccur_vn_new', 'idx_vn_cooccur_score_new']:
+            await db.execute(text(f'DROP INDEX IF EXISTS {idx}'))
+        await db.execute(text(
+            "CREATE INDEX idx_vn_sim_vn_new ON vn_similarities_staging (vn_id)"
+        ))
+        await db.execute(text(
+            "CREATE INDEX idx_vn_sim_score_new ON vn_similarities_staging (vn_id, similarity_score DESC)"
+        ))
+        await db.execute(text(
+            "CREATE INDEX idx_vn_cooccur_vn_new ON vn_cooccurrence_staging (vn_id)"
+        ))
+        await db.execute(text(
+            "CREATE INDEX idx_vn_cooccur_score_new ON vn_cooccurrence_staging (vn_id, co_rating_score DESC)"
+        ))
+        await db.commit()
+
+        # 2. Atomic triple-rename swap (PostgreSQL DDL is transactional).
+        # Both tables swap in a single transaction so content-based and
+        # collaborative similarity data stay in sync. Safe because only
+        # the daily worker mutates these tables — no concurrent DDL expected.
+        logger.info("Swapping staging tables to live...")
+        t0 = time.monotonic()
+        _SWAPPABLE_TABLES = ('vn_similarities', 'vn_cooccurrence')  # hardcoded — never from user input
+        for table in _SWAPPABLE_TABLES:
+            await db.execute(text(f'ALTER TABLE {table} RENAME TO {table}_old'))
+            await db.execute(text(f'ALTER TABLE {table}_staging RENAME TO {table}'))
+            await db.execute(text(f'ALTER TABLE {table}_old RENAME TO {table}_staging'))
+        await db.commit()
+        swap_ms = (time.monotonic() - t0) * 1000
+        logger.info(f"Swap committed in {swap_ms:.1f}ms — new similarity data is now live")
+
+        # 3-4. Post-swap housekeeping: ANALYZE + cleanup.
+        # If anything here fails, live data is already correct — treat as warning.
+        try:
+            logger.info("Running ANALYZE on new live tables...")
+            await db.execute(text("ANALYZE vn_similarities"))
+            await db.execute(text("ANALYZE vn_cooccurrence"))
+            await db.execute(text("TRUNCATE TABLE vn_similarities_staging"))
+            await db.execute(text("TRUNCATE TABLE vn_cooccurrence_staging"))
+
+            # Drop FK constraints inherited from old live tables (staging must be FK-free)
+            # After swap, the staging tables are the old live tables which had FKs.
+            # Query pg_constraint to find and drop any FK constraints on staging tables.
+            for staging_table in ['vn_similarities_staging', 'vn_cooccurrence_staging']:
+                result = await db.execute(text(f"""
+                    SELECT conname FROM pg_constraint
+                    WHERE conrelid = '{staging_table}'::regclass
+                    AND contype = 'f'
+                """))
+                fk_names = [row[0] for row in result.fetchall()]
+                for fk_name in fk_names:
+                    logger.info(f"Dropping inherited FK {fk_name} from {staging_table}")
+                    await db.execute(text(
+                        f'ALTER TABLE {staging_table} DROP CONSTRAINT {fk_name}'
+                    ))
+
+            # Drop old indexes (inherited from previous live tables, now on staging)
+            for idx in ['idx_vn_sim_vn', 'idx_vn_sim_score',
+                         'idx_vn_cooccur_vn', 'idx_vn_cooccur_score']:
+                await db.execute(text(f'DROP INDEX IF EXISTS {idx}'))
+            # Rename new indexes to canonical names (for next cycle)
+            await db.execute(text("ALTER INDEX idx_vn_sim_vn_new RENAME TO idx_vn_sim_vn"))
+            await db.execute(text("ALTER INDEX idx_vn_sim_score_new RENAME TO idx_vn_sim_score"))
+            await db.execute(text("ALTER INDEX idx_vn_cooccur_vn_new RENAME TO idx_vn_cooccur_vn"))
+            await db.execute(text("ALTER INDEX idx_vn_cooccur_score_new RENAME TO idx_vn_cooccur_score"))
+            await db.commit()
+            logger.info("Staging tables cleaned up for next run")
+        except Exception as e:
+            logger.warning(f"Post-swap cleanup failed (live data is serving correctly): {e}")
+            await db.rollback()
 
 
 async def train_hybrid_embeddings(n_components: int = 64, epochs: int = 30):

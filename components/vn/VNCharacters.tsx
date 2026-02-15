@@ -123,14 +123,14 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
         {hasSpoilers && (
           <button
             onClick={() => onShowSpoilersChange(!showSpoilers)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
               showSpoilers
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
             }`}
           >
             {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            {showSpoilers ? 'Hide spoilers' : 'Show spoilers'}
+            <span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers
           </button>
         )}
       </div>
@@ -218,7 +218,7 @@ function CharacterCard({ character, preference, showSpoilers, eager }: Character
   const isSpoilerCharacter = (character.spoiler ?? 0) > 0;
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg border p-4 flex gap-4 ${
+    <div className={`bg-white dark:bg-gray-800 rounded-lg border p-3 sm:p-4 flex gap-3 sm:gap-4 ${
       isSpoilerCharacter
         ? 'border-red-300 dark:border-red-700 ring-1 ring-red-200 dark:ring-red-800'
         : 'border-gray-200 dark:border-gray-700'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import type { VNMonthlyVotes, VNMonthlyScore, GlobalMedians } from '@/lib/vndb-stats-api';
 
 interface InsightCardsProps {
@@ -53,10 +53,10 @@ function computePolarization(distribution: Record<string, number>): Polarization
     tooltip = 'General agreement with natural variance. Some spread across scores but no major disagreement.';
   } else if (stddev < 2.3) {
     label = 'Mixed Opinions';
-    tooltip = 'Notable disagreement among voters — opinions are spread across multiple score ranges.';
+    tooltip = 'Notable disagreement among voters. Opinions are spread across multiple score ranges.';
   } else {
     label = 'Love it or Hate it';
-    tooltip = 'Sharply divided opinions. Votes cluster at opposite ends of the scale — a true marmite title.';
+    tooltip = 'Sharply divided opinions. Votes cluster at opposite ends of the scale.';
   }
 
   return { label, stddev: Math.round(stddev * 100) / 100, normalized, tooltip };
@@ -97,10 +97,10 @@ function computeHypeCurve(scoreOverTime: VNMonthlyScore[]): HypeCurveResult | nu
     tooltip = 'Consistently high scores from release to present. Both early and recent voters average 7.5+ with less than 0.3 difference.';
   } else if (diff > 0.3) {
     label = 'Sleeper Hit';
-    tooltip = 'Scores improved over time — recent voters rate it higher than early voters by 0.3+ points. Word of mouth may have helped.';
+    tooltip = 'Scores improved over time. Recent voters rate it higher than early voters by 0.3+ points.';
   } else if (diff < -0.3) {
     label = 'Hype Decay';
-    tooltip = 'Early excitement faded — scores dropped 0.3+ points from the initial reception period to recent votes.';
+    tooltip = 'Early excitement faded. Scores dropped 0.3+ points from the initial reception period to recent votes.';
   } else {
     label = 'Steady';
     tooltip = 'Score has remained stable over time, with less than 0.3 points difference between early and recent voters.';
@@ -143,13 +143,13 @@ function computeVoteVelocity(votesOverTime: VNMonthlyVotes[]): VoteVelocityResul
     tooltip = 'Vote rate in the last 3 months is 50%+ higher than the preceding 6 months. Interest is spiking.';
   } else if (ratio >= 1.1) {
     label = 'Growing';
-    tooltip = 'Vote rate is trending upward — the last 3 months show 10%+ more votes than the preceding period.';
+    tooltip = 'Vote rate is trending upward. The last 3 months show 10%+ more votes than the preceding period.';
   } else if (ratio >= 0.7) {
     label = 'Steady';
     tooltip = 'Vote rate is roughly stable, within 30% of the preceding 6-month average.';
   } else if (ratio >= 0.3) {
     label = 'Fading';
-    tooltip = 'Vote rate has dropped significantly — the last 3 months are well below the preceding period.';
+    tooltip = 'Vote rate has dropped significantly. The last 3 months are well below the preceding period.';
   } else {
     label = 'Dormant';
     tooltip = 'Almost no votes in the last 3 months compared to before. This title is no longer actively being rated.';
@@ -170,6 +170,7 @@ interface NicheQuadrantResult {
   /** 0-1 Y position (rating) */
   y: number;
   tooltip: string;
+  detail: string;
 }
 
 function computeNicheQuadrant(
@@ -179,7 +180,7 @@ function computeNicheQuadrant(
 ): NicheQuadrantResult | null {
   if (rating === null) return null;
 
-  // Use p75 as the dividing line — top 25% in each dimension
+  // Use p75 as the dividing line (top 25% in each dimension)
   const highRating = rating >= medians.p75_rating;
   const highPopularity = votecount >= medians.p75_votecount;
 
@@ -205,201 +206,36 @@ function computeNicheQuadrant(
   const x = Math.min(Math.max(logVotes / maxLogVotes, 0.05), 0.95);
   const y = Math.min(Math.max((rating - 1) / 9, 0.05), 0.95);
 
-  return { label, x, y, tooltip };
-}
+  const detail = `${rating.toFixed(2)} rating · ${votecount.toLocaleString()} votes (p75: ${medians.p75_rating.toFixed(1)} / ${Math.round(medians.p75_votecount).toLocaleString()})`;
 
-// ============ Sub-Components ============
-
-function InfoTooltip({ content, wide }: { content: React.ReactNode; wide?: boolean }) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ style: React.CSSProperties; arrowLeft: number } | null>(null);
-
-  const showTooltip = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const tooltipWidth = wide ? 320 : 224;
-    const margin = 12;
-    const vw = window.innerWidth;
-    const centerX = rect.left + rect.width / 2;
-
-    // On narrow viewports, stretch tooltip to fill width
-    if (vw < tooltipWidth + margin * 2 + 20) {
-      setPos({
-        style: {
-          position: 'fixed',
-          left: `${margin}px`,
-          right: `${margin}px`,
-          top: `${rect.top - 8}px`,
-          transform: 'translateY(-100%)',
-        },
-        arrowLeft: centerX - margin,
-      });
-    } else {
-      // Center on button, clamp to viewport edges
-      let left = centerX - tooltipWidth / 2;
-      left = Math.max(margin, Math.min(left, vw - tooltipWidth - margin));
-      setPos({
-        style: {
-          position: 'fixed',
-          left: `${left}px`,
-          top: `${rect.top - 8}px`,
-          transform: 'translateY(-100%)',
-          width: `${tooltipWidth}px`,
-        },
-        arrowLeft: centerX - left,
-      });
-    }
-  };
-
-  const hideTooltip = () => setPos(null);
-
-  // Dismiss tooltip on scroll or outside tap (mobile fix)
-  useEffect(() => {
-    if (!pos) return;
-    const dismiss = () => setPos(null);
-    const onClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
-        dismiss();
-      }
-    };
-    window.addEventListener('scroll', dismiss, { capture: true, passive: true });
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('touchstart', onClickOutside);
-    return () => {
-      window.removeEventListener('scroll', dismiss, { capture: true });
-      document.removeEventListener('mousedown', onClickOutside);
-      document.removeEventListener('touchstart', onClickOutside);
-    };
-  }, [pos]);
-
-  return (
-    <span className="inline-flex ml-1">
-      <button
-        ref={buttonRef}
-        type="button"
-        className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-300 text-[10px] font-bold leading-none flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-        onMouseEnter={showTooltip}
-        onMouseLeave={hideTooltip}
-        onClick={() => pos ? hideTooltip() : showTooltip()}
-        aria-label="More info"
-      >
-        ?
-      </button>
-      {pos && (
-        <div
-          className="px-3 py-2 text-xs text-white bg-gray-900 dark:bg-gray-600 rounded-lg shadow-lg z-50 pointer-events-none"
-          style={pos.style}
-        >
-          {content}
-          <div
-            className="absolute top-full -mt-px border-4 border-transparent border-t-gray-900 dark:border-t-gray-600"
-            style={{ left: `${pos.arrowLeft}px`, transform: 'translateX(-50%)' }}
-          />
-        </div>
-      )}
-    </span>
-  );
-}
-
-function OverviewTooltip() {
-  return (
-    <InfoTooltip
-      wide
-      content={
-        <div className="space-y-2">
-          <div>
-            <div className="font-semibold">Rating vs Popularity</div>
-            <div className="text-gray-300">Fan Favorite (top 25% in both) · Hidden Gem (high rating, fewer votes) · Mass Market (many votes, lower rating) · Under the Radar (below 75th percentile in both)</div>
-          </div>
-          <div>
-            <div className="font-semibold">Vote Spread</div>
-            <div className="text-gray-300">Strong Consensus (σ&lt;1.3) · Broad Agreement (1.3-1.8) · Mixed Opinions (1.8-2.3) · Love it or Hate it (σ&gt;2.3)</div>
-          </div>
-          <div>
-            <div className="font-semibold">Score Trajectory</div>
-            <div className="text-gray-300">Compares first 25% vs last 25% of months. Instant Classic (both ≥7.5, diff &lt;0.3) · Sleeper Hit (recent +0.3) · Hype Decay (recent -0.3) · Steady (diff &lt;0.3)</div>
-          </div>
-          <div>
-            <div className="font-semibold">Vote Momentum</div>
-            <div className="text-gray-300">Last 3 months vs preceding 6 months. Surging (1.5x+) · Growing (1.1x+) · Steady (0.7-1.1x) · Fading (0.3-0.7x) · Dormant (&lt;0.3x)</div>
-          </div>
-        </div>
-      }
-    />
-  );
-}
-
-function NicheQuadrantMini({ result }: { result: NicheQuadrantResult }) {
-  const quadrantColors = {
-    'Hidden Gem': { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-700 dark:text-emerald-400' },
-    'Fan Favorite': { bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-400' },
-    'Under the Radar': { bg: 'bg-gray-50 dark:bg-gray-800/50', text: 'text-gray-600 dark:text-gray-400' },
-    'Mass Market': { bg: 'bg-blue-50 dark:bg-blue-950/30', text: 'text-blue-700 dark:text-blue-400' },
-  };
-  const colors = quadrantColors[result.label as keyof typeof quadrantColors];
-
-  return (
-    <div className={`rounded-lg p-4 ${colors.bg} border border-gray-200/40 dark:border-gray-700/40`}>
-      <div className="flex items-center gap-3">
-        {/* Mini quadrant SVG */}
-        <svg width="48" height="48" viewBox="0 0 48 48" className="flex-shrink-0">
-          {/* Quadrant backgrounds */}
-          <rect x="0" y="0" width="24" height="24" className="fill-emerald-200/50 dark:fill-emerald-900/30" />
-          <rect x="24" y="0" width="24" height="24" className="fill-amber-200/50 dark:fill-amber-900/30" />
-          <rect x="0" y="24" width="24" height="24" className="fill-gray-200/50 dark:fill-gray-700/30" />
-          <rect x="24" y="24" width="24" height="24" className="fill-blue-200/50 dark:fill-blue-900/30" />
-          {/* Grid lines */}
-          <line x1="24" y1="0" x2="24" y2="48" className="stroke-gray-300 dark:stroke-gray-600" strokeWidth="1" />
-          <line x1="0" y1="24" x2="48" y2="24" className="stroke-gray-300 dark:stroke-gray-600" strokeWidth="1" />
-          {/* VN dot — y is inverted (higher rating = lower y in SVG) */}
-          <circle
-            cx={result.x * 48}
-            cy={(1 - result.y) * 48}
-            r="4"
-            className="fill-primary-500 dark:fill-primary-400 stroke-white dark:stroke-gray-900"
-            strokeWidth="1.5"
-          />
-        </svg>
-        <div>
-          <div className="flex items-center">
-            <span className={`text-sm font-semibold ${colors.text}`}>{result.label}</span>
-            <InfoTooltip content={result.tooltip} />
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Rating vs Popularity</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InsightCard({
-  label,
-  subtitle,
-  value,
-  colorClass,
-  tooltip,
-}: {
-  label: string;
-  subtitle: string;
-  value?: string;
-  colorClass: string;
-  tooltip?: string;
-}) {
-  return (
-    <div className="rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200/40 dark:border-gray-700/40">
-      <div className="flex items-center">
-        <span className={`text-sm font-semibold ${colorClass}`}>{label}</span>
-        {tooltip && <InfoTooltip content={tooltip} />}
-      </div>
-      {value && (
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{value}</div>
-      )}
-      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{subtitle}</div>
-    </div>
-  );
+  return { label, x, y, tooltip, detail };
 }
 
 // ============ Main Component ============
+
+const labelColors: Record<string, string> = {
+  // Quadrant
+  'Hidden Gem': 'text-emerald-600 dark:text-emerald-400',
+  'Fan Favorite': 'text-amber-600 dark:text-amber-400',
+  'Under the Radar': 'text-gray-500 dark:text-gray-400',
+  'Mass Market': 'text-blue-600 dark:text-blue-400',
+  // Polarization
+  'Strong Consensus': 'text-emerald-600 dark:text-emerald-400',
+  'Broad Agreement': 'text-sky-600 dark:text-sky-400',
+  'Mixed Opinions': 'text-amber-600 dark:text-amber-400',
+  'Love it or Hate it': 'text-rose-600 dark:text-rose-400',
+  // Hype curve
+  'Instant Classic': 'text-amber-600 dark:text-amber-400',
+  'Sleeper Hit': 'text-emerald-600 dark:text-emerald-400',
+  'Hype Decay': 'text-rose-600 dark:text-rose-400',
+  // Velocity
+  Surging: 'text-emerald-600 dark:text-emerald-400',
+  Growing: 'text-sky-600 dark:text-sky-400',
+  Fading: 'text-amber-600 dark:text-amber-400',
+  Dormant: 'text-gray-500 dark:text-gray-400',
+  // Shared
+  Steady: 'text-blue-600 dark:text-blue-400',
+};
 
 export function VNInsightCards({
   scoreDistribution,
@@ -417,67 +253,61 @@ export function VNInsightCards({
     [rating, votecount, globalMedians]
   );
 
-  // Don't render if none of the insights are available
   if (!polarization && !hypeCurve && !velocity && !nicheQuadrant) return null;
 
-  const polarizationColors: Record<string, string> = {
-    'Strong Consensus': 'text-emerald-700 dark:text-emerald-400',
-    'Broad Agreement': 'text-sky-700 dark:text-sky-400',
-    'Mixed Opinions': 'text-amber-700 dark:text-amber-400',
-    'Love it or Hate it': 'text-rose-700 dark:text-rose-400',
-  };
-
-  const hypeCurveColors: Record<string, string> = {
-    'Instant Classic': 'text-amber-700 dark:text-amber-400',
-    'Sleeper Hit': 'text-emerald-700 dark:text-emerald-400',
-    'Hype Decay': 'text-rose-700 dark:text-rose-400',
-    'Steady': 'text-blue-700 dark:text-blue-400',
-  };
-
-  const velocityColors: Record<string, string> = {
-    Surging: 'text-emerald-700 dark:text-emerald-400',
-    Growing: 'text-sky-700 dark:text-sky-400',
-    Steady: 'text-blue-700 dark:text-blue-400',
-    Fading: 'text-amber-700 dark:text-amber-400',
-    Dormant: 'text-gray-600 dark:text-gray-400',
-  };
+  const cardClass = 'rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200/40 dark:border-gray-700/40';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-        At a Glance
-        <OverviewTooltip />
-      </h3>
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Insights</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {nicheQuadrant && <NicheQuadrantMini result={nicheQuadrant} />}
+        {nicheQuadrant && (
+          <div className={cardClass}>
+            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Popularity</div>
+            <div className={`text-sm font-semibold mt-0.5 ${labelColors[nicheQuadrant.label] || 'text-gray-700 dark:text-gray-300'}`}>{nicheQuadrant.label}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{nicheQuadrant.tooltip}</div>
+            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{nicheQuadrant.detail}</div>
+          </div>
+        )}
         {polarization && (
-          <InsightCard
-            label={polarization.label}
-            subtitle="Vote Spread"
-            value={`σ = ${polarization.stddev}`}
-            colorClass={polarizationColors[polarization.label] || 'text-gray-700 dark:text-gray-300'}
-            tooltip={polarization.tooltip}
-          />
+          <div className={cardClass}>
+            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Vote Spread</div>
+            <div className={`text-sm font-semibold mt-0.5 ${labelColors[polarization.label] || 'text-gray-700 dark:text-gray-300'}`}>{polarization.label}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{polarization.tooltip}</div>
+            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">σ = {polarization.stddev}</div>
+          </div>
         )}
         {hypeCurve && (
-          <InsightCard
-            label={hypeCurve.label}
-            subtitle="Score Trajectory"
-            value={`Early avg ${hypeCurve.earlyAvg.toFixed(1)} → Recent ${hypeCurve.lateAvg.toFixed(1)}`}
-            colorClass={hypeCurveColors[hypeCurve.label] || 'text-gray-700 dark:text-gray-300'}
-            tooltip={hypeCurve.tooltip}
-          />
+          <div className={cardClass}>
+            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Score Trajectory</div>
+            <div className={`text-sm font-semibold mt-0.5 ${labelColors[hypeCurve.label] || 'text-gray-700 dark:text-gray-300'}`}>{hypeCurve.label}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{hypeCurve.tooltip}</div>
+            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Early avg {hypeCurve.earlyAvg.toFixed(1)} → Recent {hypeCurve.lateAvg.toFixed(1)}</div>
+          </div>
         )}
         {velocity && (
-          <InsightCard
-            label={velocity.label}
-            subtitle="Vote Momentum"
-            value={`${velocity.recentRate.toFixed(0)}/mo (prev ${velocity.baselineRate.toFixed(0)}/mo)`}
-            colorClass={velocityColors[velocity.label] || 'text-gray-700 dark:text-gray-300'}
-            tooltip={velocity.tooltip}
-          />
+          <div className={cardClass}>
+            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Vote Momentum</div>
+            <div className={`text-sm font-semibold mt-0.5 ${labelColors[velocity.label] || 'text-gray-700 dark:text-gray-300'}`}>{velocity.label}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{velocity.tooltip}</div>
+            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{velocity.recentRate.toFixed(0)}/mo (prev {velocity.baselineRate.toFixed(0)}/mo)</div>
+          </div>
         )}
       </div>
+
+      {/* Expandable legend */}
+      <details className="mt-3 group">
+        <summary className="text-[11px] text-gray-400 dark:text-gray-500 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 select-none list-none flex items-center gap-1">
+          <svg className="w-3 h-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M4.5 2.5L8 6L4.5 9.5" /></svg>
+          All categories
+        </summary>
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <div><span className="font-medium text-gray-600 dark:text-gray-300">Popularity:</span> Fan Favorite (≥p75 rating &amp; ≥p75 votes) · Hidden Gem (≥p75 rating, &lt;p75 votes) · Mass Market (&lt;p75 rating, ≥p75 votes) · Under the Radar (&lt;p75 both)</div>
+          <div><span className="font-medium text-gray-600 dark:text-gray-300">Vote Spread:</span> Strong Consensus (σ&lt;1.3) · Broad Agreement (σ 1.3–1.8) · Mixed Opinions (σ 1.8–2.3) · Love it or Hate it (σ&gt;2.3)</div>
+          <div><span className="font-medium text-gray-600 dark:text-gray-300">Score Trajectory:</span> Instant Classic (both ≥7.5, &lt;0.3 diff) · Sleeper Hit (&gt;+0.3) · Hype Decay (&gt;−0.3) · Steady (±0.3)</div>
+          <div><span className="font-medium text-gray-600 dark:text-gray-300">Vote Momentum:</span> Surging (≥1.5x) · Growing (≥1.1x) · Steady (≥0.7x) · Fading (≥0.3x) · Dormant (&lt;0.3x)</div>
+        </div>
+      </details>
     </div>
   );
 }

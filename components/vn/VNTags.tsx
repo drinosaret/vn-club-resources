@@ -53,7 +53,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
   const spoilerCount = tags.filter(t => t.spoiler > 0).length;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -68,7 +68,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
         {spoilerCount > 0 && (
           <button
             onClick={() => setShowSpoilers(!showSpoilers)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
               showSpoilers
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -77,12 +77,12 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
             {showSpoilers ? (
               <>
                 <EyeOff className="w-4 h-4" />
-                Hide spoilers
+                <span className="hidden sm:inline">Hide </span>spoilers
               </>
             ) : (
               <>
                 <Eye className="w-4 h-4" />
-                Show spoilers ({spoilerCount})
+                <span className="hidden sm:inline">Show </span>spoilers ({spoilerCount})
               </>
             )}
           </button>

@@ -14,6 +14,10 @@ interface FadeInProps {
   className?: string;
   /** Whether the content should be shown (controls the fade) */
   show?: boolean;
+  /** Start invisible and animate in after one paint frame.
+   *  Use for content inside dynamic imports (no SSR) to avoid
+   *  Firefox FOIT where text paints one frame behind backgrounds. */
+  defer?: boolean;
 }
 
 /**
@@ -27,9 +31,12 @@ export function FadeIn({
   slideUp = true,
   className = '',
   show = true,
+  defer = false,
 }: FadeInProps) {
-  // Start visible immediately if shown and no delay, otherwise start invisible
-  const [isVisible, setIsVisible] = useState(show && delay === 0);
+  // When defer=true, always start invisible so the browser gets a paint frame
+  // before we animate in (fixes Firefox FOIT on large DOM commits).
+  // When defer=false (default), start visible if shown with no delay (SSR-safe).
+  const [isVisible, setIsVisible] = useState(!defer && show && delay === 0);
 
   useEffect(() => {
     // Skip animation during back-nav scroll restoration
@@ -43,21 +50,23 @@ export function FadeIn({
         // Only use timeout for delayed animations
         const timer = setTimeout(() => setIsVisible(true), delay);
         return () => clearTimeout(timer);
+      } else if (defer) {
+        // Wait one paint frame so the browser can rasterize text/backgrounds
+        // while the content is still invisible, then transition in
+        const id = requestAnimationFrame(() => setIsVisible(true));
+        return () => cancelAnimationFrame(id);
       } else {
-        // No delay - show immediately
+        // No delay, no defer - show immediately
         setIsVisible(true);
       }
     } else {
       setIsVisible(false);
     }
-  }, [show, delay]);
-
-  // Use CSS class for will-change to avoid hydration mismatch with inline styles
-  const gpuClass = isVisible ? '' : 'preparing-animation';
+  }, [show, delay, defer]);
 
   return (
     <div
-      className={`transition-[opacity,transform] ${gpuClass} ${className}`}
+      className={`transition-[opacity,transform] ${className}`}
       style={{
         transitionDuration: `${duration}ms`,
         transitionTimingFunction: 'ease-out',
