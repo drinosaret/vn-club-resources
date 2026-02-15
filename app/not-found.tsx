@@ -1,5 +1,12 @@
 import Link from 'next/link';
 import SearchBar from '@/components/SearchBar';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Page Not Found',
+  description: 'The page you requested could not be found.',
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (

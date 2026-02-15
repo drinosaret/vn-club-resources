@@ -2,22 +2,28 @@ import { getAllContent } from '@/lib/mdx';
 import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import type { Metadata } from 'next';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Guides',
-  description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels.',
+  title: 'Japanese Learning Guides for Visual Novels',
+  description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels. Start reading VNs in Japanese today.',
   path: '/guides',
 });
 
-const guidesJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: 'VN Club Guides',
-  description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels.',
-  url: `${SITE_URL}/guides/`,
-  isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
-};
+const guidesJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'VN Club Guides',
+    description: 'Comprehensive guides for setting up text hookers, dictionaries, Anki mining, and other tools for learning Japanese through visual novels.',
+    url: `${SITE_URL}/guides/`,
+    isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
+  },
+  generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Guides', path: '/guides/' },
+  ]),
+];
 
 export default async function GuidesPage() {
   const guides = getAllContent('guides');

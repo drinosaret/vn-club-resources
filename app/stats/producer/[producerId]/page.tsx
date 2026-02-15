@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getProducerForMetadata } from '@/lib/vndb-server';
-import { generatePageMetadata, truncateDescription } from '@/lib/metadata-utils';
+import { generatePageMetadata, truncateDescription, safeJsonLdStringify, SITE_URL, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 import ProducerDetailClient from './ProducerDetailClient';
 
 interface PageProps {
@@ -31,5 +31,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProducerDetailPage({ params }: PageProps) {
-  return <ProducerDetailClient params={params} />;
+  const { producerId } = await params;
+  const producer = await getProducerForMetadata(producerId);
+  const displayName = producer ? (producer.original || producer.name) : null;
+
+  const jsonLd = displayName ? [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: displayName,
+      description: producer!.description ? truncateDescription(producer!.description, 500) : undefined,
+      url: `${SITE_URL}/stats/producer/${producerId}/`,
+    },
+    generateBreadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Stats', path: '/stats/' },
+      { name: displayName, path: `/stats/producer/${producerId}/` },
+    ]),
+  ] : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
+        />
+      )}
+      <ProducerDetailClient params={Promise.resolve({ producerId })} />
+    </>
+  );
 }

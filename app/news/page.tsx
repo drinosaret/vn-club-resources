@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Newspaper } from 'lucide-react';
 import { NewsFeed } from '@/components/news';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Visual Novel News & Releases',
@@ -10,18 +10,24 @@ export const metadata: Metadata = generatePageMetadata({
 });
 
 // JSON-LD for news collection page
-const newsJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: 'Visual Novel News',
-  description: 'Latest visual novel and eroge news',
-  url: `${SITE_URL}/news`,
-  isPartOf: {
-    '@type': 'WebSite',
-    name: 'VN Club',
-    url: SITE_URL,
+const newsJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Visual Novel News',
+    description: 'Latest visual novel and eroge news',
+    url: `${SITE_URL}/news`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'VN Club',
+      url: SITE_URL,
+    },
   },
-};
+  generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'VN News', path: '/news/' },
+  ]),
+];
 
 export default function NewsPage() {
   return (

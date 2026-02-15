@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import UserStatsContent from './UserStatsContent';
-import { generatePageMetadata } from '@/lib/metadata-utils';
+import { generatePageMetadata, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 interface PageProps {
   params: Promise<{ uid: string }>;
@@ -24,7 +24,21 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 export default async function Page({ params, searchParams }: PageProps) {
   const { uid } = await params;
   const { username, tab } = await searchParams;
+  const displayName = username || `User ${uid}`;
+
+  const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Stats', path: '/stats/' },
+    { name: `${displayName}'s Stats`, path: `/stats/${uid}/` },
+  ]);
+
   return (
-    <UserStatsContent uid={uid} initialUsername={username} initialTab={tab} />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(breadcrumbJsonLd) }}
+      />
+      <UserStatsContent uid={uid} initialUsername={username} initialTab={tab} />
+    </>
   );
 }

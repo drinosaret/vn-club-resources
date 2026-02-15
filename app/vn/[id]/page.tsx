@@ -6,6 +6,7 @@ import {
   getOGImagePath,
   truncateDescription,
   safeJsonLdStringify,
+  generateBreadcrumbJsonLd,
 } from '@/lib/metadata-utils';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import VNDetailClient from './VNDetailClient';
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     image: ogImage,
     imageAlt: `${vn.title} cover`,
     type: 'article',
-    largeImage: false,
+    largeImage: true,
   });
 }
 
@@ -58,7 +59,17 @@ export default async function VNDetailPage({ params }: PageProps) {
     getSimilarVNsServer(id),
   ]);
 
-  const jsonLd = vn ? generateVNJsonLd(vn) : null;
+  const metaTitle = vn
+    ? ((vn.title_romaji && !/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(vn.title_romaji)) ? vn.title_romaji : vn.title)
+    : null;
+  const jsonLd = vn ? [
+    generateVNJsonLd(vn),
+    generateBreadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Browse', path: '/browse/' },
+      { name: metaTitle || vn.title, path: `/vn/${id}/` },
+    ]),
+  ] : null;
   const vnId = id.startsWith('v') ? id : `v${id}`;
   const coverPreloadUrl = vn?.image_url
     ? getProxiedImageUrl(vn.image_url, { width: 512, vnId })

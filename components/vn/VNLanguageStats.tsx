@@ -13,6 +13,7 @@ import {
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
+import { ChartHelpTooltip } from '@/components/stats/ChartHelpTooltip';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -393,15 +394,7 @@ function TextProfile({ deck }: { deck: JitenDeckDto }) {
           <h3 className="text-base font-bold text-gray-900 dark:text-white">
             {style.label}
           </h3>
-          <span className="relative group/tip">
-            <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 cursor-help" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-            </svg>
-            <span className="pointer-events-none absolute left-0 top-full mt-1.5 w-max max-w-[260px] rounded-lg bg-gray-900 dark:bg-gray-700 text-white text-[11px] leading-relaxed px-3 py-2 opacity-0 group-hover/tip:opacity-100 transition-opacity z-20 shadow-lg">
-              <span className="font-medium block mb-1">Classification criteria</span>
-              {style.criteria}
-            </span>
-          </span>
+          <ChartHelpTooltip text={`Classification criteria: ${style.criteria}`} />
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           {style.description}
@@ -461,19 +454,6 @@ function DifficultyTooltip(props: TooltipProps<number, string>) {
 }
 
 function DifficultyFlow({ segments, average }: { segments: Array<{ segment: number; difficulty: number; peak: number }>; average: number }) {
-  const interpretation = useMemo(() => {
-    if (segments.length < 2) return null;
-    const mid = Math.floor(segments.length / 2);
-    const firstHalf = segments.slice(0, mid).reduce((s, seg) => s + seg.difficulty, 0) / mid;
-    const secondHalf = segments.slice(mid).reduce((s, seg) => s + seg.difficulty, 0) / (segments.length - mid);
-    const diff = secondHalf - firstHalf;
-    if (diff > 0.4) return 'Difficulty ramps up noticeably in later sections';
-    if (diff < -0.4) return 'Starts harder and becomes easier as you progress';
-    const variance = segments.reduce((s, seg) => s + Math.abs(seg.difficulty - average), 0) / segments.length;
-    if (variance > 0.5) return 'Difficulty varies significantly across sections';
-    return 'Difficulty stays fairly consistent throughout';
-  }, [segments, average]);
-
   const chartData = useMemo(() =>
     segments.map(seg => ({
       label: `${Math.round(((seg.segment) / segments.length) * 100)}%`,
@@ -573,12 +553,6 @@ function DifficultyFlow({ segments, average }: { segments: Array<{ segment: numb
         </span>
       </div>
 
-      {/* Interpretation */}
-      {interpretation && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center italic">
-          {interpretation}
-        </p>
-      )}
     </div>
   );
 }
@@ -723,16 +697,16 @@ function VocabularyDepth({ deck }: { deck: JitenDeckDto }) {
           </div>
           <div className="flex rounded-lg overflow-hidden h-6">
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white transition-all"
+              className="flex items-center justify-center text-[10px] font-medium text-white transition-all overflow-hidden truncate px-1"
               style={{ width: `${coreWordsPct}%`, backgroundColor: '#6366f1' }}
             >
-              {coreWordsPct > 15 && `${formatCount(coreWords)} recurring`}
+              {coreWordsPct > 20 && `${formatCount(coreWords)} recurring`}
             </div>
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white/90 transition-all"
+              className="flex items-center justify-center text-[10px] font-medium text-white/90 transition-all overflow-hidden truncate px-1"
               style={{ width: `${rareWordsPct}%`, backgroundColor: '#a78bfa' }}
             >
-              {rareWordsPct > 15 && `${formatCount(deck.uniqueWordUsedOnceCount)} one-off`}
+              {rareWordsPct > 20 && `${formatCount(deck.uniqueWordUsedOnceCount)} one-off`}
             </div>
           </div>
           <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">
@@ -751,16 +725,16 @@ function VocabularyDepth({ deck }: { deck: JitenDeckDto }) {
           </div>
           <div className="flex rounded-lg overflow-hidden h-6">
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white transition-all"
+              className="flex items-center justify-center text-[10px] font-medium text-white transition-all overflow-hidden truncate px-1"
               style={{ width: `${coreKanjiPct}%`, backgroundColor: '#14b8a6' }}
             >
-              {coreKanjiPct > 15 && `${formatCount(coreKanji)} recurring`}
+              {coreKanjiPct > 20 && `${formatCount(coreKanji)} recurring`}
             </div>
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white/90 transition-all"
+              className="flex items-center justify-center text-[10px] font-medium text-white/90 transition-all overflow-hidden truncate px-1"
               style={{ width: `${rareKanjiPct}%`, backgroundColor: '#5eead4' }}
             >
-              {rareKanjiPct > 15 && `${formatCount(deck.uniqueKanjiUsedOnceCount)} one-off`}
+              {rareKanjiPct > 20 && `${formatCount(deck.uniqueKanjiUsedOnceCount)} one-off`}
             </div>
           </div>
           <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">

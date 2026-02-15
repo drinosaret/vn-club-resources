@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import BrowsePageClient from '@/components/browse/BrowsePageClient';
 import { browseVNsServer } from '@/lib/vndb-server';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Browse Visual Novels for Learning Japanese',
@@ -10,14 +10,20 @@ export const metadata: Metadata = generatePageMetadata({
   path: '/browse',
 });
 
-const browseJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: 'Browse Visual Novels for Learning Japanese',
-  description: 'Browse thousands of visual novels from VNDB. Filter by tags, length, release date, and more to find your next Japanese reading challenge.',
-  url: `${SITE_URL}/browse/`,
-  isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
-};
+const browseJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Browse Visual Novels for Learning Japanese',
+    description: 'Browse thousands of visual novels from VNDB. Filter by tags, length, release date, and more to find your next Japanese reading challenge.',
+    url: `${SITE_URL}/browse/`,
+    isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
+  },
+  generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Browse Visual Novels', path: '/browse/' },
+  ]),
+];
 
 type GridSize = 'small' | 'medium' | 'large';
 const GRID_LIMITS: Record<GridSize, number> = { small: 42, medium: 35, large: 28 };

@@ -22,6 +22,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://vnclub.org',
   },
+  description: 'Learn Japanese with visual novels. Free guides for Textractor, Yomitan, Anki, and OCR setup. Browse VNDB, get personalized VN recommendations, and join a community of readers learning Japanese through immersion.',
+  openGraph: {
+    title: 'VN Club | Learn Japanese with Visual Novels',
+    description: 'Free guides, tools, and community for learning Japanese through visual novels. Text hooking, dictionary setup, Anki mining, and VN recommendations.',
+    url: 'https://vnclub.org',
+  },
 };
 
 // WebSite JSON-LD schema with SearchAction

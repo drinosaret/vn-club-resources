@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | VN Club",
     },
     description: "Learn Japanese with visual novels. Comprehensive guides for text hooking, dictionary setup, Anki mining, and immersion-based reading. Browse VNDB, get personalized recommendations, and find VNs for your level.",
-    keywords: ["learn japanese with visual novels", "visual novel japanese learning", "japanese learning resources", "vn club", "visual novels", "text hooking", "Anki", "immersion", "beginner visual novels japanese", "japanese through visual novels"],
+    keywords: ["learn japanese with visual novels", "visual novel japanese learning", "japanese learning resources", "vn club", "visual novels", "text hooking", "Anki", "immersion", "beginner visual novels japanese", "japanese through visual novels", "VNDB", "immersion learning", "read japanese visual novels", "japanese reading practice", "text hooker", "visual novel dictionary"],
     authors: [{ name: "VN Club Resurrection" }],
     metadataBase: new URL(origin),
     icons: {

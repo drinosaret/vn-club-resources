@@ -132,6 +132,23 @@ export function truncateDescription(text: string, maxLength = 200): string {
 }
 
 /**
+ * Generate JSON-LD BreadcrumbList schema.
+ * Last item should be the current page.
+ */
+export function generateBreadcrumbJsonLd(items: Array<{ name: string; path: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: `${SITE_URL}${item.path}`,
+    })),
+  };
+}
+
+/**
  * Generate JSON-LD VideoGame schema for VN detail pages.
  */
 export function generateVNJsonLd(vn: {

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getStaffForMetadata } from '@/lib/vndb-server';
-import { generatePageMetadata, truncateDescription } from '@/lib/metadata-utils';
+import { generatePageMetadata, truncateDescription, safeJsonLdStringify, SITE_URL, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 import StaffDetailClient from './StaffDetailClient';
 
 interface PageProps {
@@ -31,5 +31,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function StaffDetailPage({ params }: PageProps) {
-  return <StaffDetailClient params={params} />;
+  const { staffId } = await params;
+  const staff = await getStaffForMetadata(staffId);
+  const displayName = staff ? (staff.original || staff.name) : null;
+
+  const jsonLd = displayName ? [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: displayName,
+      description: staff!.description ? truncateDescription(staff!.description, 500) : undefined,
+      url: `${SITE_URL}/stats/staff/${staffId}/`,
+    },
+    generateBreadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Stats', path: '/stats/' },
+      { name: displayName, path: `/stats/staff/${staffId}/` },
+    ]),
+  ] : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
+        />
+      )}
+      <StaffDetailClient params={Promise.resolve({ staffId })} />
+    </>
+  );
 }

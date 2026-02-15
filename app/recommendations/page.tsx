@@ -2,27 +2,33 @@ import { Suspense } from 'react';
 import { Metadata } from 'next';
 import RecommendationsContent from './RecommendationsContent';
 import { Sparkles } from 'lucide-react';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'VN Recommendations',
+  title: 'Visual Novel Recommendations for Japanese Learners',
   description: 'Get personalized visual novel recommendations for learning Japanese based on your VNDB list. Discover your next VN based on your reading history and preferences.',
   path: '/recommendations',
 });
 
-const recommendationsJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  name: 'VN Recommendations',
-  description: 'Personalized visual novel recommendations for Japanese learners',
-  url: `${SITE_URL}/recommendations`,
-  applicationCategory: 'EducationalApplication',
-  isPartOf: {
-    '@type': 'WebSite',
-    name: 'VN Club',
-    url: SITE_URL,
+const recommendationsJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'VN Recommendations',
+    description: 'Personalized visual novel recommendations for Japanese learners',
+    url: `${SITE_URL}/recommendations`,
+    applicationCategory: 'EducationalApplication',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'VN Club',
+      url: SITE_URL,
+    },
   },
-};
+  generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'VN Recommendations', path: '/recommendations/' },
+  ]),
+];
 
 function LoadingFallback() {
   return (

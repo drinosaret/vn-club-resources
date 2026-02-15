@@ -38,8 +38,9 @@ export async function GET() {
   for (let i = 0; i < vnChunks; i++) ids.push(VN_BASE_ID + i);
   for (let i = 0; i < charChunks; i++) ids.push(CHAR_BASE_ID + i);
 
+  const lastmod = new Date().toISOString();
   const entries = ids
-    .map((id) => `  <sitemap>\n    <loc>${SITE_URL}/sitemap/${id}.xml</loc>\n  </sitemap>`)
+    .map((id) => `  <sitemap>\n    <loc>${SITE_URL}/sitemap/${id}.xml</loc>\n    <lastmod>${lastmod}</lastmod>\n  </sitemap>`)
     .join('\n');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

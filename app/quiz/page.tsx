@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Languages } from 'lucide-react';
 import { QuizGame } from '@/components/quiz';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Kana Quiz: Practice Hiragana & Katakana',
@@ -10,19 +10,25 @@ export const metadata: Metadata = generatePageMetadata({
 });
 
 // JSON-LD for educational quiz
-const quizJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Quiz',
-  name: 'Kana Quiz',
-  description: 'Practice hiragana and katakana recognition for Japanese learners',
-  educationalLevel: 'Beginner',
-  learningResourceType: 'Quiz',
-  about: {
-    '@type': 'Thing',
-    name: 'Japanese Writing System',
+const quizJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Quiz',
+    name: 'Kana Quiz',
+    description: 'Practice hiragana and katakana recognition for Japanese learners',
+    educationalLevel: 'Beginner',
+    learningResourceType: 'Quiz',
+    about: {
+      '@type': 'Thing',
+      name: 'Japanese Writing System',
+    },
+    url: `${SITE_URL}/quiz`,
   },
-  url: `${SITE_URL}/quiz`,
-};
+  generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Kana Quiz', path: '/quiz/' },
+  ]),
+];
 
 export default function QuizPage() {
   return (
@@ -51,7 +57,7 @@ export default function QuizPage() {
 
         {/* Tips */}
         <div className="mt-8 p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Tips</h3>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Tips</h2>
           <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
             <li>
               <strong className="text-gray-900 dark:text-white">Multiple romanizations:</strong> Both &quot;shi&quot; and &quot;si&quot; are accepted for し, &quot;chi&quot; and &quot;ti&quot; for ち, etc.

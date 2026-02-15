@@ -8,7 +8,7 @@ import {
   Bot,
   CalendarDays,
 } from 'lucide-react';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Join the VN Club Resurrection Discord',
@@ -17,20 +17,26 @@ export const metadata: Metadata = generatePageMetadata({
   path: '/join',
 });
 
-const communityJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'WebPage',
-  name: 'Join VN Club Resurrection Discord',
-  description:
-    'Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs.',
-  url: `${SITE_URL}/join`,
-  mainEntity: {
-    '@type': 'Organization',
-    name: 'VN Club Resurrection',
-    url: 'https://discord.gg/Ze7dYKVTHf',
-    sameAs: ['https://discord.gg/Ze7dYKVTHf'],
+const communityJsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Join VN Club Resurrection Discord',
+    description:
+      'Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs.',
+    url: `${SITE_URL}/join`,
+    mainEntity: {
+      '@type': 'Organization',
+      name: 'VN Club Resurrection',
+      url: 'https://discord.gg/Ze7dYKVTHf',
+      sameAs: ['https://discord.gg/Ze7dYKVTHf'],
+    },
   },
-};
+  generateBreadcrumbJsonLd([
+    { name: 'Home', path: '/' },
+    { name: 'Join Discord', path: '/join/' },
+  ]),
+];
 
 function DiscordIcon({ className }: { className?: string }) {
   return (
