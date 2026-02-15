@@ -133,16 +133,24 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const searchParams = useSearchParams();
   const { preference } = useTitlePreference();
 
-  // Tab state from URL
-  const activeTab = (searchParams.get('tab') as BrowseTab) || 'novels';
+  // Tab state — local state for instant switching, synced from URL on mount/popstate
+  const urlTab = (searchParams.get('tab') as BrowseTab) || 'novels';
+  const [activeTab, setActiveTab] = useState<BrowseTab>(urlTab);
+
+  // Sync local state when URL changes (back/forward navigation)
+  useEffect(() => {
+    setActiveTab(urlTab);
+  }, [urlTab]);
 
   const handleTabChange = useCallback((tab: BrowseTab) => {
+    setActiveTab(tab);
     const params = new URLSearchParams();
     if (tab !== 'novels') {
       params.set('tab', tab);
     }
-    router.push(`/browse${params.toString() ? `?${params.toString()}` : ''}`);
-  }, [router]);
+    const url = `/browse/${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.pushState(null, '', url);
+  }, []);
 
   const handleTabHover = useCallback((tab: BrowseTab) => {
     TAB_PRELOADERS[tab]?.();

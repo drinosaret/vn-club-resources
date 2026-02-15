@@ -28,8 +28,8 @@ export function HeroSection() {
 
       {/* Background decoration orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-primary-400/10 rounded-full blur-3xl" />
+        <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-2xl" />
+        <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-primary-400/10 rounded-full blur-2xl" />
       </div>
 
       <div className="relative container mx-auto px-4 pt-10 pb-6 md:pt-16 md:pb-0 max-w-6xl">

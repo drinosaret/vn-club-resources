@@ -81,7 +81,7 @@ export default async function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/join"
-                className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-all duration-200"
+                className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-[background-color,box-shadow] duration-200"
               >
                 <Users className="w-5 h-5" />
                 Join Discord
@@ -90,7 +90,7 @@ export default async function Home() {
                 href="https://github.com/drinosaret/vn-club-resources"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-primary-500/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-500/50 transition-all duration-200 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm"
+                className="inline-flex items-center justify-center gap-2 bg-primary-500/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-500/50 transition-[background-color,border-color] duration-200 border-2 border-white/30 hover:border-white/50"
               >
                 <GitHubIcon className="w-5 h-5" />
                 Contribute on GitHub

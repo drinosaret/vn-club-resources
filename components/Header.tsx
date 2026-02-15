@@ -49,7 +49,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-50 will-change-transform">
+    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-50">
       <nav className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="flex justify-between items-center gap-4">
           {/* Logo */}

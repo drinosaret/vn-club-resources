@@ -23,7 +23,7 @@ function BentoCard({ href, children, className = '' }: BentoCardProps) {
   return (
     <Link
       href={href}
-      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-[box-shadow,transform] duration-300 ${className}`}
+      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-300 ${className}`}
     >
       {children}
     </Link>
