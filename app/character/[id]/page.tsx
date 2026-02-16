@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     path: `/character/${id}`,
     image: ogImage,
     imageAlt: `${displayName}`,
-    largeImage: true,
+    largeImage: false,
   });
 }
 

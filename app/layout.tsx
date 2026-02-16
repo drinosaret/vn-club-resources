@@ -45,7 +45,7 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: '/assets/hikaru-icon2.webp',
       shortcut: '/favicon.ico',
-      apple: '/assets/hikaru-icon2.webp',
+      apple: '/assets/hikaru-icon2.png',
     },
     openGraph: {
       type: 'website',

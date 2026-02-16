@@ -253,6 +253,7 @@ class VNSummary(BaseModel):
     rating: float | None
     votecount: int
     olang: str | None = None  # Original language (e.g., "ja" for Japanese)
+    description: str | None = None  # Truncated description snippet (for search results)
 
 
 class TopVN(BaseModel):

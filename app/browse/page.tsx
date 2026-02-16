@@ -40,7 +40,7 @@ export default async function Page({ searchParams }: PageProps) {
   const cookieStore = await cookies();
   const gridCookie = cookieStore.get('browse-grid-size')?.value;
   const gridSize: GridSize = (gridCookie === 'small' || gridCookie === 'medium' || gridCookie === 'large')
-    ? gridCookie : 'medium';
+    ? gridCookie : 'small';
   const limit = GRID_LIMITS[gridSize];
 
   // Only fetch data server-side for the novels tab (default tab)

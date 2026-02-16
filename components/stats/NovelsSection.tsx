@@ -6,10 +6,11 @@ import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } fro
 import { Pagination } from '@/components/browse/Pagination';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
-import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from '@/components/vn/card-image-utils';
+import { COMPACT_CARD_IMAGE_WIDTH, COMPACT_CARD_IMAGE_SIZES, buildCompactCardSrcSet } from '@/components/vn/card-image-utils';
 import { LanguageFilter, LanguageFilterValue } from './LanguageFilter';
 import { useDisplayTitle, useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
-import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
+import { NSFWImage } from '@/components/NSFWImage';
+import { useImageFade } from '@/hooks/useImageFade';
 
 type ViewMode = 'list' | 'gallery';
 type SortOption = 'score' | 'rating' | 'title' | 'date';
@@ -50,8 +51,8 @@ function getStatusFromLabels(labels?: Array<{ id: number; label?: string }>): st
   return 'unknown';
 }
 
-const ITEMS_PER_PAGE = 24;
-const SKELETON_COUNT = 12;
+const ITEMS_PER_PAGE = 30;
+const SKELETON_COUNT = 18;
 
 export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
@@ -135,15 +136,15 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     return filteredAndSorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSorted, currentPage]);
 
-  // Preload images for the next page so they display instantly on page change
+  // Preload first ~2 rows of images for the next page
   useEffect(() => {
     if (currentPage < totalPages) {
       const nextStart = currentPage * ITEMS_PER_PAGE;
-      const nextPageItems = filteredAndSorted.slice(nextStart, nextStart + ITEMS_PER_PAGE);
+      const nextPageItems = filteredAndSorted.slice(nextStart, nextStart + 12);
       nextPageItems.forEach(novel => {
         if (novel.vn?.image?.url) {
           const img = new Image();
-          const url = getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id });
+          const url = getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id });
           if (url) img.src = url;
         }
       });
@@ -323,7 +324,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
       {/* Skeleton Loading State - shown during initial load */}
       {isLoading && novels.length === 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 my-4">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 my-4">
           {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
             <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden">
               <div className="aspect-[3/4] image-placeholder" />
@@ -385,7 +386,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* Gallery View */}
           {viewMode === 'gallery' && filteredAndSorted.length > 0 && (
-            <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ${isLoading ? 'pointer-events-none' : ''}`}>
+            <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 ${isLoading ? 'pointer-events-none' : ''}`}>
               {paginatedItems.map((novel) => (
                 <NovelCard key={novel.id} novel={novel} />
               ))}
@@ -404,7 +405,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
 const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   const getDisplayTitle = useDisplayTitle();
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : '-';
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : '-';
   const releaseYear = novel.vn?.released?.substring(0, 4) || '-';
@@ -419,18 +420,17 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
     >
       {/* Thumbnail */}
       <div className="flex-shrink-0 w-12 h-16 relative rounded overflow-hidden">
-        {/* Shimmer placeholder */}
-        <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+        <div className={shimmerClass} />
         {novel.vn?.image?.url ? (
           <NSFWImage
             src={getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id })}
             alt=""
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
-            className={`w-full h-full object-cover object-top transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover object-top ${fadeClass}`}
             loading="lazy"
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
+            onLoad={onLoad}
+            onError={onLoad}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
@@ -474,71 +474,65 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
 
 const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
   const getDisplayTitle = useDisplayTitle();
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : null;
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : null;
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
-  const imageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: CARD_IMAGE_WIDTH, vnId: novel.id }) : null;
-  const srcSet = novel.vn?.image?.url ? buildCardSrcSet(novel.vn.image.url, novel.id) : undefined;
+  const imageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id }) : null;
+  const srcSet = novel.vn?.image?.url ? buildCompactCardSrcSet(novel.vn.image.url, novel.id) : undefined;
 
   return (
     <div
-      className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden shadow-sm hover:shadow-lg hover:shadow-gray-300/50 dark:hover:shadow-none hover:-translate-y-1 transition-all duration-200"
-      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 320px' }}
+      className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden sm:shadow-sm sm:hover:shadow-md sm:transition-shadow"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 240px' }}
     >
       {/* Image */}
       <Link href={`/vn/${novel.id}`} className="block relative aspect-[3/4]">
-        {/* Shimmer placeholder */}
-        <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+        <div className={shimmerClass} />
         {imageUrl ? (
           <NSFWImage
             src={imageUrl}
             alt={displayTitle}
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
-            className={`w-full h-full object-cover object-top transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover object-top ${fadeClass}`}
             loading="lazy"
             srcSet={srcSet}
-            sizes={CARD_IMAGE_SIZES}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
+            sizes={COMPACT_CARD_IMAGE_SIZES}
+            onLoad={onLoad}
+            onError={onLoad}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
-            <BookOpen className="w-8 h-8" />
+            <BookOpen className="w-6 h-6" />
           </div>
         )}
 
         {/* User score badge */}
         {userScore && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 bg-primary-600 text-white text-xs font-semibold rounded-md shadow-sm z-10">
+          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-white text-[11px] font-semibold rounded z-10">
             {userScore}
           </div>
         )}
 
         {/* Global rating badge */}
         {globalRating && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-black/75 backdrop-blur-sm text-white text-xs font-medium rounded-md shadow-sm z-10">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/70 text-white text-[11px] font-medium rounded z-10">
+            <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
             {globalRating}
           </div>
         )}
-
-        {/* Hover overlay - hidden on mobile since touch doesn't have hover, pointer-events-none when NSFW so clicks reach the reveal overlay */}
-        <div className={`absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center ${isNsfwContent(novel.vn?.image?.sexual) ? 'pointer-events-none' : ''}`}>
-          <span className="text-white text-sm">View Details</span>
-        </div>
       </Link>
 
       {/* Title */}
-      <div className="p-3">
+      <div className="p-2">
         <Link href={`/vn/${novel.id}`}>
-          <h4 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          <h4 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
             {displayTitle}
           </h4>
         </Link>
         {novel.vn?.released && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
             {novel.vn.released.substring(0, 4)}
           </p>
         )}

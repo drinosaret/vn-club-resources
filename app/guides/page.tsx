@@ -38,8 +38,11 @@ export default async function GuidesPage() {
       <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
         Guides
       </h1>
-      <p className="text-lg text-gray-600 dark:text-gray-400 mb-10">
-        Comprehensive guides for setting up tools and learning Japanese through visual novels.
+      <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
+        Step-by-step guides for everything you need to start reading visual novels in Japanese. Learn how to set up text hookers, pop-up dictionaries, Anki mining workflows, OCR tools, and more.
+      </p>
+      <p className="text-base text-gray-500 dark:text-gray-500 mb-10">
+        Whether you&apos;re brand new to reading in Japanese or looking to optimize your setup, each guide includes screenshots and detailed instructions to get you up and running quickly.
       </p>
 
       <div className="space-y-6">

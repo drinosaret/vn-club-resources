@@ -3,30 +3,40 @@
  *
  * Replaces the old next-sitemap postbuild approach which only picked up
  * statically generated pages. This generates sitemaps for ALL pages including
- * dynamic VN and character pages by querying the backend API.
+ * dynamic VN, character, and stats entity pages by querying the backend API.
  *
  * Sitemap index structure:
  *   /sitemap.xml         → sitemap index (manual route — Next.js bug #77304)
  *   /sitemap/0.xml       → static pages + guide pages
  *   /sitemap/1000.xml    → VN pages chunk 0
- *   /sitemap/1001.xml    → VN pages chunk 1
  *   /sitemap/2000.xml    → Character pages chunk 0
- *   /sitemap/2001.xml    → Character pages chunk 1
+ *   /sitemap/3000.xml    → Tag pages chunk 0
+ *   /sitemap/4000.xml    → Trait pages chunk 0
+ *   /sitemap/5000.xml    → Staff pages chunk 0
+ *   /sitemap/6000.xml    → Seiyuu pages chunk 0
+ *   /sitemap/7000.xml    → Producer pages chunk 0
  */
 
 import type { MetadataRoute } from 'next';
 import { getAllContent } from '@/lib/mdx';
 import { getBackendUrlOptional } from '@/lib/config';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://vnclub.org';
-const URLS_PER_SITEMAP = 50000;
-
-// ID ranges for sitemap chunks — keeps generateSitemaps() and sitemap() in sync
-const VN_BASE_ID = 1000;
-const CHAR_BASE_ID = 2000;
+import {
+  SITE_URL,
+  URLS_PER_SITEMAP,
+  VN_BASE_ID,
+  CHAR_BASE_ID,
+  TAG_BASE_ID,
+  TRAIT_BASE_ID,
+  STAFF_BASE_ID,
+  SEIYUU_BASE_ID,
+  PRODUCER_BASE_ID,
+} from '@/lib/sitemap-config';
 
 // Cache sitemap data for 24 hours (VNDB dumps update daily)
 export const revalidate = 86400;
+
+// Stable timestamp per build — avoids new lastModified on every crawl
+const BUILD_DATE = new Date();
 
 // ============ API helpers ============
 
@@ -58,27 +68,44 @@ async function fetchSitemapIds(
   }
 }
 
+/** Fetch just the total count (limit=0). */
+async function fetchTotal(path: string): Promise<number> {
+  const data = await fetchSitemapIds(path, 0, 0);
+  return data?.total ?? 0;
+}
+
+/** Push chunk IDs for a given base and total. */
+function pushChunks(sitemaps: Array<{ id: number }>, baseId: number, total: number) {
+  const chunks = Math.ceil(total / URLS_PER_SITEMAP);
+  for (let i = 0; i < chunks; i++) {
+    sitemaps.push({ id: baseId + i });
+  }
+}
+
 // ============ Sitemap index ============
 
 export async function generateSitemaps() {
   const sitemaps: Array<{ id: number }> = [{ id: 0 }]; // static pages always included
 
-  // Fetch counts from backend (limit=0 returns just the total)
-  const vnData = await fetchSitemapIds('/vn/sitemap-ids', 0, 0);
-  const charData = await fetchSitemapIds('/characters/sitemap-ids', 0, 0);
+  // Fetch counts from backend in parallel
+  const [vnTotal, charTotal, tagTotal, traitTotal, staffTotal, seiyuuTotal, producerTotal] =
+    await Promise.all([
+      fetchTotal('/vn/sitemap-ids'),
+      fetchTotal('/characters/sitemap-ids'),
+      fetchTotal('/stats/tags/sitemap-ids'),
+      fetchTotal('/stats/traits/sitemap-ids'),
+      fetchTotal('/stats/staff/sitemap-ids'),
+      fetchTotal('/stats/seiyuu/sitemap-ids'),
+      fetchTotal('/stats/producers/sitemap-ids'),
+    ]);
 
-  const vnTotal = vnData?.total ?? 0;
-  const charTotal = charData?.total ?? 0;
-
-  const vnChunks = Math.ceil(vnTotal / URLS_PER_SITEMAP);
-  const charChunks = Math.ceil(charTotal / URLS_PER_SITEMAP);
-
-  for (let i = 0; i < vnChunks; i++) {
-    sitemaps.push({ id: VN_BASE_ID + i });
-  }
-  for (let i = 0; i < charChunks; i++) {
-    sitemaps.push({ id: CHAR_BASE_ID + i });
-  }
+  pushChunks(sitemaps, VN_BASE_ID, vnTotal);
+  pushChunks(sitemaps, CHAR_BASE_ID, charTotal);
+  pushChunks(sitemaps, TAG_BASE_ID, tagTotal);
+  pushChunks(sitemaps, TRAIT_BASE_ID, traitTotal);
+  pushChunks(sitemaps, STAFF_BASE_ID, staffTotal);
+  pushChunks(sitemaps, SEIYUU_BASE_ID, seiyuuTotal);
+  pushChunks(sitemaps, PRODUCER_BASE_ID, producerTotal);
 
   return sitemaps;
 }
@@ -96,10 +123,24 @@ export default async function sitemap(props: {
     return generateStaticSitemap();
   }
 
+  if (numId >= PRODUCER_BASE_ID) {
+    return generateEntitySitemap(numId - PRODUCER_BASE_ID, '/stats/producers/sitemap-ids', '/stats/producer/', 0.5, 'monthly');
+  }
+  if (numId >= SEIYUU_BASE_ID) {
+    return generateEntitySitemap(numId - SEIYUU_BASE_ID, '/stats/seiyuu/sitemap-ids', '/stats/seiyuu/', 0.5, 'monthly');
+  }
+  if (numId >= STAFF_BASE_ID) {
+    return generateEntitySitemap(numId - STAFF_BASE_ID, '/stats/staff/sitemap-ids', '/stats/staff/', 0.5, 'monthly');
+  }
+  if (numId >= TRAIT_BASE_ID) {
+    return generateEntitySitemap(numId - TRAIT_BASE_ID, '/stats/traits/sitemap-ids', '/stats/trait/', 0.4, 'monthly');
+  }
+  if (numId >= TAG_BASE_ID) {
+    return generateEntitySitemap(numId - TAG_BASE_ID, '/stats/tags/sitemap-ids', '/stats/tag/', 0.5, 'monthly');
+  }
   if (numId >= CHAR_BASE_ID) {
     return generateCharacterSitemap(numId - CHAR_BASE_ID);
   }
-
   if (numId >= VN_BASE_ID) {
     return generateVNSitemap(numId - VN_BASE_ID);
   }
@@ -113,81 +154,81 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
       priority: 1.0,
     },
     {
       url: `${SITE_URL}/guide/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
       priority: 1.0,
     },
     {
       url: `${SITE_URL}/join/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'monthly',
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/browse/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/guides/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/stats/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/stats/global/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/recommendations/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
       priority: 0.7,
     },
     {
       url: `${SITE_URL}/news/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'daily',
       priority: 0.6,
     },
     {
       url: `${SITE_URL}/quiz/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
       url: `${SITE_URL}/tools/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
       priority: 0.7,
     },
     {
       url: `${SITE_URL}/sources/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
-      priority: 0.7,
+      priority: 0.8,
     },
     {
       url: `${SITE_URL}/find/`,
-      lastModified: new Date(),
+      lastModified: BUILD_DATE,
       changeFrequency: 'weekly',
-      priority: 0.7,
+      priority: 0.8,
     },
   ];
 
@@ -208,7 +249,7 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
           ? new Date(guide.updated)
           : guide.date
             ? new Date(guide.date)
-            : new Date(),
+            : BUILD_DATE,
         changeFrequency: (sitemapMeta?.changefreq as MetadataRoute.Sitemap[number]['changeFrequency']) || 'monthly',
         priority: sitemapMeta?.priority || 0.7,
       });
@@ -246,7 +287,29 @@ async function generateCharacterSitemap(chunk: number): Promise<MetadataRoute.Si
 
   return data.items.map((item) => ({
     url: `${SITE_URL}/character/${item.id}/`,
+    lastModified: item.updated_at ? new Date(item.updated_at) : undefined,
     changeFrequency: 'monthly' as const,
     priority: 0.5,
+  }));
+}
+
+// ============ Stats entity pages (tags, traits, staff, seiyuu, producers) ============
+
+async function generateEntitySitemap(
+  chunk: number,
+  apiPath: string,
+  urlPrefix: string,
+  priority: number,
+  changeFrequency: 'weekly' | 'monthly',
+): Promise<MetadataRoute.Sitemap> {
+  const offset = chunk * URLS_PER_SITEMAP;
+  const data = await fetchSitemapIds(apiPath, offset, URLS_PER_SITEMAP);
+
+  if (!data?.items.length) return [];
+
+  return data.items.map((item) => ({
+    url: `${SITE_URL}${urlPrefix}${item.id}/`,
+    changeFrequency,
+    priority,
   }));
 }

@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     image: ogImage,
     imageAlt: `${vn.title} cover`,
     type: 'article',
-    largeImage: true,
+    largeImage: false,
   });
 }
 

@@ -1,6 +1,7 @@
 """Visual Novel metadata endpoints."""
 
 import logging
+import re
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -220,25 +221,40 @@ async def search_vns(
         cached["query_time"] = round(time.time() - start_time, 3)
         return schemas.VNSearchResponse(**cached)
 
-    # Only select the columns needed for VNSummary response (165 bytes/row vs 748 for full ORM)
+    # Only select the columns needed for VNSummary response
     _browse_columns = [
         VisualNovel.id, VisualNovel.title, VisualNovel.title_jp,
         VisualNovel.title_romaji, VisualNovel.image_url, VisualNovel.image_sexual,
         VisualNovel.released, VisualNovel.rating, VisualNovel.votecount,
         VisualNovel.olang,
     ]
+    # Include description snippet only for text searches (used by search bar dropdown)
+    if q:
+        _browse_columns.append(func.left(VisualNovel.description, 200).label('description'))
     query = select(*_browse_columns)
     count_query = select(func.count(VisualNovel.id))
 
     # Text search
     if q:
         eq = _escape_like(q)
-        # Search in title, title_jp, and title_romaji
+        # Direct substring match
         search_filter = or_(
             VisualNovel.title.ilike(f"%{eq}%"),
             VisualNovel.title_jp.ilike(f"%{eq}%"),
             VisualNovel.title_romaji.ilike(f"%{eq}%"),
+            func.array_to_string(VisualNovel.aliases, ' ').ilike(f"%{eq}%"),
         )
+        # Normalized match: strip punctuation/spaces so "muvluv" matches "Muv-Luv",
+        # "steinsgate" matches "Steins;Gate", "fatestaynight" matches "Fate/stay night", etc.
+        normalized_q = re.sub(r'[^a-zA-Z0-9]', '', q)
+        if len(normalized_q) >= 2:
+            _strip = lambda col: func.regexp_replace(col, '[^a-zA-Z0-9]', '', 'g')
+            search_filter = or_(
+                search_filter,
+                _strip(VisualNovel.title).ilike(f"%{normalized_q}%"),
+                _strip(VisualNovel.title_romaji).ilike(f"%{normalized_q}%"),
+                _strip(func.array_to_string(VisualNovel.aliases, ' ')).ilike(f"%{normalized_q}%"),
+            )
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 
@@ -931,6 +947,7 @@ async def search_vns(
                 rating=vn.rating,
                 votecount=vn.votecount,
                 olang=vn.olang,
+                description=getattr(vn, 'description', None),
             )
             for vn in vns
         ],

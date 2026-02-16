@@ -45,7 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import schemas
-from app.db.models import Tag, Trait, Character, CharacterTrait, CharacterVN, VisualNovel
+from app.db.models import Tag, Trait, Character, CharacterTrait, CharacterVN, VisualNovel, Staff, Producer
 from app.services.stats_service import StatsService
 from app.services.user_service import UserService
 
@@ -1578,3 +1578,136 @@ async def get_seiyuu_characters(
         raise HTTPException(status_code=404, detail=f"Seiyuu {staff_id} not found")
 
     return result
+
+
+# ============ Sitemap ID endpoints ============
+
+
+@router.get("/tags/sitemap-ids")
+async def get_tag_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get tag IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Tag.id)).where(Tag.vn_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Tag.id)
+            .where(Tag.vn_count > 0)
+            .order_by(Tag.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
+
+@router.get("/traits/sitemap-ids")
+async def get_trait_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get trait IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Trait.id)).where(Trait.char_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Trait.id)
+            .where(Trait.char_count > 0)
+            .order_by(Trait.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
+
+@router.get("/staff/sitemap-ids")
+async def get_staff_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get staff IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Staff.id)).where(Staff.vn_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Staff.id)
+            .where(Staff.vn_count > 0)
+            .order_by(Staff.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
+
+@router.get("/seiyuu/sitemap-ids")
+async def get_seiyuu_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get seiyuu (voice actor) IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Staff.id)).where(Staff.seiyuu_vn_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Staff.id)
+            .where(Staff.seiyuu_vn_count > 0)
+            .order_by(Staff.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
+
+@router.get("/producers/sitemap-ids")
+async def get_producer_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get producer IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Producer.id)).where(Producer.vn_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Producer.id)
+            .where(Producer.vn_count > 0)
+            .order_by(Producer.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}

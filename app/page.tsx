@@ -27,6 +27,15 @@ export const metadata: Metadata = {
     title: 'VN Club | Learn Japanese with Visual Novels',
     description: 'Free guides, tools, and community for learning Japanese through visual novels. Text hooking, dictionary setup, Anki mining, and VN recommendations.',
     url: 'https://vnclub.org',
+    type: 'website',
+    images: [
+      {
+        url: '/assets/hikaru-icon2.webp',
+        width: 512,
+        height: 512,
+        alt: 'VN Club - Learn Japanese with Visual Novels',
+      },
+    ],
   },
 };
 
@@ -47,7 +56,7 @@ const websiteSchema = {
     '@type': 'SearchAction',
     target: {
       '@type': 'EntryPoint',
-      urlTemplate: 'https://vnclub.org/guides?search={search_term_string}',
+      urlTemplate: 'https://vnclub.org/browse/?q={search_term_string}',
     },
     'query-input': 'required name=search_term_string',
   },

@@ -607,6 +607,7 @@ export interface VNSearchResult {
   rating?: number;
   votecount?: number;
   olang?: string;
+  description?: string;  // Truncated description snippet (up to 200 chars)
 }
 
 export interface VNSearchResponse {
@@ -1486,9 +1487,10 @@ class VNDBStatsAPI {
    * Search for VNs.
    * ALL data comes from local database.
    */
-  async searchVNs(query: string, limit: number = 20): Promise<VNSearchResponse> {
+  async searchVNs(query: string, limit: number = 20, signal?: AbortSignal): Promise<VNSearchResponse> {
     return await this.fetch<VNSearchResponse>(
-      `/api/v1/vn/search/?q=${encodeURIComponent(query)}&limit=${limit}`
+      `/api/v1/vn/search/?q=${encodeURIComponent(query)}&limit=${limit}&nsfw=true&olang=ja`,
+      signal ? { signal } : undefined
     );
   }
 

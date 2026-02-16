@@ -3,11 +3,17 @@
 
 import { NextResponse } from 'next/server';
 import { getBackendUrlOptional } from '@/lib/config';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://vnclub.org';
-const URLS_PER_SITEMAP = 50000;
-const VN_BASE_ID = 1000;
-const CHAR_BASE_ID = 2000;
+import {
+  SITE_URL,
+  URLS_PER_SITEMAP,
+  VN_BASE_ID,
+  CHAR_BASE_ID,
+  TAG_BASE_ID,
+  TRAIT_BASE_ID,
+  STAFF_BASE_ID,
+  SEIYUU_BASE_ID,
+  PRODUCER_BASE_ID,
+} from '@/lib/sitemap-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,17 +32,32 @@ async function fetchTotal(path: string): Promise<number> {
   }
 }
 
+function pushChunks(ids: number[], baseId: number, total: number) {
+  const chunks = Math.ceil(total / URLS_PER_SITEMAP);
+  for (let i = 0; i < chunks; i++) ids.push(baseId + i);
+}
+
 export async function GET() {
   const ids: number[] = [0];
 
-  const vnTotal = await fetchTotal('/vn/sitemap-ids');
-  const charTotal = await fetchTotal('/characters/sitemap-ids');
+  const [vnTotal, charTotal, tagTotal, traitTotal, staffTotal, seiyuuTotal, producerTotal] =
+    await Promise.all([
+      fetchTotal('/vn/sitemap-ids'),
+      fetchTotal('/characters/sitemap-ids'),
+      fetchTotal('/stats/tags/sitemap-ids'),
+      fetchTotal('/stats/traits/sitemap-ids'),
+      fetchTotal('/stats/staff/sitemap-ids'),
+      fetchTotal('/stats/seiyuu/sitemap-ids'),
+      fetchTotal('/stats/producers/sitemap-ids'),
+    ]);
 
-  const vnChunks = Math.ceil(vnTotal / URLS_PER_SITEMAP);
-  const charChunks = Math.ceil(charTotal / URLS_PER_SITEMAP);
-
-  for (let i = 0; i < vnChunks; i++) ids.push(VN_BASE_ID + i);
-  for (let i = 0; i < charChunks; i++) ids.push(CHAR_BASE_ID + i);
+  pushChunks(ids, VN_BASE_ID, vnTotal);
+  pushChunks(ids, CHAR_BASE_ID, charTotal);
+  pushChunks(ids, TAG_BASE_ID, tagTotal);
+  pushChunks(ids, TRAIT_BASE_ID, traitTotal);
+  pushChunks(ids, STAFF_BASE_ID, staffTotal);
+  pushChunks(ids, SEIYUU_BASE_ID, seiyuuTotal);
+  pushChunks(ids, PRODUCER_BASE_ID, producerTotal);
 
   const lastmod = new Date().toISOString();
   const entries = ids

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, startTransition, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Search, Loader2, X, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { mutate } from 'swr';
@@ -128,8 +128,7 @@ export interface BrowsePageClientProps {
   serverGridSize?: GridSize;
 }
 
-export default function BrowsePageClient({ initialData, initialSearchParams, serverGridSize = 'medium' }: BrowsePageClientProps) {
-  const router = useRouter();
+export default function BrowsePageClient({ initialData, initialSearchParams, serverGridSize = 'small' }: BrowsePageClientProps) {
   const searchParams = useSearchParams();
   const { preference } = useTitlePreference();
 
@@ -148,15 +147,24 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (tab !== 'novels') {
       params.set('tab', tab);
     }
+    lastInternalQueryRef.current = params.toString();
     const url = `/browse/${params.toString() ? `?${params.toString()}` : ''}`;
-    window.history.pushState(null, '', url);
+    // Wrap in startTransition so React treats the resulting useSearchParams()
+    // update as non-urgent and keeps old content visible (no Suspense flash).
+    startTransition(() => {
+      window.history.pushState(null, '', url);
+    });
   }, []);
 
   const handleTabHover = useCallback((tab: BrowseTab) => {
     TAB_PRELOADERS[tab]?.();
   }, []);
 
-  // Parse initial state from URL (default: Japanese VNs only)
+  // Parse initial state from URL (default: Japanese VNs only).
+  // Only computed once on mount — these seed useState/useRef and mount-time effects.
+  // Using [] deps is intentional: searchParams is correct on first render, and internal
+  // URL updates (replaceState) must NOT cause these to recompute (avoids cascading
+  // re-renders that cause content flashes on Firefox under load).
   const initialFilters = useMemo((): BrowseFilters => ({
     q: searchParams.get('q') || undefined,
     first_char: searchParams.get('first_char') || undefined,
@@ -197,14 +205,14 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || 'desc',
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
     limit: ITEMS_PER_PAGE[serverGridSize],
-  }), [searchParams, serverGridSize]);
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Parse tags from URL
+  // Parse tags from URL — computed once on mount (same rationale as initialFilters)
   const initialTags = useMemo(() => {
     const includeTags = parseTagsFromUrl(searchParams.get('tag_names'), 'include');
     const excludeTags = parseTagsFromUrl(searchParams.get('exclude_tag_names'), 'exclude');
     return [...includeTags, ...excludeTags];
-  }, [searchParams]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // State - initialize from SSR data if available
   const [filters, setFilters] = useState<BrowseFilters>(initialFilters);
@@ -263,6 +271,12 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const resultsContainerRef = useRef<HTMLDivElement>(null);
   // Ref tracking latest pending filters for debounced fetches (avoids stale closures)
   const pendingFiltersRef = useRef<BrowseFilters>(initialFilters);
+  // Guard ref: stores the query string of the last URL we set internally.
+  // When searchParams changes, if it matches this value, we know the change was
+  // self-initiated and skip sync effects. This prevents cascading re-renders
+  // (replaceState → useSearchParams update → sync effect → unnecessary state/fetch work)
+  // that cause brief content flashes on Firefox under load.
+  const lastInternalQueryRef = useRef<string | null>(null);
 
   // Delayed loading overlay — only show for non-pagination loads after 200ms
   useEffect(() => {
@@ -302,8 +316,10 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     };
   }, []);
 
-  // Sync searchInput with URL when navigating (e.g., clicking Browse link resets query)
+  // Sync searchInput with URL when navigating (e.g., clicking Browse link resets query).
+  // Skip when the URL change was self-initiated — we already have the correct state.
   useEffect(() => {
+    if (lastInternalQueryRef.current !== null) return;
     const urlQuery = searchParams.get('q') || '';
     if (searchInput !== urlQuery) {
       setSearchInput(urlQuery);
@@ -596,15 +612,18 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
 
     const queryString = params.toString();
-    // Defer router.replace to avoid "Cannot update Router while rendering" errors.
-    // This is necessary because updateURL may be called from event handlers that
-    // trigger during React's render phase (e.g., state updaters).
-    setTimeout(() => {
-      startTransition(() => {
-        router.replace(queryString ? `/browse?${queryString}` : '/browse', { scroll: false });
-      });
-    }, 0);
-  }, [router, selectedTags]);
+    // Use replaceState directly instead of router.replace to avoid triggering a
+    // Next.js soft navigation (RSC refetch). This prevents the browser tab title
+    // from briefly flashing the URL while metadata is re-evaluated.
+    // Next.js patches History API, so useSearchParams() still updates correctly.
+    // Wrapped in startTransition so React treats the resulting useSearchParams()
+    // update as non-urgent and keeps old content visible (no Suspense flash).
+    lastInternalQueryRef.current = queryString;
+    const url = `/browse/${queryString ? `?${queryString}` : ''}`;
+    startTransition(() => {
+      window.history.replaceState(window.history.state, '', url);
+    });
+  }, [selectedTags]);
 
   // Fetch results (with prefetch cache support)
   const fetchResults = useCallback(async (currentFilters: BrowseFilters) => {
@@ -833,17 +852,25 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
   }, [activeTab]);
 
-  // Sync state when URL params change (e.g., clicking "Browse" nav link clears params)
+  // Sync state when URL params change (e.g., clicking "Browse" nav link clears params,
+  // or external navigation to /browse/?q=xxx from search bar).
+  // Skip when the URL change was self-initiated — we already have the correct state.
   useEffect(() => {
+    if (lastInternalQueryRef.current !== null) {
+      lastInternalQueryRef.current = null;
+      return;
+    }
+
     // Check if URL has been reset to no params (user clicked Browse link)
     const urlHasParams = searchParams.toString().length > 0;
-    const stateHasNonDefaultValues = filters.q || filters.first_char || filters.tags ||
-      filters.exclude_tags || filters.traits || filters.exclude_traits ||
-      (filters.olang && filters.olang !== 'ja') || filters.year_min || filters.year_max ||
-      filters.length || filters.minage || filters.platform ||
-      filters.staff || filters.seiyuu || filters.developer || filters.publisher ||
-      (filters.devstatus && filters.devstatus !== '-1') || selectedTags.length > 0 ||
-      (filters.page && filters.page !== 1); // Also reset if not on page 1
+    const currentFilters = pendingFiltersRef.current;
+    const stateHasNonDefaultValues = currentFilters.q || currentFilters.first_char || currentFilters.tags ||
+      currentFilters.exclude_tags || currentFilters.traits || currentFilters.exclude_traits ||
+      (currentFilters.olang && currentFilters.olang !== 'ja') || currentFilters.year_min || currentFilters.year_max ||
+      currentFilters.length || currentFilters.minage || currentFilters.platform ||
+      currentFilters.staff || currentFilters.seiyuu || currentFilters.developer || currentFilters.publisher ||
+      (currentFilters.devstatus && currentFilters.devstatus !== '-1') || selectedTags.length > 0 ||
+      (currentFilters.page && currentFilters.page !== 1); // Also reset if not on page 1
 
     // If URL has no params but state has non-default values, reset to defaults
     if (!urlHasParams && stateHasNonDefaultValues) {
@@ -859,9 +886,23 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
         tag_mode: 'and',
       };
       setFilters(defaultFilters);
+      pendingFiltersRef.current = defaultFilters;
       setSearchInput('');
       setSelectedTags([]);
       fetchResults(defaultFilters);
+      return;
+    }
+
+    // Sync q param from URL if it changed externally (e.g., navigated from search bar)
+    if (urlHasParams) {
+      const urlQ = searchParams.get('q') || undefined;
+      if (urlQ !== (currentFilters.q || undefined)) {
+        const updated = { ...currentFilters, q: urlQ, page: 1 };
+        setFilters(updated);
+        pendingFiltersRef.current = updated;
+        setSearchInput(urlQ || '');
+        fetchResults(updated);
+      }
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -878,7 +919,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     const newLimit = ITEMS_PER_PAGE[gridSize];
     if (filters.limit !== newLimit) {
       const currentPage = filters.page || 1;
-      const currentLimit = filters.limit || ITEMS_PER_PAGE['medium'];
+      const currentLimit = filters.limit || ITEMS_PER_PAGE['small'];
       const firstItemIndex = (currentPage - 1) * currentLimit;
       const equivalentPage = Math.max(1, Math.floor(firstItemIndex / newLimit) + 1);
       const updated = { ...filters, limit: newLimit, page: equivalentPage };

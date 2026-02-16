@@ -40,7 +40,8 @@ from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import insert, dialect as pg_dialect
+from sqlalchemy.schema import CreateIndex
 
 from app.db.database import async_session, async_session_maker, engine
 from app.db.models import (
@@ -81,7 +82,7 @@ def get_first_romaji_alias(alias_field: str | None) -> str | None:
 
     import re
 
-    for alias in alias_field.split("\n"):
+    for alias in alias_field.split("\\n"):
         alias = alias.strip()
         if not alias:
             continue
@@ -401,17 +402,29 @@ async def drop_import_indexes() -> dict[str, list[str]]:
 
     Returns dict mapping table_name -> [create_statement, ...] for recreation.
     Indexes are dropped to avoid update overhead during import.
+    Each index is dropped in its own transaction with a lock timeout to avoid
+    deadlocks with concurrent API queries.
     """
     indexes = await get_import_table_indexes()
     dropped: dict[str, list[str]] = {}
 
-    async with engine.begin() as conn:
-        for table, index_list in indexes.items():
-            dropped[table] = []
-            for index_name, create_stmt in index_list:
-                await conn.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
-                dropped[table].append(create_stmt)
-                logger.info(f"Dropped index: {index_name}")
+    for table, index_list in indexes.items():
+        dropped[table] = []
+        for index_name, create_stmt in index_list:
+            for attempt in range(3):
+                try:
+                    async with engine.begin() as conn:
+                        await conn.execute(text("SET LOCAL lock_timeout = '10s'"))
+                        await conn.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
+                    dropped[table].append(create_stmt)
+                    logger.info(f"Dropped index: {index_name}")
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        logger.warning(f"Failed to drop {index_name} (attempt {attempt + 1}/3): {e}, retrying...")
+                        await asyncio.sleep(2 ** attempt)
+                    else:
+                        logger.error(f"Failed to drop {index_name} after 3 attempts: {e}, skipping")
 
     total_dropped = sum(len(stmts) for stmts in dropped.values())
     logger.info(f"Dropped {total_dropped} indexes total")
@@ -444,6 +457,53 @@ async def recreate_import_indexes(dropped_indexes: dict[str, list[str]]):
         await conn.execute(text("RESET maintenance_work_mem"))
 
     logger.info(f"Recreated {created} indexes")
+
+    # Safety net: ensure any indexes orphaned by previous crashed imports are restored
+    await ensure_all_import_indexes()
+
+
+async def ensure_all_import_indexes():
+    """Ensure all model-defined indexes exist on import tables.
+
+    Safety net for indexes orphaned by crashed imports (dropped but never recreated).
+    Uses IF NOT EXISTS so it's a no-op for indexes that already exist.
+    """
+    from app.db.database import Base
+
+    # Get currently existing index names
+    async with async_session() as db:
+        result = await db.execute(text("""
+            SELECT indexname FROM pg_indexes
+            WHERE schemaname = 'public' AND tablename = ANY(:tables)
+        """), {"tables": IMPORT_TABLES})
+        existing = {row[0] for row in result}
+
+    # Check model-defined indexes and create any missing ones
+    missing = []
+    for table_name in IMPORT_TABLES:
+        table = Base.metadata.tables.get(table_name)
+        if table is None:
+            continue
+        for index in table.indexes:
+            if index.name not in existing:
+                missing.append(index)
+
+    if not missing:
+        return
+
+    logger.info(f"Found {len(missing)} missing indexes (likely from a previous crashed import), recreating...")
+    async with engine.begin() as conn:
+        await conn.execute(text("SET maintenance_work_mem = '512MB'"))
+        for index in missing:
+            try:
+                ddl = CreateIndex(index).compile(dialect=pg_dialect())
+                # Add IF NOT EXISTS for safety
+                stmt = str(ddl).replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS", 1)
+                logger.info(f"Restoring missing index: {index.name}")
+                await conn.execute(text(stmt))
+            except Exception as e:
+                logger.error(f"Failed to restore index {index.name}: {e}")
+        await conn.execute(text("RESET maintenance_work_mem"))
 
 
 async def analyze_import_tables():
@@ -970,7 +1030,10 @@ def _load_vn_titles(titles_file: str) -> dict[str, tuple[str, str | None, str | 
             if vn_id not in titles:
                 titles[vn_id] = (title, latin, None)
             elif lang == "en" and is_official:
-                titles[vn_id] = (title, latin, titles[vn_id][2])
+                # Preserve romaji from previous entry (e.g., Japanese latin field)
+                # if the English entry has no latin of its own
+                prev_latin = titles[vn_id][1]
+                titles[vn_id] = (title, latin or prev_latin, titles[vn_id][2])
             elif is_official and titles[vn_id][0] == "":
                 titles[vn_id] = (title, latin, titles[vn_id][2])
 
@@ -1155,12 +1218,21 @@ async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, imag
                         except (ValueError, TypeError):
                             pass
 
+                    # Parse aliases (separated by literal \n in VNDB dump TSV)
+                    alias_raw = row.get("alias", "")
+                    aliases = None
+                    if alias_raw and alias_raw != "\\N":
+                        aliases = [sanitize_text(a.strip()) for a in alias_raw.split("\\n") if a.strip()]
+                        if not aliases:
+                            aliases = None
+
                     imported_ids.add(vn_id)
                     batch.append({
                         "id": vn_id,
                         "title": title,
                         "title_romaji": title_romaji or get_first_romaji_alias(row.get("alias")),
                         "title_jp": title_jp,
+                        "aliases": aliases,
                         "description": sanitize_text(row.get("description")),
                         "image_url": image_url,
                         "image_sexual": image_sexual,
@@ -1579,6 +1651,7 @@ async def _upsert_vns(db: AsyncSession, batch: list[dict]):
             "title": stmt.excluded.title,
             "title_romaji": stmt.excluded.title_romaji,
             "title_jp": stmt.excluded.title_jp,
+            "aliases": stmt.excluded.aliases,
             "description": stmt.excluded.description,
             "image_url": stmt.excluded.image_url,
             "image_sexual": stmt.excluded.image_sexual,

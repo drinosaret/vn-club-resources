@@ -175,7 +175,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         ref={imgRef}
         src={src}
         alt={alt}
-        className={className}
+        className={`${className}${shouldBlur ? ' invisible' : ''}`}
         loading={loading}
         decoding="async"
         srcSet={srcSet}
@@ -208,7 +208,7 @@ export function NSFWNextImage({ src, alt, imageSexual, vnId, className = '', fil
       <Image
         src={src}
         alt={alt}
-        className={className}
+        className={`${className}${shouldBlur ? ' invisible' : ''}`}
         fill={fill}
         sizes={sizes}
         priority={priority}

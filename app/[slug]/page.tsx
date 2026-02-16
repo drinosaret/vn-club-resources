@@ -101,6 +101,22 @@ const mainGuideFAQ = {
         text: 'As a beginner, expect to spend significantly more time than native readers. A 10-hour VN might take 40-80 hours. Speed improves rapidly with practice. After reading a few VNs, most learners see dramatic improvement in reading speed and comprehension.',
       },
     },
+    {
+      '@type': 'Question',
+      name: 'What is Textractor and how does it work?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Textractor is a free, open-source text hooking tool that extracts text from visual novels in real time. It hooks into the game process and captures Japanese text as it appears on screen, letting you copy it to clipboard-reading dictionary tools like JL or Yomitan for instant lookups. Our Textractor guide covers installation and setup in detail.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Do I need to know Japanese before reading visual novels?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'You should learn hiragana and katakana first, which takes about a week. After that, you can start reading with dictionary tools to look up every word you don\'t know. Many learners start reading their first VN with minimal grammar knowledge and learn through immersion. The key is having the right tools set up to make lookups fast and effortless.',
+      },
+    },
   ],
 };
 

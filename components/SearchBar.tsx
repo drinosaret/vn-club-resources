@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, FileText, Newspaper, X } from 'lucide-react';
+import { Search, FileText, Newspaper, X, Gamepad2, ArrowRight } from 'lucide-react';
 import { searchContent, SearchResult } from '@/lib/search';
+import { vndbStatsApi, VNSearchResult } from '@/lib/vndb-stats-api';
+import { getProxiedImageUrl, getTinySrc } from '@/lib/vndb-image-cache';
+import { getDisplayTitle, useTitlePreference } from '@/lib/title-preference';
+import { stripBBCode } from '@/lib/bbcode';
 
 // Maximum search query length to prevent ReDoS attacks
 const MAX_QUERY_LENGTH = 100;
+const VN_RESULT_LIMIT = 5;
 
 interface SearchBarProps {
   className?: string;
@@ -16,14 +21,22 @@ interface SearchBarProps {
 
 export default function SearchBar({ className = '', onClose, isMobile = false }: SearchBarProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [guideResults, setGuideResults] = useState<SearchResult[]>([]);
+  const [vnResults, setVnResults] = useState<VNSearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prefetchedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const router = useRouter();
+  const { preference } = useTitlePreference();
+
+  // Total navigable items: guides + VNs + "See all VNs" link (if VN results exist)
+  const totalItems = useMemo(() => {
+    return guideResults.length + vnResults.length + (vnResults.length > 0 ? 1 : 0);
+  }, [guideResults.length, vnResults.length]);
 
   // Prefetch search index on first focus for faster search
   const handleFocus = useCallback(() => {
@@ -38,29 +51,55 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
     }
   }, []);
 
-  // Debounced search
+  // Debounced search — guides + VNs in parallel
   useEffect(() => {
     if (!query.trim()) {
-      setResults([]);
+      setGuideResults([]);
+      setVnResults([]);
       setIsOpen(false);
       return;
     }
 
     const timeoutId = setTimeout(async () => {
       setIsLoading(true);
+
+      // Cancel any in-flight VN search
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       try {
-        const searchResults = await searchContent(query);
-        setResults(searchResults);
-        setIsOpen(true);
+        const [guideSettled, vnSettled] = await Promise.allSettled([
+          searchContent(query),
+          vndbStatsApi.searchVNs(query, VN_RESULT_LIMIT, controller.signal),
+        ]);
+
+        // Don't update state if this request was aborted
+        if (controller.signal.aborted) return;
+
+        const guides = guideSettled.status === 'fulfilled' ? guideSettled.value : [];
+        const vns = vnSettled.status === 'fulfilled' ? vnSettled.value.results : [];
+
+        setGuideResults(guides);
+        setVnResults(vns);
+        setIsOpen(guides.length > 0 || vns.length > 0);
         setSelectedIndex(-1);
       } catch {
-        setResults([]);
+        if (!controller.signal.aborted) {
+          setGuideResults([]);
+          setVnResults([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     }, 200);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      abortRef.current?.abort();
+    };
   }, [query]);
 
   // Close dropdown when clicking outside
@@ -75,31 +114,61 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navigateToResult = useCallback((result: SearchResult) => {
-    router.push(`/${result.slug}`);
+  const closeAndReset = useCallback(() => {
     setQuery('');
     setIsOpen(false);
-    setResults([]);
+    setGuideResults([]);
+    setVnResults([]);
     onClose?.();
-  }, [router, onClose]);
+  }, [onClose]);
+
+  const navigateToGuide = useCallback((result: SearchResult) => {
+    router.push(`/${result.slug}`);
+    closeAndReset();
+  }, [router, closeAndReset]);
+
+  const navigateToVN = useCallback((vn: VNSearchResult) => {
+    const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
+    router.push(`/vn/${vnId}/`);
+    closeAndReset();
+  }, [router, closeAndReset]);
+
+  const navigateToBrowse = useCallback(() => {
+    router.push(`/browse/?q=${encodeURIComponent(query.trim())}`);
+    closeAndReset();
+  }, [router, query, closeAndReset]);
+
+  // Map flat selectedIndex to the correct section/action
+  const handleSelect = useCallback((index: number) => {
+    if (index < 0) return;
+
+    if (index < guideResults.length) {
+      navigateToGuide(guideResults[index]);
+    } else if (index < guideResults.length + vnResults.length) {
+      navigateToVN(vnResults[index - guideResults.length]);
+    } else {
+      // "See all visual novels" link
+      navigateToBrowse();
+    }
+  }, [guideResults, vnResults, navigateToGuide, navigateToVN, navigateToBrowse]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isOpen || results.length === 0) return;
+    if (!isOpen || totalItems === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => (prev < results.length - 1 ? prev + 1 : 0));
+        setSelectedIndex(prev => (prev < totalItems - 1 ? prev + 1 : 0));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : results.length - 1));
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : totalItems - 1));
         break;
       case 'Enter':
         e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < results.length) {
-          navigateToResult(results[selectedIndex]);
+        if (selectedIndex >= 0) {
+          handleSelect(selectedIndex);
         }
         break;
       case 'Escape':
@@ -108,24 +177,39 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
         inputRef.current?.blur();
         break;
     }
-  }, [isOpen, results, selectedIndex, navigateToResult]);
+  }, [isOpen, totalItems, selectedIndex, handleSelect]);
 
   const clearSearch = () => {
     setQuery('');
-    setResults([]);
+    setGuideResults([]);
+    setVnResults([]);
     setIsOpen(false);
     inputRef.current?.focus();
   };
 
-  const highlightMatch = (text: string, query: string) => {
+  const highlightMatch = (text: string, searchQuery: string) => {
     // Validate inputs to prevent ReDoS
-    const trimmedQuery = query.trim().slice(0, MAX_QUERY_LENGTH);
+    const trimmedQuery = searchQuery.trim().slice(0, MAX_QUERY_LENGTH);
     if (!trimmedQuery) return text;
 
     // Escape regex special characters
     const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedQuery})`, 'gi');
-    const parts = text.split(regex);
+    let regex = new RegExp(`(${escapedQuery})`, 'gi');
+    let parts = text.split(regex);
+
+    // If no exact match, try normalized match: allow separators between characters
+    // so "muvluv" highlights "Muv-Luv", "steinsgate" highlights "Steins;Gate", etc.
+    if (parts.length <= 1) {
+      const alphanumOnly = trimmedQuery.replace(/[^a-zA-Z0-9]/g, '');
+      if (alphanumOnly.length >= 2) {
+        const fuzzyPattern = alphanumOnly
+          .split('')
+          .map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+          .join('[^a-zA-Z0-9]*');
+        regex = new RegExp(`(${fuzzyPattern})`, 'gi');
+        parts = text.split(regex);
+      }
+    }
 
     return parts.map((part, i) =>
       regex.test(part) ? (
@@ -137,6 +221,8 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
       )
     );
   };
+
+  const hasResults = guideResults.length > 0 || vnResults.length > 0;
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -150,7 +236,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
           onKeyDown={handleKeyDown}
           onFocus={() => {
             handleFocus(); // Prefetch search index on first focus
-            query.trim() && results.length > 0 && setIsOpen(true);
+            query.trim() && hasResults && setIsOpen(true);
           }}
           placeholder="Search..."
           className={`
@@ -191,8 +277,8 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
             bg-white dark:bg-gray-900
             border border-gray-200 dark:border-gray-700
             rounded-lg shadow-lg
-            max-h-96 overflow-y-auto
-            ${isMobile ? 'left-0 right-0' : 'min-w-80'}
+            max-h-[28rem] overflow-y-auto
+            ${isMobile ? 'left-0 right-0' : 'min-w-[420px]'}
           `}
         >
           {isLoading ? (
@@ -200,53 +286,174 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
               <div className="inline-block w-4 h-4 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin mr-2" />
               Searching...
             </div>
-          ) : results.length === 0 ? (
+          ) : !hasResults ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               No results found for &ldquo;{query}&rdquo;
             </div>
           ) : (
-            <ul className="py-2">
-              {results.map((result, index) => (
-                <li key={result.id}>
+            <div>
+              {/* Guide results */}
+              {guideResults.length > 0 && (
+                <div>
+                  {vnResults.length > 0 && (
+                    <div className="px-4 pt-2.5 pb-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Guides
+                    </div>
+                  )}
+                  <ul className={vnResults.length > 0 ? 'pb-1' : 'py-2'}>
+                    {guideResults.map((result, index) => (
+                      <li key={result.id}>
+                        <button
+                          onClick={() => navigateToGuide(result)}
+                          onMouseEnter={() => setSelectedIndex(index)}
+                          role="option"
+                          aria-selected={index === selectedIndex}
+                          className={`
+                            w-full px-4 py-3 text-left
+                            hover:bg-gray-100 dark:hover:bg-gray-800
+                            focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800
+                            border-b border-gray-100 dark:border-gray-800 last:border-b-0
+                            ${index === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
+                          `}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 mt-0.5">
+                              {result.type === 'guide' ? (
+                                <FileText className="w-4 h-4 text-indigo-500" />
+                              ) : (
+                                <Newspaper className="w-4 h-4 text-purple-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {highlightMatch(result.title, query)}
+                              </div>
+                              {result.section && (
+                                <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
+                                  in section: {result.section}
+                                </div>
+                              )}
+                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                                {highlightMatch(result.excerpt, query)}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* VN results */}
+              {vnResults.length > 0 && (
+                <div className={guideResults.length > 0 ? 'border-t border-gray-200 dark:border-gray-700' : ''}>
+                  <div className="px-4 pt-2.5 pb-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Visual Novels
+                  </div>
+                  <ul className="pb-1">
+                    {vnResults.map((vn, index) => {
+                      const flatIndex = guideResults.length + index;
+                      const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
+                      const isNsfw = vn.image_sexual != null && vn.image_sexual >= 1.5;
+                      const proxied = vn.image_url ? getProxiedImageUrl(vn.image_url, { width: 128, vnId }) : null;
+                      const imageUrl = proxied && isNsfw ? getTinySrc(proxied) : proxied;
+                      const displayTitle = getDisplayTitle(vn, preference);
+                      // Show the "other" title as subtitle (JP when showing romaji, romaji when showing JP)
+                      const subtitle = (preference === 'japanese'
+                        ? (vn.title_romaji || vn.title || '')
+                        : (vn.title_jp || '')
+                      ).replace(/\\n|\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+                      return (
+                        <li key={vn.id}>
+                          <button
+                            onClick={() => navigateToVN(vn)}
+                            onMouseEnter={() => setSelectedIndex(flatIndex)}
+                            role="option"
+                            aria-selected={flatIndex === selectedIndex}
+                            className={`
+                              w-full px-4 py-2.5 text-left
+                              hover:bg-gray-100 dark:hover:bg-gray-800
+                              focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800
+                              border-b border-gray-100 dark:border-gray-800 last:border-b-0
+                              ${flatIndex === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
+                            `}
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Thumbnail */}
+                              <div className="flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={displayTitle}
+                                    className="w-full h-full object-cover"
+                                    style={isNsfw ? { imageRendering: 'pixelated' } : undefined}
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Gamepad2 className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Details */}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                  {highlightMatch(displayTitle, query)}
+                                </div>
+                                {subtitle && subtitle !== displayTitle && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    {subtitle}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                  {vn.rating != null && (
+                                    <span className="text-yellow-600 dark:text-yellow-400">
+                                      ★ {vn.rating.toFixed(1)}
+                                    </span>
+                                  )}
+                                  {vn.released && (
+                                    <span>{vn.released.slice(0, 4)}</span>
+                                  )}
+                                </div>
+                                {vn.description && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                    {stripBBCode(vn.description).replace(/\n/g, ' ')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {/* "See all visual novels" link */}
                   <button
-                    onClick={() => navigateToResult(result)}
-                    onMouseEnter={() => setSelectedIndex(index)}
+                    onClick={navigateToBrowse}
+                    onMouseEnter={() => setSelectedIndex(guideResults.length + vnResults.length)}
                     role="option"
-                    aria-selected={index === selectedIndex}
+                    aria-selected={selectedIndex === guideResults.length + vnResults.length}
                     className={`
-                      w-full px-4 py-3 text-left
+                      w-full px-4 py-2.5 text-left text-sm
+                      text-indigo-600 dark:text-indigo-400
                       hover:bg-gray-100 dark:hover:bg-gray-800
-                      focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800
-                      border-b border-gray-100 dark:border-gray-800 last:border-b-0
-                      ${index === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
+                      focus:outline-none
+                      border-t border-gray-200 dark:border-gray-700
+                      flex items-center gap-2
+                      ${selectedIndex === guideResults.length + vnResults.length ? 'bg-gray-100 dark:bg-gray-800' : ''}
                     `}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {result.type === 'guide' ? (
-                          <FileText className="w-4 h-4 text-indigo-500" />
-                        ) : (
-                          <Newspaper className="w-4 h-4 text-purple-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {highlightMatch(result.title, query)}
-                        </div>
-                        {result.section && (
-                          <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
-                            in section: {result.section}
-                          </div>
-                        )}
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                          {highlightMatch(result.excerpt, query)}
-                        </div>
-                      </div>
-                    </div>
+                    <Search className="w-3.5 h-3.5" />
+                    Search all visual novels for &ldquo;{query}&rdquo;
+                    <ArrowRight className="w-3.5 h-3.5 ml-auto" />
                   </button>
-                </li>
-              ))}
-            </ul>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
