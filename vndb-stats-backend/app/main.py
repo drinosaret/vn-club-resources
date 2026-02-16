@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import timezone
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -36,7 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.api.v1.router import api_router
-from app.db.database import init_db, get_db, async_session_maker
+from app.db.database import init_db, get_db
 from app.db.models import VisualNovel, SystemMetadata
 from app.core.tasks import TaskManager
 
@@ -60,103 +60,6 @@ scheduler = AsyncIOScheduler(
     },
 )
 task_manager = TaskManager.get_instance()
-
-
-async def run_daily_update():
-    """Run daily data update from VNDB dumps."""
-    import time
-    from app.ingestion.importer import run_full_import
-    from app.ingestion.model_trainer import (
-        compute_tag_vectors,
-        train_collaborative_filter,
-        compute_vn_similarities,
-        compute_item_item_similarity,
-        swap_similarity_tables,
-    )
-
-    start_time = time.time()
-    logger.info("=" * 60)
-    logger.info("STARTING DAILY VNDB DATA UPDATE")
-    logger.info("=" * 60)
-
-    try:
-        # Phase 1: Import data
-        logger.info("\n>>> PHASE 1/3: DATA IMPORT <<<")
-        await run_full_import(settings.dump_storage_path)
-
-        # Phase 2: Compute models
-        logger.info("\n>>> PHASE 2/3: COMPUTING MODELS <<<")
-        await compute_tag_vectors()
-        await train_collaborative_filter()
-
-        # Phase 3: Compute similarity tables
-        logger.info("\n>>> PHASE 3/3: COMPUTING SIMILARITY TABLES <<<")
-        logger.info("This enables 'Similar Games' and 'Users Also Read' features")
-        await compute_vn_similarities()  # Content-based (tag similarity)
-        await compute_item_item_similarity()  # Collaborative filtering
-        await swap_similarity_tables()
-
-        # Update last import time
-        async with async_session_maker() as session:
-            result = await session.execute(
-                select(SystemMetadata).where(SystemMetadata.key == "last_import")
-            )
-            metadata = result.scalar_one_or_none()
-            now = datetime.utcnow().isoformat()
-            if metadata:
-                metadata.value = now
-            else:
-                metadata = SystemMetadata(key="last_import", value=now)
-                session.add(metadata)
-            await session.commit()
-
-        elapsed = time.time() - start_time
-        logger.info("=" * 60)
-        logger.info(f"DAILY UPDATE COMPLETE - Total time: {int(elapsed // 60)}m {int(elapsed % 60)}s")
-        logger.info("=" * 60)
-    except Exception as e:
-        logger.error(f"Daily update failed: {e}")
-
-
-async def check_and_update_if_stale():
-    """Check if data is stale (>24h) and trigger update if so.
-
-    Set AUTO_UPDATE=false environment variable to disable automatic updates on startup.
-    """
-    import os
-
-    # Allow disabling auto-update via environment variable
-    if os.environ.get("AUTO_UPDATE", "true").lower() == "false":
-        logger.info("AUTO_UPDATE=false - skipping automatic update check")
-        return
-
-    try:
-        async with async_session_maker() as session:
-            result = await session.execute(
-                select(SystemMetadata).where(SystemMetadata.key == "last_import")
-            )
-            metadata = result.scalar_one_or_none()
-
-            if metadata and metadata.value:
-                last_import = datetime.fromisoformat(metadata.value.replace('Z', '+00:00'))
-                hours_since = (datetime.utcnow() - last_import.replace(tzinfo=None)).total_seconds() / 3600
-
-                if hours_since > 24:
-                    logger.info(f"Data is {hours_since:.1f} hours old - triggering update")
-                    task_manager.create_task(
-                        run_daily_update(),
-                        name="daily_update_stale",
-                    )
-                else:
-                    logger.info(f"Data is {hours_since:.1f} hours old - still fresh")
-            else:
-                logger.info("No last_import found - triggering initial update")
-                task_manager.create_task(
-                    run_daily_update(),
-                    name="daily_update_initial",
-                )
-    except Exception as e:
-        logger.error(f"Failed to check data staleness: {e}")
 
 
 @asynccontextmanager
@@ -203,12 +106,11 @@ async def lifespan(app: FastAPI):
         logging.getLogger().addHandler(discord_log_handler)
         logger.info("Discord webhook logging enabled for API")
 
-    # Check if data is stale and update if needed
-    await check_and_update_if_stale()
-
     # Note: Daily VNDB imports are handled by the worker container
     # to avoid blocking API queries during database-intensive operations.
     # See scripts/worker.py for the scheduled import job.
+    # Do NOT run check_and_update_if_stale() here — it triggers heavy
+    # computation (model training, similarity matrices) that starves API requests.
 
     # News aggregation jobs (matching Discord bot schedule)
     # VNDB New VNs - 10:00 UTC daily
