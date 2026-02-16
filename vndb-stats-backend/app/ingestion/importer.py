@@ -377,14 +377,17 @@ STAGING_TABLES = [
 ]
 
 
-async def get_table_indexes(table_name: str) -> list[tuple[str, str]]:
+async def get_table_indexes(table_name: str, db: AsyncSession | None = None) -> list[tuple[str, str]]:
     """Get all non-primary-key indexes for a specific table.
 
     Returns list of (index_name, create_statement) tuples.
     Used by swap_staging_to_live to recreate indexes on staging before swap.
+
+    Pass an existing `db` session when calling inside an open transaction
+    to avoid self-deadlock (new session blocking on the caller's locks).
     """
-    async with async_session() as db:
-        result = await db.execute(text("""
+    async def _query(session: AsyncSession):
+        result = await session.execute(text("""
             SELECT indexname, indexdef
             FROM pg_indexes
             WHERE schemaname = 'public'
@@ -393,6 +396,11 @@ async def get_table_indexes(table_name: str) -> list[tuple[str, str]]:
             ORDER BY indexname
         """), {"table": table_name})
         return [(row[0], row[1]) for row in result]
+
+    if db is not None:
+        return await _query(db)
+    async with async_session() as new_db:
+        return await _query(new_db)
 
 
 async def prepare_staging(table_name: str):
@@ -504,12 +512,13 @@ async def swap_staging_to_live(table_names: str | list[str]) -> bool:
                     ))
 
                 # Drop canonical-named indexes inherited from old live (now on staging)
-                staging_indexes = await get_table_indexes(staging)
+                # Pass db to avoid self-deadlock (we hold locks on staging in this txn)
+                staging_indexes = await get_table_indexes(staging, db=db)
                 for idx_name, _ in staging_indexes:
                     await db.execute(text(f"DROP INDEX IF EXISTS {idx_name}"))
 
                 # Rename _new indexes on live table to canonical names (for next cycle)
-                live_indexes = await get_table_indexes(table)
+                live_indexes = await get_table_indexes(table, db=db)
                 for idx_name, _ in live_indexes:
                     if idx_name.endswith("_new"):
                         canonical_name = idx_name[:-4]  # strip "_new" suffix
