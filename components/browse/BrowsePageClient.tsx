@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, startTransition, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, startTransition, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Search, Loader2, X, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
@@ -91,6 +91,48 @@ const ITEMS_PER_PAGE: Record<GridSize, number> = {
   large: 28,   // 4 cols × 7 rows at xl
 };
 
+/** Parse browse filters from URL search params. Used for both initial mount and
+ *  back-navigation recovery (where window.location.search is more reliable than
+ *  useSearchParams which may return stale cached RSC values). */
+function parseFiltersFromParams(params: URLSearchParams, limit: number): BrowseFilters {
+  return {
+    q: params.get('q') || undefined,
+    first_char: params.get('first_char') || undefined,
+    tags: params.get('tags') || undefined,
+    exclude_tags: params.get('exclude_tags') || undefined,
+    traits: params.get('traits') || undefined,
+    exclude_traits: params.get('exclude_traits') || undefined,
+    tag_mode: (params.get('tag_mode') as 'and' | 'or') || 'and',
+    include_children: params.has('include_children') ? params.get('include_children') === 'true' : true,
+    year_min: params.get('year_min') ? Number(params.get('year_min')) : undefined,
+    year_max: params.get('year_max') ? Number(params.get('year_max')) : undefined,
+    min_rating: params.get('min_rating') ? Number(params.get('min_rating')) : undefined,
+    max_rating: params.get('max_rating') ? Number(params.get('max_rating')) : undefined,
+    min_votecount: params.get('min_votecount') ? Number(params.get('min_votecount')) : undefined,
+    max_votecount: params.get('max_votecount') ? Number(params.get('max_votecount')) : undefined,
+    length: params.get('length') || undefined,
+    exclude_length: params.get('exclude_length') || undefined,
+    minage: params.get('minage') || undefined,
+    exclude_minage: params.get('exclude_minage') || undefined,
+    devstatus: params.get('devstatus') || '-1',
+    exclude_devstatus: params.get('exclude_devstatus') || undefined,
+    olang: params.has('olang') ? (params.get('olang') || undefined) : 'ja',
+    exclude_olang: params.get('exclude_olang') || undefined,
+    platform: params.get('platform') || undefined,
+    exclude_platform: params.get('exclude_platform') || undefined,
+    spoiler_level: params.get('spoiler_level') ? Number(params.get('spoiler_level')) : 0,
+    staff: params.get('staff') || undefined,
+    seiyuu: params.get('seiyuu') || undefined,
+    developer: params.get('developer') || undefined,
+    publisher: params.get('publisher') || undefined,
+    producer: params.get('producer') || undefined,
+    sort: (params.get('sort') as BrowseFilters['sort']) || 'rating',
+    sort_order: (params.get('sort_order') as 'asc' | 'desc') || 'desc',
+    page: params.get('page') ? Number(params.get('page')) : 1,
+    limit,
+  };
+}
+
 // Helper to parse tag/trait/entity names from URL (stored as "type:id:name,type:id:name")
 function parseTagsFromUrl(param: string | null, mode: 'include' | 'exclude'): SelectedTag[] {
   if (!param) return [];
@@ -165,47 +207,10 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   // Using [] deps is intentional: searchParams is correct on first render, and internal
   // URL updates (replaceState) must NOT cause these to recompute (avoids cascading
   // re-renders that cause content flashes on Firefox under load).
-  const initialFilters = useMemo((): BrowseFilters => ({
-    q: searchParams.get('q') || undefined,
-    first_char: searchParams.get('first_char') || undefined,
-    tags: searchParams.get('tags') || undefined,
-    exclude_tags: searchParams.get('exclude_tags') || undefined,
-    traits: searchParams.get('traits') || undefined,
-    exclude_traits: searchParams.get('exclude_traits') || undefined,
-    tag_mode: (searchParams.get('tag_mode') as 'and' | 'or') || 'and',
-    include_children: searchParams.has('include_children') ? searchParams.get('include_children') === 'true' : true, // Default to true
-    year_min: searchParams.get('year_min') ? Number(searchParams.get('year_min')) : undefined,
-    year_max: searchParams.get('year_max') ? Number(searchParams.get('year_max')) : undefined,
-    min_rating: searchParams.get('min_rating') ? Number(searchParams.get('min_rating')) : undefined,
-    max_rating: searchParams.get('max_rating') ? Number(searchParams.get('max_rating')) : undefined,
-    min_votecount: searchParams.get('min_votecount') ? Number(searchParams.get('min_votecount')) : undefined,
-    max_votecount: searchParams.get('max_votecount') ? Number(searchParams.get('max_votecount')) : undefined,
-    // Multi-select filters (comma-separated)
-    // Empty string in URL means "no filter" (user explicitly cleared it)
-    // Absent param means "use default" (for olang, defaults to 'ja')
-    length: searchParams.get('length') || undefined,
-    exclude_length: searchParams.get('exclude_length') || undefined,
-    minage: searchParams.get('minage') || undefined,
-    exclude_minage: searchParams.get('exclude_minage') || undefined,
-    devstatus: searchParams.get('devstatus') || '-1', // Default: all status
-    exclude_devstatus: searchParams.get('exclude_devstatus') || undefined,
-    // olang: empty string = all languages, absent = default to Japanese
-    olang: searchParams.has('olang') ? (searchParams.get('olang') || undefined) : 'ja',
-    exclude_olang: searchParams.get('exclude_olang') || undefined,
-    platform: searchParams.get('platform') || undefined,
-    exclude_platform: searchParams.get('exclude_platform') || undefined,
-    spoiler_level: searchParams.get('spoiler_level') ? Number(searchParams.get('spoiler_level')) : 0, // Default: hide spoilers
-    // Entity filters
-    staff: searchParams.get('staff') || undefined,
-    seiyuu: searchParams.get('seiyuu') || undefined,
-    developer: searchParams.get('developer') || undefined,
-    publisher: searchParams.get('publisher') || undefined,
-    producer: searchParams.get('producer') || undefined,
-    sort: (searchParams.get('sort') as BrowseFilters['sort']) || 'rating',
-    sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || 'desc',
-    page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
-    limit: ITEMS_PER_PAGE[serverGridSize],
-  }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const initialFilters = useMemo(
+    () => parseFiltersFromParams(searchParams, ITEMS_PER_PAGE[serverGridSize]),
+    [] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // Parse tags from URL — computed once on mount (same rationale as initialFilters)
   const initialTags = useMemo(() => {
@@ -235,9 +240,49 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false); // Delayed overlay for filter/search changes
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<SelectedTag[]>(initialTags);
+  // Key to force VNGrid remount on back navigation — clears its internal displayResults
+  // buffer which otherwise keeps showing stale covers during the refetch.
+  const [gridKey, setGridKey] = useState(0);
   // Initialize from server-known grid size — SSR data already uses this limit,
   // so server and client render identically. No useLayoutEffect needed.
   const [gridSize, setGridSizeState] = useState<GridSize>(serverGridSize);
+  // On mount: sync grid size from localStorage and refetch on back navigation.
+  // Two problems this solves:
+  // 1. Stale RSC cache: user changes to medium, clicks a VN, presses back → cached
+  //    RSC payload still has serverGridSize='small' with wrong limit/data.
+  // 2. Stale initialData: cached RSC has data from the FIRST /browse/ visit (page 1,
+  //    default filters) but the URL has the user's actual state (page 3, filters, etc.).
+  // On back nav, refetch with URL-derived filters + correct grid size limit.
+  // useLayoutEffect runs before paint — prevents flash of stale covers on back navigation.
+  useLayoutEffect(() => {
+    // Read actual grid size from localStorage (always current, unlike cached serverGridSize)
+    let actualGridSize: GridSize = gridSize;
+    try {
+      const stored = localStorage.getItem('browse-grid-size');
+      if (stored && (stored === 'small' || stored === 'medium' || stored === 'large')) {
+        actualGridSize = stored;
+        if (stored !== gridSize) {
+          setGridSizeState(stored);
+        }
+      }
+    } catch {}
+
+    // On back navigation, cached initialData is likely stale — refetch with correct params.
+    // Peek at the flag (nav detection effect will still consume it for scroll restoration).
+    // Read from window.location.search (always the real browser URL) instead of
+    // useSearchParams() which may return stale params from the cached RSC payload.
+    const isBackNav = sessionStorage.getItem('is-popstate-navigation') === 'true';
+    if (isBackNav) {
+      const correctLimit = ITEMS_PER_PAGE[actualGridSize];
+      const urlParams = new URLSearchParams(window.location.search);
+      const correctFilters = parseFiltersFromParams(urlParams, correctLimit);
+      setFilters(correctFilters);
+      pendingFiltersRef.current = correctFilters;
+      setResults([]); // Clear stale cached results so VNGrid shows skeleton, not wrong covers
+      setGridKey(k => k + 1); // Force VNGrid remount to clear its internal displayResults buffer
+      fetchResults(correctFilters);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const setGridSize = useCallback((size: GridSize) => {
     setGridSizeState(size);
     // Persist to cookie (server reads it for SSR) and localStorage (fallback)
@@ -1399,6 +1444,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             {/* Results Grid */}
             <div>
               <VNGrid
+                key={gridKey}
                 results={results}
                 isLoading={isLoading}
                 showOverlay={showLoadingOverlay}

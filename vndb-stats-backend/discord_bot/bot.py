@@ -16,7 +16,6 @@ COG_EXTENSIONS = [
     "discord_bot.cogs.blacklist_new",   # /blacklist - cover blacklist management
     "discord_bot.cogs.news_new",        # /news - news feed management
     "discord_bot.cogs.announcements",   # /announcements - announcement management
-    "discord_bot.cogs.rss",             # /rss - RSS feed management
 ]
 
 # Legacy cogs (kept for reference, can be removed once new cogs are verified)

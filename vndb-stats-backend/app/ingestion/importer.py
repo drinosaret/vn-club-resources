@@ -356,7 +356,7 @@ async def mark_import_complete(source_path: str, table_name: str):
         logger.info(f"Marked {table_name} import complete (mtime: {mtime})")
 
 
-# ============ Index Management for Fast Imports ============
+# ============ Index Management & Staging Table Support ============
 
 # Tables that are imported from VNDB dumps (not caches or computed tables)
 IMPORT_TABLES = [
@@ -367,99 +367,174 @@ IMPORT_TABLES = [
     'release_platforms', 'release_media', 'release_extlinks',
 ]
 
+# Tables that use the staging + atomic swap pattern (TRUNCATE+COPY tables).
+# These have corresponding {table}_staging tables created by migration 025.
+STAGING_TABLES = [
+    'global_votes', 'vn_tags', 'vn_staff', 'vn_seiyuu', 'vn_relations',
+    'character_vn', 'character_traits',
+    'release_vn', 'release_producers', 'release_platforms', 'release_media', 'release_extlinks',
+    'ulist_vns', 'ulist_labels', 'vndb_users',
+]
 
-async def get_import_table_indexes() -> dict[str, list[tuple[str, str]]]:
-    """Get all non-primary-key indexes for import tables.
 
-    Returns dict mapping table_name -> [(index_name, create_statement), ...]
-    Used to drop indexes before import and recreate them after.
+async def get_table_indexes(table_name: str) -> list[tuple[str, str]]:
+    """Get all non-primary-key indexes for a specific table.
+
+    Returns list of (index_name, create_statement) tuples.
+    Used by swap_staging_to_live to recreate indexes on staging before swap.
     """
     async with async_session() as db:
-        # Query pg_indexes for non-PK indexes on import tables
         result = await db.execute(text("""
-            SELECT tablename, indexname, indexdef
+            SELECT indexname, indexdef
             FROM pg_indexes
             WHERE schemaname = 'public'
-              AND tablename = ANY(:tables)
+              AND tablename = :table
               AND indexname NOT LIKE '%_pkey'
-            ORDER BY tablename, indexname
-        """), {"tables": IMPORT_TABLES})
-
-        indexes: dict[str, list[tuple[str, str]]] = {}
-        for row in result:
-            table = row[0]
-            if table not in indexes:
-                indexes[table] = []
-            indexes[table].append((row[1], row[2]))
-
-        total_count = sum(len(idx_list) for idx_list in indexes.values())
-        logger.info(f"Found {total_count} non-PK indexes across {len(indexes)} tables")
-        return indexes
+            ORDER BY indexname
+        """), {"table": table_name})
+        return [(row[0], row[1]) for row in result]
 
 
-async def drop_import_indexes() -> dict[str, list[str]]:
-    """Drop all non-PK indexes on import tables for faster bulk loading.
+async def prepare_staging(table_name: str):
+    """Truncate staging table before import.
 
-    Returns dict mapping table_name -> [create_statement, ...] for recreation.
-    Indexes are dropped to avoid update overhead during import.
-    Each index is dropped in its own transaction with a lock timeout to avoid
-    deadlocks with concurrent API queries.
+    Cleans up any leftover data from a prior failed import run.
+    Safe even if staging table is already empty.
+    Table name comes from hardcoded STAGING_TABLES constant.
     """
-    indexes = await get_import_table_indexes()
-    dropped: dict[str, list[str]] = {}
+    staging = f"{table_name}_staging"
+    async with async_session() as db:
+        await db.execute(text(f"TRUNCATE TABLE {staging}"))
+        await db.commit()
+    logger.info(f"Prepared staging table: {staging}")
 
-    for table, index_list in indexes.items():
-        dropped[table] = []
-        for index_name, create_stmt in index_list:
-            for attempt in range(3):
+
+async def swap_staging_to_live(table_names: str | list[str]) -> bool:
+    """Atomically swap staging tables to live via triple-rename (zero downtime).
+
+    Generalizes the pattern from model_trainer.swap_similarity_tables().
+
+    Steps:
+    1. Guard: check staging tables have data (refuse to swap empty into live)
+    2. Create indexes on staging (so queries are fast immediately after swap)
+    3. Atomic triple-rename: live→old, staging→live, old→staging
+    4. Post-swap cleanup: ANALYZE, truncate staging, fix index/constraint names
+
+    Args:
+        table_names: Single table name or list of table names to swap atomically.
+                     Use a list when tables must stay in sync (e.g., ulist_vns + ulist_labels).
+
+    Returns:
+        True if swap succeeded, False if aborted (empty staging).
+    """
+    if isinstance(table_names, str):
+        table_names = [table_names]
+
+    async with async_session() as db:
+        # 1. Guard: refuse to swap empty staging tables
+        for table in table_names:
+            staging = f"{table}_staging"
+            result = await db.execute(text(f"SELECT EXISTS (SELECT 1 FROM {staging})"))
+            has_data = result.scalar_one()
+            if not has_data:
+                logger.error(
+                    f"ABORTING SWAP: {staging} is empty — refusing to replace live data with nothing"
+                )
+                return False
+
+        # 2. Create indexes on staging tables BEFORE swap (so reads are fast immediately).
+        # For each live table's non-PK indexes, create an equivalent on staging with _new suffix.
+        # Drop stale _new indexes first (from a previously failed cleanup).
+        logger.info(f"Creating indexes on staging tables: {table_names}")
+        for table in table_names:
+            staging = f"{table}_staging"
+            live_indexes = await get_table_indexes(table)
+
+            for idx_name, idx_def in live_indexes:
+                new_idx_name = f"{idx_name}_new"
+                # Drop stale _new index if it exists from a previous failed run
+                await db.execute(text(f"DROP INDEX IF EXISTS {new_idx_name}"))
+                # Rewrite CREATE INDEX to target staging table with _new suffix
+                # idx_def format: "CREATE INDEX idx_name ON public.table USING btree (columns)"
+                staging_def = idx_def.replace(f" {idx_name} ", f" {new_idx_name} ")
+                staging_def = staging_def.replace(f"ON public.{table} ", f"ON public.{staging} ")
+                staging_def = staging_def.replace(f"ON public.{table}(", f"ON public.{staging}(")
                 try:
-                    async with engine.begin() as conn:
-                        await conn.execute(text("SET LOCAL lock_timeout = '10s'"))
-                        await conn.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
-                    dropped[table].append(create_stmt)
-                    logger.info(f"Dropped index: {index_name}")
-                    break
+                    await db.execute(text(staging_def))
                 except Exception as e:
-                    if attempt < 2:
-                        logger.warning(f"Failed to drop {index_name} (attempt {attempt + 1}/3): {e}, retrying...")
-                        await asyncio.sleep(2 ** attempt)
-                    else:
-                        logger.error(f"Failed to drop {index_name} after 3 attempts: {e}, skipping")
+                    logger.warning(f"Failed to create staging index {new_idx_name}: {e}")
+        await db.commit()
 
-    total_dropped = sum(len(stmts) for stmts in dropped.values())
-    logger.info(f"Dropped {total_dropped} indexes total")
-    return dropped
+        # 3. Atomic triple-rename swap (PostgreSQL DDL is transactional).
+        # AccessExclusiveLock held only for the RENAMEs — milliseconds, not minutes.
+        logger.info(f"Swapping staging tables to live: {table_names}")
+        import time
+        t0 = time.monotonic()
+        for table in table_names:
+            await db.execute(text(f"ALTER TABLE {table} RENAME TO {table}_old"))
+            await db.execute(text(f"ALTER TABLE {table}_staging RENAME TO {table}"))
+            await db.execute(text(f"ALTER TABLE {table}_old RENAME TO {table}_staging"))
+        await db.commit()
+        swap_ms = (time.monotonic() - t0) * 1000
+        logger.info(f"Swap committed in {swap_ms:.1f}ms — {table_names} now serving fresh data")
 
+        # 4. Post-swap housekeeping: ANALYZE + cleanup.
+        # If anything here fails, live data is already correct — treat as warning.
+        try:
+            for table in table_names:
+                staging = f"{table}_staging"
 
-async def recreate_import_indexes(dropped_indexes: dict[str, list[str]]):
-    """Recreate all dropped indexes with optimized settings.
+                # ANALYZE for fresh query planner stats
+                await db.execute(text(f"ANALYZE {table}"))
 
-    Uses increased maintenance_work_mem for faster index creation.
-    Should be called after all imports are complete.
-    """
-    total_count = sum(len(stmts) for stmts in dropped_indexes.values())
-    logger.info(f"Recreating {total_count} indexes...")
+                # Truncate staging (free disk space, prepare for next run)
+                await db.execute(text(f"TRUNCATE TABLE {staging}"))
 
-    async with engine.begin() as conn:
-        # Increase maintenance_work_mem for faster index creation
-        await conn.execute(text("SET maintenance_work_mem = '512MB'"))
+                # Drop FK constraints inherited from old live table (now on staging)
+                result = await db.execute(text(f"""
+                    SELECT conname FROM pg_constraint
+                    WHERE conrelid = '{staging}'::regclass
+                    AND contype = 'f'
+                """))
+                fk_names = [row[0] for row in result.fetchall()]
+                for fk_name in fk_names:
+                    logger.info(f"Dropping inherited FK {fk_name} from {staging}")
+                    await db.execute(text(
+                        f"ALTER TABLE {staging} DROP CONSTRAINT {fk_name}"
+                    ))
 
-        created = 0
-        for table, create_stmts in dropped_indexes.items():
-            for create_stmt in create_stmts:
-                # Extract index name for logging (CREATE INDEX idx_name ON ...)
-                idx_name = create_stmt.split()[2] if len(create_stmt.split()) > 2 else "unknown"
-                logger.info(f"Creating index ({created + 1}/{total_count}): {idx_name}")
-                await conn.execute(text(create_stmt))
-                created += 1
+                # Drop canonical-named indexes inherited from old live (now on staging)
+                staging_indexes = await get_table_indexes(staging)
+                for idx_name, _ in staging_indexes:
+                    await db.execute(text(f"DROP INDEX IF EXISTS {idx_name}"))
 
-        # Reset to default
-        await conn.execute(text("RESET maintenance_work_mem"))
+                # Rename _new indexes on live table to canonical names (for next cycle)
+                live_indexes = await get_table_indexes(table)
+                for idx_name, _ in live_indexes:
+                    if idx_name.endswith("_new"):
+                        canonical_name = idx_name[:-4]  # strip "_new" suffix
+                        try:
+                            await db.execute(text(
+                                f"ALTER INDEX {idx_name} RENAME TO {canonical_name}"
+                            ))
+                        except Exception:
+                            pass  # Index may not exist if creation failed earlier
 
-    logger.info(f"Recreated {created} indexes")
+                # Rename PK constraint to canonical name
+                try:
+                    await db.execute(text(
+                        f"ALTER TABLE {table} RENAME CONSTRAINT {table}_staging_pkey TO {table}_pkey"
+                    ))
+                except Exception:
+                    pass  # PK constraint may already have the right name
 
-    # Safety net: ensure any indexes orphaned by previous crashed imports are restored
-    await ensure_all_import_indexes()
+            await db.commit()
+            logger.info(f"Post-swap cleanup complete for {table_names}")
+        except Exception as e:
+            logger.warning(f"Post-swap cleanup failed (live data is serving correctly): {e}")
+            await db.rollback()
+
+    return True
 
 
 async def ensure_all_import_indexes():
@@ -648,10 +723,8 @@ async def import_votes(votes_path: str, force: bool = False):
         valid_vn_ids = {row[0] for row in result}
     logger.info(f"Found {len(valid_vn_ids)} VNs in database for vote filtering")
 
-    # Clear existing votes (they're replaced daily)
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE global_votes"))
-        await db.commit()
+    # Prepare staging table (truncate leftover data from any prior failed run)
+    await prepare_staging("global_votes")
 
     count = 0
     skipped = 0
@@ -696,7 +769,7 @@ async def import_votes(votes_path: str, force: bool = False):
 
             if len(batch) >= BATCH_SIZE:
                 await copy_bulk_data(
-                    "global_votes",
+                    "global_votes_staging",
                     ["vn_id", "user_hash", "vote", "date"],
                     batch
                 )
@@ -712,12 +785,15 @@ async def import_votes(votes_path: str, force: bool = False):
     # Final batch
     if batch:
         await copy_bulk_data(
-            "global_votes",
+            "global_votes_staging",
             ["vn_id", "user_hash", "vote", "date"],
             batch
         )
 
-    logger.info(f"Imported {count} votes (skipped {skipped} for non-existent VNs)")
+    logger.info(f"Imported {count} votes into staging (skipped {skipped} for non-existent VNs)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("global_votes")
 
     # Mark import as complete
     await mark_import_complete(votes_path, "votes")
@@ -1792,10 +1868,8 @@ async def _import_vn_tags_table(tags_vn_file: str):
         valid_tag_ids = {row[0] for row in tag_result}
     logger.info(f"Found {len(valid_vn_ids)} VNs and {len(valid_tag_ids)} tags in database")
 
-    # Clear existing relationships
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE vn_tags"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("vn_tags")
 
     # Second pass: compute averages and use COPY for fast bulk loading
     count = 0
@@ -1843,7 +1917,7 @@ async def _import_vn_tags_table(tags_vn_file: str):
 
             if len(batch) >= BATCH_SIZE:
                 await copy_bulk_data(
-                    "vn_tags",
+                    "vn_tags_staging",
                     ["vn_id", "tag_id", "score", "spoiler_level", "lie"],
                     batch
                 )
@@ -1861,12 +1935,15 @@ async def _import_vn_tags_table(tags_vn_file: str):
     # Final batch
     if batch:
         await copy_bulk_data(
-            "vn_tags",
+            "vn_tags_staging",
             ["vn_id", "tag_id", "score", "spoiler_level", "lie"],
             batch
         )
 
     logger.info(f"Imported {count} VN-tag relationships ({skipped} skipped, {errors} errors, {lie_tag_count} marked as lies)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("vn_tags")
 
 
 # ============ Traits Import ============
@@ -2257,10 +2334,8 @@ async def import_vn_staff(extract_dir: str, force: bool = False):
     skipped = 0
     duplicates = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE vn_staff"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("vn_staff")
 
     # Use COPY for fast bulk loading (10-100x faster than INSERT)
     batch: list[tuple] = []
@@ -2310,7 +2385,7 @@ async def import_vn_staff(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "vn_staff",
+                            "vn_staff_staging",
                             ["vn_id", "staff_id", "aid", "role", "note"],
                             batch
                         )
@@ -2331,12 +2406,15 @@ async def import_vn_staff(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "vn_staff",
+                "vn_staff_staging",
                 ["vn_id", "staff_id", "aid", "role", "note"],
                 batch
             )
         except Exception as e:
             logger.error(f"Error in final COPY batch: {e}")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("vn_staff")
 
     await clear_import_progress("vn_staff")
     logger.info(f"Imported {count} VN-staff relationships ({skipped} skipped, {duplicates} duplicates)")
@@ -2399,10 +2477,8 @@ async def import_seiyuu(extract_dir: str, force: bool = False):
     skipped = 0
     duplicates = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE vn_seiyuu"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("vn_seiyuu")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -2455,7 +2531,7 @@ async def import_seiyuu(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "vn_seiyuu",
+                            "vn_seiyuu_staging",
                             ["vn_id", "staff_id", "aid", "character_id", "note"],
                             batch
                         )
@@ -2475,12 +2551,15 @@ async def import_seiyuu(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "vn_seiyuu",
+                "vn_seiyuu_staging",
                 ["vn_id", "staff_id", "aid", "character_id", "note"],
                 batch
             )
         except Exception as e:
             logger.error(f"Error in final COPY batch: {e}")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("vn_seiyuu")
 
     await clear_import_progress("vn_seiyuu")
     logger.info(f"Imported {count} VN-seiyuu relationships ({skipped} skipped, {duplicates} duplicates)")
@@ -2546,10 +2625,8 @@ async def import_vn_relations(extract_dir: str, force: bool = False):
     skipped = 0
     duplicates = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE vn_relations"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("vn_relations")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -2594,7 +2671,7 @@ async def import_vn_relations(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "vn_relations",
+                            "vn_relations_staging",
                             ["vn_id", "related_vn_id", "relation", "official"],
                             batch
                         )
@@ -2614,12 +2691,15 @@ async def import_vn_relations(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "vn_relations",
+                "vn_relations_staging",
                 ["vn_id", "related_vn_id", "relation", "official"],
                 batch
             )
         except Exception as e:
             logger.error(f"Error in final COPY batch: {e}")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("vn_relations")
 
     await clear_import_progress("vn_relations")
     logger.info(f"Imported {count} VN relations ({skipped} skipped, {duplicates} duplicates)")
@@ -2939,10 +3019,8 @@ async def import_character_vns(extract_dir: str, force: bool = False):
     skipped = 0
     duplicates = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE character_vn"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("character_vn")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -2996,7 +3074,7 @@ async def import_character_vns(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "character_vn",
+                            "character_vn_staging",
                             ["character_id", "vn_id", "role", "spoiler_level", "release_id"],
                             batch
                         )
@@ -3016,7 +3094,7 @@ async def import_character_vns(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "character_vn",
+                "character_vn_staging",
                 ["character_id", "vn_id", "role", "spoiler_level", "release_id"],
                 batch
             )
@@ -3025,6 +3103,9 @@ async def import_character_vns(extract_dir: str, force: bool = False):
 
     await clear_import_progress("character_vn")
     logger.info(f"Imported {count} character-VN relationships ({skipped} skipped, {duplicates} duplicates)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("character_vn")
 
     # Mark import as complete
     await mark_import_complete(chars_vns_file, "character_vns")
@@ -3080,10 +3161,8 @@ async def import_character_traits(extract_dir: str, force: bool = False):
     count = 0
     skipped = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE character_traits"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("character_traits")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -3119,7 +3198,7 @@ async def import_character_traits(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "character_traits",
+                            "character_traits_staging",
                             ["character_id", "trait_id", "spoiler_level"],
                             batch
                         )
@@ -3139,7 +3218,7 @@ async def import_character_traits(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "character_traits",
+                "character_traits_staging",
                 ["character_id", "trait_id", "spoiler_level"],
                 batch
             )
@@ -3148,6 +3227,9 @@ async def import_character_traits(extract_dir: str, force: bool = False):
 
     await clear_import_progress("character_traits")
     logger.info(f"Imported {count} character-trait relationships ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("character_traits")
 
     # Mark import as complete
     await mark_import_complete(chars_traits_file, "character_traits")
@@ -3463,10 +3545,8 @@ async def import_release_vns(extract_dir: str, force: bool = False):
     count = 0
     skipped = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE release_vn"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("release_vn")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -3502,7 +3582,7 @@ async def import_release_vns(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "release_vn",
+                            "release_vn_staging",
                             ["release_id", "vn_id", "rtype"],
                             batch
                         )
@@ -3522,7 +3602,7 @@ async def import_release_vns(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "release_vn",
+                "release_vn_staging",
                 ["release_id", "vn_id", "rtype"],
                 batch
             )
@@ -3531,6 +3611,9 @@ async def import_release_vns(extract_dir: str, force: bool = False):
 
     await clear_import_progress("release_vn")
     logger.info(f"Imported {count} release-VN relationships ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("release_vn")
 
     # Mark import as complete
     await mark_import_complete(release_vn_file, "release_vn")
@@ -3584,10 +3667,8 @@ async def import_release_producers(extract_dir: str, force: bool = False):
     count = 0
     skipped = 0
 
-    # Clear existing relationships first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE release_producers"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("release_producers")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -3622,7 +3703,7 @@ async def import_release_producers(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "release_producers",
+                            "release_producers_staging",
                             ["release_id", "producer_id", "developer", "publisher"],
                             batch
                         )
@@ -3642,7 +3723,7 @@ async def import_release_producers(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "release_producers",
+                "release_producers_staging",
                 ["release_id", "producer_id", "developer", "publisher"],
                 batch
             )
@@ -3651,6 +3732,9 @@ async def import_release_producers(extract_dir: str, force: bool = False):
 
     await clear_import_progress("release_producers")
     logger.info(f"Imported {count} release-producer relationships ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("release_producers")
 
     # Only mark complete if data was actually imported
     if count > 0:
@@ -3705,10 +3789,8 @@ async def import_release_platforms(extract_dir: str, force: bool = False):
     count = 0
     skipped = 0
 
-    # Clear existing data first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE release_platforms"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("release_platforms")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -3738,7 +3820,7 @@ async def import_release_platforms(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "release_platforms",
+                            "release_platforms_staging",
                             ["release_id", "platform"],
                             batch
                         )
@@ -3757,7 +3839,7 @@ async def import_release_platforms(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "release_platforms",
+                "release_platforms_staging",
                 ["release_id", "platform"],
                 batch
             )
@@ -3765,6 +3847,10 @@ async def import_release_platforms(extract_dir: str, force: bool = False):
             logger.error(f"Error in final COPY batch: {e}")
 
     logger.info(f"Imported {count} release platforms ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("release_platforms")
+
     await mark_import_complete(platforms_file, "release_platforms")
 
 
@@ -3814,10 +3900,8 @@ async def import_release_media(extract_dir: str, force: bool = False):
     count = 0
     skipped = 0
 
-    # Clear existing data first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE release_media"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("release_media")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -3853,7 +3937,7 @@ async def import_release_media(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "release_media",
+                            "release_media_staging",
                             ["release_id", "medium", "quantity"],
                             batch
                         )
@@ -3872,7 +3956,7 @@ async def import_release_media(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "release_media",
+                "release_media_staging",
                 ["release_id", "medium", "quantity"],
                 batch
             )
@@ -3880,6 +3964,10 @@ async def import_release_media(extract_dir: str, force: bool = False):
             logger.error(f"Error in final COPY batch: {e}")
 
     logger.info(f"Imported {count} release media entries ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("release_media")
+
     await mark_import_complete(media_file, "release_media")
 
 
@@ -3929,10 +4017,8 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
     count = 0
     skipped = 0
 
-    # Clear existing data first
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE release_extlinks"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("release_extlinks")
 
     # Use COPY for fast bulk loading
     batch: list[tuple] = []
@@ -3968,7 +4054,7 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
-                            "release_extlinks",
+                            "release_extlinks_staging",
                             ["release_id", "site", "url"],
                             batch
                         )
@@ -3987,7 +4073,7 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
     if batch:
         try:
             await copy_bulk_data(
-                "release_extlinks",
+                "release_extlinks_staging",
                 ["release_id", "site", "url"],
                 batch
             )
@@ -3995,6 +4081,10 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
             logger.error(f"Error in final COPY batch: {e}")
 
     logger.info(f"Imported {count} release extlinks ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("release_extlinks")
+
     await mark_import_complete(extlinks_file, "release_extlinks")
 
 
@@ -4077,11 +4167,9 @@ async def import_ulist_vns(extract_dir: str, force: bool = False):
         valid_vn_ids = {row[0] for row in result}
     logger.info(f"Found {len(valid_vn_ids)} VNs in database for ulist filtering")
 
-    # Clear existing user list data (they're replaced on each import)
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE ulist_vns"))
-        await db.execute(text("TRUNCATE TABLE ulist_labels"))
-        await db.commit()
+    # Prepare staging tables (both ulist_vns and ulist_labels are co-populated)
+    await prepare_staging("ulist_vns")
+    await prepare_staging("ulist_labels")
 
     count = 0
     labels_count = 0
@@ -4161,7 +4249,7 @@ async def import_ulist_vns(extract_dir: str, force: bool = False):
 
                 if len(vn_batch) >= BATCH_SIZE:
                     await copy_bulk_data(
-                        "ulist_vns",
+                        "ulist_vns_staging",
                         ["uid", "vid", "added", "lastmod", "vote_date", "vote", "started", "finished", "notes"],
                         vn_batch
                     )
@@ -4169,7 +4257,7 @@ async def import_ulist_vns(extract_dir: str, force: bool = False):
 
                 if len(label_batch) >= BATCH_SIZE:
                     await copy_bulk_data(
-                        "ulist_labels",
+                        "ulist_labels_staging",
                         ["uid", "vid", "label"],
                         label_batch
                     )
@@ -4186,19 +4274,23 @@ async def import_ulist_vns(extract_dir: str, force: bool = False):
     # Final batches
     if vn_batch:
         await copy_bulk_data(
-            "ulist_vns",
+            "ulist_vns_staging",
             ["uid", "vid", "added", "lastmod", "vote_date", "vote", "started", "finished", "notes"],
             vn_batch
         )
 
     if label_batch:
         await copy_bulk_data(
-            "ulist_labels",
+            "ulist_labels_staging",
             ["uid", "vid", "label"],
             label_batch
         )
 
     logger.info(f"Imported {count} user VN list entries, {labels_count} labels (skipped {skipped} for non-existent VNs)")
+
+    # Atomically swap both staging tables to live together
+    await swap_staging_to_live(["ulist_vns", "ulist_labels"])
+
     await mark_import_complete(ulist_file, "ulist_vns")
 
 
@@ -4233,10 +4325,8 @@ async def import_vndb_users(extract_dir: str, force: bool = False):
         logger.error(f"users header not found: {header_file}")
         return
 
-    # Truncate and re-import
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE vndb_users"))
-        await db.commit()
+    # Prepare staging table
+    await prepare_staging("vndb_users")
 
     count = 0
     batch: list[tuple] = []
@@ -4258,7 +4348,7 @@ async def import_vndb_users(extract_dir: str, force: bool = False):
             if len(batch) >= BATCH_SIZE:
                 async with async_session() as db:
                     await db.execute(
-                        text("INSERT INTO vndb_users (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
+                        text("INSERT INTO vndb_users_staging (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
                         [{"uid": u, "username": n} for u, n in batch],
                     )
                     await db.commit()
@@ -4268,12 +4358,16 @@ async def import_vndb_users(extract_dir: str, force: bool = False):
     if batch:
         async with async_session() as db:
             await db.execute(
-                text("INSERT INTO vndb_users (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
+                text("INSERT INTO vndb_users_staging (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
                 [{"uid": u, "username": n} for u, n in batch],
             )
             await db.commit()
 
     logger.info(f"Imported {count} VNDB users")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("vndb_users")
+
     await mark_import_complete(users_file, "vndb_users")
 
 
@@ -4291,98 +4385,6 @@ async def import_ulist_labels(extract_dir: str, force: bool = False):
     return
 
 
-async def _import_ulist_labels_old(extract_dir: str, force: bool = False):
-    """OLD implementation - kept for reference but not used."""
-    labels_file = None
-
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "ulist_labels":
-                labels_file = os.path.join(root, f)
-
-    if not labels_file:
-        logger.warning("ulist_labels file not found in extracted files")
-        return
-
-    # Check if import is needed
-    if not await should_import(labels_file, "ulist_labels", force):
-        return
-
-    logger.info(f"Importing user VN list labels from {labels_file}")
-
-    # Read header to get field positions
-    header_file = labels_file + ".header"
-    try:
-        with open(header_file, "r", encoding="utf-8") as f:
-            fieldnames = f.read().strip().split("\t")
-        logger.info(f"ulist_labels fields: {fieldnames}")
-    except FileNotFoundError:
-        logger.error(f"ulist_labels header not found: {header_file}")
-        return
-
-    # Clear existing labels data (they're replaced on each import)
-    async with async_session() as db:
-        await db.execute(text("TRUNCATE TABLE ulist_labels"))
-        await db.commit()
-
-    count = 0
-    skipped = 0
-    batch: list[tuple] = []
-    BATCH_SIZE = 10000
-
-    with open(labels_file, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
-
-        for row in reader:
-            try:
-                uid = row.get("uid", "")
-                vid = row.get("vid", "")
-                label_str = row.get("label", "")
-
-                if not uid or not vid or not label_str:
-                    skipped += 1
-                    continue
-
-                # Add prefixes if missing
-                if not uid.startswith("u"):
-                    uid = f"u{uid}"
-                if not vid.startswith("v"):
-                    vid = f"v{vid}"
-
-                label = int(label_str)
-
-                # Use tuple for COPY format
-                batch.append((uid, vid, label))
-                count += 1
-
-                if len(batch) >= BATCH_SIZE:
-                    await copy_bulk_data(
-                        "ulist_labels",
-                        ["uid", "vid", "label"],
-                        batch
-                    )
-                    batch = []
-
-                    if count % 1000000 == 0:
-                        logger.info(f"Imported {count} user list labels...")
-
-            except (ValueError, KeyError) as e:
-                logger.debug(f"Skipping invalid ulist_labels row: {row} - {e}")
-                skipped += 1
-                continue
-
-    # Final batch
-    if batch:
-        await copy_bulk_data(
-            "ulist_labels",
-            ["uid", "vid", "label"],
-            batch
-        )
-
-    logger.info(f"Imported {count} user VN list labels (skipped {skipped})")
-    await mark_import_complete(labels_file, "ulist_labels")
-
-
 async def run_full_import(
     dump_dir: str,
     skip_download: bool = False,
@@ -4391,10 +4393,9 @@ async def run_full_import(
 ):
     """Run a full import of all dump files.
 
-    Optimized for performance:
-    - Drops indexes before import, recreates after (30-50% faster)
-    - Uses COPY for large tables (10-50x faster than INSERT)
-    - Runs ANALYZE after import for optimal query planning
+    Uses staging tables for zero-downtime atomic swaps on junction tables.
+    Parent tables use safe upserts. If this crashes at any point, the live
+    site continues serving previous data unaffected.
 
     Args:
         dump_dir: Directory to store/read dump files
@@ -4402,6 +4403,41 @@ async def run_full_import(
         max_age_hours: Re-download if dumps are older than this (default: 168 = 1 week)
         force: If True, bypass mtime checks and re-import all tables
     """
+    import time
+    from app.ingestion.dump_downloader import download_dumps
+
+    # Acquire advisory lock to prevent concurrent imports
+    lock_acquired = False
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text("SELECT pg_try_advisory_lock(hashtext('vndb_import'))"))
+            lock_acquired = result.scalar_one()
+        if not lock_acquired:
+            logger.error("Another import is already running (advisory lock held). Aborting.")
+            return
+    except Exception as e:
+        logger.warning(f"Failed to acquire advisory lock: {e}, proceeding anyway")
+        lock_acquired = False
+
+    try:
+        await _run_full_import_inner(dump_dir, skip_download, max_age_hours, force)
+    finally:
+        # Release advisory lock
+        if lock_acquired:
+            try:
+                async with engine.begin() as conn:
+                    await conn.execute(text("SELECT pg_advisory_unlock(hashtext('vndb_import'))"))
+            except Exception as e:
+                logger.warning(f"Failed to release advisory lock: {e}")
+
+
+async def _run_full_import_inner(
+    dump_dir: str,
+    skip_download: bool = False,
+    max_age_hours: int = 168,
+    force: bool = False,
+):
+    """Inner implementation of run_full_import (called with advisory lock held)."""
     import time
     from app.ingestion.dump_downloader import download_dumps
 
@@ -4415,7 +4451,10 @@ async def run_full_import(
         logger.info(f"{progress} {name.upper()} - {status} (elapsed: {elapsed_str})")
         logger.info(f"{'=' * 50}")
 
-    total_steps = 29  # Including download, index drop/recreate, length votes, users, ulist, average ratings, browse counts, and analyze
+    total_steps = 27  # Including download, length votes, users, ulist, average ratings, browse counts, and analyze
+
+    # Safety net: ensure all indexes exist before starting (catch orphaned state from previous crashes)
+    await ensure_all_import_indexes()
 
     # Step 1: Download dumps (or skip if using existing)
     if skip_download:
@@ -4441,140 +4480,133 @@ async def run_full_import(
 
     extract_dir = os.path.join(dump_dir, "extracted")
 
-    # Step 2: Drop indexes for faster import
-    log_step(2, total_steps, "Dropping indexes", "speeds up bulk loading")
-    dropped_indexes = await drop_import_indexes()
+    # Import in order (respecting foreign key dependencies).
+    # Parent tables use safe upserts; junction tables use staging + atomic swap.
 
-    # Import in order (respecting foreign key dependencies)
-
-    # Step 3: Tags
+    # Step 2: Tags
     if "tags" in paths:
-        log_step(3, total_steps, "Importing tags")
+        log_step(2, total_steps, "Importing tags")
         await import_tags(paths["tags"], force=force)
 
-    # Step 4: Traits
+    # Step 3: Traits
     if "traits" in paths:
-        log_step(4, total_steps, "Importing traits")
+        log_step(3, total_steps, "Importing traits")
         await import_traits(paths["traits"], force=force)
 
-    # Step 5: Producers
+    # Step 4: Producers
     if "db" in paths:
-        log_step(5, total_steps, "Importing producers")
+        log_step(4, total_steps, "Importing producers")
         await import_producers(extract_dir, force=force)
 
-    # Step 6: Staff
+    # Step 5: Staff
     if "db" in paths:
-        log_step(6, total_steps, "Importing staff")
+        log_step(5, total_steps, "Importing staff")
         await import_staff(extract_dir, force=force)
 
-    # Step 7: Visual Novels (main data - takes longest)
+    # Step 6: Visual Novels (main data - takes longest)
     if "db" in paths:
-        log_step(7, total_steps, "Importing visual novels", "this is the largest table")
+        log_step(6, total_steps, "Importing visual novels", "this is the largest table")
         await import_visual_novels(paths["db"], extract_dir, force=force)
 
-    # Step 8: VN-Staff relationships
+    # Step 7: VN-Staff relationships
     if "db" in paths:
-        log_step(8, total_steps, "Importing VN-Staff relationships")
+        log_step(7, total_steps, "Importing VN-Staff relationships")
         await import_vn_staff(extract_dir, force=force)
 
-    # Step 9: Seiyuu relationships
+    # Step 8: Seiyuu relationships
     if "db" in paths:
-        log_step(9, total_steps, "Importing seiyuu data")
+        log_step(8, total_steps, "Importing seiyuu data")
         await import_seiyuu(extract_dir, force=force)
 
-    # Step 10: VN relations (sequel, prequel, shares characters, etc.)
+    # Step 9: VN relations (sequel, prequel, shares characters, etc.)
     if "db" in paths:
-        log_step(10, total_steps, "Importing VN relations")
+        log_step(9, total_steps, "Importing VN relations")
         await import_vn_relations(extract_dir, force=force)
 
-    # Step 11: Characters
+    # Step 10: Characters
     if "db" in paths:
-        log_step(11, total_steps, "Importing characters")
+        log_step(10, total_steps, "Importing characters")
         await import_characters(extract_dir, force=force)
 
-    # Step 12: Character-VN relationships
+    # Step 11: Character-VN relationships
     if "db" in paths:
-        log_step(12, total_steps, "Importing character-VN relationships")
+        log_step(11, total_steps, "Importing character-VN relationships")
         await import_character_vns(extract_dir, force=force)
 
-    # Step 13: Character-Traits
+    # Step 12: Character-Traits
     if "db" in paths:
-        log_step(13, total_steps, "Importing character traits")
+        log_step(12, total_steps, "Importing character traits")
         await import_character_traits(extract_dir, force=force)
 
-    # Step 14: Releases
+    # Step 13: Releases
     if "db" in paths:
-        log_step(14, total_steps, "Importing releases")
+        log_step(13, total_steps, "Importing releases")
         await import_releases(extract_dir, force=force)
 
-    # Step 15: Release-VN relationships
+    # Step 14: Release-VN relationships
     if "db" in paths:
-        log_step(15, total_steps, "Importing release-VN relationships")
+        log_step(14, total_steps, "Importing release-VN relationships")
         await import_release_vns(extract_dir, force=force)
 
-    # Step 16: Release-Producer relationships
+    # Step 15: Release-Producer relationships
     if "db" in paths:
-        log_step(16, total_steps, "Importing release-producer relationships")
+        log_step(15, total_steps, "Importing release-producer relationships")
         await import_release_producers(extract_dir, force=force)
 
-    # Step 17: Release platforms
+    # Step 16: Release platforms
     if "db" in paths:
-        log_step(17, total_steps, "Importing release platforms")
+        log_step(16, total_steps, "Importing release platforms")
         await import_release_platforms(extract_dir, force=force)
 
-    # Step 18: Release media
+    # Step 17: Release media
     if "db" in paths:
-        log_step(18, total_steps, "Importing release media")
+        log_step(17, total_steps, "Importing release media")
         await import_release_media(extract_dir, force=force)
 
-    # Step 19: Release external links
+    # Step 18: Release external links
     if "db" in paths:
-        log_step(19, total_steps, "Importing release links")
+        log_step(18, total_steps, "Importing release links")
         await import_release_extlinks(extract_dir, force=force)
 
-    # Step 20: Votes (uses COPY for fast bulk loading)
+    # Step 19: Votes (uses COPY for fast bulk loading)
     if "votes" in paths:
-        log_step(20, total_steps, "Importing votes", "uses COPY for fast bulk loading")
+        log_step(19, total_steps, "Importing votes", "uses COPY for fast bulk loading")
         await import_votes(paths["votes"], force=force)
 
-    # Step 21: Length votes (user-submitted playtime data)
+    # Step 20: Length votes (user-submitted playtime data)
     if "db" in paths:
-        log_step(21, total_steps, "Importing length votes", "user playtime averages for length_minutes")
+        log_step(20, total_steps, "Importing length votes", "user playtime averages for length_minutes")
         await import_length_votes(extract_dir, force=force)
 
-    # Step 22: VNDB users (uid → username mapping)
+    # Step 21: VNDB users (uid → username mapping)
     if "db" in paths:
-        log_step(22, total_steps, "Importing VNDB users", "uid to username mapping")
+        log_step(21, total_steps, "Importing VNDB users", "uid to username mapping")
         await import_vndb_users(extract_dir, force=force)
 
-    # Step 23: User VN lists (for user stats - replaces VNDB API calls)
+    # Step 22: User VN lists (for user stats - replaces VNDB API calls)
     if "db" in paths:
-        log_step(23, total_steps, "Importing user VN lists", "used for user stats page")
+        log_step(22, total_steps, "Importing user VN lists", "used for user stats page")
         await import_ulist_vns(extract_dir, force=force)
 
-    # Step 24: User VN list labels (Playing, Finished, etc.)
+    # Step 23: User VN list labels (Playing, Finished, etc.)
     if "db" in paths:
-        log_step(24, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
+        log_step(23, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
         await import_ulist_labels(extract_dir, force=force)
 
-    # Step 25: Compute average ratings from votes
-    log_step(25, total_steps, "Computing average ratings", "raw averages for quality signal")
+    # Step 24: Compute average ratings from votes
+    log_step(24, total_steps, "Computing average ratings", "raw averages for quality signal")
     await compute_average_ratings()
 
-    # Step 26: Aggregate platforms and languages from release data
-    log_step(26, total_steps, "Aggregating VN platforms and languages", "from release data")
+    # Step 25: Aggregate platforms and languages from release data
+    log_step(25, total_steps, "Aggregating VN platforms and languages", "from release data")
     await update_vn_platforms_and_languages()
 
-    # Step 27: Compute precomputed browse counts for staff and producers
-    log_step(27, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
+    # Step 26: Compute precomputed browse counts for staff and producers
+    log_step(26, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
     await update_browse_precomputed_counts()
 
-    # Step 28: Recreate indexes
-    log_step(28, total_steps, "Recreating indexes", "may take a few minutes")
-    await recreate_import_indexes(dropped_indexes)
-
-    # Step 29: Analyze tables
-    log_step(29, total_steps, "Analyzing tables", "updating query planner statistics")
+    # Step 27: Analyze tables
+    log_step(27, total_steps, "Analyzing tables", "updating query planner statistics")
     await analyze_import_tables()
 
     total_time = time.time() - start_time
@@ -4607,7 +4639,7 @@ async def update_import_progress(
     from sqlalchemy import update
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-    total_steps = 28
+    total_steps = 27
     progress = (step / total_steps) * 100 if total_steps > 0 else 0
 
     async with async_session() as db:
@@ -4711,6 +4743,25 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
         if await check_import_cancelled(run_id):
             raise Exception("Import cancelled by user")
 
+    # Acquire advisory lock to prevent concurrent imports
+    lock_acquired = False
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text("SELECT pg_try_advisory_lock(hashtext('vndb_import'))"))
+            lock_acquired = result.scalar_one()
+        if not lock_acquired:
+            logger.error("Another import is already running (advisory lock held). Aborting.")
+            async with async_session() as db:
+                await db.execute(
+                    text("UPDATE import_runs SET status = 'failed', error = 'Another import already running' WHERE id = :id"),
+                    {"id": run_id}
+                )
+                await db.commit()
+            return
+    except Exception as e:
+        logger.warning(f"Failed to acquire advisory lock: {e}, proceeding anyway")
+        lock_acquired = False
+
     try:
         # Mark as running
         async with async_session() as db:
@@ -4719,6 +4770,9 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
                 {"id": run_id, "now": datetime.now(timezone.utc)}
             )
             await db.commit()
+
+        # Safety net: ensure all indexes exist before starting
+        await ensure_all_import_indexes()
 
         # Step 1: Download dumps
         await log_and_track(1, "download", "Downloading VNDB dumps...")
@@ -4731,135 +4785,125 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
 
         extract_dir = os.path.join(dump_dir, "extracted")
 
-        # Step 2: Drop indexes
-        await log_and_track(2, "indexes", "Dropping indexes for faster bulk loading...")
-        dropped_indexes = await drop_import_indexes()
-        await log_import_message(run_id, "INFO", f"Dropped {len(dropped_indexes)} indexes", "indexes")
-
-        # Step 3: Tags
+        # Step 2: Tags
         if "tags" in paths:
-            await log_and_track(3, "tags", "Importing tags...")
+            await log_and_track(2, "tags", "Importing tags...")
             await import_tags(paths["tags"])
 
-        # Step 4: Traits
+        # Step 3: Traits
         if "traits" in paths:
-            await log_and_track(4, "traits", "Importing traits...")
+            await log_and_track(3, "traits", "Importing traits...")
             await import_traits(paths["traits"])
 
-        # Step 5: Producers
+        # Step 4: Producers
         if "db" in paths:
-            await log_and_track(5, "producers", "Importing producers...")
+            await log_and_track(4, "producers", "Importing producers...")
             await import_producers(extract_dir)
 
-        # Step 6: Staff
+        # Step 5: Staff
         if "db" in paths:
-            await log_and_track(6, "staff", "Importing staff...")
+            await log_and_track(5, "staff", "Importing staff...")
             await import_staff(extract_dir)
 
-        # Step 7: Visual Novels (largest table)
+        # Step 6: Visual Novels (largest table)
         if "db" in paths:
-            await log_and_track(7, "visual_novels", "Importing visual novels (largest table)...")
+            await log_and_track(6, "visual_novels", "Importing visual novels (largest table)...")
             await import_visual_novels(paths["db"], extract_dir)
 
-        # Step 8: VN-Staff relationships
+        # Step 7: VN-Staff relationships
         if "db" in paths:
-            await log_and_track(8, "vn_staff", "Importing VN-Staff relationships...")
+            await log_and_track(7, "vn_staff", "Importing VN-Staff relationships...")
             await import_vn_staff(extract_dir)
 
-        # Step 9: Seiyuu
+        # Step 8: Seiyuu
         if "db" in paths:
-            await log_and_track(9, "seiyuu", "Importing seiyuu data...")
+            await log_and_track(8, "seiyuu", "Importing seiyuu data...")
             await import_seiyuu(extract_dir)
 
-        # Step 10: Characters
+        # Step 9: Characters
         if "db" in paths:
-            await log_and_track(10, "characters", "Importing characters...")
+            await log_and_track(9, "characters", "Importing characters...")
             await import_characters(extract_dir)
 
-        # Step 11: Character-VN relationships
+        # Step 10: Character-VN relationships
         if "db" in paths:
-            await log_and_track(11, "character_vns", "Importing character-VN relationships...")
+            await log_and_track(10, "character_vns", "Importing character-VN relationships...")
             await import_character_vns(extract_dir)
 
-        # Step 12: Character traits
+        # Step 11: Character traits
         if "db" in paths:
-            await log_and_track(12, "character_traits", "Importing character traits...")
+            await log_and_track(11, "character_traits", "Importing character traits...")
             await import_character_traits(extract_dir)
 
-        # Step 13: Releases
+        # Step 12: Releases
         if "db" in paths:
-            await log_and_track(13, "releases", "Importing releases...")
+            await log_and_track(12, "releases", "Importing releases...")
             await import_releases(extract_dir)
 
-        # Step 14: Release-VN relationships
+        # Step 13: Release-VN relationships
         if "db" in paths:
-            await log_and_track(14, "release_vns", "Importing release-VN relationships...")
+            await log_and_track(13, "release_vns", "Importing release-VN relationships...")
             await import_release_vns(extract_dir)
 
-        # Step 15: Release-Producer relationships
+        # Step 14: Release-Producer relationships
         if "db" in paths:
-            await log_and_track(15, "release_producers", "Importing release-producer relationships...")
+            await log_and_track(14, "release_producers", "Importing release-producer relationships...")
             await import_release_producers(extract_dir)
 
-        # Step 16: Release platforms
+        # Step 15: Release platforms
         if "db" in paths:
-            await log_and_track(16, "release_platforms", "Importing release platforms...")
+            await log_and_track(15, "release_platforms", "Importing release platforms...")
             await import_release_platforms(extract_dir)
 
-        # Step 17: Release media
+        # Step 16: Release media
         if "db" in paths:
-            await log_and_track(17, "release_media", "Importing release media...")
+            await log_and_track(16, "release_media", "Importing release media...")
             await import_release_media(extract_dir)
 
-        # Step 18: Release external links
+        # Step 17: Release external links
         if "db" in paths:
-            await log_and_track(18, "release_extlinks", "Importing release links...")
+            await log_and_track(17, "release_extlinks", "Importing release links...")
             await import_release_extlinks(extract_dir)
 
-        # Step 19: Votes (uses COPY)
+        # Step 18: Votes (uses COPY)
         if "votes" in paths:
-            await log_and_track(19, "votes", "Importing votes (COPY bulk load)...")
+            await log_and_track(18, "votes", "Importing votes (COPY bulk load)...")
             await import_votes(paths["votes"])
 
-        # Step 20: Length votes (user playtime data)
+        # Step 19: Length votes (user playtime data)
         if "db" in paths:
-            await log_and_track(20, "length_votes", "Importing length votes (user playtime averages)...")
+            await log_and_track(19, "length_votes", "Importing length votes (user playtime averages)...")
             await import_length_votes(extract_dir)
 
-        # Step 21: VNDB users (uid → username mapping)
+        # Step 20: VNDB users (uid → username mapping)
         if "db" in paths:
-            await log_and_track(21, "vndb_users", "Importing VNDB users (uid → username)...")
+            await log_and_track(20, "vndb_users", "Importing VNDB users (uid → username)...")
             await import_vndb_users(extract_dir)
 
-        # Step 22: User VN lists (for user stats - replaces VNDB API calls)
+        # Step 21: User VN lists (for user stats - replaces VNDB API calls)
         if "db" in paths:
-            await log_and_track(22, "ulist_vns", "Importing user VN lists...")
+            await log_and_track(21, "ulist_vns", "Importing user VN lists...")
             await import_ulist_vns(extract_dir)
 
-        # Step 23: User VN list labels (Playing, Finished, etc.)
+        # Step 22: User VN list labels (Playing, Finished, etc.)
         if "db" in paths:
-            await log_and_track(23, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
+            await log_and_track(22, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
             await import_ulist_labels(extract_dir)
 
-        # Step 24: Aggregate platforms and languages from release data
-        await log_and_track(24, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
+        # Step 23: Aggregate platforms and languages from release data
+        await log_and_track(23, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
         await update_vn_platforms_and_languages()
 
-        # Step 25: Compute precomputed browse counts for staff and producers
-        await log_and_track(25, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
+        # Step 24: Compute precomputed browse counts for staff and producers
+        await log_and_track(24, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
         await update_browse_precomputed_counts()
 
-        # Step 26: Recreate indexes
-        await log_and_track(26, "indexes", "Recreating indexes...")
-        await recreate_import_indexes(dropped_indexes)
-        await log_import_message(run_id, "INFO", f"Recreated {len(dropped_indexes)} indexes", "indexes")
-
-        # Step 27: Analyze tables
-        await log_and_track(27, "analyze", "Analyzing tables for query planner...")
+        # Step 25: Analyze tables
+        await log_and_track(25, "analyze", "Analyzing tables for query planner...")
         await analyze_import_tables()
 
-        # Step 28: Evaluate auto-blacklist rules
-        await log_and_track(28, "blacklist", "Evaluating cover blacklist rules...")
+        # Step 26: Evaluate auto-blacklist rules
+        await log_and_track(26, "blacklist", "Evaluating cover blacklist rules...")
         from app.services.blacklist_service import evaluate_auto_blacklist
         async with async_session() as db:
             blacklist_stats = await evaluate_auto_blacklist(db)
@@ -4916,3 +4960,11 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
             f"Import {status}: {error_msg}",
             "error"
         )
+    finally:
+        # Release advisory lock
+        if lock_acquired:
+            try:
+                async with engine.begin() as conn:
+                    await conn.execute(text("SELECT pg_advisory_unlock(hashtext('vndb_import'))"))
+            except Exception as e:
+                logger.warning(f"Failed to release advisory lock: {e}")

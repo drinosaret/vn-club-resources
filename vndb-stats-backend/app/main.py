@@ -171,7 +171,7 @@ async def lifespan(app: FastAPI):
         run_news_cleanup,
         run_news_catch_up,
     )
-    from app.logging import AsyncDBLogHandler
+    from app.logging import AsyncDBLogHandler, DiscordWebhookLogHandler
     from app.logging.cleanup import cleanup_old_logs
 
     # Startup
@@ -187,6 +187,21 @@ async def lifespan(app: FastAPI):
     db_log_handler.start()
     logging.getLogger().addHandler(db_log_handler)
     logger.info("Database logging handler initialized")
+
+    # Initialize Discord webhook logging (optional)
+    discord_log_handler = None
+    settings = get_settings()
+    if settings.discord_log_webhook_url:
+        discord_log_handler = DiscordWebhookLogHandler(
+            webhook_url=settings.discord_log_webhook_url,
+            flush_interval=5.0,
+        )
+        discord_log_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
+        )
+        discord_log_handler.start()
+        logging.getLogger().addHandler(discord_log_handler)
+        logger.info("Discord webhook logging enabled for API")
 
     # Check if data is stale and update if needed
     await check_and_update_if_stale()
@@ -271,6 +286,8 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down application...")
     await task_manager.cancel_all(timeout=10.0)
+    if discord_log_handler:
+        discord_log_handler.stop()
     db_log_handler.stop()
     scheduler.shutdown()
     logger.info("Shutdown complete")

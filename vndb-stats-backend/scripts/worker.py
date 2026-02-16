@@ -29,8 +29,8 @@ from sqlalchemy import select, func, text
 
 from app.config import get_settings
 from app.db.database import init_db, async_session_maker
-from app.db.models import SystemMetadata, VisualNovel, VNSimilarity, VNCoOccurrence
-from app.logging import ScriptDBLogHandler
+from app.db.models import SystemMetadata, VisualNovel, VNSimilarity, VNCoOccurrence, ImportRun
+from app.logging import ScriptDBLogHandler, DiscordWebhookLogHandler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,6 +64,38 @@ def shutdown_db_logging():
         logger.info("Flushing worker database logs...")
         _db_log_handler.stop()
         _db_log_handler = None
+
+
+_discord_log_handler: Optional[DiscordWebhookLogHandler] = None
+
+
+def setup_discord_logging():
+    """Initialize Discord webhook logging if configured."""
+    global _discord_log_handler
+    settings = get_settings()
+
+    if not settings.discord_log_webhook_url:
+        return
+
+    _discord_log_handler = DiscordWebhookLogHandler(
+        webhook_url=settings.discord_log_webhook_url,
+        flush_interval=5.0,
+    )
+    _discord_log_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S")
+    )
+    _discord_log_handler.start()
+    logging.getLogger().addHandler(_discord_log_handler)
+    logger.info("Discord webhook logging enabled for worker")
+
+
+def shutdown_discord_logging():
+    """Gracefully shutdown Discord webhook logging."""
+    global _discord_log_handler
+    if _discord_log_handler:
+        logger.info("Flushing worker Discord logs...")
+        _discord_log_handler.stop()
+        _discord_log_handler = None
 
 
 async def get_database_status() -> dict:
@@ -133,7 +165,8 @@ async def run_daily_update():
     The entire pipeline has a 4-hour timeout to prevent indefinite hangs.
     """
     import time
-    from app.ingestion.importer import run_full_import
+    from datetime import timezone
+    from app.ingestion.importer import run_import_with_tracking
     from app.ingestion.model_trainer import (
         compute_tag_vectors,
         train_collaborative_filter,
@@ -153,11 +186,37 @@ async def run_daily_update():
     logger.info(f"Maximum duration: {max_duration // 3600} hours")
     logger.info("=" * 60)
 
+    # Create ImportRun record so Discord bot can track progress
+    run_id = None
+    try:
+        async with async_session_maker() as db:
+            run = ImportRun(
+                status="pending",
+                triggered_by="scheduled",
+                started_at=datetime.now(timezone.utc),
+                current_step=0,
+                total_steps=27,
+                progress_percent=0.0,
+            )
+            db.add(run)
+            await db.commit()
+            await db.refresh(run)
+            run_id = run.id
+        logger.info(f"Created import run #{run_id}")
+    except Exception as e:
+        logger.error(f"Failed to create ImportRun record: {e}")
+        # Continue without tracking — import still works
+
     try:
         async with asyncio.timeout(max_duration):
             # Phase 1: Import data
             logger.info("\n>>> PHASE 1/3: DATA IMPORT <<<")
-            await run_full_import(settings.dump_storage_path, max_age_hours=24, force=True)
+            if run_id:
+                await run_import_with_tracking(run_id, force_download=True)
+            else:
+                # Fallback if ImportRun creation failed
+                from app.ingestion.importer import run_full_import
+                await run_full_import(settings.dump_storage_path, max_age_hours=24, force=True)
 
             # Phase 2: Compute models
             logger.info("\n>>> PHASE 2/3: COMPUTING MODELS <<<")
@@ -204,17 +263,19 @@ async def run_daily_update():
         logger.error("=" * 60)
         # Mark the import as failed in the database
         try:
-            async with async_session_maker() as session:
-                await session.execute(
-                    text("""
-                        UPDATE import_runs
-                        SET status = 'failed',
-                            error_message = 'Timed out after maximum duration',
-                            ended_at = NOW()
-                        WHERE status = 'running'
-                    """)
-                )
-                await session.commit()
+            if run_id:
+                async with async_session_maker() as session:
+                    await session.execute(
+                        text("""
+                            UPDATE import_runs
+                            SET status = 'failed',
+                                error_message = 'Timed out after maximum duration',
+                                ended_at = NOW()
+                            WHERE id = :run_id AND status = 'running'
+                        """),
+                        {"run_id": run_id}
+                    )
+                    await session.commit()
         except Exception as db_error:
             logger.error(f"Failed to mark import as failed: {db_error}")
         raise
@@ -380,6 +441,7 @@ async def main():
 
     # Enable database logging now that DB is ready
     setup_db_logging()
+    setup_discord_logging()
 
     # Run any pending data migrations
     # Data migrations populate columns without requiring full reimport
@@ -425,6 +487,7 @@ async def main():
             await asyncio.sleep(3600)
     except (KeyboardInterrupt, SystemExit):
         logger.info("Worker shutting down...")
+        shutdown_discord_logging()
         shutdown_db_logging()
         scheduler.shutdown()
 

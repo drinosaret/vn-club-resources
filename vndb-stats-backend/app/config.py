@@ -119,6 +119,7 @@ class Settings(BaseSettings):
     # Logging handler
     log_handler_shutdown_timeout: float = 30.0  # Seconds to wait for log flush
     log_handler_circuit_breaker_threshold: int = 5  # Failures before circuit opens
+    discord_log_webhook_url: str | None = None  # Worker logs mirrored to Discord channel
 
 
 @lru_cache
