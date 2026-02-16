@@ -121,7 +121,7 @@ export default function RootLayout({
                   var theme = localStorage.getItem('theme') || 'light';
                   var el = document.documentElement;
                   el.classList.remove('light', 'dark');
-                  el.classList.add(theme);
+                  el.classList.add(theme, 'no-transitions');
                 } catch (e) {}
               })();
             `,
@@ -144,7 +144,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <div className="flex flex-col min-h-screen overflow-x-clip">
               <Header />
-              <main className="flex-grow pt-16 md:pt-[72px]">
+              <main className="flex-grow pt-16 md:pt-[72px]" style={{ contain: 'layout paint' }}>
                 {children}
               </main>
               <Footer />

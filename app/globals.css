@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font-Flash Fix
+
+/* Fix 1 — make transition-all safe by excluding font/text-layout properties.
+   Unlayered so it beats Tailwind's @layer utilities version of .transition-all. */
+.transition-all {
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke, opacity, box-shadow,
+    transform, filter, -webkit-backdrop-filter, backdrop-filter,
+    width, height, max-width, max-height, min-width, min-height,
+    padding, margin, gap, inset, top, right, bottom, left,
+    border-radius, outline-color, outline-offset,
+    flex, flex-grow, flex-shrink, flex-basis,
+    grid-template-columns, grid-template-rows, column-gap, row-gap,
+    visibility, z-index, order, translate, rotate, scale;
+}
+
+/* Fix 2 — kill all transitions during initial load (class removed after hydration) */
+html.no-transitions,
+html.no-transitions *,
+html.no-transitions *::before,
+html.no-transitions *::after {
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-down {
+  animation: slide-down 150ms ease-out;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -70,20 +104,18 @@ body {
   }
 }
 
-/* Disable React 19 automatic View Transition animations.
-   React wraps DOM commits in startViewTransition() internally. The default
-   250ms crossfade creates visible DOM snaps when aborted, exposing Firefox
-   WebRender's async text rasterization lag. Making VTs instant prevents the
-   visual artifacts while preserving React's VT lifecycle hooks. */
+/* ═══ View Transition Defensive Rules ═══
+   The bundled react-dom includes startViewTransition() support (activated only
+   when <ViewTransition> components are in the tree — not currently used).
+   These rules are kept as defensive CSS: if VTs are ever enabled, they prevent
+   Firefox WebRender's async text rasterization from causing visible flashes
+   during the VT snapshot/swap lifecycle. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 
-/* Exclude main content from View Transition capture entirely.
-   Prevents Firefox WebRender from deferring text rasterization
-   during React 19's automatic startViewTransition() calls. */
 main {
   view-transition-name: none;
 }

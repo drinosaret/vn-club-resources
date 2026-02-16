@@ -23,7 +23,7 @@ export function BrowseTabs({ activeTab, onTabChange, onTabHover }: BrowseTabsPro
   return (
     <div className="relative border-b border-gray-200 dark:border-gray-700 mb-6">
       <div className="overflow-x-auto">
-        <nav className="flex gap-0 min-w-max" aria-label="Browse tabs">
+        <nav className="flex gap-0 min-w-max" aria-label="Browse tabs" style={{ contain: 'content' }}>
           {TABS.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id;
             return (

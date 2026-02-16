@@ -57,12 +57,15 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
       setGuideResults([]);
       setVnResults([]);
       setIsOpen(false);
+      setIsLoading(false);
       return;
     }
 
-    const timeoutId = setTimeout(async () => {
-      setIsLoading(true);
+    // Immediately show loading feedback while debounce + fetch runs
+    setIsLoading(true);
+    setIsOpen(true);
 
+    const timeoutId = setTimeout(async () => {
       // Cancel any in-flight VN search
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -82,7 +85,6 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
 
         setGuideResults(guides);
         setVnResults(vns);
-        setIsOpen(guides.length > 0 || vns.length > 0);
         setSelectedIndex(-1);
       } catch {
         if (!controller.signal.aborted) {
@@ -227,7 +229,13 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        {isLoading ? (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-indigo-500 dark:border-t-indigo-400 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        )}
         <input
           ref={inputRef}
           type="text"
@@ -236,7 +244,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
           onKeyDown={handleKeyDown}
           onFocus={() => {
             handleFocus(); // Prefetch search index on first focus
-            query.trim() && hasResults && setIsOpen(true);
+            query.trim() && (hasResults || isLoading) && setIsOpen(true);
           }}
           placeholder="Search..."
           className={`
@@ -246,9 +254,11 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
             rounded-lg
             text-sm text-gray-900 dark:text-gray-100
             placeholder-gray-500 dark:placeholder-gray-400
-            focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent
-            transition-colors
-            ${isMobile ? 'text-base' : ''}
+            focus:outline-none transition-colors
+            ${isMobile
+              ? 'text-base focus:border-gray-400 dark:focus:border-gray-600'
+              : 'focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent'
+            }
           `}
           aria-label="Search"
           aria-expanded={isOpen}
@@ -273,20 +283,22 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
           id="search-results"
           role="listbox"
           className={`
-            absolute z-50 mt-2 w-full
+            absolute z-50 mt-2
             bg-white dark:bg-gray-900
-            border border-gray-200 dark:border-gray-700
-            rounded-lg shadow-lg
+            shadow-lg
             max-h-[28rem] overflow-y-auto
-            ${isMobile ? 'left-0 right-0' : 'min-w-[420px]'}
+            ${isMobile
+              ? '-mx-4 w-[calc(100%+2rem)] rounded-b-lg border-b border-gray-200 dark:border-gray-700'
+              : 'w-full min-w-[420px] rounded-lg border border-gray-200 dark:border-gray-700'
+            }
           `}
         >
-          {isLoading ? (
+          {isLoading && !hasResults ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               <div className="inline-block w-4 h-4 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin mr-2" />
               Searching...
             </div>
-          ) : !hasResults ? (
+          ) : !isLoading && !hasResults ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               No results found for &ldquo;{query}&rdquo;
             </div>
@@ -387,9 +399,11 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                                   <img
                                     src={imageUrl}
                                     alt={displayTitle}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover opacity-0 transition-opacity duration-200"
                                     style={isNsfw ? { imageRendering: 'pixelated' } : undefined}
                                     loading="lazy"
+                                    onLoad={(e) => { (e.target as HTMLImageElement).classList.remove('opacity-0'); }}
+                                    onError={(e) => { (e.target as HTMLImageElement).classList.remove('opacity-0'); }}
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center">

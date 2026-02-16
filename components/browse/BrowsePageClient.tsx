@@ -12,6 +12,7 @@ import { Pagination, PaginationSkeleton } from './Pagination';
 import { TagFilter, SelectedTag, FilterEntityType } from './TagFilter';
 import { ViewModeToggle, GridSize } from './ViewModeToggle';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
+import { consumePendingScroll } from '@/components/ScrollToTop';
 import { CompactFilterBar } from './CompactFilterBar';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { InlineRangeSliders } from './InlineRangeSliders';
@@ -246,14 +247,16 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   // Initialize from server-known grid size — SSR data already uses this limit,
   // so server and client render identically. No useLayoutEffect needed.
   const [gridSize, setGridSizeState] = useState<GridSize>(serverGridSize);
-  // On mount: sync grid size from localStorage and refetch on back navigation.
+  // On mount: sync grid size from localStorage and restore/refetch on back navigation.
   // Two problems this solves:
   // 1. Stale RSC cache: user changes to medium, clicks a VN, presses back → cached
   //    RSC payload still has serverGridSize='small' with wrong limit/data.
   // 2. Stale initialData: cached RSC has data from the FIRST /browse/ visit (page 1,
   //    default filters) but the URL has the user's actual state (page 3, filters, etc.).
-  // On back nav, refetch with URL-derived filters + correct grid size limit.
+  // First tries to restore from a sessionStorage snapshot (saved on VN link click) for
+  // instant back navigation. Falls back to refetching if no snapshot is available.
   // useLayoutEffect runs before paint — prevents flash of stale covers on back navigation.
+  const didRestoreSnapshotRef = useRef(false);
   useLayoutEffect(() => {
     // Read actual grid size from localStorage (always current, unlike cached serverGridSize)
     let actualGridSize: GridSize = gridSize;
@@ -267,13 +270,57 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       }
     } catch {}
 
-    // On back navigation, cached initialData is likely stale — refetch with correct params.
+    // On back navigation, cached initialData is likely stale — restore or refetch.
     // Peek at the flag (nav detection effect will still consume it for scroll restoration).
     // Read from window.location.search (always the real browser URL) instead of
     // useSearchParams() which may return stale params from the cached RSC payload.
     const isBackNav = sessionStorage.getItem('is-popstate-navigation') === 'true';
     if (isBackNav) {
       const correctLimit = ITEMS_PER_PAGE[actualGridSize];
+
+      // Try instant restore from snapshot (saved when user clicked a VN link).
+      // Verify both the grid size limit and the URL match to avoid restoring stale data
+      // (e.g., user visited browse with different filters between saving and restoring).
+      const snapshotJson = sessionStorage.getItem('browse-snapshot');
+      if (snapshotJson) {
+        try {
+          const snapshot = JSON.parse(snapshotJson);
+          const urlMatches = snapshot.urlSearch === window.location.search;
+          const limitMatches = snapshot.filters?.limit === correctLimit;
+          if (urlMatches && limitMatches) {
+            sessionStorage.removeItem('browse-snapshot');
+            // Instant restore — no fetch, no loading flash.
+            // Increment gridKey to force VNGrid remount: without this, VNGrid's
+            // internal displayResults state still holds the stale initialData covers
+            // (from the cached RSC payload) and only updates via a post-paint useEffect.
+            // Since stt-restoring is removed via rAF (before useEffect), the stale covers
+            // would flash briefly. Remounting VNGrid ensures displayResults initializes
+            // from the correct snapshot data on first render.
+            setGridKey(k => k + 1);
+            setResults(snapshot.results);
+            setTotal(snapshot.total);
+            setTotalWithSpoilers(snapshot.totalWithSpoilers);
+            setPages(snapshot.pages);
+            setQueryTime(snapshot.queryTime);
+            setDisplayedQueryTime(snapshot.displayedQueryTime);
+            setFilters(snapshot.filters);
+            pendingFiltersRef.current = snapshot.filters;
+            setSelectedTags(snapshot.selectedTags);
+            setSearchInput(snapshot.searchInput);
+            setIsLoading(false);
+            didRestoreSnapshotRef.current = true;
+            return; // Skip refetch — data is already restored
+          }
+        } catch {
+          // Parse failed — fall through to refetch
+        }
+        sessionStorage.removeItem('browse-snapshot');
+      }
+
+      // No valid snapshot — refetch with correct params.
+      // Set flag so consumePendingScroll() runs after data loads (handles the case
+      // where ScrollToTop's MutationObserver times out before the fetch completes).
+      needsScrollRestoreRef.current = true;
       const urlParams = new URLSearchParams(window.location.search);
       const correctFilters = parseFiltersFromParams(urlParams, correctLimit);
       setFilters(correctFilters);
@@ -304,9 +351,6 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const prefetchCacheRef = useRef<Map<string, BrowseResponse>>(new Map());
   const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prefetchAbortRef = useRef<AbortController | null>(null);
-  // Ref to track if current load is from back navigation (for scroll restoration)
-  const isBackNavigationRef = useRef(false);
-  const pendingScrollRestoreRef = useRef<number | null>(null);
   // Ref to track forward navigation for defensive scroll-to-top after content renders
   const isForwardNavRef = useRef(false);
   // Gate ref: prevents Strict Mode double-invocation from re-processing nav detection
@@ -314,6 +358,10 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const didDetectNavRef = useRef(false);
   // Ref for results section - used for pagination scroll target
   const resultsContainerRef = useRef<HTMLDivElement>(null);
+  // Ref: true when back-nav triggered a refetch (no valid snapshot) — signals
+  // that we need to call consumePendingScroll() after data loads, in case
+  // ScrollToTop's MutationObserver timed out before the fetch completed.
+  const needsScrollRestoreRef = useRef(false);
   // Ref tracking latest pending filters for debounced fetches (avoids stale closures)
   const pendingFiltersRef = useRef<BrowseFilters>(initialFilters);
   // Guard ref: stores the query string of the last URL we set internally.
@@ -322,6 +370,20 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   // (replaceState → useSearchParams update → sync effect → unnecessary state/fetch work)
   // that cause brief content flashes on Firefox under load.
   const lastInternalQueryRef = useRef<string | null>(null);
+  // Snapshot ref: tracks current browse state for instant back-navigation restore.
+  // Updated via useEffect whenever results change. Read in the click handler (which
+  // has [] deps) via ref access to always get the latest state at click time.
+  const browseSnapshotRef = useRef<{
+    results: VNSearchResult[];
+    total: number;
+    totalWithSpoilers: number | null;
+    pages: number;
+    queryTime: number | undefined;
+    displayedQueryTime: number | undefined;
+    filters: BrowseFilters;
+    selectedTags: SelectedTag[];
+    searchInput: string;
+  } | null>(null);
 
   // Delayed loading overlay — only show for non-pagination loads after 200ms
   useEffect(() => {
@@ -371,10 +433,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track back navigation for scroll restoration
-  // ScrollToTop sets 'is-popstate-navigation' flag when it detects back/forward nav
-  // (via absence of forward-nav link click flag). ScrollToTop's effects run before
-  // this component's mount effects due to sibling render order in the layout.
+  // Detect navigation type for forward-nav scroll safety.
+  // ScrollToTop handles all back-nav scroll restoration (via MutationObserver),
+  // so BrowsePageClient only needs to handle the forward-nav edge case.
   //
   // Gate with didDetectNavRef: React Strict Mode double-invokes [] effects on mount.
   // Without the gate, the 2nd invocation finds 'is-popstate-navigation' consumed,
@@ -387,13 +448,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     sessionStorage.removeItem('is-popstate-navigation');
 
     if (isBackNav) {
-      // Back/forward navigation - check for saved scroll
-      const savedScroll = sessionStorage.getItem('browse-scroll');
-      if (savedScroll) {
-        pendingScrollRestoreRef.current = parseInt(savedScroll, 10);
-        isBackNavigationRef.current = true;
-        sessionStorage.removeItem('browse-scroll');
-      }
+      // Back/forward navigation — ScrollToTop handles scroll restoration.
+      // Clean up any stale browse-scroll key (no longer used).
+      sessionStorage.removeItem('browse-scroll');
     } else {
       // Forward navigation - clear any stale scroll position and ensure page is at top.
       // This is defensive: ScrollToTop normally handles this, but it only watches pathname
@@ -405,68 +462,66 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
   }, []);
 
-  // Save scroll position when clicking VN links
+  // Keep browse snapshot ref current — captures latest state for the click handler.
+  // Only updates when we have actual results (not during loading).
+  useEffect(() => {
+    if (!isLoading && results.length > 0) {
+      browseSnapshotRef.current = {
+        results, total, totalWithSpoilers, pages, queryTime, displayedQueryTime,
+        filters, selectedTags, searchInput,
+      };
+    }
+  }, [isLoading, results, total, totalWithSpoilers, pages, queryTime, displayedQueryTime, filters, selectedTags, searchInput]);
+
+  // Save browse state snapshot when clicking any link that navigates away from browse,
+  // enabling instant back-navigation. Previously only saved for VN links — now covers
+  // character, tag, staff, and all other outgoing links for a smoother back experience.
+  // Scroll position is saved separately by ScrollToTop (generic, all pages).
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const vnLink = target.closest('a[href^="/vn/"]');
-      if (vnLink) {
-        sessionStorage.setItem('browse-scroll', String(window.scrollY));
+      const link = target.closest('a[href]') as HTMLAnchorElement | null;
+      if (!link) return;
+      try {
+        const url = new URL(link.href, window.location.origin);
+        // Only save for internal links navigating away from browse
+        if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+          if (browseSnapshotRef.current) {
+            sessionStorage.setItem('browse-snapshot', JSON.stringify({
+              ...browseSnapshotRef.current,
+              urlSearch: window.location.search,
+            }));
+          }
+        }
+      } catch {
+        // Invalid URL or sessionStorage full — back nav will fall back to refetching
       }
     };
     document.addEventListener('click', handleClick, true);
     return () => document.removeEventListener('click', handleClick, true);
   }, []);
 
-  // Scroll restoration effect - waits for content AND sufficient DOM height before restoring
-  // This is key: we can't restore scroll during skeleton loading phase because
-  // the DOM height is wrong. We must wait for !isLoading && results.length > 0
-  // AND for the page to be tall enough to scroll to the target position
+  // Forward nav safety: re-assert scroll-to-top after content renders.
+  // Handles mobile edge cases where momentum scrolling, Suspense transitions,
+  // or browser viewport changes override the initial scrollTo(0, 0).
+  // Back-nav scroll restoration is handled entirely by ScrollToTop (via MutationObserver).
   useEffect(() => {
-    if (pendingScrollRestoreRef.current !== null && !isLoading && results.length > 0) {
-      const targetScroll = pendingScrollRestoreRef.current;
-      pendingScrollRestoreRef.current = null;
-      isBackNavigationRef.current = false;
-
-      const attemptScroll = () => {
-        const canScroll = document.body.scrollHeight >= targetScroll + window.innerHeight;
-        if (canScroll || targetScroll <= 0) {
-          window.scrollTo(0, targetScroll);
-          return true;
-        }
-        return false;
-      };
-
-      // Try immediately in next frame
-      requestAnimationFrame(() => {
-        if (attemptScroll()) return;
-
-        // If page isn't tall enough yet (images loading), watch for size changes
-        let timeoutId: NodeJS.Timeout;
-        const observer = new ResizeObserver(() => {
-          if (attemptScroll()) {
-            observer.disconnect();
-            clearTimeout(timeoutId);
-          }
-        });
-
-        observer.observe(document.body);
-
-        // Fallback: scroll to best available position after 1 second
-        timeoutId = setTimeout(() => {
-          observer.disconnect();
-          const maxAvailable = Math.max(0, document.body.scrollHeight - window.innerHeight);
-          window.scrollTo(0, Math.min(targetScroll, maxAvailable));
-        }, 1000);
-      });
-    } else if (isForwardNavRef.current && !isLoading && results.length > 0) {
-      // Forward nav safety: re-assert scroll-to-top after content renders.
-      // Handles mobile edge cases where momentum scrolling, Suspense transitions,
-      // or browser viewport changes override the initial scrollTo(0, 0).
+    if (isForwardNavRef.current && !isLoading && results.length > 0) {
       isForwardNavRef.current = false;
       requestAnimationFrame(() => {
         if (window.scrollY !== 0) window.scrollTo(0, 0);
       });
+    }
+  }, [isLoading, results.length]);
+
+  // Back-nav scroll restore: after refetch completes (no valid snapshot path),
+  // call consumePendingScroll() to restore the saved position. This handles the
+  // case where ScrollToTop's MutationObserver timed out before our fetch finished
+  // (common on slow mobile networks).
+  useEffect(() => {
+    if (needsScrollRestoreRef.current && !isLoading && results.length > 0) {
+      needsScrollRestoreRef.current = false;
+      consumePendingScroll();
     }
   }, [isLoading, results.length]);
 
@@ -902,8 +957,13 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   // Skip when the URL change was self-initiated — we already have the correct state.
   useEffect(() => {
     if (lastInternalQueryRef.current !== null) {
+      const expectedQuery = lastInternalQueryRef.current;
       lastInternalQueryRef.current = null;
-      return;
+      // Only skip if URL matches our self-initiated change.
+      // If URL is different (e.g., nav link cleared params), proceed with sync.
+      if (searchParams.toString() === expectedQuery) {
+        return;
+      }
     }
 
     // Check if URL has been reset to no params (user clicked Browse link)
@@ -951,9 +1011,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Initial fetch - skip if we have SSR data
+  // Initial fetch - skip if we have SSR data or restored from snapshot
   useEffect(() => {
-    if (!initialData) {
+    if (!initialData && !didRestoreSnapshotRef.current) {
       fetchResults(initialFilters);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -978,7 +1038,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const handleFilterChange = useCallback((newFilters: Partial<BrowseFilters>) => {
     setSkipPreload(false); // Filter change — use preload buffer for smooth transition
     setIsPaginatingOnly(false); // This is a filter change, not pagination-only
-    pendingScrollRestoreRef.current = null; // Clear pending scroll restore on filter change
+
     // Compute from ref (always current) to avoid stale closure
     const updated = { ...pendingFiltersRef.current, ...newFilters, page: 1 };
     pendingFiltersRef.current = updated;
@@ -998,7 +1058,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const handleTagsChange = useCallback((newTags: SelectedTag[]) => {
     setSkipPreload(false); // Filter change — use preload buffer for smooth transition
     setIsPaginatingOnly(false); // This is a filter change, not pagination-only
-    pendingScrollRestoreRef.current = null; // Clear pending scroll restore on filter change
+
     setSelectedTags(newTags);
     // Separate tags, traits, and entities
     const includeTags = newTags.filter(t => t.mode === 'include' && t.type === 'tag').map(t => t.id);

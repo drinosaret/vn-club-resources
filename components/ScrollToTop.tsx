@@ -171,7 +171,14 @@ export function ScrollToTop() {
             timeoutId = setTimeout(() => {
               observer.disconnect();
               scrollCleanupRef.current = null;
-              window.scrollTo(0, Math.min(targetPosition, Math.max(0, document.body.scrollHeight - window.innerHeight)));
+              const canScrollNow = document.body.scrollHeight >= targetPosition + window.innerHeight;
+              if (canScrollNow) {
+                // Page became tall enough but observer missed it — scroll now
+                window.scrollTo(0, targetPosition);
+                sessionStorage.removeItem(PENDING_SCROLL_KEY);
+              }
+              // If page is still too short, leave PENDING_SCROLL_KEY intact
+              // so async pages can call consumePendingScroll() after data loads
               restoreVisibility();
             }, 1500);
           }

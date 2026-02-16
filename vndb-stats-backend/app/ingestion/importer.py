@@ -487,11 +487,11 @@ async def swap_staging_to_live(table_names: str | list[str]) -> bool:
         logger.info(f"Swap committed in {swap_ms:.1f}ms — {table_names} now serving fresh data")
 
         # 4. Post-swap housekeeping: ANALYZE + cleanup.
-        # If anything here fails, live data is already correct — treat as warning.
-        try:
-            for table in table_names:
-                staging = f"{table}_staging"
-
+        # Each table is cleaned up in its own transaction so one failure
+        # doesn't abort cleanup for the remaining tables.
+        for table in table_names:
+            staging = f"{table}_staging"
+            try:
                 # ANALYZE for fresh query planner stats
                 await db.execute(text(f"ANALYZE {table}"))
 
@@ -537,11 +537,12 @@ async def swap_staging_to_live(table_names: str | list[str]) -> bool:
                 except Exception:
                     pass  # PK constraint may already have the right name
 
-            await db.commit()
-            logger.info(f"Post-swap cleanup complete for {table_names}")
-        except Exception as e:
-            logger.warning(f"Post-swap cleanup failed (live data is serving correctly): {e}")
-            await db.rollback()
+                await db.commit()
+            except Exception as e:
+                logger.warning(f"Post-swap cleanup failed for {table} (live data is correct): {e}")
+                await db.rollback()
+
+        logger.info(f"Post-swap cleanup complete for {table_names}")
 
     return True
 
@@ -3906,15 +3907,12 @@ async def import_release_media(extract_dir: str, force: bool = False):
         valid_release_ids = {row[0] for row in release_result}
     logger.info(f"Found {len(valid_release_ids)} releases in database")
 
-    count = 0
     skipped = 0
 
-    # Prepare staging table
-    await prepare_staging("release_media")
-
-    # Use COPY for fast bulk loading
-    batch: list[tuple] = []
-    BATCH_SIZE = 10000
+    # Read all rows into a deduplicated dict first.
+    # VNDB dump can have duplicate (release_id, medium) rows with different qty
+    # values (e.g. two "flp" entries for the same release). Keep the last seen.
+    deduped: dict[tuple[str, str], tuple[str, str, int]] = {}
 
     with open(media_file, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
@@ -3940,29 +3938,22 @@ async def import_release_media(extract_dir: str, force: bool = False):
                 except ValueError:
                     quantity = 1
 
-                batch.append((release_id, medium, quantity))
-                count += 1
-
-                if len(batch) >= BATCH_SIZE:
-                    try:
-                        await copy_bulk_data(
-                            "release_media_staging",
-                            ["release_id", "medium", "quantity"],
-                            batch
-                        )
-                    except Exception as e:
-                        logger.error(f"Error in COPY batch at count {count}: {e}")
-                    batch = []
-
-                    if count % 50000 == 0:
-                        logger.info(f"Imported {count} release media entries...")
+                deduped[(release_id, medium)] = (release_id, medium, quantity)
 
             except Exception as e:
                 logger.debug(f"Error processing release media row: {e}")
                 continue
 
-    # Final batch
-    if batch:
+    # Prepare staging table
+    await prepare_staging("release_media")
+
+    # Bulk load deduplicated rows
+    rows = list(deduped.values())
+    count = len(rows)
+    BATCH_SIZE = 10000
+
+    for i in range(0, count, BATCH_SIZE):
+        batch = rows[i:i + BATCH_SIZE]
         try:
             await copy_bulk_data(
                 "release_media_staging",
@@ -3970,7 +3961,10 @@ async def import_release_media(extract_dir: str, force: bool = False):
                 batch
             )
         except Exception as e:
-            logger.error(f"Error in final COPY batch: {e}")
+            logger.error(f"Error in COPY batch at offset {i}: {e}")
+
+        if (i + BATCH_SIZE) % 50000 == 0:
+            logger.info(f"Imported {min(i + BATCH_SIZE, count)} release media entries...")
 
     logger.info(f"Imported {count} release media entries ({skipped} skipped)")
 

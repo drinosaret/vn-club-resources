@@ -133,7 +133,7 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="lg:hidden mt-4 pb-4 max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden">
+          <div className="lg:hidden mt-4 pb-4 max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden animate-slide-down">
             <div className="flex flex-col space-y-1">
               <SearchBar
                 className="mb-3"
