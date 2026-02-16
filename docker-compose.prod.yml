@@ -89,6 +89,7 @@ services:
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
       - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
@@ -167,6 +168,7 @@ services:
       - DISCORD_ADMIN_USER_IDS=${DISCORD_ADMIN_USER_IDS:-}
       - FRONTEND_URL=https://vnclub.org
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
+      - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
@@ -233,6 +235,7 @@ services:
       - DUMP_STORAGE_PATH=/app/data
       - VNDB_API_URL=https://api.vndb.org/kana
       - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
+      - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
