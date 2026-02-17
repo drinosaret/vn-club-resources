@@ -9,7 +9,7 @@ sitemap:
 
 A simple guide on how to quickly set up and use [OwOCR](https://github.com/AuroraWright/owocr), an optical character recognition program that can make reading Japanese text from visual novels much easier.
 
-> **Note:** OwOCR is now available as a standalone GUI application, but it is still available as a terminal tool via pip on all platforms. Alternatively, you can use [GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner), which also uses a fork of OwOCR as a part of its comprehensive all-in-one mining setup.
+> **Note:** OwOCR is now available as a standalone GUI application, but it is still available as a terminal tool via pip on all platforms. Alternatively, you can use [GameSentenceMiner](https://github.com/bpwhelan/GameSentenceMiner), which includes a fork of OwOCR as part of its all-in-one mining setup. Keep in mind that due to the GSM fork using an older version of OwOCR, there can be differences in the results and new features such as text reordering and furigana filtering may not be present.
 
 ![OwOCR in action](assets/owocr-main.webp)
 
@@ -65,8 +65,10 @@ Under the **General** tab:
 - **write_to:** `websocket` (see the [Textractor Guide](/textractor-guide) if you need help setting up a texthooker page for WebSocket output)
 
 Under the **Engines** tab:
-- **engine:** `Google Lens` (best accuracy, set as your primary engine)
+- **engine:** `Google Lens` for best accuracy or `oneocr` on Windows for faster local processing, pick whichever suits your needs
 - **engine_secondary:** `oneocr` on Windows, `alivetext` on macOS, `meikiocr` on Linux
+
+> The local engines listed above are also perfectly valid as your primary engine if you prefer faster processing and privacy. Only enable the engine(s) you actually use, as extra engines significantly increase startup time.
 
 Under the **Screen capture** tab:
 - **screen_capture_area** controls what OwOCR captures. By default it's set to automatic selection, which prompts you to select a capture area on startup. You can also set it to capture the entire screen, or set it to window, which will let you enter a window name to lock onto.
@@ -344,7 +346,7 @@ While OwOCR is running, you can use these keys:
 
 ## Tips
 
-- **Use Google Lens** for best accuracy in most cases
+- **Google Lens** offers the best accuracy in most cases. Local engines like **OneOCR** (Windows), **Apple Live Text** (macOS), and **meikiocr** (Linux) often work faster and respect your privacy
 - **Secondary engine:** You can set up a secondary engine if you want to make use of a two-pass system. This means that only the changed areas get sent to the online engine, improving speed and accuracy
 - **Furigana** is automatically filtered for Japanese text
 - **Avoid hotkey conflicts** with game controls

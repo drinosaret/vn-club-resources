@@ -352,12 +352,12 @@ Under **General**:
 - **output_format:** `json`
 
 Under **Engines**:
-- **engine:** `oneocr` on Windows, `alivetext` on macOS, `meikiocr` on Linux
+- **engine:** `oneocr` on Windows, `alivetext` on macOS, `meikiocr` on Linux (you can also use `Google Lens` or another online engine if you prefer)
 - Only enable the engine(s) you actually use, as extra engines significantly increase startup time
 
 Under **Screen capture**:
 - **screen_capture_area:** `window` is strongly recommended for accuracy
-- **screen_capture_delay_seconds:** if CPU usage is too high, increase this value (1.5-3 seconds works well for OneOCR). Set to `-1` to disable automatic capture and use a hotkey instead
+- **screen_capture_delay_seconds:** if CPU usage is too high, increase this value (1.5-3 seconds may work well for OneOCR, but this will vary depending on your PC specs). Set to `-1` to disable automatic capture and use the `screen_capture_combo` hotkey instead
 
 Under **Processing**:
 - **join_lines:** enabled
