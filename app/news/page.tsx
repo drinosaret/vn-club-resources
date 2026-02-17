@@ -6,7 +6,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'Visual Novel News & Releases',
   description: 'Latest visual novel news, new Japanese VN releases, and eroge industry updates. Stay informed about upcoming titles for your Japanese reading list.',
-  path: '/news',
+  path: '/news/',
 });
 
 // JSON-LD for news collection page
@@ -16,7 +16,7 @@ const newsJsonLd = [
     '@type': 'CollectionPage',
     name: 'Visual Novel News',
     description: 'Latest visual novel and eroge news',
-    url: `${SITE_URL}/news`,
+    url: `${SITE_URL}/news/`,
     isPartOf: {
       '@type': 'WebSite',
       name: 'VN Club',

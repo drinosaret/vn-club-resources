@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return generatePageMetadata({
     title: metaTitle,
     description: cleanDescription,
-    path: `/vn/${id}`,
+    path: `/vn/${id}/`,
     image: ogImage,
     imageAlt: `${vn.title} cover`,
     type: 'article',

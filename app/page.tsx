@@ -6,7 +6,7 @@ import { ExploreSection } from '@/components/home/ExploreSection';
 import { getGuidesWithImages } from '@/lib/navigation-server';
 import { getFeaturedVNsData } from '@/lib/featured-vns';
 import type { Metadata } from 'next';
-import { safeJsonLdStringify } from '@/lib/metadata-utils';
+import { safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -20,13 +20,13 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   alternates: {
-    canonical: 'https://vnclub.org',
+    canonical: '/',
   },
   description: 'Learn Japanese with visual novels. Free guides for Textractor, Yomitan, Anki, and OCR setup. Browse VNDB, get personalized VN recommendations, and join a community of readers learning Japanese through immersion.',
   openGraph: {
     title: 'VN Club | Learn Japanese with Visual Novels',
     description: 'Free guides, tools, and community for learning Japanese through visual novels. Text hooking, dictionary setup, Anki mining, and VN recommendations.',
-    url: 'https://vnclub.org',
+    url: '/',
     type: 'website',
     images: [
       {
@@ -36,6 +36,12 @@ export const metadata: Metadata = {
         alt: 'VN Club - Learn Japanese with Visual Novels',
       },
     ],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'VN Club | Learn Japanese with Visual Novels',
+    description: 'Free guides, tools, and community for learning Japanese through visual novels. Text hooking, dictionary setup, Anki mining, and VN recommendations.',
+    images: ['/assets/hikaru-icon2.webp'],
   },
 };
 
@@ -72,7 +78,10 @@ export default async function Home() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(websiteSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify([
+          websiteSchema,
+          generateBreadcrumbJsonLd([{ name: 'Home', path: '/' }]),
+        ]) }}
       />
       <div className="w-full">
         {/* 1. Hero Section with Stats Banner */}

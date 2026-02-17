@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { X, ExternalLink, Tag, Users, BookOpen, ImageOff, Mic, Heart, Building2, Pen, Star, LucideIcon } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -516,11 +517,11 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
     return cats.sort((a, b) => b.percent - a.percent);
   }, [details, tagPercent, similarGamesPercent, usersAlsoReadPercent, qualityPercent, developerPercent, staffPercent, seiyuuPercent, traitPercent, scores.quality]);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="rec-detail-modal-title">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60"
         onClick={onClose}
       />
 
@@ -651,6 +652,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

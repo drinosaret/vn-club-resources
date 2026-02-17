@@ -6,7 +6,7 @@ export const metadata: Metadata = generatePageMetadata({
   title: 'Global Visual Novel Statistics',
   description:
     'Explore global visual novel statistics from VNDB — top rated VNs, score distributions, release trends, and reading activity across the community.',
-  path: '/stats/global',
+  path: '/stats/global/',
 });
 
 const globalStatsJsonLd = {

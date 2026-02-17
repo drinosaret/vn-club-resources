@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return generatePageMetadata({
     title: `${tag.name} - Tag Stats`,
     description,
-    path: `/stats/tag/${tagId}`,
+    path: `/stats/tag/${tagId}/`,
   });
 }
 

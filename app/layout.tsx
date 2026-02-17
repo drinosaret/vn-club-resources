@@ -91,7 +91,7 @@ const organizationSchema = {
   },
   description: 'Learn Japanese with visual novels. Comprehensive guides, tools, and resources for immersion-based Japanese learning through VNs.',
   sameAs: [
-    'https://discord.gg/hnfUpsPv8T',
+    'https://discord.gg/Ze7dYKVTHf',
     'https://github.com/drinosaret/vn-club-resources',
   ],
   knowsAbout: ['Japanese language learning', 'Visual novels', 'Immersion learning', 'Text hooking'],

@@ -50,7 +50,7 @@ export function DigestCard({ item }: DigestCardProps) {
             <>
               <Image
                 src={getNewsImageUrl(previewImages[0])!}
-                alt=""
+                alt={digestItems.length > 0 ? getNewsItemTitle(digestItems[0], preference) : item.source}
                 fill
                 loading="lazy"
                 className={`object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}

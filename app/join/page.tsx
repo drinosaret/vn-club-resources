@@ -14,7 +14,7 @@ export const metadata: Metadata = generatePageMetadata({
   title: 'Join the VN Club Resurrection Discord',
   description:
     'Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs, get help with setup, share progress, and discover new visual novels.',
-  path: '/join',
+  path: '/join/',
 });
 
 const communityJsonLd = [
@@ -24,7 +24,7 @@ const communityJsonLd = [
     name: 'Join VN Club Resurrection Discord',
     description:
       'Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs.',
-    url: `${SITE_URL}/join`,
+    url: `${SITE_URL}/join/`,
     mainEntity: {
       '@type': 'Organization',
       name: 'VN Club Resurrection',

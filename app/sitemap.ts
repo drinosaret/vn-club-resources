@@ -74,6 +74,23 @@ async function fetchTotal(path: string): Promise<number> {
   return data?.total ?? 0;
 }
 
+/** Fetch the last VNDB import date for entity sitemaps. */
+async function fetchLastImportDate(): Promise<Date | undefined> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return undefined;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/stats/last-import-date`, {
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    return data?.last_import ? new Date(data.last_import) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Push chunk IDs for a given base and total. */
 function pushChunks(sitemaps: Array<{ id: number }>, baseId: number, total: number) {
   const chunks = Math.ceil(total / URLS_PER_SITEMAP);
@@ -123,23 +140,28 @@ export default async function sitemap(props: {
     return generateStaticSitemap();
   }
 
+  // Fetch last import date for entity pages (covers characters through producers)
+  const lastImportDate = numId >= CHAR_BASE_ID
+    ? await fetchLastImportDate()
+    : undefined;
+
   if (numId >= PRODUCER_BASE_ID) {
-    return generateEntitySitemap(numId - PRODUCER_BASE_ID, '/stats/producers/sitemap-ids', '/stats/producer/', 0.5, 'monthly');
+    return generateEntitySitemap(numId - PRODUCER_BASE_ID, '/stats/producers/sitemap-ids', '/stats/producer/', 0.5, 'monthly', lastImportDate);
   }
   if (numId >= SEIYUU_BASE_ID) {
-    return generateEntitySitemap(numId - SEIYUU_BASE_ID, '/stats/seiyuu/sitemap-ids', '/stats/seiyuu/', 0.5, 'monthly');
+    return generateEntitySitemap(numId - SEIYUU_BASE_ID, '/stats/seiyuu/sitemap-ids', '/stats/seiyuu/', 0.5, 'monthly', lastImportDate);
   }
   if (numId >= STAFF_BASE_ID) {
-    return generateEntitySitemap(numId - STAFF_BASE_ID, '/stats/staff/sitemap-ids', '/stats/staff/', 0.5, 'monthly');
+    return generateEntitySitemap(numId - STAFF_BASE_ID, '/stats/staff/sitemap-ids', '/stats/staff/', 0.5, 'monthly', lastImportDate);
   }
   if (numId >= TRAIT_BASE_ID) {
-    return generateEntitySitemap(numId - TRAIT_BASE_ID, '/stats/traits/sitemap-ids', '/stats/trait/', 0.4, 'monthly');
+    return generateEntitySitemap(numId - TRAIT_BASE_ID, '/stats/traits/sitemap-ids', '/stats/trait/', 0.4, 'monthly', lastImportDate);
   }
   if (numId >= TAG_BASE_ID) {
-    return generateEntitySitemap(numId - TAG_BASE_ID, '/stats/tags/sitemap-ids', '/stats/tag/', 0.5, 'monthly');
+    return generateEntitySitemap(numId - TAG_BASE_ID, '/stats/tags/sitemap-ids', '/stats/tag/', 0.5, 'monthly', lastImportDate);
   }
   if (numId >= CHAR_BASE_ID) {
-    return generateCharacterSitemap(numId - CHAR_BASE_ID);
+    return generateCharacterSitemap(numId - CHAR_BASE_ID, lastImportDate);
   }
   if (numId >= VN_BASE_ID) {
     return generateVNSitemap(numId - VN_BASE_ID);
@@ -193,6 +215,12 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
       lastModified: BUILD_DATE,
       changeFrequency: 'daily',
       priority: 0.8,
+    },
+    {
+      url: `${SITE_URL}/stats/compare/`,
+      lastModified: BUILD_DATE,
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
     {
       url: `${SITE_URL}/recommendations/`,
@@ -279,7 +307,7 @@ async function generateVNSitemap(chunk: number): Promise<MetadataRoute.Sitemap> 
 
 // ============ Character pages ============
 
-async function generateCharacterSitemap(chunk: number): Promise<MetadataRoute.Sitemap> {
+async function generateCharacterSitemap(chunk: number, lastImportDate?: Date): Promise<MetadataRoute.Sitemap> {
   const offset = chunk * URLS_PER_SITEMAP;
   const data = await fetchSitemapIds('/characters/sitemap-ids', offset, URLS_PER_SITEMAP);
 
@@ -287,7 +315,7 @@ async function generateCharacterSitemap(chunk: number): Promise<MetadataRoute.Si
 
   return data.items.map((item) => ({
     url: `${SITE_URL}/character/${item.id}/`,
-    lastModified: item.updated_at ? new Date(item.updated_at) : undefined,
+    lastModified: item.updated_at ? new Date(item.updated_at) : lastImportDate,
     changeFrequency: 'monthly' as const,
     priority: 0.5,
   }));
@@ -301,6 +329,7 @@ async function generateEntitySitemap(
   urlPrefix: string,
   priority: number,
   changeFrequency: 'weekly' | 'monthly',
+  lastImportDate?: Date,
 ): Promise<MetadataRoute.Sitemap> {
   const offset = chunk * URLS_PER_SITEMAP;
   const data = await fetchSitemapIds(apiPath, offset, URLS_PER_SITEMAP);
@@ -309,6 +338,7 @@ async function generateEntitySitemap(
 
   return data.items.map((item) => ({
     url: `${SITE_URL}${urlPrefix}${item.id}/`,
+    lastModified: lastImportDate,
     changeFrequency,
     priority,
   }));

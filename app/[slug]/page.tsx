@@ -7,7 +7,7 @@ import { CalendarPlus, History, Pencil } from 'lucide-react';
 import { ResourceMarkdownRenderer } from '@/components/ResourceMarkdownRenderer';
 import { RelativeTime } from '@/components/RelativeTime';
 import type { Metadata } from 'next';
-import { safeJsonLdStringify } from '@/lib/metadata-utils';
+import { safeJsonLdStringify, SITE_URL } from '@/lib/metadata-utils';
 
 export const dynamic = 'force-static';
 export const dynamicParams = false;
@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  const description = guide.description || `Learn how to ${guide.title.toLowerCase()} with our comprehensive guide.`;
-  const url = `https://vnclub.org/${slug}`;
+  const description = guide.description || `${guide.title} — a guide for Japanese visual novel readers.`;
+  const path = `/${slug}/`;
   const heroImage = extractFirstImage(guide.content) || '/assets/hikaru-icon2.webp';
 
   return {
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: 'article',
       title: guide.title,
       description,
-      url,
+      url: path,
       siteName: 'VN Club',
       publishedTime: guide.date,
       modifiedTime: guide.updated || guide.date,
@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       images: [heroImage],
     },
     alternates: {
-      canonical: url,
+      canonical: path,
     },
   };
 }
@@ -124,35 +124,36 @@ const mainGuideFAQ = {
 function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>, slug: string) {
   const heroImage = extractFirstImage(guide.content);
   const imageUrl = heroImage
-    ? `https://vnclub.org${heroImage}`
-    : 'https://vnclub.org/assets/hikaru-icon2.webp';
+    ? `${SITE_URL}${heroImage}`
+    : `${SITE_URL}/assets/hikaru-icon2.webp`;
+  const guideUrl = `${SITE_URL}/${slug}/`;
 
   const schemas: Record<string, unknown>[] = [
     {
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: guide.title,
-      description: guide.description || `Learn how to ${guide.title.toLowerCase()} with our comprehensive guide.`,
-      url: `https://vnclub.org/${slug}`,
+      description: guide.description || `${guide.title} — a guide for Japanese visual novel readers.`,
+      url: guideUrl,
       datePublished: guide.date,
       dateModified: guide.updated || guide.date,
       author: {
         '@type': 'Organization',
         name: 'VN Club Resurrection',
-        url: 'https://vnclub.org',
+        url: SITE_URL,
       },
       publisher: {
         '@type': 'Organization',
         name: 'VN Club',
-        url: 'https://vnclub.org',
+        url: SITE_URL,
         logo: {
           '@type': 'ImageObject',
-          url: 'https://vnclub.org/assets/hikaru-icon2.webp',
+          url: `${SITE_URL}/assets/hikaru-icon2.webp`,
         },
       },
       mainEntityOfPage: {
         '@type': 'WebPage',
-        '@id': `https://vnclub.org/${slug}`,
+        '@id': guideUrl,
       },
       image: imageUrl,
       articleSection: 'Guide',
@@ -166,27 +167,40 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
           '@type': 'ListItem',
           position: 1,
           name: 'Home',
-          item: 'https://vnclub.org',
+          item: `${SITE_URL}/`,
         },
         {
           '@type': 'ListItem',
           position: 2,
           name: 'Guides',
-          item: 'https://vnclub.org/guides',
+          item: `${SITE_URL}/guides/`,
         },
         {
           '@type': 'ListItem',
           position: 3,
           name: guide.title,
-          item: `https://vnclub.org/${slug}`,
+          item: guideUrl,
         },
       ],
     },
   ];
 
-  // Add FAQ schema to the main guide page for featured snippets
+  // Add FAQ schema — hardcoded for main guide, frontmatter-driven for others
   if (slug === 'guide') {
     schemas.push(mainGuideFAQ);
+  } else if (guide.faq && Array.isArray(guide.faq)) {
+    schemas.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: guide.faq.map((item: { q: string; a: string }) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.a,
+        },
+      })),
+    });
   }
 
   return schemas;

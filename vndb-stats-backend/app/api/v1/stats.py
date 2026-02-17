@@ -45,7 +45,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import schemas
-from app.db.models import Tag, Trait, Character, CharacterTrait, CharacterVN, VisualNovel, Staff, Producer
+from app.db.models import Tag, Trait, Character, CharacterTrait, CharacterVN, VisualNovel, Staff, Producer, SystemMetadata
 from app.services.stats_service import StatsService
 from app.services.user_service import UserService
 
@@ -900,6 +900,18 @@ async def get_trait_tags(
     return await stats_service.get_trait_tags(numeric_trait_id, limit=limit)
 
 
+@router.get("/last-import-date")
+async def get_last_import_date(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the last VNDB data import timestamp for sitemap generation."""
+    result = await db.execute(
+        select(SystemMetadata.value).where(SystemMetadata.key == "last_import")
+    )
+    value = result.scalar_one_or_none()
+    return {"last_import": value}
+
+
 @router.get("/{vndb_uid}", response_model=schemas.UserStatsResponse)
 @stats_limiter.limit("10/minute")  # Limit expensive stats calculations per user
 async def get_user_stats(
@@ -1280,6 +1292,33 @@ async def get_similar_producers(
 
 # ============ Staff Stats Endpoints ============
 
+
+@router.get("/staff/sitemap-ids")
+async def get_staff_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get staff IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Staff.id)).where(Staff.vn_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Staff.id)
+            .where(Staff.vn_count > 0)
+            .order_by(Staff.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
+
 @router.get("/staff/{staff_id}", response_model=schemas.StaffStatsResponse)
 async def get_staff_stats(
     staff_id: str,
@@ -1414,6 +1453,33 @@ async def get_staff_vns_with_tags(
 
 
 # ============ Seiyuu Stats Endpoints ============
+
+
+@router.get("/seiyuu/sitemap-ids")
+async def get_seiyuu_sitemap_ids(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50000, ge=0, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get seiyuu (voice actor) IDs for sitemap generation."""
+    count_result = await db.execute(
+        select(func.count(Staff.id)).where(Staff.seiyuu_vn_count > 0)
+    )
+    total = count_result.scalar_one()
+
+    items = []
+    if limit > 0:
+        result = await db.execute(
+            select(Staff.id)
+            .where(Staff.seiyuu_vn_count > 0)
+            .order_by(Staff.id)
+            .offset(offset)
+            .limit(limit)
+        )
+        items = [{"id": row.id} for row in result]
+
+    return {"items": items, "total": total}
+
 
 @router.get("/seiyuu/{staff_id}", response_model=schemas.SeiyuuStatsResponse)
 async def get_seiyuu_stats(
@@ -1627,58 +1693,6 @@ async def get_trait_sitemap_ids(
             select(Trait.id)
             .where(Trait.char_count > 0)
             .order_by(Trait.id)
-            .offset(offset)
-            .limit(limit)
-        )
-        items = [{"id": row.id} for row in result]
-
-    return {"items": items, "total": total}
-
-
-@router.get("/staff/sitemap-ids")
-async def get_staff_sitemap_ids(
-    offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get staff IDs for sitemap generation."""
-    count_result = await db.execute(
-        select(func.count(Staff.id)).where(Staff.vn_count > 0)
-    )
-    total = count_result.scalar_one()
-
-    items = []
-    if limit > 0:
-        result = await db.execute(
-            select(Staff.id)
-            .where(Staff.vn_count > 0)
-            .order_by(Staff.id)
-            .offset(offset)
-            .limit(limit)
-        )
-        items = [{"id": row.id} for row in result]
-
-    return {"items": items, "total": total}
-
-
-@router.get("/seiyuu/sitemap-ids")
-async def get_seiyuu_sitemap_ids(
-    offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get seiyuu (voice actor) IDs for sitemap generation."""
-    count_result = await db.execute(
-        select(func.count(Staff.id)).where(Staff.seiyuu_vn_count > 0)
-    )
-    total = count_result.scalar_one()
-
-    items = []
-    if limit > 0:
-        result = await db.execute(
-            select(Staff.id)
-            .where(Staff.seiyuu_vn_count > 0)
-            .order_by(Staff.id)
             .offset(offset)
             .limit(limit)
         )

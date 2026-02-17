@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Tag, Heart, Minus } from 'lucide-react';
+import { X, Tag, Heart, Plus, Minus } from 'lucide-react';
 import { DropdownSelect, SelectedValue } from '../browse/DropdownSelect';
 import { SelectedItem } from './TagTraitAutocomplete';
 
@@ -437,9 +437,11 @@ function TagTraitChip({
         className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors"
         title={isExclude ? 'Click to include' : 'Click to exclude'}
       >
-        {isExclude ? <Minus className="w-3 h-3" /> : null}
-        {isTag ? <Tag className="w-3 h-3" /> : <Heart className="w-3 h-3" />}
+        {isExclude ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
       </button>
+
+      {/* Type icon */}
+      {isTag ? <Tag className="w-3 h-3" /> : <Heart className="w-3 h-3" />}
 
       <span className={isExclude ? 'line-through' : ''}>{item.name}</span>
 

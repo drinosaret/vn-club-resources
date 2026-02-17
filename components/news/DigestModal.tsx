@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { X, ExternalLink, Calendar, Building2, ImageOff } from 'lucide-react';
 import type { NewsItem } from '@/lib/sample-news-data';
@@ -88,7 +89,7 @@ export function DigestModal({ title, items, onClose }: DigestModalProps) {
     };
   }, []);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="digest-modal-title">
       {/* Backdrop */}
       <div
@@ -120,7 +121,8 @@ export function DigestModal({ title, items, onClose }: DigestModalProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

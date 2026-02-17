@@ -424,7 +424,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
         {novel.vn?.image?.url ? (
           <NSFWImage
             src={getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id })}
-            alt=""
+            alt={typeof displayTitle === 'string' ? displayTitle : ''}
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
             className={`w-full h-full object-cover object-top ${fadeClass}`}

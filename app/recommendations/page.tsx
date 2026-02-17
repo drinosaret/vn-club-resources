@@ -7,7 +7,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'Visual Novel Recommendations for Japanese Learners',
   description: 'Get personalized visual novel recommendations for learning Japanese based on your VNDB list. Discover your next VN based on your reading history and preferences.',
-  path: '/recommendations',
+  path: '/recommendations/',
 });
 
 const recommendationsJsonLd = [
@@ -16,7 +16,7 @@ const recommendationsJsonLd = [
     '@type': 'WebApplication',
     name: 'VN Recommendations',
     description: 'Personalized visual novel recommendations for Japanese learners',
-    url: `${SITE_URL}/recommendations`,
+    url: `${SITE_URL}/recommendations/`,
     applicationCategory: 'EducationalApplication',
     isPartOf: {
       '@type': 'WebSite',

@@ -6,7 +6,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'Kana Quiz: Practice Hiragana & Katakana',
   description: 'Practice hiragana and katakana recognition with our interactive quiz. Build reading speed for Japanese visual novels with instant feedback and streak tracking.',
-  path: '/quiz',
+  path: '/quiz/',
 });
 
 // JSON-LD for educational quiz
@@ -22,7 +22,7 @@ const quizJsonLd = [
       '@type': 'Thing',
       name: 'Japanese Writing System',
     },
-    url: `${SITE_URL}/quiz`,
+    url: `${SITE_URL}/quiz/`,
   },
   generateBreadcrumbJsonLd([
     { name: 'Home', path: '/' },

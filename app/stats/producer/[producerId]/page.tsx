@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return generatePageMetadata({
     title: `${displayName} - Producer Stats`,
     description,
-    path: `/stats/producer/${producerId}`,
+    path: `/stats/producer/${producerId}/`,
   });
 }
 

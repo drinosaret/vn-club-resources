@@ -82,7 +82,7 @@ export function HeroSection() {
           >
             <Image
               src="/assets/hikaruportrait.webp"
-              alt=""
+              alt="Hikaru, VN Club mascot"
               width={300}
               height={400}
               className="object-contain drop-shadow-2xl"

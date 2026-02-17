@@ -17,7 +17,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   return generatePageMetadata({
     title: `${displayName}'s Stats`,
     description: `Visual novel reading statistics for ${displayName}. View score distributions, favorite tags, developers, and personalized recommendations.`,
-    path: `/stats/${uid}${username ? `?username=${encodeURIComponent(username)}` : ''}`,
+    path: `/stats/${uid}/${username ? `?username=${encodeURIComponent(username)}` : ''}`,
   });
 }
 

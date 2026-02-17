@@ -6,7 +6,7 @@ import { ArrowLeft, Users } from 'lucide-react';
 export const metadata = generatePageMetadata({
   title: 'Compare Lists',
   description: 'Compare your visual novel list with another user and find users with similar taste.',
-  path: '/stats/compare',
+  path: '/stats/compare/',
   noIndex: true,
 });
 

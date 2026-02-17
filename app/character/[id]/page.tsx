@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return generatePageMetadata({
     title: displayName,
     description,
-    path: `/character/${id}`,
+    path: `/character/${id}/`,
     image: ogImage,
     imageAlt: `${displayName}`,
     largeImage: false,

@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return generatePageMetadata({
     title: `${displayName} - Voice Actor Stats`,
     description,
-    path: `/stats/seiyuu/${staffId}`,
+    path: `/stats/seiyuu/${staffId}/`,
   });
 }
 
