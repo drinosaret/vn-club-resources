@@ -2,6 +2,7 @@ import useSWR, { preload } from 'swr';
 
 const jitenFetcher = async (url: string) => {
   const res = await fetch(url);
+  if (res.status >= 500) throw new Error(`Jiten fetch failed (${res.status})`);
   if (!res.ok) return null;
   const json = await res.json();
   return json?.data ?? json;
@@ -12,7 +13,7 @@ const JITEN_SWR_OPTS = {
   revalidateOnReconnect: false,
   revalidateIfStale: false,
   dedupingInterval: 60000,
-  errorRetryCount: 1,
+  errorRetryCount: 2,
 } as const;
 
 export function useJitenDetail(vnId: string | null) {

@@ -655,18 +655,70 @@ class ReleaseMedia(Base):
 
 
 class ReleaseExtlink(Base):
-    """External links (Steam, DLsite, etc.) with full URLs."""
+    """Release-level external links (junction table)."""
 
     __tablename__ = "release_extlinks"
 
-    release_id = Column(String(10), ForeignKey("releases.id", ondelete="CASCADE"), primary_key=True)
-    site = Column(String(50), primary_key=True)  # steam, dlsite, getchu, dmm, etc.
-    url = Column(String(500))  # Full URL for direct linking
+    release_id = Column(String(10), primary_key=True)
+    link_id = Column(Integer, primary_key=True)
 
     __table_args__ = (
         Index("idx_release_extlinks_release", "release_id"),
-        Index("idx_release_extlinks_site", "site"),
     )
+
+
+class ExtlinksMaster(Base):
+    """Master lookup table for all external links."""
+
+    __tablename__ = "extlinks_master"
+
+    id = Column(Integer, primary_key=True)
+    site = Column(String(50), nullable=False)
+    value = Column(Text, nullable=False)
+
+    __table_args__ = (
+        Index("idx_extlinks_master_site", "site"),
+    )
+
+
+class VNExtlink(Base):
+    """VN-level external links (junction table)."""
+
+    __tablename__ = "vn_extlinks"
+
+    vn_id = Column(String(10), primary_key=True)
+    link_id = Column(Integer, primary_key=True)
+
+    __table_args__ = (
+        Index("idx_vn_extlinks_vn", "vn_id"),
+    )
+
+
+class WikidataEntry(Base):
+    """Pre-resolved Wikidata entries from VNDB dump."""
+
+    __tablename__ = "wikidata_entries"
+
+    id = Column(Integer, primary_key=True)
+    enwiki = Column(Text)
+    jawiki = Column(Text)
+    website = Column(Text)
+    vndb = Column(Text)
+    mobygames = Column(Text)
+    mobygames_game = Column(Text)
+    gamefaqs_game = Column(Text)
+    gamefaqs_company = Column(Text)
+    howlongtobeat = Column(Text)
+    igdb_game = Column(Text)
+    pcgamingwiki = Column(Text)
+    giantbomb = Column(Text)
+    steam = Column(Text)
+    gog = Column(Text)
+    lutris = Column(Text)
+    wine = Column(Text)
+    anidb_anime = Column(Text)
+    ann_anime = Column(Text)
+    acdb_source = Column(Text)
 
 
 # ============ News Aggregation Models ============

@@ -5,6 +5,7 @@ import { ExternalLink } from 'lucide-react';
 
 const fetchDeckId = async (vnId: string): Promise<number | null> => {
   const res = await fetch(`/api/jiten/${vnId}/`);
+  if (res.status >= 500) throw new Error(`Jiten lookup failed (${res.status})`);
   if (!res.ok) return null;
   const data: number[] | null = await res.json();
   return data && data.length > 0 ? data[0] : null;
@@ -16,7 +17,7 @@ export function useJitenDeck(vnId: string | undefined): number | null | undefine
   const { data: deckId } = useSWR(
     vnId ? ['jiten-deck', vnId] : null,
     () => fetchDeckId(vnId!),
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: false, errorRetryCount: 2 }
   );
   return deckId;
 }

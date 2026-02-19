@@ -104,7 +104,8 @@ export async function GET(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(null, {
-      headers: { 'Cache-Control': 'public, max-age=60' },
+      status: 502,
+      headers: { 'Cache-Control': 'no-store' },
     });
   }
 }

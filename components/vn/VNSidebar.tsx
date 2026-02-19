@@ -13,6 +13,8 @@ interface VNSidebarProps {
   length?: number;
   platforms?: string[];
   languages?: string[];
+  links?: Array<{ site: string; url: string; label: string }>;
+  shops?: Array<{ site: string; url: string; label: string }>;
   updatedAt?: string;
 }
 
@@ -24,6 +26,8 @@ export function VNSidebar({
   length,
   platforms,
   languages,
+  links,
+  shops,
   updatedAt,
 }: VNSidebarProps) {
   const { preference } = useTitlePreference();
@@ -120,6 +124,44 @@ export function VNSidebar({
         )}
 
       </div>
+
+      {links && links.length > 0 && (
+        <div>
+          <SidebarLabel>Links</SidebarLabel>
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {links.map((link, i) => (
+              <a
+                key={`${link.site}-${i}`}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-1.5 py-0.5 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {shops && shops.length > 0 && (
+        <div>
+          <SidebarLabel>Shops</SidebarLabel>
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {shops.map((shop, i) => (
+              <a
+                key={`${shop.site}-${i}`}
+                href={shop.url}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="px-1.5 py-0.5 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+              >
+                {shop.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {formattedUpdatedAt && (
         <p className="text-[11px] text-gray-400 dark:text-gray-500">

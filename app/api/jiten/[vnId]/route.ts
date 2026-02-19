@@ -39,7 +39,8 @@ export async function GET(
 
     if (!res.ok) {
       return NextResponse.json(null, {
-        headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
+        status: 502,
+        headers: { 'Cache-Control': 'no-store' },
       });
     }
 
@@ -50,7 +51,8 @@ export async function GET(
     });
   } catch {
     return NextResponse.json(null, {
-      headers: { 'Cache-Control': 'public, max-age=60' },
+      status: 502,
+      headers: { 'Cache-Control': 'no-store' },
     });
   }
 }

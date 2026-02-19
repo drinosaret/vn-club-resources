@@ -106,6 +106,8 @@ services:
       - ./app:/app/app
       - ./discord_bot:/app/discord_bot
       - ./scripts:/app/scripts
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/run_bot.py"]

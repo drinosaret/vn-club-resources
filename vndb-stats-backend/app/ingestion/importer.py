@@ -365,6 +365,7 @@ IMPORT_TABLES = [
     'traits', 'characters', 'character_vn', 'character_traits',
     'releases', 'release_vn', 'release_producers',
     'release_platforms', 'release_media', 'release_extlinks',
+    'extlinks_master', 'vn_extlinks', 'wikidata_entries',
 ]
 
 # Tables that use the staging + atomic swap pattern (TRUNCATE+COPY tables).
@@ -374,6 +375,16 @@ STAGING_TABLES = [
     'character_vn', 'character_traits',
     'release_vn', 'release_producers', 'release_platforms', 'release_media', 'release_extlinks',
     'ulist_vns', 'ulist_labels', 'vndb_users',
+    'extlinks_master', 'vn_extlinks', 'wikidata_entries',
+]
+
+# Columns to import from the wikidata dump file (subset of all available columns)
+WIKIDATA_COLUMNS = [
+    "id", "enwiki", "jawiki", "website", "vndb",
+    "mobygames", "mobygames_game", "gamefaqs_game", "gamefaqs_company",
+    "howlongtobeat", "igdb_game", "pcgamingwiki", "giantbomb",
+    "steam", "gog", "lutris", "wine",
+    "anidb_anime", "ann_anime", "acdb_source",
 ]
 
 
@@ -3977,6 +3988,9 @@ async def import_release_media(extract_dir: str, force: bool = False):
 async def import_release_extlinks(extract_dir: str, force: bool = False):
     """Import release external links from db dump.
 
+    The dump file 'releases_extlinks' has columns: id, link.
+    Each row maps a release to a link ID in the extlinks_master table.
+
     Uses PostgreSQL COPY for fast bulk loading.
 
     Args:
@@ -4041,24 +4055,18 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
                     skipped += 1
                     continue
 
-                # Site/link type - map numeric ID to string if needed
-                site = row.get("site", "") or row.get("link", "")
-                if site == "\\N" or not site:
+                link_id = row.get("link", "")
+                if link_id == "\\N" or not link_id:
                     continue
 
-                # URL - may need to be constructed from site + value
-                url = sanitize_text(row.get("url", "")) or sanitize_text(row.get("val", ""))
-                if url == "\\N":
-                    url = None
-
-                batch.append((release_id, str(site), url))
+                batch.append((release_id, int(link_id)))
                 count += 1
 
                 if len(batch) >= BATCH_SIZE:
                     try:
                         await copy_bulk_data(
                             "release_extlinks_staging",
-                            ["release_id", "site", "url"],
+                            ["release_id", "link_id"],
                             batch
                         )
                     except Exception as e:
@@ -4077,7 +4085,7 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
         try:
             await copy_bulk_data(
                 "release_extlinks_staging",
-                ["release_id", "site", "url"],
+                ["release_id", "link_id"],
                 batch
             )
         except Exception as e:
@@ -4085,10 +4093,340 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
 
     logger.info(f"Imported {count} release extlinks ({skipped} skipped)")
 
-    # Atomically swap staging to live
-    await swap_staging_to_live("release_extlinks")
+    # NOTE: swap is deferred — all extlink tables are swapped atomically
+    # after extlinks_master, vn_extlinks, and release_extlinks are all populated.
 
     await mark_import_complete(extlinks_file, "release_extlinks")
+
+
+async def import_extlinks_master(extract_dir: str, force: bool = False):
+    """Import external links master table from db dump.
+
+    The dump file 'extlinks' has columns: id, site, value.
+    Each row is a unique external link with its site type and URL/value.
+
+    Uses PostgreSQL COPY for fast bulk loading.
+
+    Args:
+        extract_dir: Directory with extracted dump files
+        force: If True, import regardless of file modification time
+    """
+    extlinks_file = None
+
+    for root, dirs, files in os.walk(extract_dir):
+        for f in files:
+            if f == "extlinks":
+                extlinks_file = os.path.join(root, f)
+                break
+
+    if not extlinks_file:
+        logger.warning("Extlinks master file not found in extracted files")
+        return
+
+    # Check if import is needed
+    if not await should_import(extlinks_file, "extlinks_master", force):
+        return
+
+    logger.info(f"Importing extlinks master from {extlinks_file}")
+
+    # Read header
+    header_file = extlinks_file + ".header"
+    try:
+        with open(header_file, "r", encoding="utf-8") as f:
+            fieldnames = f.read().strip().split("\t")
+        logger.info(f"Extlinks master fields: {fieldnames}")
+    except FileNotFoundError:
+        logger.error(f"Extlinks master header not found: {header_file}")
+        return
+
+    count = 0
+    skipped = 0
+
+    # Prepare staging table
+    await prepare_staging("extlinks_master")
+
+    # Use COPY for fast bulk loading
+    batch: list[tuple] = []
+    BATCH_SIZE = 10000
+
+    with open(extlinks_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
+
+        for row in reader:
+            try:
+                link_id = row.get("id", "")
+                if link_id == "\\N" or not link_id:
+                    skipped += 1
+                    continue
+
+                site = row.get("site", "")
+                if site == "\\N" or not site:
+                    skipped += 1
+                    continue
+
+                value = row.get("value", "")
+                if value == "\\N" or not value:
+                    skipped += 1
+                    continue
+
+                batch.append((int(link_id), str(site), sanitize_text(value)))
+                count += 1
+
+                if len(batch) >= BATCH_SIZE:
+                    try:
+                        await copy_bulk_data(
+                            "extlinks_master_staging",
+                            ["id", "site", "value"],
+                            batch
+                        )
+                    except Exception as e:
+                        logger.error(f"Error in COPY batch at count {count}: {e}")
+                    batch = []
+
+                    if count % 100000 == 0:
+                        logger.info(f"Imported {count} extlinks master entries...")
+
+            except Exception as e:
+                logger.debug(f"Error processing extlinks master row: {e}")
+                continue
+
+    # Final batch
+    if batch:
+        try:
+            await copy_bulk_data(
+                "extlinks_master_staging",
+                ["id", "site", "value"],
+                batch
+            )
+        except Exception as e:
+            logger.error(f"Error in final COPY batch: {e}")
+
+    logger.info(f"Imported {count} extlinks master entries ({skipped} skipped)")
+
+    # NOTE: swap is deferred — all extlink tables are swapped atomically
+    # after extlinks_master, vn_extlinks, and release_extlinks are all populated.
+
+    await mark_import_complete(extlinks_file, "extlinks_master")
+
+
+async def import_vn_extlinks(extract_dir: str, force: bool = False):
+    """Import VN external links from db dump.
+
+    The dump file 'vn_extlinks' has columns: id, link.
+    Each row maps a VN to a link ID in the extlinks_master table.
+
+    Uses PostgreSQL COPY for fast bulk loading.
+
+    Args:
+        extract_dir: Directory with extracted dump files
+        force: If True, import regardless of file modification time
+    """
+    extlinks_file = None
+
+    for root, dirs, files in os.walk(extract_dir):
+        for f in files:
+            if f == "vn_extlinks":
+                extlinks_file = os.path.join(root, f)
+                break
+
+    if not extlinks_file:
+        logger.warning("VN extlinks file not found in extracted files")
+        return
+
+    # Check if import is needed
+    if not await should_import(extlinks_file, "vn_extlinks", force):
+        return
+
+    logger.info(f"Importing VN extlinks from {extlinks_file}")
+
+    # Read header
+    header_file = extlinks_file + ".header"
+    try:
+        with open(header_file, "r", encoding="utf-8") as f:
+            fieldnames = f.read().strip().split("\t")
+        logger.info(f"VN extlinks fields: {fieldnames}")
+    except FileNotFoundError:
+        logger.error(f"VN extlinks header not found: {header_file}")
+        return
+
+    # Get valid VN IDs
+    async with async_session() as db:
+        vn_result = await db.execute(text("SELECT id FROM visual_novels"))
+        valid_vn_ids = {row[0] for row in vn_result}
+    logger.info(f"Found {len(valid_vn_ids)} visual novels in database")
+
+    count = 0
+    skipped = 0
+
+    # Prepare staging table
+    await prepare_staging("vn_extlinks")
+
+    # Use COPY for fast bulk loading
+    batch: list[tuple] = []
+    BATCH_SIZE = 10000
+
+    with open(extlinks_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
+
+        for row in reader:
+            try:
+                vn_id = row.get("id", "")
+                if not vn_id.startswith("v"):
+                    vn_id = f"v{vn_id}"
+
+                # Skip if VN doesn't exist
+                if vn_id not in valid_vn_ids:
+                    skipped += 1
+                    continue
+
+                link_id = row.get("link", "")
+                if link_id == "\\N" or not link_id:
+                    continue
+
+                batch.append((vn_id, int(link_id)))
+                count += 1
+
+                if len(batch) >= BATCH_SIZE:
+                    try:
+                        await copy_bulk_data(
+                            "vn_extlinks_staging",
+                            ["vn_id", "link_id"],
+                            batch
+                        )
+                    except Exception as e:
+                        logger.error(f"Error in COPY batch at count {count}: {e}")
+                    batch = []
+
+            except Exception as e:
+                logger.debug(f"Error processing VN extlink row: {e}")
+                continue
+
+    # Final batch
+    if batch:
+        try:
+            await copy_bulk_data(
+                "vn_extlinks_staging",
+                ["vn_id", "link_id"],
+                batch
+            )
+        except Exception as e:
+            logger.error(f"Error in final COPY batch: {e}")
+
+    logger.info(f"Imported {count} VN extlinks ({skipped} skipped)")
+
+    # NOTE: swap is deferred — all extlink tables are swapped atomically
+    # after extlinks_master, vn_extlinks, and release_extlinks are all populated.
+
+    await mark_import_complete(extlinks_file, "vn_extlinks")
+
+
+async def import_wikidata_entries(extract_dir: str, force: bool = False):
+    """Import wikidata entries from db dump.
+
+    The dump file 'wikidata' has many columns but we only import a subset
+    defined in WIKIDATA_COLUMNS.
+
+    Uses PostgreSQL COPY for fast bulk loading.
+
+    Args:
+        extract_dir: Directory with extracted dump files
+        force: If True, import regardless of file modification time
+    """
+    wikidata_file = None
+
+    for root, dirs, files in os.walk(extract_dir):
+        for f in files:
+            if f == "wikidata":
+                wikidata_file = os.path.join(root, f)
+                break
+
+    if not wikidata_file:
+        logger.warning("Wikidata file not found in extracted files")
+        return
+
+    # Check if import is needed
+    if not await should_import(wikidata_file, "wikidata_entries", force):
+        return
+
+    logger.info(f"Importing wikidata entries from {wikidata_file}")
+
+    # Read header
+    header_file = wikidata_file + ".header"
+    try:
+        with open(header_file, "r", encoding="utf-8") as f:
+            fieldnames = f.read().strip().split("\t")
+        logger.info(f"Wikidata fields: {fieldnames}")
+    except FileNotFoundError:
+        logger.error(f"Wikidata header not found: {header_file}")
+        return
+
+    count = 0
+    skipped = 0
+
+    # Prepare staging table
+    await prepare_staging("wikidata_entries")
+
+    # Use COPY for fast bulk loading
+    batch: list[tuple] = []
+    BATCH_SIZE = 5000
+
+    with open(wikidata_file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
+
+        for row in reader:
+            try:
+                wikidata_id = row.get("id", "")
+                if wikidata_id == "\\N" or not wikidata_id:
+                    skipped += 1
+                    continue
+
+                # Build row tuple with only the columns we want
+                values = [int(wikidata_id)]
+                for col in WIKIDATA_COLUMNS[1:]:  # Skip "id", already handled
+                    raw_value = row.get(col, "")
+                    if raw_value == "\\N" or not raw_value:
+                        values.append(None)
+                    else:
+                        values.append(sanitize_text(raw_value))
+
+                batch.append(tuple(values))
+                count += 1
+
+                if len(batch) >= BATCH_SIZE:
+                    try:
+                        await copy_bulk_data(
+                            "wikidata_entries_staging",
+                            WIKIDATA_COLUMNS,
+                            batch
+                        )
+                    except Exception as e:
+                        logger.error(f"Error in COPY batch at count {count}: {e}")
+                    batch = []
+
+                    if count % 5000 == 0:
+                        logger.info(f"Imported {count} wikidata entries...")
+
+            except Exception as e:
+                logger.debug(f"Error processing wikidata row: {e}")
+                continue
+
+    # Final batch
+    if batch:
+        try:
+            await copy_bulk_data(
+                "wikidata_entries_staging",
+                WIKIDATA_COLUMNS,
+                batch
+            )
+        except Exception as e:
+            logger.error(f"Error in final COPY batch: {e}")
+
+    logger.info(f"Imported {count} wikidata entries ({skipped} skipped)")
+
+    # Atomically swap staging to live
+    await swap_staging_to_live("wikidata_entries")
+
+    await mark_import_complete(wikidata_file, "wikidata_entries")
 
 
 # ==================== User List Tables ====================
@@ -4454,7 +4792,7 @@ async def _run_full_import_inner(
         logger.info(f"{progress} {name.upper()} - {status} (elapsed: {elapsed_str})")
         logger.info(f"{'=' * 50}")
 
-    total_steps = 27  # Including download, length votes, users, ulist, average ratings, browse counts, and analyze
+    total_steps = 30  # Including download, length votes, users, ulist, average ratings, browse counts, and analyze
 
     # Safety net: ensure all indexes exist before starting (catch orphaned state from previous crashes)
     await ensure_all_import_indexes()
@@ -4566,50 +4904,70 @@ async def _run_full_import_inner(
         log_step(17, total_steps, "Importing release media")
         await import_release_media(extract_dir, force=force)
 
-    # Step 18: Release external links
+    # Step 18: Extlinks master lookup table (must run before entity extlinks)
     if "db" in paths:
-        log_step(18, total_steps, "Importing release links")
+        log_step(18, total_steps, "Importing extlinks master lookup table")
+        await import_extlinks_master(extract_dir, force=force)
+
+    # Step 19: Release external links
+    if "db" in paths:
+        log_step(19, total_steps, "Importing release links")
         await import_release_extlinks(extract_dir, force=force)
 
-    # Step 19: Votes (uses COPY for fast bulk loading)
+    # Step 20: VN external links
+    if "db" in paths:
+        log_step(20, total_steps, "Importing VN external links")
+        await import_vn_extlinks(extract_dir, force=force)
+
+    # Step 20b: Atomically swap all extlink tables together
+    if "db" in paths:
+        logger.info("Swapping extlink tables atomically (master + vn + release)")
+        await swap_staging_to_live(["extlinks_master", "release_extlinks", "vn_extlinks"])
+
+    # Step 21: Wikidata entries
+    if "db" in paths:
+        log_step(21, total_steps, "Importing Wikidata entries")
+        await import_wikidata_entries(extract_dir, force=force)
+
+    # Step 22: Votes (uses COPY for fast bulk loading)
     if "votes" in paths:
-        log_step(19, total_steps, "Importing votes", "uses COPY for fast bulk loading")
+        log_step(22, total_steps, "Importing votes", "uses COPY for fast bulk loading")
         await import_votes(paths["votes"], force=force)
 
-    # Step 20: Length votes (user-submitted playtime data)
+    # Step 23: Length votes (user-submitted playtime data)
     if "db" in paths:
-        log_step(20, total_steps, "Importing length votes", "user playtime averages for length_minutes")
+        log_step(23, total_steps, "Importing length votes", "user playtime averages for length_minutes")
         await import_length_votes(extract_dir, force=force)
 
-    # Step 21: VNDB users (uid → username mapping)
+    # Step 24: VNDB users (uid → username mapping)
     if "db" in paths:
-        log_step(21, total_steps, "Importing VNDB users", "uid to username mapping")
+        log_step(24, total_steps, "Importing VNDB users", "uid to username mapping")
         await import_vndb_users(extract_dir, force=force)
 
-    # Step 22: User VN lists (for user stats - replaces VNDB API calls)
+    # Step 25: User VN lists (for user stats - replaces VNDB API calls)
     if "db" in paths:
-        log_step(22, total_steps, "Importing user VN lists", "used for user stats page")
+        log_step(25, total_steps, "Importing user VN lists", "used for user stats page")
         await import_ulist_vns(extract_dir, force=force)
 
-    # Step 23: User VN list labels (Playing, Finished, etc.)
+    # Step 26: User VN list labels (Playing, Finished, etc.)
     if "db" in paths:
-        log_step(23, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
+        log_step(26, total_steps, "Importing user list labels", "Playing/Finished/Stalled/etc. categories")
         await import_ulist_labels(extract_dir, force=force)
 
-    # Step 24: Compute average ratings from votes
-    log_step(24, total_steps, "Computing average ratings", "raw averages for quality signal")
+    # Step 27: Compute average ratings from votes
+    log_step(27, total_steps, "Computing average ratings", "raw averages for quality signal")
     await compute_average_ratings()
 
-    # Step 25: Aggregate platforms and languages from release data
-    log_step(25, total_steps, "Aggregating VN platforms and languages", "from release data")
+    # Step 28: Aggregate platforms and languages from release data
+    log_step(28, total_steps, "Aggregating VN platforms and languages", "from release data")
     await update_vn_platforms_and_languages()
 
-    # Step 26: Compute precomputed browse counts for staff and producers
-    log_step(26, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
+    # Step 29: Compute precomputed browse counts for staff and producers
+    log_step(29, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
     await update_browse_precomputed_counts()
 
-    # Step 27: Analyze tables
-    log_step(27, total_steps, "Analyzing tables", "updating query planner statistics")
+    # Step 30: Analyze tables
+    log_step(30, total_steps, "Analyzing tables", "updating query planner statistics")
     await analyze_import_tables()
 
     total_time = time.time() - start_time
@@ -4632,7 +4990,7 @@ async def update_import_progress(
 
     Args:
         run_id: The ImportRun ID to update
-        step: Current step number (1-27)
+        step: Current step number (1-30)
         phase: Description of current phase
         status: running, completed, failed, cancelled
         error_message: Error message if failed
@@ -4642,7 +5000,7 @@ async def update_import_progress(
     from sqlalchemy import update
     from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-    total_steps = 27
+    total_steps = 30
     progress = (step / total_steps) * 100 if total_steps > 0 else 0
 
     async with async_session() as db:
@@ -4736,7 +5094,7 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
         """Helper to log and update progress simultaneously."""
         elapsed = time.time() - start_time
         elapsed_str = f"{int(elapsed // 60)}m {int(elapsed % 60)}s"
-        full_message = f"[{step}/27] {message} (elapsed: {elapsed_str})"
+        full_message = f"[{step}/30] {message} (elapsed: {elapsed_str})"
 
         logger.info(full_message)
         await update_import_progress(run_id, step, phase)
@@ -4863,50 +5221,70 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
             await log_and_track(16, "release_media", "Importing release media...")
             await import_release_media(extract_dir)
 
-        # Step 17: Release external links
+        # Step 17: Extlinks master lookup table
         if "db" in paths:
-            await log_and_track(17, "release_extlinks", "Importing release links...")
+            await log_and_track(17, "extlinks_master", "Importing extlinks master lookup table...")
+            await import_extlinks_master(extract_dir)
+
+        # Step 18: Release external links
+        if "db" in paths:
+            await log_and_track(18, "release_extlinks", "Importing release links...")
             await import_release_extlinks(extract_dir)
 
-        # Step 18: Votes (uses COPY)
+        # Step 19: VN external links
+        if "db" in paths:
+            await log_and_track(19, "vn_extlinks", "Importing VN external links...")
+            await import_vn_extlinks(extract_dir)
+
+        # Step 19b: Atomically swap all extlink tables together
+        if "db" in paths:
+            logger.info("Swapping extlink tables atomically (master + vn + release)")
+            await swap_staging_to_live(["extlinks_master", "release_extlinks", "vn_extlinks"])
+
+        # Step 20: Wikidata entries
+        if "db" in paths:
+            await log_and_track(20, "wikidata_entries", "Importing Wikidata entries...")
+            await import_wikidata_entries(extract_dir)
+
+        # Step 21: Votes (uses COPY)
         if "votes" in paths:
-            await log_and_track(18, "votes", "Importing votes (COPY bulk load)...")
+            await log_and_track(21, "votes", "Importing votes (COPY bulk load)...")
             await import_votes(paths["votes"])
 
-        # Step 19: Length votes (user playtime data)
+        # Step 22: Length votes (user playtime data)
         if "db" in paths:
-            await log_and_track(19, "length_votes", "Importing length votes (user playtime averages)...")
+            await log_and_track(22, "length_votes", "Importing length votes (user playtime averages)...")
             await import_length_votes(extract_dir)
 
-        # Step 20: VNDB users (uid → username mapping)
+        # Step 23: VNDB users (uid → username mapping)
         if "db" in paths:
-            await log_and_track(20, "vndb_users", "Importing VNDB users (uid → username)...")
+            await log_and_track(23, "vndb_users", "Importing VNDB users (uid → username)...")
             await import_vndb_users(extract_dir)
 
-        # Step 21: User VN lists (for user stats - replaces VNDB API calls)
+        # Step 24: User VN lists (for user stats - replaces VNDB API calls)
         if "db" in paths:
-            await log_and_track(21, "ulist_vns", "Importing user VN lists...")
+            await log_and_track(24, "ulist_vns", "Importing user VN lists...")
             await import_ulist_vns(extract_dir)
 
-        # Step 22: User VN list labels (Playing, Finished, etc.)
+        # Step 25: User VN list labels (Playing, Finished, etc.)
         if "db" in paths:
-            await log_and_track(22, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
+            await log_and_track(25, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
             await import_ulist_labels(extract_dir)
 
-        # Step 23: Aggregate platforms and languages from release data
-        await log_and_track(23, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
+        # Step 26: Aggregate platforms and languages from release data
+        await log_and_track(26, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
         await update_vn_platforms_and_languages()
 
-        # Step 24: Compute precomputed browse counts for staff and producers
-        await log_and_track(24, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
+        # Step 27: Compute precomputed browse counts for staff and producers
+        await log_and_track(27, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
         await update_browse_precomputed_counts()
 
-        # Step 25: Analyze tables
-        await log_and_track(25, "analyze", "Analyzing tables for query planner...")
+        # Step 28: Analyze tables
+        await log_and_track(28, "analyze", "Analyzing tables for query planner...")
         await analyze_import_tables()
 
-        # Step 26: Evaluate auto-blacklist rules
-        await log_and_track(26, "blacklist", "Evaluating cover blacklist rules...")
+        # Step 29: Evaluate auto-blacklist rules
+        await log_and_track(29, "blacklist", "Evaluating cover blacklist rules...")
         from app.services.blacklist_service import evaluate_auto_blacklist
         async with async_session() as db:
             blacklist_stats = await evaluate_auto_blacklist(db)
@@ -4923,7 +5301,7 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
 
         # Mark as completed
         await update_import_progress(
-            run_id, 27, "completed",
+            run_id, 30, "completed",
             status="completed",
             stats=stats
         )

@@ -292,6 +292,13 @@ class DeveloperInfo(BaseModel):
     original: str | None = None  # Original language name (Japanese, etc.)
 
 
+class ExtlinkInfo(BaseModel):
+    """External link with resolved URL."""
+    site: str
+    url: str
+    label: str
+
+
 class VNDetailResponse(BaseModel):
     """Detailed VN information."""
     id: str
@@ -312,6 +319,8 @@ class VNDetailResponse(BaseModel):
     relations: list[VNRelationInfo] = []
     olang: str | None = None  # Original language (e.g., "ja" for Japanese)
     updated_at: datetime | None = None
+    links: list[ExtlinkInfo] = []
+    shops: list[ExtlinkInfo] = []
 
 
 class VNMonthlyVotes(BaseModel):

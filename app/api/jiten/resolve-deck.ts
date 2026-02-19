@@ -12,7 +12,8 @@ export async function resolveDeckId(vnId: string, signal?: AbortSignal): Promise
     `https://api.jiten.moe/api/media-deck/by-link-id/2/${vnId}`,
     { signal }
   );
-  if (!res.ok) return null;
+  if (res.status >= 500) throw new Error(`Jiten API error: ${res.status}`);
+  if (!res.ok) return null; // 4xx = no deck found for this VN
   const ids: number[] = await res.json();
   const id = ids.length > 0 ? ids[0] : null;
 

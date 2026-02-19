@@ -408,6 +408,12 @@ export interface VNRelation {
   olang?: string;
 }
 
+export interface ExtlinkInfo {
+  site: string;
+  url: string;
+  label: string;
+}
+
 export interface VNDetail {
   id: string;
   title: string;
@@ -428,6 +434,8 @@ export interface VNDetail {
   relations?: VNRelation[];
   olang?: string;         // Original language (e.g., "ja" for Japanese)
   updated_at?: string;
+  links?: ExtlinkInfo[];
+  shops?: ExtlinkInfo[];
 }
 
 // ============ Similar VNs Types ============

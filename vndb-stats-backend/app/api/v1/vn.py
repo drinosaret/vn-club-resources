@@ -14,7 +14,8 @@ from slowapi.util import get_remote_address
 
 from app.db.database import get_db
 from app.db import schemas
-from app.db.models import VisualNovel, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation
+from app.db.models import VisualNovel, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
+from app.services.extlinks_service import build_extlink_url, build_wikidata_links, get_site_label, SHOP_SITES, LINK_SITES, LINK_SORT_ORDER, SHOP_SORT_ORDER, DEPRECATED_SITES, TRANSLATION_ONLY_SITES
 from app.core.vndb_client import get_vndb_client
 from app.core.auth import require_admin
 from app.core.cache import get_cache
@@ -1971,6 +1972,94 @@ async def get_vn_details(
         for row in relations_result.all()
     ]
 
+    # ── External links ──
+
+    # 1. VN-level direct extlinks (wikidata, renai, wp, encubed)
+    vn_links_result = await db.execute(
+        select(ExtlinksMaster.site, ExtlinksMaster.value)
+        .join(VNExtlink, VNExtlink.link_id == ExtlinksMaster.id)
+        .where(VNExtlink.vn_id == vn_id)
+    )
+
+    vn_links = []
+    wikidata_qid = None
+    has_en_wikipedia = False
+    for site, value in vn_links_result:
+        if site == "wikidata":
+            wikidata_qid = value
+            continue
+        if site in DEPRECATED_SITES or site in TRANSLATION_ONLY_SITES:
+            continue
+        if site == "wp":
+            has_en_wikipedia = True
+        url = build_extlink_url(site, value)
+        if url:
+            vn_links.append(schemas.ExtlinkInfo(
+                site=site, url=url, label=get_site_label(site)
+            ))
+
+    # 2. Wikidata-resolved links (Wikipedia, IGDB, HowLongToBeat, etc.)
+    if wikidata_qid:
+        try:
+            qid_num = int(wikidata_qid.lstrip("Qq"))
+            wd_result = await db.execute(
+                select(WikidataEntry).where(WikidataEntry.id == qid_num)
+            )
+            wd_row = wd_result.scalar_one_or_none()
+            if wd_row:
+                wd_dict = {col: getattr(wd_row, col) for col in [
+                    "enwiki", "jawiki", "mobygames_game", "gamefaqs_game",
+                    "howlongtobeat", "igdb_game", "pcgamingwiki",
+                    "steam", "gog", "lutris", "wine",
+                    "anidb_anime", "ann_anime", "acdb_source",
+                ]}
+                wd_links = build_wikidata_links(wd_dict)
+                vn_links.extend([
+                    schemas.ExtlinkInfo(site=l["site"], url=l["url"], label=l["label"])
+                    for l in wd_links
+                    if not (l["site"] == "enwiki" and has_en_wikipedia)
+                ])
+        except Exception as e:
+            logger.debug(f"Failed to resolve wikidata Q{wikidata_qid} for {vn_id}: {e}")
+
+    # 3. Release-level links and shop links (deduplicated by site)
+    release_links_result = await db.execute(
+        select(ExtlinksMaster.site, ExtlinksMaster.value)
+        .join(ReleaseExtlink, ReleaseExtlink.link_id == ExtlinksMaster.id)
+        .join(ReleaseVN, ReleaseVN.release_id == ReleaseExtlink.release_id)
+        .where(ReleaseVN.vn_id == vn_id)
+    )
+
+    seen_shop_sites: set[str] = set()
+    seen_link_sites: set[str] = {l.site for l in vn_links}
+    shops = []
+    for site, value in release_links_result:
+        if site in DEPRECATED_SITES or site in TRANSLATION_ONLY_SITES:
+            continue
+        if site in SHOP_SITES and site not in seen_shop_sites:
+            seen_shop_sites.add(site)
+            url = build_extlink_url(site, value)
+            if url:
+                shops.append(schemas.ExtlinkInfo(
+                    site=site, url=url, label=get_site_label(site)
+                ))
+        elif site in LINK_SITES and site not in seen_link_sites:
+            seen_link_sites.add(site)
+            url = build_extlink_url(site, value)
+            if url:
+                vn_links.append(schemas.ExtlinkInfo(
+                    site=site, url=url, label=get_site_label(site)
+                ))
+
+    # Deduplicate: remove from Links any site that also appears in Shops
+    if shops:
+        shop_site_set = {s.site for s in shops}
+        vn_links = [l for l in vn_links if l.site not in shop_site_set]
+
+    # Sort links and shops by priority
+    vn_links.sort(key=lambda l: LINK_SORT_ORDER.get(l.site, 50))
+    shops.sort(key=lambda s: SHOP_SORT_ORDER.get(s.site, 50))
+
     return schemas.VNDetailResponse(
         id=vn.id,
         title=vn.title,
@@ -1990,6 +2079,8 @@ async def get_vn_details(
         relations=relations,
         olang=vn.olang,
         updated_at=vn.updated_at,
+        links=vn_links,
+        shops=shops,
     )
 
 

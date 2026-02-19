@@ -524,6 +524,8 @@ export default function VNDetailClient({
             platforms={vn.platforms}
             languages={vn.languages}
             updatedAt={vn.updated_at}
+            links={vn.links}
+            shops={vn.shops}
           />
         </div>
 
