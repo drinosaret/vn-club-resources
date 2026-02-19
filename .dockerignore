@@ -11,7 +11,7 @@ build
 # Testing
 coverage
 
-# Environment files (use Railway env vars instead)
+# Environment files (use Docker env vars instead)
 .env
 .env.local
 .env.development.local
@@ -55,5 +55,4 @@ public/cache/**
 **/cache/
 
 # Misc
-.vercel
 .turbo

@@ -23,6 +23,7 @@ const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
   display: 'swap',
   variable: '--font-jp',
+  preload: false,
 });
 
 const ALLOWED_HOSTS = new Set(['vnclub.org', 'www.vnclub.org', 'beta.vnclub.org']);

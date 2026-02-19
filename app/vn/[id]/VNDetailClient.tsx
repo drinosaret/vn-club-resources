@@ -134,16 +134,18 @@ export default function VNDetailClient({
   const [charactersLoaded, setCharactersLoaded] = useState(!!initialCharacters);
   const [traitsReadyCount, setTraitsReadyCount] = useState<number | undefined>(() => {
     if (!initialCharacters || initialCharacters.length === 0) return undefined;
-    const traitMaxSpoiler = new Map<string, number>();
+    const traitData = new Map<string, { spoiler: number; group_name?: string }>();
     for (const char of initialCharacters) {
       for (const trait of char.traits) {
-        const existing = traitMaxSpoiler.get(trait.id) ?? 0;
-        traitMaxSpoiler.set(trait.id, Math.max(existing, trait.spoiler));
+        const existing = traitData.get(trait.id);
+        if (!existing || trait.spoiler > existing.spoiler) {
+          traitData.set(trait.id, { spoiler: trait.spoiler, group_name: trait.group_name });
+        }
       }
     }
     let count = 0;
-    for (const [, spoiler] of traitMaxSpoiler) {
-      if (spoiler === 0) count++;
+    for (const [, data] of traitData) {
+      if (data.spoiler === 0 && !data.group_name?.includes('(Sexual)')) count++;
     }
     return count;
   });
@@ -156,6 +158,10 @@ export default function VNDetailClient({
   const [showTagSpoilers, setShowTagSpoilers] = useState(false);
   const [showTraitSpoilers, setShowTraitSpoilers] = useState(false);
   const [showCharacterSpoilers, setShowCharacterSpoilers] = useState(false);
+
+  // Sexual content toggles (hidden by default, same pattern as spoilers)
+  const [showSexualTags, setShowSexualTags] = useState(false);
+  const [showSexualTraits, setShowSexualTraits] = useState(false);
 
   // Tracks which lazy tab modules have loaded (triggers re-render)
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(() => {
@@ -326,17 +332,19 @@ export default function VNDetailClient({
   };
 
   // Calculate trait count from characters (for tab badge)
-  const calculateTraitCount = useCallback((chars: VNCharacter[], spoilers: boolean) => {
-    const traitMaxSpoiler = new Map<string, number>();
+  const calculateTraitCount = useCallback((chars: VNCharacter[], spoilers: boolean, sexual: boolean) => {
+    const traitData = new Map<string, { spoiler: number; group_name?: string }>();
     for (const char of chars) {
       for (const trait of char.traits) {
-        const existing = traitMaxSpoiler.get(trait.id) ?? 0;
-        traitMaxSpoiler.set(trait.id, Math.max(existing, trait.spoiler));
+        const existing = traitData.get(trait.id);
+        if (!existing || trait.spoiler > existing.spoiler) {
+          traitData.set(trait.id, { spoiler: trait.spoiler, group_name: trait.group_name });
+        }
       }
     }
     let count = 0;
-    for (const [, spoiler] of traitMaxSpoiler) {
-      if (spoilers || spoiler === 0) count++;
+    for (const [, data] of traitData) {
+      if ((spoilers || data.spoiler === 0) && (sexual || !data.group_name?.includes('(Sexual)'))) count++;
     }
     return count;
   }, []);
@@ -347,7 +355,7 @@ export default function VNDetailClient({
       const chars = await vndbStatsApi.getVNCharacters(vnId);
       setCharacters(chars);
       setCharactersLoaded(true);
-      setTraitsReadyCount(calculateTraitCount(chars, showTraitSpoilers));
+      setTraitsReadyCount(calculateTraitCount(chars, showTraitSpoilers, showSexualTraits));
       const traitIds = new Set<string>();
       for (const char of chars) {
         for (const trait of char.traits) {
@@ -373,12 +381,12 @@ export default function VNDetailClient({
     }
   }, [charactersLoaded, charactersLoading, loadCharacters, vn]);
 
-  // Recalculate trait count when spoiler toggle changes
+  // Recalculate trait count when spoiler or sexual toggle changes
   useEffect(() => {
     if (characters.length > 0) {
-      setTraitsReadyCount(calculateTraitCount(characters, showTraitSpoilers));
+      setTraitsReadyCount(calculateTraitCount(characters, showTraitSpoilers, showSexualTraits));
     }
-  }, [showTraitSpoilers, characters, calculateTraitCount]);
+  }, [showTraitSpoilers, showSexualTraits, characters, calculateTraitCount]);
 
   // Preload global trait counts when server-provided characters are available
   useEffect(() => {
@@ -399,8 +407,8 @@ export default function VNDetailClient({
 
   const visibleTagCount = useMemo(() => {
     if (!vn) return undefined;
-    return vn.tags?.filter(t => showTagSpoilers || t.spoiler === 0).length;
-  }, [showTagSpoilers, vn]);
+    return vn.tags?.filter(t => (showTagSpoilers || t.spoiler === 0) && (showSexualTags || t.category !== 'ero')).length;
+  }, [showTagSpoilers, showSexualTags, vn]);
 
   const visibleCharacterCount = useMemo(() => {
     if (!charactersLoaded) return undefined;
@@ -549,9 +557,9 @@ export default function VNDetailClient({
 
           {/* Tab Content — lazy-mount / keep-alive: tabs mount on first visit,
              then stay in the DOM (hidden via CSS) for instant re-visits. */}
-          <div className="min-h-[400px]">
+          <div className="relative min-h-[400px]">
           <div
-            style={{ display: activeTab === 'summary' ? undefined : 'none' }}
+            className={activeTab === 'summary' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
             role="tabpanel"
             id="vn-tabpanel-summary"
             aria-labelledby="vn-tab-summary"
@@ -607,7 +615,8 @@ export default function VNDetailClient({
 
           {visitedTabs.has('language') && (
             <div
-              style={{ display: activeTab === 'language' ? undefined : 'none', contain: 'content' }}
+              className={activeTab === 'language' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
+              style={{ contain: 'content' }}
               role="tabpanel"
               id="vn-tabpanel-language"
               aria-labelledby="vn-tab-language"
@@ -623,7 +632,7 @@ export default function VNDetailClient({
 
           {visitedTabs.has('tags') && (
             <div
-              style={{ display: activeTab === 'tags' ? undefined : 'none' }}
+              className={activeTab === 'tags' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
               role="tabpanel"
               id="vn-tabpanel-tags"
               aria-labelledby="vn-tab-tags"
@@ -631,7 +640,7 @@ export default function VNDetailClient({
               {(() => {
                 const Comp = LazyVNTagsTable.get();
                 return Comp
-                  ? <Comp tags={vn.tags} showSpoilers={showTagSpoilers} onShowSpoilersChange={setShowTagSpoilers} />
+                  ? <Comp tags={vn.tags} showSpoilers={showTagSpoilers} onShowSpoilersChange={setShowTagSpoilers} showSexual={showSexualTags} onShowSexualChange={setShowSexualTags} />
                   : <TabContentSkeleton rows={10} />;
               })()}
             </div>
@@ -639,7 +648,7 @@ export default function VNDetailClient({
 
           {visitedTabs.has('traits') && (
             <div
-              style={{ display: activeTab === 'traits' ? undefined : 'none' }}
+              className={activeTab === 'traits' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
               role="tabpanel"
               id="vn-tabpanel-traits"
               aria-labelledby="vn-tab-traits"
@@ -647,7 +656,7 @@ export default function VNDetailClient({
               {(() => {
                 const Comp = LazyVNTraits.get();
                 return Comp
-                  ? <Comp characters={characters} isLoading={charactersLoading} globalCounts={globalTraitCounts} showSpoilers={showTraitSpoilers} onShowSpoilersChange={setShowTraitSpoilers} />
+                  ? <Comp characters={characters} isLoading={charactersLoading} globalCounts={globalTraitCounts} showSpoilers={showTraitSpoilers} onShowSpoilersChange={setShowTraitSpoilers} showSexual={showSexualTraits} onShowSexualChange={setShowSexualTraits} />
                   : <TabContentSkeleton rows={12} />;
               })()}
             </div>
@@ -655,7 +664,7 @@ export default function VNDetailClient({
 
           {visitedTabs.has('characters') && (
             <div
-              style={{ display: activeTab === 'characters' ? undefined : 'none' }}
+              className={activeTab === 'characters' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
               role="tabpanel"
               id="vn-tabpanel-characters"
               aria-labelledby="vn-tab-characters"
@@ -663,7 +672,7 @@ export default function VNDetailClient({
               {(() => {
                 const Comp = LazyVNCharacters.get();
                 return Comp
-                  ? <Comp characters={characters} isLoading={charactersLoading} showSpoilers={showCharacterSpoilers} onShowSpoilersChange={setShowCharacterSpoilers} />
+                  ? <Comp characters={characters} isLoading={charactersLoading} showSpoilers={showCharacterSpoilers} onShowSpoilersChange={setShowCharacterSpoilers} showSexual={showSexualTraits} onShowSexualChange={setShowSexualTraits} />
                   : <TabContentSkeleton rows={8} />;
               })()}
             </div>
@@ -671,7 +680,8 @@ export default function VNDetailClient({
 
           {visitedTabs.has('stats') && (
             <div
-              style={{ display: activeTab === 'stats' ? undefined : 'none', contain: 'content' }}
+              className={activeTab === 'stats' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
+              style={{ contain: 'content' }}
               role="tabpanel"
               id="vn-tabpanel-stats"
               aria-labelledby="vn-tab-stats"

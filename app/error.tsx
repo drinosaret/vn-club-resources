@@ -18,7 +18,7 @@ export default function Error({
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="text-center">
         <p className="text-6xl font-bold text-gray-300 dark:text-gray-700 mb-4">!</p>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           The page failed to load properly. Try refreshing or go back to the home page.
         </p>

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!vn) {
     return {
-      title: 'Visual Novel',
+      title: `Visual Novel ${id}`,
       description: 'Visual novel information, ratings, and details on VN Club.',
     };
   }

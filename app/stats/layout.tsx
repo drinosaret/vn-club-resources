@@ -5,7 +5,7 @@ import { VNDBAttribution } from '@/components/VNDBAttribution';
 const baseMetadata = generatePageMetadata({
   title: 'VNDB Stats',
   description: 'Visual novel reading statistics and analytics. Track your VN reading habits, view score distributions, explore global trends, and compare your taste with other VNDB users.',
-  path: '/stats',
+  path: '/stats/',
 });
 
 export const metadata: Metadata = {

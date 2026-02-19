@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent layout shift when scrollbar appears/disappears */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Font-Flash Fix
 
 /* Fix 1 — make transition-all safe by excluding font/text-layout properties.
@@ -408,7 +413,9 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
     animation: none;
   }
 
-  .vn-tab-indicator {
+  .vn-tab-indicator,
+  .vn-tabpanel-active,
+  .vn-tabpanel-hidden {
     transition: none;
   }
 }
@@ -503,6 +510,28 @@ html.stt-restoring main {
    Smooth sliding underline for active tab. */
 .vn-tab-indicator {
   transition: left 200ms ease, width 200ms ease;
+}
+
+/* ═══ VN Detail Page: Tab Panel Visibility ═══
+   Opacity/position layering instead of display:none.
+   Avoids Firefox WebRender text re-rasterization on tab switch. */
+.vn-tabpanel-active {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 75ms ease-out;
+}
+
+.vn-tabpanel-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 50ms ease-in, visibility 0s 50ms;
 }
 
 /* Tab scroll fade edges on mobile */

@@ -5,9 +5,8 @@ import { ArrowLeft, Users } from 'lucide-react';
 
 export const metadata = generatePageMetadata({
   title: 'Compare Lists',
-  description: 'Compare your visual novel list with another user and find users with similar taste.',
+  description: 'Compare your visual novel reading list with another VNDB user. Find readers with similar taste, see shared VNs, and discover score differences across your libraries.',
   path: '/stats/compare/',
-  noIndex: true,
 });
 
 function LoadingFallback() {

@@ -15,7 +15,7 @@ const newsJsonLd = [
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: 'Visual Novel News',
-    description: 'Latest visual novel and eroge news',
+    description: 'Latest visual novel news, new Japanese VN releases, and eroge industry updates. Stay informed about upcoming titles for your Japanese reading list.',
     url: `${SITE_URL}/news/`,
     isPartOf: {
       '@type': 'WebSite',
@@ -25,7 +25,7 @@ const newsJsonLd = [
   },
   generateBreadcrumbJsonLd([
     { name: 'Home', path: '/' },
-    { name: 'VN News', path: '/news/' },
+    { name: 'Visual Novel News', path: '/news/' },
   ]),
 ];
 
@@ -44,7 +44,7 @@ export default function NewsPage() {
             <Newspaper className="w-10 h-10 text-rose-600 dark:text-rose-400" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 flex items-center justify-center gap-3">
-            VN News
+            Visual Novel News
             <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
               Beta
             </span>

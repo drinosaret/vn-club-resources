@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!trait) {
     return {
-      title: 'Trait Stats',
+      title: `Trait ${traitId} Stats`,
       description: 'Visual novel character trait statistics and analysis on VN Club.',
     };
   }

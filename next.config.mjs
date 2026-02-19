@@ -2,12 +2,12 @@
 
 // Determine output mode:
 // - STATIC_EXPORT=true → static export (GitHub Pages)
-// - Default → standalone (Railway/Docker)
+// - Default → standalone (Docker/VPS)
 const getOutputConfig = () => {
   if (process.env.STATIC_EXPORT === 'true') {
     return { output: 'export' };
   }
-  // Standalone output for Docker/Railway deployment
+  // Standalone output for Docker/VPS deployment
   return { output: 'standalone' };
 };
 
@@ -29,6 +29,8 @@ const isDev = process.env.NODE_ENV === 'development';
 const nextConfig = {
   ...getOutputConfig(),
   trailingSlash: true,
+  poweredByHeader: false,
+  compress: false, // nginx handles gzip — no need for Node.js to double-compress
   // Security and caching headers
   async headers() {
     return [
@@ -114,11 +116,11 @@ const nextConfig = {
     ];
   },
   images: {
-    // Enable image optimization for standalone mode (Railway)
+    // Enable image optimization for standalone mode
     // Static export will still be unoptimized due to Next.js limitations
     unoptimized: process.env.STATIC_EXPORT === 'true',
     contentDispositionType: 'inline',
-    formats: ['image/webp'],
+    formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     // Allow local image paths (explicit config required in Next.js 16+)
@@ -165,6 +167,9 @@ const nextConfig = {
         destination: '/api/sitemap-index',
       },
     ];
+  },
+  experimental: {
+    optimizePackageImports: ['recharts'],
   },
   // Disable source maps in production to avoid leaking source code
   productionBrowserSourceMaps: false,

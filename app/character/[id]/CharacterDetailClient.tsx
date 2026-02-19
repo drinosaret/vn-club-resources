@@ -73,6 +73,7 @@ export default function CharacterDetailPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSpoilers, setShowSpoilers] = useState(false);
+  const [showSexual, setShowSexual] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [similarLanguageFilter, setSimilarLanguageFilter] = useState<LanguageFilterValue>('ja');
   const { onLoad: onMainImageLoad, shimmerClass: mainImageShimmer, fadeClass: mainImageFade } = useImageFade();
@@ -122,9 +123,9 @@ export default function CharacterDetailPage({ params }: PageProps) {
   const traitsByGroup = useMemo(() => {
     if (!character) return {};
     const groups: Record<string, typeof character.traits> = {};
-    const visibleTraits = showSpoilers
-      ? character.traits
-      : character.traits.filter(t => t.spoiler === 0);
+    const visibleTraits = character.traits.filter(t =>
+      (showSpoilers || t.spoiler === 0) && (showSexual || !t.group_name?.includes('(Sexual)'))
+    );
 
     for (const trait of visibleTraits) {
       const group = trait.group_name || 'Other';
@@ -134,12 +135,13 @@ export default function CharacterDetailPage({ params }: PageProps) {
       groups[group].push(trait);
     }
     return groups;
-  }, [character, showSpoilers]);
+  }, [character, showSpoilers, showSexual]);
 
-  // Count spoiler traits + check description for spoilers
-  const spoilerTraitCount = character?.traits.filter(t => t.spoiler > 0).length || 0;
+  // Counts respect the other toggle's state so they reflect what would actually appear
+  const spoilerTraitCount = character?.traits.filter(t => t.spoiler > 0 && (showSexual || !t.group_name?.includes('(Sexual)'))).length || 0;
   const hasDescriptionSpoiler = character?.description ? hasSpoilerContent(character.description) : false;
   const spoilerCount = spoilerTraitCount + (hasDescriptionSpoiler ? 1 : 0);
+  const sexualTraitCount = character?.traits.filter(t => t.group_name?.includes('(Sexual)') && (showSpoilers || t.spoiler === 0)).length || 0;
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -311,19 +313,34 @@ export default function CharacterDetailPage({ params }: PageProps) {
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Traits
                 </h2>
-                {spoilerCount > 0 && (
-                  <button
-                    onClick={() => setShowSpoilers(!showSpoilers)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                      showSpoilers
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}
-                  >
-                    {showSpoilers ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    {showSpoilers ? 'Hide' : 'Show'} spoilers
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {sexualTraitCount > 0 && (
+                    <button
+                      onClick={() => setShowSexual(!showSexual)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                        showSexual
+                          ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      {showSexual ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showSexual ? 'Hide' : 'Show'} sexual ({sexualTraitCount})</span>
+                    </button>
+                  )}
+                  {spoilerCount > 0 && (
+                    <button
+                      onClick={() => setShowSpoilers(!showSpoilers)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                        showSpoilers
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      {showSpoilers ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showSpoilers ? 'Hide' : 'Show'} spoilers ({spoilerCount})</span>
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="p-4 space-y-3">
                 {Object.entries(traitsByGroup).map(([group, traits]) => (

@@ -13,7 +13,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'Join the VN Club Resurrection Discord',
   description:
-    'Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs, get help with setup, share progress, and discover new visual novels.',
+    'Join the VN Club Resurrection Discord. Connect with Japanese learners reading VNs, get setup help, share progress, and discover new visual novels.',
   path: '/join/',
 });
 

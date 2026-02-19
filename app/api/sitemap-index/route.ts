@@ -59,7 +59,22 @@ export async function GET() {
   pushChunks(ids, SEIYUU_BASE_ID, seiyuuTotal);
   pushChunks(ids, PRODUCER_BASE_ID, producerTotal);
 
-  const lastmod = new Date().toISOString();
+  // Use the last VNDB import date so lastmod only changes when data actually updates.
+  // Google distrusts lastmod values that change on every request.
+  let lastmod = new Date().toISOString();
+  const backendUrl = getBackendUrlOptional();
+  if (backendUrl) {
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/stats/last-import-date`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.last_import) lastmod = new Date(data.last_import).toISOString();
+      }
+    } catch {
+      // Fall through to current date
+    }
+  }
+
   const entries = ids
     .map((id) => `  <sitemap>\n    <loc>${SITE_URL}/sitemap/${id}.xml</loc>\n    <lastmod>${lastmod}</lastmod>\n  </sitemap>`)
     .join('\n');

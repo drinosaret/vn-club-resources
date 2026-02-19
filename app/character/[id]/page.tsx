@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!character) {
     return {
-      title: 'Character',
+      title: `Character ${id}`,
       description: 'Visual novel character information and details on VN Club.',
     };
   }

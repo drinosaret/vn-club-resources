@@ -14,6 +14,8 @@ interface VNCharactersProps {
   isLoading?: boolean;
   showSpoilers: boolean;
   onShowSpoilersChange: (show: boolean) => void;
+  showSexual: boolean;
+  onShowSexualChange: (show: boolean) => void;
 }
 
 // Role order and labels
@@ -25,7 +27,7 @@ const roleLabels: Record<string, string> = {
   appears: 'Makes an Appearance',
 };
 
-export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoilersChange }: VNCharactersProps) {
+export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoilersChange, showSexual, onShowSexualChange }: VNCharactersProps) {
   const { preference } = useTitlePreference();
 
   // Group characters by role (filter out spoiler characters unless showSpoilers is true)
@@ -70,21 +72,36 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
       : characters.filter(char => (char.spoiler ?? 0) === 0).length;
   }, [characters, showSpoilers]);
 
-  // Count spoiler traits (only from non-spoiler characters, since spoiler characters are hidden)
+  // Count spoiler traits (respects sexual toggle - excludes traits that won't appear even with spoilers on)
   const spoilerTraitCount = useMemo(() => {
     let count = 0;
     for (const char of characters) {
       if ((char.spoiler ?? 0) === 0) {
         for (const trait of char.traits) {
-          if (trait.spoiler > 0) count++;
+          if (trait.spoiler > 0 && (showSexual || !trait.group_name?.includes('(Sexual)'))) count++;
         }
       }
     }
     return count;
-  }, [characters]);
+  }, [characters, showSexual]);
 
-  // Check if there are any spoilers (characters or traits)
-  const hasSpoilers = spoilerCharacterCount > 0 || spoilerTraitCount > 0;
+  // Count sexual traits (only those visible given current spoiler state)
+  const sexualTraitCount = useMemo(() => {
+    let count = 0;
+    const visibleChars = showSpoilers
+      ? characters
+      : characters.filter(char => (char.spoiler ?? 0) === 0);
+    for (const char of visibleChars) {
+      for (const trait of char.traits) {
+        if (trait.group_name?.includes('(Sexual)') && (showSpoilers || trait.spoiler === 0)) count++;
+      }
+    }
+    return count;
+  }, [characters, showSpoilers]);
+
+  // Combined spoiler count for display
+  const spoilerCount = spoilerCharacterCount + spoilerTraitCount;
+  const hasSpoilers = spoilerCount > 0;
 
   // Progressive rendering: show first batch immediately, defer the rest
   const [showAll, setShowAll] = useState(false);
@@ -120,19 +137,34 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
             Characters ({visibleCharacterCount})
           </h2>
         </div>
-        {hasSpoilers && (
-          <button
-            onClick={() => onShowSpoilersChange(!showSpoilers)}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
-              showSpoilers
-                ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            <span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {sexualTraitCount > 0 && (
+            <button
+              onClick={() => onShowSexualChange(!showSexual)}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+                showSexual
+                  ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              {showSexual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <span><span className="hidden sm:inline">{showSexual ? 'Hide' : 'Show'} </span>sexual ({sexualTraitCount})</span>
+            </button>
+          )}
+          {hasSpoilers && (
+            <button
+              onClick={() => onShowSpoilersChange(!showSpoilers)}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+                showSpoilers
+                  ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <span><span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers ({spoilerCount})</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Character groups */}
@@ -159,6 +191,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
                       character={char}
                       preference={preference}
                       showSpoilers={showSpoilers}
+                      showSexual={showSexual}
                       eager={idx < INITIAL_BATCH}
                     />
                   );
@@ -176,10 +209,11 @@ interface CharacterCardProps {
   character: VNCharacter;
   preference: 'japanese' | 'romaji';
   showSpoilers: boolean;
+  showSexual: boolean;
   eager?: boolean;
 }
 
-function CharacterCard({ character, preference, showSpoilers, eager }: CharacterCardProps) {
+function CharacterCard({ character, preference, showSpoilers, showSexual, eager }: CharacterCardProps) {
   const [imageError, setImageError] = useState(false);
   const { onLoad, shimmerClass, fadeClass } = useImageFade();
 
@@ -195,10 +229,10 @@ function CharacterCard({ character, preference, showSpoilers, eager }: Character
       ? character.name // Show Japanese as alternate
       : character.original; // Show romaji as alternate
 
-  // Filter traits based on spoiler setting
-  const visibleTraits = showSpoilers
-    ? character.traits
-    : character.traits.filter(t => t.spoiler === 0);
+  // Filter traits based on spoiler and sexual settings
+  const visibleTraits = character.traits.filter(t =>
+    (showSpoilers || t.spoiler === 0) && (showSexual || !t.group_name?.includes('(Sexual)'))
+  );
 
   // Group traits by category
   const traitsByGroup = useMemo(() => {

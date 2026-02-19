@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!staff) {
     return {
-      title: 'Staff Stats',
+      title: `Staff ${staffId} Stats`,
       description: 'Visual novel staff statistics and credited works on VN Club.',
     };
   }

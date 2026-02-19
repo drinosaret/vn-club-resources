@@ -38,6 +38,10 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
         left: tabRect.left - navRect.left + nav.scrollLeft,
         width: tabRect.width,
       });
+      // Auto-scroll active tab into view on mobile (when tab bar overflows)
+      if (nav.scrollWidth > nav.clientWidth) {
+        tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
     }
   }, [activeTab]);
 

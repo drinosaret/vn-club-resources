@@ -180,7 +180,7 @@ def build_extlink_url(site: str, value: Optional[str]) -> Optional[str]:
         if "/" in value:
             part1, part2 = value.split("/", 1)
             return f"https://www.play-asia.com/{part1}/13/70{part2}"
-        return None
+        return f"https://www.play-asia.com/-/13/70{value}"
 
     # ------------------------------------------------------------------
     # Special handling: digiket (7-digit zero-padded)

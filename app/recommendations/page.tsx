@@ -5,8 +5,8 @@ import { Sparkles } from 'lucide-react';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Visual Novel Recommendations for Japanese Learners',
-  description: 'Get personalized visual novel recommendations for learning Japanese based on your VNDB list. Discover your next VN based on your reading history and preferences.',
+  title: 'Personalized Visual Novel Recommendations',
+  description: 'Get personalized visual novel recommendations based on your VNDB list. Discover your next VN based on your reading history and preferences.',
   path: '/recommendations/',
 });
 
@@ -15,7 +15,7 @@ const recommendationsJsonLd = [
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'VN Recommendations',
-    description: 'Personalized visual novel recommendations for Japanese learners',
+    description: 'Personalized visual novel recommendations based on your VNDB ratings',
     url: `${SITE_URL}/recommendations/`,
     applicationCategory: 'EducationalApplication',
     isPartOf: {

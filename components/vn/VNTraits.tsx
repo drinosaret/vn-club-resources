@@ -11,12 +11,14 @@ interface VNTraitsProps {
   globalCounts?: { counts: Record<string, number>; total_characters: number } | null;
   showSpoilers: boolean;
   onShowSpoilersChange: (show: boolean) => void;
+  showSexual: boolean;
+  onShowSexualChange: (show: boolean) => void;
 }
 
 type SortField = 'name' | 'characters' | 'importance' | 'weight';
 type SortDir = 'asc' | 'desc';
 
-export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp, showSpoilers, onShowSpoilersChange }: VNTraitsProps) {
+export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp, showSpoilers, onShowSpoilersChange, showSexual, onShowSexualChange }: VNTraitsProps) {
   const [sortField, setSortField] = useState<SortField>('weight');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [localGlobalCounts, setLocalGlobalCounts] = useState<VNTraitsProps['globalCounts']>(null);
@@ -44,13 +46,12 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
     }
   }, [globalCountsProp, traitIds, localGlobalCounts]);
 
-  const { traits, totalCharacters, spoilerCount } = useMemo(() => {
+  const { traits, totalCharacters } = useMemo(() => {
     if (!characters || characters.length === 0) {
-      return { traits: [], totalCharacters: 0, spoilerCount: 0 };
+      return { traits: [], totalCharacters: 0 };
     }
 
     const traitMap = new Map<string, { name: string; group_name?: string; spoiler: number; count: number }>();
-    let spoilers = 0;
 
     for (const char of characters) {
       for (const trait of char.traits) {
@@ -67,7 +68,6 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
             count: 1,
           });
         }
-        if (trait.spoiler > 0) spoilers++;
       }
     }
 
@@ -93,20 +93,33 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
       });
     }
 
-    return { traits: aggregated, totalCharacters: total, spoilerCount: spoilers };
+    return { traits: aggregated, totalCharacters: total };
   }, [characters, globalCounts]);
 
-  const filteredTraits = useMemo(() => {
-    let filtered = showSpoilers ? traits : traits.filter(t => t.spoiler === 0);
+  // Counts respect the other toggle's state so they reflect what would actually appear
+  const spoilerCount = useMemo(() =>
+    traits.filter(t => t.spoiler > 0 && (showSexual || !t.group_name?.includes('(Sexual)'))).length,
+    [traits, showSexual]
+  );
+  const sexualCount = useMemo(() =>
+    traits.filter(t => t.group_name?.includes('(Sexual)') && (showSpoilers || t.spoiler === 0)).length,
+    [traits, showSpoilers]
+  );
 
-    // Normalize weight to 0-100 scale (top visible item = 100)
-    const maxWeight = Math.max(...filtered.map(t => t.weight), 1);
-    const normalized = filtered.map(t => ({
+  const filteredTraits = useMemo(() => {
+    // Normalize weight to 0-100 scale using ALL traits (stable when toggling filters)
+    const maxWeight = Math.max(...traits.map(t => t.weight), 1);
+    const normalized = traits.map(t => ({
       ...t,
       weight: (t.weight / maxWeight) * 100,
     }));
 
-    return normalized.sort((a, b) => {
+    // Filter after normalization
+    const filtered = normalized.filter(t =>
+      (showSpoilers || t.spoiler === 0) && (showSexual || !t.group_name?.includes('(Sexual)'))
+    );
+
+    return filtered.sort((a, b) => {
       let cmp = 0;
       if (sortField === 'name') cmp = a.name.localeCompare(b.name);
       else if (sortField === 'characters') cmp = a.character_count - b.character_count;
@@ -114,7 +127,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
       else cmp = a.weight - b.weight;
       return sortDir === 'desc' ? -cmp : cmp;
     });
-  }, [traits, showSpoilers, sortField, sortDir]);
+  }, [traits, showSpoilers, showSexual, sortField, sortDir]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -150,23 +163,44 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Traits</h2>
               <span className="text-sm text-gray-400">({filteredTraits.length})</span>
             </div>
-            {spoilerCount > 0 && (
-              <button
-                onClick={() => onShowSpoilersChange(!showSpoilers)}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
-                  showSpoilers
-                    ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                }`}
-              >
-                {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                <span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {sexualCount > 0 && (
+                <button
+                  onClick={() => onShowSexualChange(!showSexual)}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+                    showSexual
+                      ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  {showSexual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span><span className="hidden sm:inline">{showSexual ? 'Hide' : 'Show'} </span>sexual ({sexualCount})</span>
+                </button>
+              )}
+              {spoilerCount > 0 && (
+                <button
+                  onClick={() => onShowSpoilersChange(!showSpoilers)}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+                    showSpoilers
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span><span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers ({spoilerCount})</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+              <colgroup>
+                <col />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 90 }} />
+              </colgroup>
               <thead className="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
                   <th className="px-3 sm:px-4 py-3 text-left">
@@ -193,15 +227,17 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filteredTraits.map((trait) => (
-                  <tr key={trait.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 ${trait.spoiler > 0 ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
-                    <td className="px-3 sm:px-4 py-2">
-                      <div>
+                  <tr key={trait.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 ${trait.spoiler > 0 ? 'bg-red-50/50 dark:bg-red-900/10' : trait.group_name?.includes('(Sexual)') ? 'bg-pink-50/50 dark:bg-pink-900/10' : ''}`}>
+                    <td className="px-3 sm:px-4 py-2 truncate">
+                      <div className="truncate">
                         <Link
                           href={`/stats/trait/${trait.id}`}
                           className="text-sm text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                          title={trait.name}
                         >
                           {trait.name}
                           {trait.spoiler > 0 && <span className="ml-1 text-red-500">!</span>}
+                          {trait.group_name?.includes('(Sexual)') && trait.spoiler === 0 && <span className="ml-1 text-pink-500">&#9829;</span>}
                         </Link>
                         {trait.group_name && (
                           <span className="ml-2 text-xs text-gray-400 hidden sm:inline">{trait.group_name}</span>

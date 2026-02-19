@@ -111,9 +111,6 @@ deploy/nginx/ssl/
 .stfolder/
 *sync-conflict*
 
-# Vercel
-.vercel/
-
 # Debug logs
 npm-debug.log*
 yarn-debug.log*

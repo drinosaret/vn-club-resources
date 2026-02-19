@@ -19,6 +19,7 @@ function GitHubIcon({ className }: { className?: string }) {
 export const revalidate = 60;
 
 export const metadata: Metadata = {
+  title: 'VN Club | Learn Japanese with Visual Novels',
   alternates: {
     canonical: '/',
   },
