@@ -8,6 +8,7 @@ import { getSourceConfig, getRelativeTime } from '@/lib/sample-news-data';
 import { DigestModal } from './DigestModal';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getNewsImageUrl } from '@/lib/vndb-image-cache';
+import { useImageFade } from '@/hooks/useImageFade';
 
 interface DigestCardProps {
   item: NewsListItem;
@@ -27,7 +28,7 @@ function getNewsItemTitle(newsItem: NewsItem, preference: 'japanese' | 'romaji')
 
 export function DigestCard({ item }: DigestCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad: onImageLoad, shimmerClass, fadeClass } = useImageFade();
   const sourceConfig = getSourceConfig(item.source);
   const relativeTime = getRelativeTime(item.publishedAt);
   const previewImages = item.previewImages || [];
@@ -44,7 +45,7 @@ export function DigestCard({ item }: DigestCardProps) {
         <div className="relative w-full h-40 flex-shrink-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/50 dark:via-indigo-950/50 dark:to-purple-950/50 overflow-hidden">
           {/* Shimmer placeholder - visible until image loads */}
           {previewImages.length > 0 && (
-            <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 z-0 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+            <div className={`${shimmerClass} z-0`} />
           )}
           {previewImages.length > 0 ? (
             <>
@@ -53,8 +54,8 @@ export function DigestCard({ item }: DigestCardProps) {
                 alt={digestItems.length > 0 ? getNewsItemTitle(digestItems[0], preference) : item.source}
                 fill
                 loading="lazy"
-                className={`object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                onLoad={() => setImageLoaded(true)}
+                className={`object-cover ${fadeClass}`}
+                onLoad={onImageLoad}
                 unoptimized
               />
               {/* Count badge */}

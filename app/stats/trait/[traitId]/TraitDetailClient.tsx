@@ -37,6 +37,7 @@ import { SpoilerFilter, SpoilerFilterValue } from '@/components/stats/SpoilerFil
 import { LastUpdated } from '@/components/stats/LastUpdated';
 import { sortTagsByWeight } from '@/lib/weighted-score-utils';
 import { NSFWImage } from '@/components/NSFWImage';
+import { useImageFade } from '@/hooks/useImageFade';
 
 /** Preload VN cover images into browser cache using Image() objects */
 function preloadVNImages(vns: Array<{ image_url?: string | null; id: string }>) {
@@ -875,7 +876,7 @@ export default function TraitDetailPage({ params }: PageProps) {
 
 function CharacterCard({ character }: { character: TraitCharacter }) {
   const { preference } = useTitlePreference();
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad, shimmerClass, fadeClass } = useImageFade();
 
   return (
     <Link
@@ -883,17 +884,16 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
       className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
     >
       <div className="w-16 h-20 flex-shrink-0 relative overflow-hidden rounded">
-        {/* Shimmer placeholder - visible until image loads */}
-        <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+        <div className={shimmerClass} />
         {character.image_url ? (
           <NSFWImage
             src={getProxiedImageUrl(character.image_url, { width: 128 })}
             alt={character.name}
             vnId={character.id}
             imageSexual={character.image_sexual}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
+            className={`w-full h-full object-cover ${fadeClass}`}
+            onLoad={onLoad}
+            onError={onLoad}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
@@ -943,7 +943,7 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
 
 function VNCard({ vn }: { vn: TagVN }) {
   const { preference } = useTitlePreference();
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const displayTitle = getDisplayTitle({ title: vn.title, title_jp: vn.title_jp || vn.alttitle, title_romaji: vn.title_romaji }, preference);
 
   return (
@@ -952,17 +952,16 @@ function VNCard({ vn }: { vn: TagVN }) {
       className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
     >
       <div className="w-16 h-20 flex-shrink-0 relative overflow-hidden rounded">
-        {/* Shimmer placeholder - visible until image loads */}
-        <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+        <div className={shimmerClass} />
         {vn.image_url ? (
           <NSFWImage
             src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
             alt={displayTitle}
             vnId={vn.id}
             imageSexual={vn.image_sexual}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
+            className={`w-full h-full object-cover ${fadeClass}`}
+            onLoad={onLoad}
+            onError={onLoad}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">

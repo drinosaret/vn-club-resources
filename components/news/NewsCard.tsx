@@ -7,6 +7,7 @@ import type { NewsListItem } from '@/lib/sample-news-data';
 import { getSourceConfig, getRelativeTime } from '@/lib/sample-news-data';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getNewsImageUrl } from '@/lib/vndb-image-cache';
+import { useImageFade } from '@/hooks/useImageFade';
 
 interface NewsCardProps {
   item: NewsListItem;
@@ -16,7 +17,7 @@ export function NewsCard({ item }: NewsCardProps) {
   const sourceConfig = getSourceConfig(item.source);
   const relativeTime = getRelativeTime(item.publishedAt);
   const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad: onImageLoad, shimmerClass, fadeClass } = useImageFade();
   const { preference } = useTitlePreference();
 
   // For VNDB sources, use title preference; otherwise use title as-is
@@ -56,7 +57,7 @@ export function NewsCard({ item }: NewsCardProps) {
       <div className="relative w-full h-40 flex-shrink-0">
         {/* Shimmer placeholder - visible until image loads */}
         {hasValidImage && (
-          <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+          <div className={shimmerClass} />
         )}
         {hasValidImage ? (
           <Image
@@ -64,9 +65,9 @@ export function NewsCard({ item }: NewsCardProps) {
             alt={item.title}
             fill
             loading="lazy"
-            className={`object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`object-cover ${fadeClass}`}
             onError={() => setImageError(true)}
-            onLoad={() => setImageLoaded(true)}
+            onLoad={onImageLoad}
             unoptimized
           />
         ) : (

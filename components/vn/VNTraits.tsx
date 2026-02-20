@@ -164,7 +164,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between flex-wrap gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary-500" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Traits</h2>
@@ -240,7 +240,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
                         >
                           {trait.name}
                           {trait.spoiler > 0 && <span className="ml-1 text-red-500">!</span>}
-                          {trait.group_name?.includes('(Sexual)') && trait.spoiler === 0 && <span className="ml-1 text-pink-500">&#9829;</span>}
+                          {trait.group_name?.includes('(Sexual)') && <span className="ml-1 text-pink-500">&#9829;</span>}
                         </Link>
                         {trait.group_name && (
                           <span className="ml-2 text-xs text-gray-400 hidden sm:inline">{trait.group_name}</span>

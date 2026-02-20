@@ -13,6 +13,7 @@ import { useTitlePreference, getDisplayTitle, TitlePreference } from '@/lib/titl
 import { HowItWorksAccordion } from '@/components/recommendations/HowItWorksAccordion';
 import TagTraitAutocomplete, { SelectedItem } from '@/components/recommendations/TagTraitAutocomplete';
 import { CompactRecommendationFilters } from '@/components/recommendations/CompactRecommendationFilters';
+import { useImageFade } from '@/hooks/useImageFade';
 import { NSFWImage } from '@/components/NSFWImage';
 import { FadeIn } from '@/components/FadeIn';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -74,7 +75,7 @@ interface RecommendationCardProps {
 }
 
 function RecommendationCard({ rec, index, titlePreference, onInfoClick }: RecommendationCardProps) {
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const { onLoad, shimmerClass, fadeClass } = useImageFade();
   const imageUrl = getProxiedImageUrl(rec.image_url, { width: CARD_IMAGE_WIDTH, vnId: rec.vn_id });
   const srcSet = rec.image_url ? buildCardSrcSet(rec.image_url, rec.vn_id) : undefined;
 
@@ -90,17 +91,17 @@ function RecommendationCard({ rec, index, titlePreference, onInfoClick }: Recomm
         {/* Image */}
         <div className="relative aspect-[3/4]">
           {/* Shimmer placeholder - visible until image loads */}
-          <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${isImageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+          <div className={shimmerClass} />
           {rec.image_url ? (
             <NSFWImage
               src={imageUrl || rec.image_url}
               alt={rec.title}
               imageSexual={rec.image_sexual}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`w-full h-full object-cover ${fadeClass}`}
               loading="lazy"
               srcSet={srcSet}
               sizes={CARD_IMAGE_SIZES}
-              onLoad={() => setIsImageLoaded(true)}
+              onLoad={onLoad}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200 dark:bg-gray-700">

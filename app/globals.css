@@ -523,6 +523,8 @@ html.stt-restoring main {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  height: 0;           /* Collapse so content doesn't extend scroll area on mobile */
+  overflow: hidden;    /* Clip content within collapsed bounds */
 }
 
 /* Tab scroll fade edges on mobile */

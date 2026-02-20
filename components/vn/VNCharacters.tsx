@@ -130,7 +130,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
   return (
     <div className="space-y-6">
       {/* Header with spoiler toggle */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Users className="w-5 h-5 text-primary-500" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">

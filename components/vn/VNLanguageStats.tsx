@@ -825,7 +825,7 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
             alt={displayTitle}
             vnId={vnId}
             imageSexual={imageSexual}
-            className={`w-full h-full object-cover object-top transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
             onLoad={handleImageLoad}
             onError={handleImageError}
@@ -862,7 +862,7 @@ function SimilarDifficultySection({ vns, currentDifficulty }: { vns: SimilarDiff
           Other visual novels with a similar reading difficulty ({getDifficultyLabel(currentDifficulty)}, {currentDifficulty.toFixed(1)}/5)
         </p>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
         {vns.map(vn => (
           <SimilarVNCard
             key={vn.vnId}
@@ -891,7 +891,7 @@ function SimilarLengthSection({ vns, currentCharCount }: { vns: SimilarLengthVN[
           Other visual novels with a similar character count ({formatCount(currentCharCount)} chars)
         </p>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
         {vns.map(vn => (
           <SimilarVNCard
             key={vn.vnId}

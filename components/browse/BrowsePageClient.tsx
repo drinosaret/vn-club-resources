@@ -7,7 +7,8 @@ import { Search, Loader2, X, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-
 import { mutate } from 'swr';
 import { vndbStatsApi, VNSearchResult, BrowseFilters, BrowseResponse } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
-import { VNGrid } from './VNGrid';
+import { VNGrid, GRID_IMAGE_WIDTHS } from './VNGrid';
+import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { Pagination, PaginationSkeleton } from './Pagination';
 import { TagFilter, SelectedTag, FilterEntityType } from './TagFilter';
 import { ViewModeToggle, GridSize } from './ViewModeToggle';
@@ -732,6 +733,16 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     const cachedResponse = prefetchCacheRef.current.get(cacheKey);
     if (cachedResponse) {
       prefetchCacheRef.current.delete(cacheKey);
+      // Preload above-fold images — gives a head start before React renders.
+      // If prefetchPage already loaded them, this is a no-op (browser cache hit).
+      const imgWidth = GRID_IMAGE_WIDTHS[gridSize];
+      cachedResponse.results.slice(0, 8).forEach(vn => {
+        if (vn.image_url) {
+          const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
+          const url = getProxiedImageUrl(vn.image_url, { width: imgWidth, vnId });
+          if (url) { const img = new Image(); img.src = url; }
+        }
+      });
       // Wrap in startTransition so these 7 setState calls don't batch synchronously
       // with handlePageChange's setState calls. Without this, the entire data update
       // renders synchronously in the click handler (~10ms), adding to the synchronous
@@ -809,6 +820,18 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       // Only cache if not aborted
       if (!abortController.signal.aborted) {
         prefetchCacheRef.current.set(cacheKey, response);
+
+        // Preload above-fold images so they're in browser cache when user navigates.
+        // On mobile (no hover), adjacent pages are auto-prefetched after load,
+        // giving images a head start before the user taps next/prev.
+        const imgWidth = GRID_IMAGE_WIDTHS[gridSize];
+        response.results.slice(0, 8).forEach(vn => {
+          if (vn.image_url) {
+            const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
+            const url = getProxiedImageUrl(vn.image_url, { width: imgWidth, vnId });
+            if (url) { const img = new Image(); img.src = url; }
+          }
+        });
 
         // Limit cache size to prevent memory bloat
         if (prefetchCacheRef.current.size > 10) {

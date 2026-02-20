@@ -399,7 +399,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                                   <img
                                     src={imageUrl}
                                     alt={displayTitle}
-                                    className="w-full h-full object-cover opacity-0 transition-opacity duration-200"
+                                    className="w-full h-full object-cover opacity-0"
                                     style={isNsfw ? { imageRendering: 'pixelated' } : undefined}
                                     loading="lazy"
                                     onLoad={(e) => { (e.target as HTMLImageElement).classList.remove('opacity-0'); }}

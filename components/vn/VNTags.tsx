@@ -56,7 +56,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -118,7 +118,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
               {isSpoiler && (
                 <span className="text-xs text-red-500 dark:text-red-400">!</span>
               )}
-              {isSexual && !isSpoiler && (
+              {isSexual && (
                 <span className="text-xs text-pink-500 dark:text-pink-400">&#9829;</span>
               )}
             </Link>

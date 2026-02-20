@@ -8,6 +8,7 @@ import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { LanguageFilter, LanguageFilterValue, filterByLanguage } from './LanguageFilter';
 import { useTitlePreference, getDisplayTitle, type TitlePreference } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
+import { useImageFade } from '@/hooks/useImageFade';
 
 interface TopVNsTableProps {
   title: string;
@@ -63,7 +64,7 @@ export function TopVNsTable({
 }
 
 function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { rank: number }; showRating: boolean; showVotes: boolean; preference: TitlePreference }) {
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const { onLoad, shimmerClass, fadeClass } = useImageFade();
 
   return (
     <Link
@@ -79,16 +80,16 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
       <div className="w-10 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
         {vn.image_url ? (
           <>
-            <div className={`absolute inset-0 image-placeholder transition-opacity duration-300 ${imageLoaded ? 'opacity-0' : 'opacity-100'}`} />
+            <div className={shimmerClass} />
             <NSFWImage
               src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
               alt={getDisplayTitle({ title: vn.title, title_jp: vn.alttitle }, preference)}
               vnId={vn.id}
               imageSexual={vn.image_sexual}
-              className={`w-full h-full object-cover object-top transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`w-full h-full object-cover object-top ${fadeClass}`}
               loading="lazy"
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageLoaded(true)}
+              onLoad={onLoad}
+              onError={onLoad}
             />
           </>
         ) : (

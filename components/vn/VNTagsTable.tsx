@@ -92,7 +92,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange, showSexu
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between flex-wrap gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-primary-500" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tags</h2>
@@ -167,7 +167,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange, showSexu
                   >
                     {tag.name}
                     {tag.spoiler > 0 && <span className="ml-1 text-red-500">!</span>}
-                    {tag.category === 'ero' && tag.spoiler === 0 && <span className="ml-1 text-pink-500">&#9829;</span>}
+                    {tag.category === 'ero' && <span className="ml-1 text-pink-500">&#9829;</span>}
                   </Link>
                 </td>
                 <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">

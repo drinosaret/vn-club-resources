@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, memo, startTransition } from 'react';
+import { useState, useRef, useEffect, useCallback, useReducer, memo, startTransition } from 'react';
 import Link from 'next/link';
 import { Star, Loader2, BookOpen } from 'lucide-react';
 import { VNSearchResult } from '@/lib/vndb-stats-api';
@@ -13,7 +13,7 @@ import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
 // The actual rendering uses srcset with multiple widths so the browser
 // picks the optimal variant per viewport. This "primary" width is used
 // by the Image() preload objects and as the default src.
-const GRID_IMAGE_WIDTHS: Record<GridSize, ImageWidth> = {
+export const GRID_IMAGE_WIDTHS: Record<GridSize, ImageWidth> = {
   small: 256,   // 3 cols on mobile (~120px) — 256px fine for 2x retina
   medium: 512,  // 2 cols on mobile (~195px) — needs 512px for retina
   large: 512,   // 2 cols on mobile (~195px) — needs 512px for retina
@@ -237,24 +237,23 @@ interface VNCoverProps {
 }
 
 const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass }: VNCoverProps) {
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
-  const retryCountRef = useRef(0);
+  // All image state in a single ref — mutations don't trigger renders.
+  // useReducer provides a lightweight re-render trigger for onLoad/onError.
+  const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
   const retryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [, rerender] = useReducer(x => x + 1, 0);
 
-  // Reset state when the VN changes (key={index} reuses the component instance).
-  // This is React's "storing information from previous renders" pattern —
-  // setState during render is batched with the current render, no extra commit.
-  const [prevVnId, setPrevVnId] = useState(vn.id);
-  if (vn.id !== prevVnId) {
-    setPrevVnId(vn.id);
-    setImageError(false);
-    setImageLoaded(false);
-    setRetryKey(0);
-    retryCountRef.current = 0;
+  // Reset when VN changes (key={index} reuses the component instance).
+  // Ref mutation — no setState during render, so React doesn't discard + retry.
+  // This avoids 35× double renders (and ~350-500 discarded JSX objects) per pagination.
+  const prevVnIdRef = useRef(vn.id);
+  if (vn.id !== prevVnIdRef.current) {
+    prevVnIdRef.current = vn.id;
+    imgState.current = { loaded: false, error: false, retryKey: 0, retryCount: 0 };
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
   }
+
+  const { loaded: imageLoaded, error: imageError, retryKey } = imgState.current;
 
   const title = getDisplayTitle({
     title: vn.title,
@@ -292,22 +291,27 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
 
 
   const handleImageError = useCallback(() => {
-    if (retryCountRef.current < 2) {
-      const delay = retryCountRef.current === 0 ? 2000 : 5000;
-      retryCountRef.current++;
-      setImageError(true);
+    const s = imgState.current;
+    if (s.retryCount < 2) {
+      const delay = s.retryCount === 0 ? 2000 : 5000;
+      s.retryCount++;
+      s.error = true;
+      rerender();
       retryTimerRef.current = setTimeout(() => {
-        setImageError(false);
-        setImageLoaded(false);
-        setRetryKey(prev => prev + 1);
+        s.error = false;
+        s.loaded = false;
+        s.retryKey++;
+        rerender();
       }, delay);
     } else {
-      setImageError(true);
+      s.error = true;
+      rerender();
     }
   }, []);
 
   const handleImageLoad = useCallback(() => {
-    setImageLoaded(true);
+    imgState.current.loaded = true;
+    rerender();
   }, []);
 
   return (
