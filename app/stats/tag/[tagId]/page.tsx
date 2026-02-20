@@ -56,7 +56,7 @@ export default async function TagDetailPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
         />
       )}
-      <TagDetailClient params={Promise.resolve({ tagId })} />
+      <TagDetailClient key={tagId} params={Promise.resolve({ tagId })} />
     </>
   );
 }

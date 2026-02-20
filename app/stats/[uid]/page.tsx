@@ -55,7 +55,7 @@ export default async function Page({ params, searchParams }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
-      <UserStatsContent uid={uid} initialUsername={username} initialTab={tab} />
+      <UserStatsContent key={uid} uid={uid} initialUsername={username} initialTab={tab} />
     </>
   );
 }

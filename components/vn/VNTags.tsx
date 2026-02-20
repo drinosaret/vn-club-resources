@@ -71,6 +71,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
           {sexualCount > 0 && (
             <button
               onClick={() => setShowSexual(!showSexual)}
+              aria-pressed={showSexual}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                 showSexual
                   ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
@@ -84,6 +85,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
           {spoilerCount > 0 && (
             <button
               onClick={() => setShowSpoilers(!showSpoilers)}
+              aria-pressed={showSpoilers}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                 showSpoilers
                   ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'

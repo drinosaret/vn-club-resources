@@ -10,6 +10,7 @@
     "prebuild": "npx tsx scripts/generate-search-index.ts && npx tsx scripts/cache-vndb-images.ts",
     "build": "next build",
     "start": "next start",
+    "prod": "next build && next start",
     "lint": "eslint --cache --cache-location .next/cache/eslint/ app components lib scripts",
     "export": "next build && npx serve@latest out",
     "generate-search": "npx tsx scripts/generate-search-index.ts",

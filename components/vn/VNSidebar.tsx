@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
 import { useTitlePreference } from '@/lib/title-preference';
@@ -31,6 +32,8 @@ export function VNSidebar({
   updatedAt,
 }: VNSidebarProps) {
   const { preference } = useTitlePreference();
+  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
+  const [showAllLanguages, setShowAllLanguages] = useState(false);
   const lengthInfo = length ? lengthLabels[length] : null;
   const formattedDate = released ? formatReleaseDate(released) : null;
   const formattedUpdatedAt = updatedAt ? formatUpdatedAt(updatedAt) : null;
@@ -89,7 +92,7 @@ export function VNSidebar({
           <div className="col-span-2">
             <SidebarLabel>Platforms</SidebarLabel>
             <div className="flex flex-wrap gap-1 mt-0.5">
-              {platforms.slice(0, 5).map(p => (
+              {(showAllPlatforms ? platforms : platforms.slice(0, 5)).map(p => (
                 <span
                   key={p}
                   className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded"
@@ -97,8 +100,13 @@ export function VNSidebar({
                   {platformNames[p] || p}
                 </span>
               ))}
-              {platforms.length > 5 && (
-                <span className="text-xs text-gray-400">+{platforms.length - 5}</span>
+              {!showAllPlatforms && platforms.length > 5 && (
+                <button
+                  onClick={() => setShowAllPlatforms(true)}
+                  className="text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                >
+                  +{platforms.length - 5}
+                </button>
               )}
             </div>
           </div>
@@ -108,7 +116,7 @@ export function VNSidebar({
           <div className="col-span-2">
             <SidebarLabel>Languages</SidebarLabel>
             <div className="flex flex-wrap gap-1 mt-0.5">
-              {languages.slice(0, 8).map(lang => (
+              {(showAllLanguages ? languages : languages.slice(0, 8)).map(lang => (
                 <span
                   key={lang}
                   className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded uppercase"
@@ -116,8 +124,13 @@ export function VNSidebar({
                   {lang}
                 </span>
               ))}
-              {languages.length > 8 && (
-                <span className="text-xs text-gray-400">+{languages.length - 8}</span>
+              {!showAllLanguages && languages.length > 8 && (
+                <button
+                  onClick={() => setShowAllLanguages(true)}
+                  className="text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                >
+                  +{languages.length - 8}
+                </button>
               )}
             </div>
           </div>
@@ -135,7 +148,7 @@ export function VNSidebar({
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-1.5 py-0.5 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+                className="inline-flex items-center min-h-[32px] px-2 py-1 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
               >
                 {link.label}
               </a>
@@ -154,7 +167,7 @@ export function VNSidebar({
                 href={shop.url}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="px-1.5 py-0.5 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+                className="inline-flex items-center min-h-[32px] px-2 py-1 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
               >
                 {shop.label}
               </a>
@@ -205,7 +218,14 @@ function RatingArc({ rating, votecount }: { rating: number; votecount: number })
           {votecount.toLocaleString()} votes
         </span>
       </div>
-      <div className="mt-1.5 h-1 rounded-full bg-gray-200 dark:bg-gray-700">
+      <div
+        className="mt-1.5 h-1 rounded-full bg-gray-200 dark:bg-gray-700"
+        role="progressbar"
+        aria-valuenow={rating}
+        aria-valuemin={1}
+        aria-valuemax={10}
+        aria-label={`Rating: ${rating.toFixed(2)} out of 10`}
+      >
         <div
           className={`h-full rounded-full ${barColor}`}
           style={{ width: `${progress}%` }}

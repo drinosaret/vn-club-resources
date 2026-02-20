@@ -32,7 +32,8 @@ function ChartToggle({
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+          aria-pressed={active === opt.value}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
             active === opt.value
               ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'

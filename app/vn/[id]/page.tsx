@@ -9,6 +9,7 @@ import {
   generateBreadcrumbJsonLd,
 } from '@/lib/metadata-utils';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { resolveDeckId } from '@/app/api/jiten/resolve-deck';
 import VNDetailClient from './VNDetailClient';
 
 export const revalidate = 3600; // ISR: cache pages for 1 hour
@@ -52,11 +53,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function VNDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  // Fetch VN metadata, characters, and similar VNs in parallel
-  const [vn, characters, similar] = await Promise.all([
+  const vnId = id.startsWith('v') ? id : `v${id}`;
+
+  // Fetch VN metadata, characters, similar VNs, and jiten deck ID in parallel
+  const [vn, characters, similar, jitenDeckId] = await Promise.all([
     getVNForMetadata(id),
     getVNCharactersServer(id),
     getSimilarVNsServer(id),
+    resolveDeckId(vnId).catch(() => undefined as undefined),
   ]);
 
   const metaTitle = vn
@@ -70,7 +74,6 @@ export default async function VNDetailPage({ params }: PageProps) {
       { name: metaTitle || vn.title, path: `/vn/${id}/` },
     ]),
   ] : null;
-  const vnId = id.startsWith('v') ? id : `v${id}`;
   const coverPreloadUrl = vn?.image_url
     ? getProxiedImageUrl(vn.image_url, { width: 512, vnId })
     : null;
@@ -87,10 +90,12 @@ export default async function VNDetailPage({ params }: PageProps) {
         />
       )}
       <VNDetailClient
+        key={id}
         vnId={id}
         initialVN={vn}
         initialCharacters={characters}
         initialSimilar={similar}
+        initialJitenDeckId={jitenDeckId}
       />
     </>
   );

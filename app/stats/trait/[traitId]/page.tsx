@@ -56,7 +56,7 @@ export default async function TraitDetailPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
         />
       )}
-      <TraitDetailClient params={Promise.resolve({ traitId })} />
+      <TraitDetailClient key={traitId} params={Promise.resolve({ traitId })} />
     </>
   );
 }

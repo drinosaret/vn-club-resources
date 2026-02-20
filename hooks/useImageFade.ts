@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 
 /**
- * Hook for consistent shimmer-to-fade-in image loading transitions.
+ * Hook for consistent shimmer-to-instant image loading.
  * Matches the pattern used in VNGrid browse covers.
  */
 export function useImageFade() {
@@ -16,6 +16,6 @@ export function useImageFade() {
     /** Apply to the shimmer placeholder div — no transition so preloaded images appear instantly */
     shimmerClass: loaded ? 'hidden' : 'absolute inset-0 image-placeholder',
     /** Merge into the image element's className */
-    fadeClass: loaded ? 'opacity-100' : 'opacity-0 transition-opacity duration-150',
+    fadeClass: loaded ? 'opacity-100' : 'opacity-0',
   };
 }

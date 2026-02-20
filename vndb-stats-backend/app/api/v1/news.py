@@ -276,7 +276,7 @@ async def list_announcements(
 
 # ==================== RSS Config Endpoints ====================
 
-@router.get("/rss-configs", response_model=list[schemas.RSSFeedConfigResponse], dependencies=[Depends(require_admin)])
+@router.get("/rss-configs", response_model=list[schemas.RSSFeedConfigResponse], dependencies=[Depends(require_admin)], include_in_schema=False)
 async def list_rss_configs(
     db: AsyncSession = Depends(get_db),
 ):

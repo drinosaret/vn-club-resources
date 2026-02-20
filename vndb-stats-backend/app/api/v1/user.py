@@ -97,7 +97,7 @@ async def get_user_vn_list(
     )
 
 
-@router.post("/{vndb_uid}/refresh")
+@router.post("/{vndb_uid}/refresh", include_in_schema=False)
 @limiter.limit("5/minute")
 async def refresh_user_data(
     request: Request,

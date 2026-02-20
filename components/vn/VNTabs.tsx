@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 
 export type VNTabId = 'summary' | 'language' | 'tags' | 'traits' | 'characters' | 'stats';
 
@@ -16,7 +16,9 @@ interface VNTabsProps {
 export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCount, characterCount }: VNTabsProps) {
   const navRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<VNTabId, HTMLButtonElement>>(new Map());
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  const userClickedTab = useRef(false);
+  const updateIndicatorRef = useRef<() => void>(() => {});
 
   const allTabs: Array<{ id: VNTabId; label: string; count?: number; hidden?: boolean }> = [
     { id: 'summary', label: 'Overview' },
@@ -31,30 +33,36 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
   const updateIndicator = useCallback(() => {
     const tab = tabRefs.current.get(activeTab);
     const nav = navRef.current;
-    if (tab && nav) {
+    const indicator = indicatorRef.current;
+    if (tab && nav && indicator) {
       const navRect = nav.getBoundingClientRect();
       const tabRect = tab.getBoundingClientRect();
-      setIndicatorStyle({
-        left: tabRect.left - navRect.left + nav.scrollLeft,
-        width: tabRect.width,
-      });
+      const left = tabRect.left - navRect.left + nav.scrollLeft;
+
+      indicator.style.transform = `translateX(${left}px)`;
+      indicator.style.width = `${tabRect.width}px`;
+
       // Auto-scroll active tab into view on mobile (when tab bar overflows)
-      if (nav.scrollWidth > nav.clientWidth) {
+      // Only on user-initiated tab changes — not on mount/resize (causes page jump)
+      if (userClickedTab.current && nav.scrollWidth > nav.clientWidth) {
         tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
+      userClickedTab.current = false;
     }
   }, [activeTab]);
+
+  updateIndicatorRef.current = updateIndicator;
 
   useEffect(() => {
     updateIndicator();
   }, [updateIndicator]);
 
-  // Update indicator on resize
+  // Update indicator on resize — observer created once, uses ref for latest callback
   useEffect(() => {
-    const observer = new ResizeObserver(updateIndicator);
+    const observer = new ResizeObserver(() => updateIndicatorRef.current());
     if (navRef.current) observer.observe(navRef.current);
     return () => observer.disconnect();
-  }, [updateIndicator]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard navigation between tabs
   const handleKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
@@ -72,6 +80,7 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
     if (nextIndex >= 0) {
       e.preventDefault();
       const nextTab = tabs[nextIndex];
+      userClickedTab.current = true;
       onTabChange(nextTab.id);
       tabRefs.current.get(nextTab.id)?.focus();
     }
@@ -89,7 +98,7 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
           <button
             key={tab.id}
             ref={(el) => { if (el) tabRefs.current.set(tab.id, el); }}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => { userClickedTab.current = true; onTabChange(tab.id); }}
             onMouseEnter={() => onTabHover?.(tab.id)}
             onFocus={() => onTabHover?.(tab.id)}
             onTouchStart={() => onTabHover?.(tab.id)}
@@ -118,23 +127,18 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 opacity-60'
                   }`}
                 >
-                  {tab.count !== undefined ? tab.count : '\u00B7'}
+                  {tab.count !== undefined ? tab.count : <span className="inline-block w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-600 animate-pulse" />}
                 </span>
               )}
             </span>
           </button>
         ))}
 
-        {/* Animated underline indicator — inside nav so it scrolls with tabs */}
-        {indicatorStyle && (
-          <span
-            className="absolute bottom-0 h-0.5 bg-primary-600 dark:bg-primary-400 vn-tab-indicator rounded-full"
-            style={{
-              left: indicatorStyle.left,
-              width: indicatorStyle.width,
-            }}
-          />
-        )}
+        {/* Underline indicator — inside nav so it scrolls with tabs */}
+        <span
+          ref={indicatorRef}
+          className="absolute bottom-0 left-0 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full"
+        />
       </nav>
     </div>
   );

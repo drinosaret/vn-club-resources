@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, startTransition, type ComponentType } from 'react';
+import { useEffect, useState, useCallback, useMemo, type ComponentType } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { ArrowLeft, ExternalLink, AlertCircle, RefreshCw, Globe } from 'lucide-react';
 
@@ -218,22 +218,22 @@ export default function VNDetailClient({
   // Handle tab change - update URL without triggering RSC re-render
   const handleTabChange = useCallback((newTab: VNTabId) => {
     void loadTabModule(newTab);
-    startTransition(() => {
-      setActiveTab(newTab);
-      setVisitedTabs(prev => {
-        if (prev.has(newTab)) return prev;
-        return new Set(prev).add(newTab);
-      });
+    setActiveTab(newTab);
+    setVisitedTabs(prev => {
+      if (prev.has(newTab)) return prev;
+      return new Set(prev).add(newTab);
     });
-    const params = new URLSearchParams(searchParams.toString());
+    // Read URL directly to avoid searchParams dependency (which recreates this callback)
+    const params = new URLSearchParams(window.location.search);
     if (newTab === 'summary') {
       params.delete('tab');
     } else {
       params.set('tab', newTab);
     }
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
     window.history.replaceState(null, '', newUrl);
-  }, [pathname, searchParams, loadTabModule]);
+  }, [pathname, loadTabModule]);
 
   // Prefetch tab data on hover for faster perceived loading
   const handleTabHover = useCallback((tabId: VNTabId) => {
@@ -249,17 +249,17 @@ export default function VNDetailClient({
     void loadTabModule(tabId);
   }, [jitenDeckId, loadSimilarVNs, loadTabModule, similarData, similarLoading, vnId]);
 
-  // Sync tab state when URL changes (back/forward navigation)
+  // Sync tab state when URL changes (back/forward navigation).
+  // Depends only on tabFromUrl — NOT activeTab — to avoid a race condition:
+  // handleTabChange sets activeTab immediately, but replaceState triggers
+  // Next.js to update searchParams asynchronously. If activeTab were in deps,
+  // the effect would fire with stale tabFromUrl and "correct" activeTab back.
   useEffect(() => {
     const urlTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'summary';
-    if (urlTab !== activeTab) {
-      setActiveTab(urlTab);
-      setVisitedTabs(prev => {
-        if (prev.has(urlTab)) return prev;
-        return new Set(prev).add(urlTab);
-      });
-    }
-  }, [activeTab, tabFromUrl]);
+    void loadTabModule(urlTab);
+    setActiveTab(urlTab);
+    setVisitedTabs(prev => prev.has(urlTab) ? prev : new Set(prev).add(urlTab));
+  }, [tabFromUrl, loadTabModule]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadVN = useCallback(async () => {
     setIsLoading(true);
@@ -486,7 +486,7 @@ export default function VNDetailClient({
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            <span className="hidden sm:inline">View on </span>VNDB
+            <span><span className="hidden sm:inline">View on </span>VNDB</span>
             <ExternalLink className="w-4 h-4" />
           </a>
           <button
@@ -573,7 +573,8 @@ export default function VNDetailClient({
                   <span className="text-gray-600 dark:text-gray-400">Show:</span>
                   <button
                     onClick={() => setJapaneseOnly(true)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                    aria-pressed={japaneseOnly}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                       japaneseOnly
                         ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -583,7 +584,8 @@ export default function VNDetailClient({
                   </button>
                   <button
                     onClick={() => setJapaneseOnly(false)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                    aria-pressed={!japaneseOnly}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                       !japaneseOnly
                         ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -624,7 +626,7 @@ export default function VNDetailClient({
               {(() => {
                 const Comp = LazyVNLanguageStats.get();
                 return Comp
-                  ? <Comp vnId={vn.id} deckId={jitenDeckId ?? undefined} />
+                  ? <Comp vnId={vn.id} deckId={jitenDeckId} />
                   : <TabContentSkeleton rows={8} />;
               })()}
             </div>

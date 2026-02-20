@@ -411,7 +411,7 @@ async def browse_seiyuu(
 
 # ============ Developers (deprecated — use /producers?role=developer) ============
 
-@router.get("/developers", response_model=schemas.BrowseProducersResponse)
+@router.get("/developers", response_model=schemas.BrowseProducersResponse, include_in_schema=False)
 async def browse_developers(
     q: str | None = Query(default=None, description="Search query for developer name"),
     first_char: str | None = Query(default=None, description="Filter by first letter (A-Z) or # for non-alpha"),
@@ -483,7 +483,7 @@ async def browse_developers(
 
 # ============ Publishers (deprecated — use /producers?role=publisher) ============
 
-@router.get("/publishers", response_model=schemas.BrowseProducersResponse)
+@router.get("/publishers", response_model=schemas.BrowseProducersResponse, include_in_schema=False)
 async def browse_publishers(
     q: str | None = Query(default=None, description="Search query for publisher name"),
     first_char: str | None = Query(default=None, description="Filter by first letter (A-Z) or # for non-alpha"),

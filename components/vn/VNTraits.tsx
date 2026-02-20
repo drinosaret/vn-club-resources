@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { Eye, EyeOff, ArrowUpDown, User } from 'lucide-react';
+import { Eye, EyeOff, ArrowUpDown, ArrowUp, ArrowDown, User } from 'lucide-react';
 import { vndbStatsApi, type VNCharacter, type AggregatedTrait } from '@/lib/vndb-stats-api';
 
 interface VNTraitsProps {
@@ -72,7 +72,9 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
     }
 
     const total = characters.length;
-    // Use global total characters for IDF, fallback to approximation
+    // Use global total characters for IDF (inverse document frequency).
+    // Fallback ~500K is the approximate total characters in VNDB — rough constant
+    // is fine since IDF is only used for relative ranking within this VN's traits.
     const globalTotal = globalCounts?.total_characters || 500000;
     let aggregated: AggregatedTrait[] = [];
 
@@ -138,6 +140,11 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
     }
   };
 
+  const SortIcon = ({ field }: { field: SortField }) =>
+    sortField === field
+      ? sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+      : <ArrowUpDown className="w-3 h-3" />;
+
   const isReady = !isLoading;
   const isEmpty = isReady && traits.length === 0;
 
@@ -167,6 +174,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
               {sexualCount > 0 && (
                 <button
                   onClick={() => onShowSexualChange(!showSexual)}
+                  aria-pressed={showSexual}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                     showSexual
                       ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
@@ -180,6 +188,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
               {spoilerCount > 0 && (
                 <button
                   onClick={() => onShowSpoilersChange(!showSpoilers)}
+                  aria-pressed={showSpoilers}
                   className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                     showSpoilers
                       ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
@@ -194,33 +203,27 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full" style={{ tableLayout: 'fixed' }}>
-              <colgroup>
-                <col />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 90 }} />
-              </colgroup>
+            <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                  <th className="px-3 sm:px-4 py-3 text-left">
+                  <th className="px-3 sm:px-4 py-3 text-left" aria-sort={sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                     <button onClick={() => handleSort('name')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                      Name <ArrowUpDown className="w-3 h-3" />
+                      Name <SortIcon field="name" />
                     </button>
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-right">
+                  <th className="px-2 sm:px-4 py-3 text-right whitespace-nowrap" aria-sort={sortField === 'characters' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                     <button onClick={() => handleSort('characters')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      <span className="sm:hidden">Chars</span><span className="hidden sm:inline">Characters</span> <ArrowUpDown className="w-3 h-3" />
+                      <span className="sm:hidden">Chars</span><span className="hidden sm:inline">Characters</span> <SortIcon field="characters" />
                     </button>
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-right">
+                  <th className="hidden sm:table-cell px-2 sm:px-4 py-3 text-right whitespace-nowrap" aria-sort={sortField === 'importance' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                     <button onClick={() => handleSort('importance')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      <span className="sm:hidden">Imp.</span><span className="hidden sm:inline">Importance</span> <ArrowUpDown className="w-3 h-3" />
+                      Importance <SortIcon field="importance" />
                     </button>
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-right">
+                  <th className="px-2 sm:px-4 py-3 text-right whitespace-nowrap" aria-sort={sortField === 'weight' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
                     <button onClick={() => handleSort('weight')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      Weight <ArrowUpDown className="w-3 h-3" />
+                      Weight <SortIcon field="weight" />
                     </button>
                   </th>
                 </tr>
@@ -228,8 +231,8 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filteredTraits.map((trait) => (
                   <tr key={trait.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 ${trait.spoiler > 0 ? 'bg-red-50/50 dark:bg-red-900/10' : trait.group_name?.includes('(Sexual)') ? 'bg-pink-50/50 dark:bg-pink-900/10' : ''}`}>
-                    <td className="px-3 sm:px-4 py-2 truncate">
-                      <div className="truncate">
+                    <td className="px-3 sm:px-4 py-2">
+                      <div>
                         <Link
                           href={`/stats/trait/${trait.id}`}
                           className="text-sm text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
@@ -244,13 +247,13 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
                         )}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {trait.character_count}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                    <td className="hidden sm:table-cell px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {trait.importance.toFixed(2)}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white">
+                    <td className="px-2 sm:px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                       {trait.weight.toFixed(2)}
                     </td>
                   </tr>

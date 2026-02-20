@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "VNDB Stats API"
     debug: bool = False
+    enable_api_docs: bool = False  # Enable Swagger UI at /docs without full debug mode
 
     # Development mode - when True:
     # - Worker won't auto-trigger imports on startup

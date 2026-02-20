@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, memo } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, startTransition } from 'react';
 import Link from 'next/link';
 import { Star, Loader2, BookOpen } from 'lucide-react';
 import { VNSearchResult } from '@/lib/vndb-stats-api';
@@ -97,8 +97,13 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
 
     // Pagination: skip preload buffer, show results immediately.
     // Individual VNCover shimmer placeholders handle image loading.
+    // startTransition makes React render concurrently (yielding to browser for
+    // paints) instead of a single 40ms+ synchronous block that causes Firefox
+    // WebRender to drop text in tiles outside the grid.
     if (skipPreload) {
-      setDisplayResults(results);
+      startTransition(() => {
+        setDisplayResults(results);
+      });
       setIsSwapping(false);
       return;
     }
@@ -187,7 +192,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
 
   // Show grid — keeps old results visible during loading and image preloading
   return (
-    <div className="relative">
+    <div className="relative" style={{ contain: 'content' }}>
       {/* Thin progress bar for pagination feedback */}
       {hasMounted && isPaginating && isLoading && (
         <div className="absolute top-0 left-0 right-0 z-20 h-0.5 bg-gray-200 dark:bg-gray-700 overflow-hidden rounded-full">
@@ -206,9 +211,9 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
         </div>
       )}
       {/* Flexbox layout centers incomplete last row like VNDB */}
-      <div className={`flex flex-wrap justify-center gap-x-3 gap-y-5 my-6 transition-opacity duration-150 ease-out ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-80' : ''}`}>
+      <div className={`flex flex-wrap justify-center gap-x-3 gap-y-5 my-6 ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-80' : ''}`}>
         {displayResults.map((vn, index) => (
-          <VNCover key={vn.id} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
+          <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
         ))}
       </div>
     </div>
@@ -237,6 +242,19 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
   const [retryKey, setRetryKey] = useState(0);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Reset state when the VN changes (key={index} reuses the component instance).
+  // This is React's "storing information from previous renders" pattern —
+  // setState during render is batched with the current render, no extra commit.
+  const [prevVnId, setPrevVnId] = useState(vn.id);
+  if (vn.id !== prevVnId) {
+    setPrevVnId(vn.id);
+    setImageError(false);
+    setImageLoaded(false);
+    setRetryKey(0);
+    retryCountRef.current = 0;
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }
 
   const title = getDisplayTitle({
     title: vn.title,
@@ -272,15 +290,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
   }, []);
 
-  // Skip shimmer for images already in browser cache (from preload links).
-  // useLayoutEffect fires before paint, so the shimmer is never visible for cached images.
-  useLayoutEffect(() => {
-    if (imageUrl && !imageLoaded) {
-      const img = new Image();
-      img.src = imageUrl;
-      if (img.complete) setImageLoaded(true);
-    }
-  }, [imageUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleImageError = useCallback(() => {
     if (retryCountRef.current < 2) {
@@ -320,7 +329,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
             alt={title}
             imageSexual={vn.image_sexual}
             vnId={vnId}
-            className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
             srcSet={srcset}
             sizes={imageSizes || IMAGE_SIZES.medium}

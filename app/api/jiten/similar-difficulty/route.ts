@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 import { fetchCovers, type JitenMediaDeck, extractVnId } from '../jiten-utils';
 
-const CACHE_MAX_AGE = 3600;
+// Similar games change moderately as new VNs are added
+const CACHE_CONTROL = 'public, max-age=7200, stale-while-revalidate=3600';
 const DIFFICULTY_RANGE = 0.5;
 const MAX_RESULTS = 10;
 
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(results, {
-      headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
+      headers: { 'Cache-Control': CACHE_CONTROL },
     });
   } catch {
     return NextResponse.json(null, {

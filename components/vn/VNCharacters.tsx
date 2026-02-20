@@ -141,6 +141,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
           {sexualTraitCount > 0 && (
             <button
               onClick={() => onShowSexualChange(!showSexual)}
+              aria-pressed={showSexual}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                 showSexual
                   ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
@@ -154,6 +155,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
           {hasSpoilers && (
             <button
               onClick={() => onShowSpoilersChange(!showSpoilers)}
+              aria-pressed={showSpoilers}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
                 showSpoilers
                   ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
@@ -310,14 +312,14 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
           <div className="mt-2 space-y-1.5">
             {Object.entries(traitsByGroup).slice(0, 4).map(([group, traits]) => (
               <div key={group} className="flex flex-wrap items-center gap-1">
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 w-14 flex-shrink-0 truncate">
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 w-14 flex-shrink-0 truncate">
                   {group}:
                 </span>
                 {traits.slice(0, 4).map((trait) => (
                   <Link
                     key={trait.id}
                     href={`/stats/trait/${trait.id}`}
-                    className={`text-[11px] px-1.5 py-0.5 rounded transition-colors ${
+                    className={`text-xs px-2 py-1 rounded transition-colors ${
                       trait.spoiler > 0
                         ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -327,12 +329,12 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
                   </Link>
                 ))}
                 {traits.length > 4 && (
-                  <span className="text-[10px] text-gray-400">+{traits.length - 4}</span>
+                  <span className="text-[11px] text-gray-400">+{traits.length - 4}</span>
                 )}
               </div>
             ))}
             {Object.keys(traitsByGroup).length > 4 && (
-              <p className="text-[10px] text-gray-400 dark:text-gray-500">
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">
                 +{Object.keys(traitsByGroup).length - 4} more categories
               </p>
             )}

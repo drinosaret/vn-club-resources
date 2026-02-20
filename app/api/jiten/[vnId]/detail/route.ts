@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveDeckId } from '../../resolve-deck';
 import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
-const CACHE_MAX_AGE = 3600; // 1 hour — deck detail data rarely changes
+// Language stats change rarely — cache aggressively
+const CACHE_CONTROL = 'public, max-age=21600, stale-while-revalidate=21600';
 
 export async function GET(
   request: NextRequest,
@@ -30,7 +31,7 @@ export async function GET(
     if (!deckId) {
       clearTimeout(timeoutId);
       return NextResponse.json(null, {
-        headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
+        headers: { 'Cache-Control': CACHE_CONTROL },
       });
     }
 
@@ -49,7 +50,7 @@ export async function GET(
 
     const data = await res.json();
     return NextResponse.json(data, {
-      headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
+      headers: { 'Cache-Control': CACHE_CONTROL },
     });
   } catch {
     return NextResponse.json(null, {

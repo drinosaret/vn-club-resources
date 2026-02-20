@@ -195,13 +195,20 @@ async def lifespan(app: FastAPI):
     logger.info("Shutdown complete")
 
 
+_show_docs = settings.debug or settings.enable_api_docs
 app = FastAPI(
     title=settings.app_name,
-    description="API for VNDB user statistics and personalized recommendations",
+    description=(
+        "Public API for VNDB visual novel statistics, personalized recommendations, "
+        "and browsing data. Powered by daily VNDB database dumps.\n\n"
+        # Actual limits configured in rate_limit_default (line ~48) and per-endpoint @limiter decorators
+        "**Rate limits:** Most endpoints allow 100 requests/minute per IP. "
+        "User stats and recommendations are limited to 10/minute."
+    ),
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None,
+    docs_url="/docs" if _show_docs else None,
+    redoc_url="/redoc" if _show_docs else None,
 )
 
 # Rate limiting
@@ -226,13 +233,13 @@ app.add_middleware(CorrelationIDMiddleware)
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/health")
+@app.get("/health", include_in_schema=False)
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": settings.app_name}
 
 
-@app.get("/health/db")
+@app.get("/health/db", include_in_schema=False)
 async def db_status(db: AsyncSession = Depends(get_db)):
     """Check database status and data availability."""
     try:
@@ -289,12 +296,14 @@ async def db_status(db: AsyncSession = Depends(get_db)):
         }
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
     """Root endpoint with API info."""
-    return {
+    info = {
         "name": settings.app_name,
         "version": "1.0.0",
-        "docs": "/docs",
         "health": "/health",
     }
+    if _show_docs:
+        info["docs"] = "/docs"
+    return info

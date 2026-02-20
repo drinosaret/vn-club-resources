@@ -58,7 +58,7 @@ export default async function ProducerDetailPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
         />
       )}
-      <ProducerDetailClient params={Promise.resolve({ producerId })} />
+      <ProducerDetailClient key={producerId} params={Promise.resolve({ producerId })} />
     </>
   );
 }

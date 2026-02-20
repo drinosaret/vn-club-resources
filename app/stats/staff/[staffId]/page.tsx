@@ -58,7 +58,7 @@ export default async function StaffDetailPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
         />
       )}
-      <StaffDetailClient params={Promise.resolve({ staffId })} />
+      <StaffDetailClient key={staffId} params={Promise.resolve({ staffId })} />
     </>
   );
 }

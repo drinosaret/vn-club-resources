@@ -371,7 +371,7 @@ async def get_tag_vns_with_tags(
     )
 
 
-@router.get("/tag/{tag_id}/debug/length-vns", dependencies=[Depends(require_admin)])
+@router.get("/tag/{tag_id}/debug/length-vns", dependencies=[Depends(require_admin)], include_in_schema=False)
 async def debug_tag_length_vns(
     tag_id: str,
     category: str,
@@ -900,7 +900,7 @@ async def get_trait_tags(
     return await stats_service.get_trait_tags(numeric_trait_id, limit=limit)
 
 
-@router.get("/last-import-date")
+@router.get("/last-import-date", include_in_schema=False)
 async def get_last_import_date(
     db: AsyncSession = Depends(get_db),
 ):
@@ -1293,7 +1293,7 @@ async def get_similar_producers(
 # ============ Staff Stats Endpoints ============
 
 
-@router.get("/staff/sitemap-ids")
+@router.get("/staff/sitemap-ids", include_in_schema=False)
 async def get_staff_sitemap_ids(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50000, ge=0, le=50000),
@@ -1455,7 +1455,7 @@ async def get_staff_vns_with_tags(
 # ============ Seiyuu Stats Endpoints ============
 
 
-@router.get("/seiyuu/sitemap-ids")
+@router.get("/seiyuu/sitemap-ids", include_in_schema=False)
 async def get_seiyuu_sitemap_ids(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50000, ge=0, le=50000),
@@ -1649,7 +1649,7 @@ async def get_seiyuu_characters(
 # ============ Sitemap ID endpoints ============
 
 
-@router.get("/tags/sitemap-ids")
+@router.get("/tags/sitemap-ids", include_in_schema=False)
 async def get_tag_sitemap_ids(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50000, ge=0, le=50000),
@@ -1675,7 +1675,7 @@ async def get_tag_sitemap_ids(
     return {"items": items, "total": total}
 
 
-@router.get("/traits/sitemap-ids")
+@router.get("/traits/sitemap-ids", include_in_schema=False)
 async def get_trait_sitemap_ids(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50000, ge=0, le=50000),
@@ -1701,7 +1701,7 @@ async def get_trait_sitemap_ids(
     return {"items": items, "total": total}
 
 
-@router.get("/producers/sitemap-ids")
+@router.get("/producers/sitemap-ids", include_in_schema=False)
 async def get_producer_sitemap_ids(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50000, ge=0, le=50000),

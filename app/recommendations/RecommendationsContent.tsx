@@ -752,7 +752,7 @@ export default function RecommendationsContent() {
                   {loadingElapsed >= 30 && ' (Very large collections may take up to 60s)'}
                 </p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 20 }).map((_, i) => (
                   <div
                     key={i}
@@ -795,7 +795,7 @@ export default function RecommendationsContent() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                   {recommendations.map((rec, index) => (
                     <RecommendationCard
                       key={rec.vn_id}

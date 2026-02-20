@@ -107,6 +107,18 @@ export default function Footer() {
                   Contribute on GitHub
                 </a>
               </li>
+              {process.env.NEXT_PUBLIC_VNDB_STATS_API && (
+                <li>
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_VNDB_STATS_API}/docs`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Public API
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>

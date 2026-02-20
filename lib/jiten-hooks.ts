@@ -2,8 +2,7 @@ import useSWR, { preload } from 'swr';
 
 const jitenFetcher = async (url: string) => {
   const res = await fetch(url);
-  if (res.status >= 500) throw new Error(`Jiten fetch failed (${res.status})`);
-  if (!res.ok) return null;
+  if (!res.ok) throw new Error(`Jiten fetch failed (${res.status})`);
   const json = await res.json();
   return json?.data ?? json;
 };

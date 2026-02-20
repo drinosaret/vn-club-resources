@@ -2,21 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveDeckId } from '../../resolve-deck';
 import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
-const CACHE_MAX_AGE = 3600;
+// Language stats change rarely — cache aggressively
+const CACHE_CONTROL = 'public, max-age=21600, stale-while-revalidate=21600';
 
 // Server-side response cache to avoid amplifying upstream requests.
 // Each /all/ call makes 4 upstream requests to jiten.moe but costs 1 rate limit token,
-// so we cache results here (5min TTL) to prevent repeated upstream calls for the same VN.
+// so we cache results here to prevent repeated upstream calls for the same VN.
 const responseCache = new Map<string, { data: unknown; ts: number }>();
-const RESPONSE_CACHE_TTL = 5 * 60 * 1000;
-const RESPONSE_CACHE_MAX = 500;
+const RESPONSE_CACHE_TTL = 6 * 60 * 60 * 1000;  // 6 hours for populated results
+const NULL_RESPONSE_TTL = 30 * 60 * 1000;         // 30 minutes for null results
+const RESPONSE_CACHE_MAX = 1000;
+
+function isNullResult(data: unknown): boolean {
+  const obj = data as Record<string, unknown> | null;
+  return !obj || (obj.detail === null && obj.difficulty === null && obj.coverage === null);
+}
 
 function cacheSet(key: string, data: unknown) {
   const now = Date.now();
   // Evict expired entries when cache is getting full
   if (responseCache.size >= RESPONSE_CACHE_MAX * 0.8) {
     for (const [k, v] of responseCache) {
-      if (now - v.ts > RESPONSE_CACHE_TTL) responseCache.delete(k);
+      const ttl = isNullResult(v.data) ? NULL_RESPONSE_TTL : RESPONSE_CACHE_TTL;
+      if (now - v.ts > ttl) responseCache.delete(k);
     }
   }
   responseCache.set(key, { data, ts: now });
@@ -46,10 +54,13 @@ export async function GET(
 
   // Check server-side cache first
   const cached = responseCache.get(vnId);
-  if (cached && Date.now() - cached.ts < RESPONSE_CACHE_TTL) {
-    return NextResponse.json(cached.data, {
-      headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` },
-    });
+  if (cached) {
+    const ttl = isNullResult(cached.data) ? NULL_RESPONSE_TTL : RESPONSE_CACHE_TTL;
+    if (Date.now() - cached.ts < ttl) {
+      return NextResponse.json(cached.data, {
+        headers: { 'Cache-Control': CACHE_CONTROL },
+      });
+    }
   }
 
   try {
@@ -63,7 +74,7 @@ export async function GET(
       cacheSet(vnId, data);
       return NextResponse.json(
         data,
-        { headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` } },
+        { headers: { 'Cache-Control': CACHE_CONTROL } },
       );
     }
 
@@ -92,7 +103,7 @@ export async function GET(
 
     return NextResponse.json(
       data,
-      { headers: { 'Cache-Control': `public, max-age=${CACHE_MAX_AGE}` } },
+      { headers: { 'Cache-Control': CACHE_CONTROL } },
     );
   } catch {
     return NextResponse.json(

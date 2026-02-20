@@ -93,7 +93,7 @@ async def _get_tag_names(db: AsyncSession, tag_ids: list[int] | None) -> list[st
 
 # ==================== Public Endpoints ====================
 
-@router.get("/ids", response_model=BlacklistIdsResponse)
+@router.get("/ids", response_model=BlacklistIdsResponse, include_in_schema=False)
 async def get_blacklist_ids(db: AsyncSession = Depends(get_db)):
     """
     Get all blacklisted VN IDs.
@@ -112,7 +112,7 @@ async def get_blacklist_ids(db: AsyncSession = Depends(get_db)):
 
 # ==================== Admin Config Endpoints ====================
 
-@router.get("/admin/config", response_model=list[BlacklistConfigResponse], dependencies=[Depends(require_admin)])
+@router.get("/admin/config", response_model=list[BlacklistConfigResponse], dependencies=[Depends(require_admin)], include_in_schema=False)
 async def list_blacklist_configs(
     db: AsyncSession = Depends(get_db),
 ):
@@ -140,7 +140,7 @@ async def list_blacklist_configs(
     ]
 
 
-@router.get("/admin/entries", response_model=list[BlacklistEntryResponse], dependencies=[Depends(require_admin)])
+@router.get("/admin/entries", response_model=list[BlacklistEntryResponse], dependencies=[Depends(require_admin)], include_in_schema=False)
 async def list_blacklist_entries(
     reason: Optional[str] = Query(None, description="Filter by reason: 'manual' or 'auto_tag'"),
     limit: int = Query(50, ge=1, le=500),
@@ -179,7 +179,7 @@ async def list_blacklist_entries(
     return entries
 
 
-@router.get("/admin/stats", response_model=BlacklistStatsResponse, dependencies=[Depends(require_admin)])
+@router.get("/admin/stats", response_model=BlacklistStatsResponse, dependencies=[Depends(require_admin)], include_in_schema=False)
 async def get_blacklist_stats(
     db: AsyncSession = Depends(get_db),
 ):
@@ -216,7 +216,7 @@ async def get_blacklist_stats(
 
 # ==================== Tag Search Endpoint ====================
 
-@router.get("/admin/tags/search", response_model=list[TagSearchResult], dependencies=[Depends(require_admin)])
+@router.get("/admin/tags/search", response_model=list[TagSearchResult], dependencies=[Depends(require_admin)], include_in_schema=False)
 async def search_tags(
     q: str = Query(..., min_length=2, description="Search query"),
     limit: int = Query(20, ge=1, le=50),

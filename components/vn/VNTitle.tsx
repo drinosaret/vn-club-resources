@@ -44,7 +44,7 @@ export function VNTitle({ title, titleJp, titleRomaji }: VNTitleProps) {
       {altTitles.length > 0 && (
         <div className="mt-0.5 space-y-0">
           {altTitles.map((alt, index) => (
-            <p key={index} className={`text-sm text-gray-400 dark:text-gray-500 ${alt.isJapanese ? 'font-jp' : 'italic'}`}>
+            <p key={index} className={`text-sm text-gray-500 dark:text-gray-400 ${alt.isJapanese ? 'font-jp' : 'italic'}`}>
               {alt.text}
             </p>
           ))}

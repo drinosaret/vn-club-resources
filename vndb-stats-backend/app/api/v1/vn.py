@@ -80,7 +80,7 @@ def _escape_like(value: str) -> str:
 # More specific routes must be defined BEFORE parameterized routes like /{vn_id}
 
 
-@router.get("/sitemap-ids")
+@router.get("/sitemap-ids", include_in_schema=False)
 async def get_vn_sitemap_ids(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50000, ge=0, le=50000),
@@ -2084,7 +2084,7 @@ async def get_vn_details(
     )
 
 
-@router.post("/{vn_id}/refresh", response_model=schemas.VNDetailResponse, dependencies=[Depends(require_admin)])
+@router.post("/{vn_id}/refresh", response_model=schemas.VNDetailResponse, dependencies=[Depends(require_admin)], include_in_schema=False)
 @limiter.limit("5/minute")
 async def refresh_vn(
     request: Request,

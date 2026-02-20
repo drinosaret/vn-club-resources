@@ -731,14 +731,20 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     const cacheKey = JSON.stringify(currentFilters);
     const cachedResponse = prefetchCacheRef.current.get(cacheKey);
     if (cachedResponse) {
-      setResults(cachedResponse.results);
-      setTotal(cachedResponse.total);
-      setTotalWithSpoilers(cachedResponse.total_with_spoilers ?? null);
-      setPages(cachedResponse.pages);
-      setQueryTime(cachedResponse.query_time);
-      setIsLoading(false);
-      setIsPaginatingOnly(false); // Reset after fetch completes
-      prefetchCacheRef.current.delete(cacheKey); // Remove after use
+      prefetchCacheRef.current.delete(cacheKey);
+      // Wrap in startTransition so these 7 setState calls don't batch synchronously
+      // with handlePageChange's setState calls. Without this, the entire data update
+      // renders synchronously in the click handler (~10ms), adding to the synchronous
+      // block that causes Firefox WebRender to drop text tiles.
+      startTransition(() => {
+        setResults(cachedResponse.results);
+        setTotal(cachedResponse.total);
+        setTotalWithSpoilers(cachedResponse.total_with_spoilers ?? null);
+        setPages(cachedResponse.pages);
+        setQueryTime(cachedResponse.query_time);
+        setIsLoading(false);
+        setIsPaginatingOnly(false);
+      });
       return;
     }
 

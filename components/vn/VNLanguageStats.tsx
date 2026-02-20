@@ -54,7 +54,7 @@ interface SimilarLengthVN {
 
 interface VNLanguageStatsProps {
   vnId: string;
-  deckId?: number;
+  deckId?: number | null;
 }
 
 // ──────────── Helpers ────────────
@@ -262,7 +262,9 @@ function buildRadarData(deck: JitenDeckDto, label?: string) {
 // ──────────── Main Component ────────────
 
 export function VNLanguageStats({ vnId, deckId }: VNLanguageStatsProps) {
-  const { data: allData, error: allError, isLoading: allLoading } = useJitenAll(vnId);
+  // Skip fetch entirely when we already know there's no jiten deck (deckId === null).
+  // This avoids a skeleton flash before the "no data" message.
+  const { data: allData, error: allError, isLoading: allLoading } = useJitenAll(deckId === null ? null : vnId);
 
   const detail = allData?.detail ?? null;
   const difficulty = allData?.difficulty ?? null;

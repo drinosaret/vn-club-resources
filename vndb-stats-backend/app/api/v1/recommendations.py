@@ -75,7 +75,7 @@ class RecommendationMethod(str, Enum):
     SIMILAR_USERS = "similar_users"
 
 
-@router.get("/{vndb_uid}", response_model=schemas.RecommendationsResponse)
+@router.get("/{vndb_uid}", response_model=schemas.RecommendationsResponse, include_in_schema=False)
 @limiter.limit("10/minute")
 async def get_recommendations(
     request: Request,
@@ -187,7 +187,7 @@ async def get_recommendations(
     )
 
 
-@router.get("/{vndb_uid}/similar/{vn_id}", response_model=schemas.SimilarVNsResponse)
+@router.get("/{vndb_uid}/similar/{vn_id}", response_model=schemas.SimilarVNsResponse, include_in_schema=False)
 @limiter.limit("30/minute")
 async def get_similar_vns(
     request: Request,

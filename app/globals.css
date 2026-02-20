@@ -413,7 +413,6 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
     animation: none;
   }
 
-  .vn-tab-indicator,
   .vn-tabpanel-active,
   .vn-tabpanel-hidden {
     transition: none;
@@ -506,12 +505,6 @@ html.stt-restoring main {
   filter: none !important;
 }
 
-/* ═══ VN Detail Page: Tab Indicator ═══
-   Smooth sliding underline for active tab. */
-.vn-tab-indicator {
-  transition: left 200ms ease, width 200ms ease;
-}
-
 /* ═══ VN Detail Page: Tab Panel Visibility ═══
    Opacity/position layering instead of display:none.
    Avoids Firefox WebRender text re-rasterization on tab switch. */
@@ -520,7 +513,6 @@ html.stt-restoring main {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transition: opacity 75ms ease-out;
 }
 
 .vn-tabpanel-hidden {
@@ -531,7 +523,6 @@ html.stt-restoring main {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 50ms ease-in, visibility 0s 50ms;
 }
 
 /* Tab scroll fade edges on mobile */

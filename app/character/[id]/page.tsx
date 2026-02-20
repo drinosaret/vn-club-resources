@@ -67,7 +67,7 @@ export default async function CharacterDetailPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(characterJsonLd) }}
         />
       )}
-      <CharacterDetailClient params={Promise.resolve({ id })} />
+      <CharacterDetailClient key={id} params={Promise.resolve({ id })} />
     </>
   );
 }
