@@ -23,17 +23,7 @@ const relationLabels: Record<string, string> = {
 
 export function VNRelations({ relations }: VNRelationsProps) {
   if (!relations || relations.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <GitBranch className="w-5 h-5 text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Related Visual Novels</h2>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-          No related visual novels.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
