@@ -17,7 +17,7 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
   const navRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<VNTabId, HTMLButtonElement>>(new Map());
   const indicatorRef = useRef<HTMLSpanElement>(null);
-  const userClickedTab = useRef(false);
+
   const updateIndicatorRef = useRef<() => void>(() => {});
 
   const allTabs: Array<{ id: VNTabId; label: string; count?: number; hidden?: boolean }> = [
@@ -42,12 +42,7 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
       indicator.style.transform = `translateX(${left}px)`;
       indicator.style.width = `${tabRect.width}px`;
 
-      // Auto-scroll active tab into view on mobile (when tab bar overflows)
-      // Only on user-initiated tab changes — not on mount/resize (causes page jump)
-      if (userClickedTab.current && nav.scrollWidth > nav.clientWidth) {
-        tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-      userClickedTab.current = false;
+
     }
   }, [activeTab]);
 
@@ -80,7 +75,6 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
     if (nextIndex >= 0) {
       e.preventDefault();
       const nextTab = tabs[nextIndex];
-      userClickedTab.current = true;
       onTabChange(nextTab.id);
       tabRefs.current.get(nextTab.id)?.focus();
     }
@@ -98,7 +92,7 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
           <button
             key={tab.id}
             ref={(el) => { if (el) tabRefs.current.set(tab.id, el); }}
-            onClick={() => { userClickedTab.current = true; onTabChange(tab.id); }}
+            onClick={() => onTabChange(tab.id)}
             onMouseEnter={() => onTabHover?.(tab.id)}
             onFocus={() => onTabHover?.(tab.id)}
             onTouchStart={() => onTabHover?.(tab.id)}

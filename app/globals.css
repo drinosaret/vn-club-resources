@@ -354,6 +354,42 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
   display: none;
 }
 
+/* Scrollbar visible only on hover */
+.scrollbar-hover {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollbar-hover:hover {
+  scrollbar-color: #d1d5db transparent;
+}
+
+.dark .scrollbar-hover:hover {
+  scrollbar-color: #4b5563 transparent;
+}
+
+.scrollbar-hover::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-hover::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+.scrollbar-hover:hover::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+}
+
+.dark .scrollbar-hover:hover::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
 /* Fade-in animation for tab content */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }

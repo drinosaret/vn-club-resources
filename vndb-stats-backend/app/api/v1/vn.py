@@ -15,7 +15,7 @@ from slowapi.util import get_remote_address
 from app.db.database import get_db
 from app.db import schemas
 from app.db.models import VisualNovel, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
-from app.services.extlinks_service import build_extlink_url, build_wikidata_links, get_site_label, SHOP_SITES, LINK_SITES, LINK_SORT_ORDER, SHOP_SORT_ORDER, DEPRECATED_SITES, TRANSLATION_ONLY_SITES
+from app.services.extlinks_service import build_extlink_url, build_wikidata_links, get_site_label, SHOP_SITES, LINK_SITES, LINK_SORT_ORDER, SHOP_SORT_ORDER, DEPRECATED_SITES, TRANSLATION_ONLY_SITES, NON_JP_CONSOLE_STORES
 from app.core.vndb_client import get_vndb_client
 from app.core.auth import require_admin
 from app.core.cache import get_cache
@@ -1988,7 +1988,7 @@ async def get_vn_details(
         if site == "wikidata":
             wikidata_qid = value
             continue
-        if site in DEPRECATED_SITES or site in TRANSLATION_ONLY_SITES:
+        if site in DEPRECATED_SITES or site in TRANSLATION_ONLY_SITES or site in NON_JP_CONSOLE_STORES:
             continue
         if site == "wp":
             has_en_wikipedia = True
@@ -2034,7 +2034,7 @@ async def get_vn_details(
     seen_link_sites: set[str] = {l.site for l in vn_links}
     shops = []
     for site, value in release_links_result:
-        if site in DEPRECATED_SITES or site in TRANSLATION_ONLY_SITES:
+        if site in DEPRECATED_SITES or site in TRANSLATION_ONLY_SITES or site in NON_JP_CONSOLE_STORES:
             continue
         if site in SHOP_SITES and site not in seen_shop_sites:
             seen_shop_sites.add(site)

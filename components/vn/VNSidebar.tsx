@@ -7,8 +7,6 @@ import { useTitlePreference } from '@/lib/title-preference';
 import { lengthLabels, platformNames, formatReleaseDate, formatUpdatedAt } from './vn-utils';
 
 interface VNSidebarProps {
-  rating?: number | null;
-  votecount?: number | null;
   developers?: Array<{ id: string; name: string; original?: string }>;
   released?: string;
   length?: number;
@@ -20,8 +18,6 @@ interface VNSidebarProps {
 }
 
 export function VNSidebar({
-  rating,
-  votecount,
   developers,
   released,
   length,
@@ -34,17 +30,14 @@ export function VNSidebar({
   const { preference } = useTitlePreference();
   const [showAllPlatforms, setShowAllPlatforms] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
+  const [showAllLinks, setShowAllLinks] = useState(false);
+  const [showAllShops, setShowAllShops] = useState(false);
   const lengthInfo = length ? lengthLabels[length] : null;
   const formattedDate = released ? formatReleaseDate(released) : null;
   const formattedUpdatedAt = updatedAt ? formatUpdatedAt(updatedAt) : null;
 
   return (
-    <div className="mt-3 space-y-3">
-      {/* Rating Arc */}
-      {rating != null && votecount != null && votecount > 0 && (
-        <RatingArc rating={rating} votecount={votecount} />
-      )}
-
+    <div className="space-y-3">
       {/* Metadata items — compact grid */}
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2.5 text-sm items-baseline">
         {developers && developers.length > 0 && (
@@ -139,48 +132,69 @@ export function VNSidebar({
       </div>
 
       {links && links.length > 0 && (
-        <div>
+        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
           <SidebarLabel>Links</SidebarLabel>
-          <div className="flex flex-wrap gap-1 mt-0.5">
-            {links.map((link, i) => (
-              <a
-                key={`${link.site}-${i}`}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center min-h-[32px] px-2 py-1 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
-              >
-                {link.label}
-              </a>
+          <p className="text-xs leading-relaxed mt-0.5">
+            {(showAllLinks ? links : links.slice(0, 5)).map((link, i, arr) => (
+              <span key={`${link.site}-${i}`}>
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors"
+                >
+                  {link.label}
+                </a>
+                {i < arr.length - 1 && <span className="text-gray-400 dark:text-gray-500">, </span>}
+              </span>
             ))}
-          </div>
+            {!showAllLinks && links.length > 5 && (
+              <button
+                onClick={() => setShowAllLinks(true)}
+                className="ml-0.5 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 hover:underline transition-colors"
+              >
+                +{links.length - 5} more
+              </button>
+            )}
+          </p>
         </div>
       )}
 
       {shops && shops.length > 0 && (
-        <div>
+        <div className="mt-3">
           <SidebarLabel>Shops</SidebarLabel>
-          <div className="flex flex-wrap gap-1 mt-0.5">
-            {shops.map((shop, i) => (
-              <a
-                key={`${shop.site}-${i}`}
-                href={shop.url}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                className="inline-flex items-center min-h-[32px] px-2 py-1 text-xs rounded border border-primary-200 dark:border-primary-800/60 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
-              >
-                {shop.label}
-              </a>
+          <p className="text-xs leading-relaxed mt-0.5">
+            {(showAllShops ? shops : shops.slice(0, 5)).map((shop, i, arr) => (
+              <span key={`${shop.site}-${i}`}>
+                <a
+                  href={shop.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors"
+                >
+                  {shop.label}
+                </a>
+                {i < arr.length - 1 && <span className="text-gray-400 dark:text-gray-500">, </span>}
+              </span>
             ))}
-          </div>
+            {!showAllShops && shops.length > 5 && (
+              <button
+                onClick={() => setShowAllShops(true)}
+                className="ml-0.5 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 hover:underline transition-colors"
+              >
+                +{shops.length - 5} more
+              </button>
+            )}
+          </p>
         </div>
       )}
 
       {formattedUpdatedAt && (
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="mt-3 text-[11px] text-gray-400 dark:text-gray-500">
           Updated {formattedUpdatedAt.toLowerCase()}
         </p>
       )}
+
     </div>
   );
 }
@@ -195,7 +209,7 @@ function SidebarLabel({ children }: { children: React.ReactNode }) {
 
 // ─── Rating Bar ───
 
-function RatingArc({ rating, votecount }: { rating: number; votecount: number }) {
+export function RatingArc({ rating, votecount }: { rating: number; votecount: number }) {
   const progress = Math.max(0, Math.min((rating - 1) / 9, 1)) * 100;
 
   let barColor = 'bg-gray-400';

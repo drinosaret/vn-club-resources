@@ -15,7 +15,7 @@ import { useVNVoteStats, prefetchVoteStats } from '@/lib/vndb-stats-cached';
 import { prefetchJitenData } from '@/lib/jiten-hooks';
 import { VNCover } from '@/components/vn/VNCover';
 import { VNTitle } from '@/components/vn/VNTitle';
-import { VNSidebar } from '@/components/vn/VNSidebar';
+import { VNSidebar, RatingArc } from '@/components/vn/VNSidebar';
 import { VNDescription } from '@/components/vn/VNDescription';
 import { VNTags } from '@/components/vn/VNTags';
 import { VNTabs, VNTabId } from '@/components/vn/VNTabs';
@@ -514,8 +514,8 @@ export default function VNDetailClient({
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
         {/* Left column — Cover + Sidebar */}
-        <div className="lg:sticky lg:top-20 lg:self-start z-10">
-          <div className="max-w-[280px] mx-auto lg:max-w-none lg:mx-0">
+        <div className="lg:sticky lg:top-20 lg:self-start lg:flex lg:flex-col lg:max-h-[calc(100vh-5rem)] z-10">
+          <div className="max-w-[280px] mx-auto lg:max-w-none lg:mx-0 flex-shrink-0">
             <VNCover
               imageUrl={vn.image_url}
               imageSexual={vn.image_sexual}
@@ -523,18 +523,23 @@ export default function VNDetailClient({
               vnId={vn.id}
             />
           </div>
-          <VNSidebar
-            rating={vn.rating}
-            votecount={vn.votecount}
-            developers={vn.developers}
-            released={vn.released}
-            length={vn.length}
-            platforms={vn.platforms}
-            languages={vn.languages}
-            updatedAt={vn.updated_at}
-            links={vn.links}
-            shops={vn.shops}
-          />
+          {vn.rating != null && vn.votecount != null && vn.votecount > 0 && (
+            <div className="mt-3 flex-shrink-0">
+              <RatingArc rating={vn.rating} votecount={vn.votecount} />
+            </div>
+          )}
+          <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 lg:overflow-y-auto lg:min-h-0 scrollbar-hover">
+            <VNSidebar
+              developers={vn.developers}
+              released={vn.released}
+              length={vn.length}
+              platforms={vn.platforms}
+              languages={vn.languages}
+              updatedAt={vn.updated_at}
+              links={vn.links}
+              shops={vn.shops}
+            />
+          </div>
         </div>
 
         {/* Right column — Description + Tabs + Content */}
@@ -544,7 +549,7 @@ export default function VNDetailClient({
 
           {/* Sticky tabs — negative margin + padding extends the frosted background
              upward to cover the space-y-4 gap between this and the previous sibling */}
-          <div className="sticky top-16 md:top-[71px] z-20 -mt-4 pt-4 bg-white dark:bg-[color:var(--background)]">
+          <div className="sticky top-16 lg:top-[71px] z-20 -mt-4 pt-4 bg-white dark:bg-[color:var(--background)]">
             <VNTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}

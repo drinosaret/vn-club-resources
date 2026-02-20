@@ -392,6 +392,16 @@ TRANSLATION_ONLY_SITES: set[str] = {
     "kagura",      # Kagura Games — English localization publisher
 }
 
+# Non-JP regional console store pages — not useful for buying the Japanese
+# version, which is what the site's audience wants.
+NON_JP_CONSOLE_STORES: set[str] = {
+    "nintendo",        # Nintendo eShop (US/global)
+    "nintendo_hk",     # Nintendo eShop (Hong Kong)
+    "playstation_na",  # PlayStation Store (North America)
+    "playstation_eu",  # PlayStation Store (Europe)
+    "playstation_hk",  # PlayStation Store (Hong Kong)
+}
+
 # Sort priority for links (lower = first). Sites not listed default to 50.
 LINK_SORT_ORDER: dict[str, int] = {
     "website":          0,

@@ -309,11 +309,11 @@ export default function CharacterDetailPage({ params }: PageProps) {
           {/* Traits */}
           {character.traits.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                 <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   Traits
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {sexualTraitCount > 0 && (
                     <button
                       onClick={() => setShowSexual(!showSexual)}

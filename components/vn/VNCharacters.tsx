@@ -130,19 +130,19 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
   return (
     <div className="space-y-6">
       {/* Header with spoiler toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Users className="w-5 h-5 text-primary-500" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Characters ({visibleCharacterCount})
           </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {sexualTraitCount > 0 && (
             <button
               onClick={() => onShowSexualChange(!showSexual)}
               aria-pressed={showSexual}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors ${
                 showSexual
                   ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -156,7 +156,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
             <button
               onClick={() => onShowSpoilersChange(!showSpoilers)}
               aria-pressed={showSpoilers}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors ${
                 showSpoilers
                   ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
