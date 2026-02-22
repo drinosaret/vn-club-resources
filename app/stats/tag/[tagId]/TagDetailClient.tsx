@@ -125,9 +125,9 @@ export default function TagDetailPage({ params }: PageProps) {
 
   // Handle page change - update URL
   const handlePageChange = useCallback((newPage: number) => {
-    loadNovels(newPage);
+    loadNovels(newPage, spoilerFilter, languageFilter);
     updateUrl(activeTab, newPage);
-  }, [activeTab, updateUrl]);
+  }, [activeTab, spoilerFilter, languageFilter, updateUrl]);
 
   // Prefetch page on hover — preload images from cached response or trigger API fetch
   const handlePrefetchPage = useCallback((page: number) => {
@@ -300,9 +300,9 @@ export default function TagDetailPage({ params }: PageProps) {
     prefetchCacheRef.current.clear();
     setSpoilerFilter(value);
     setCurrentPage(1);
-    loadNovels(1, value);
+    loadNovels(1, value, languageFilter);
     updateUrl(activeTab, 1);
-  }, [activeTab, updateUrl]);
+  }, [activeTab, languageFilter, updateUrl]);
 
   const handleLanguageChange = useCallback((value: LanguageFilterValue) => {
     prefetchCacheRef.current.clear();

@@ -227,18 +227,18 @@ export default function StaffDetailPage({ params }: PageProps) {
 
   const handlePageChange = useCallback((newPage: number) => {
     if (newPage >= 1 && newPage <= vnsPages) {
-      loadNovels(newPage);
+      loadNovels(newPage, spoilerFilter, languageFilter);
       updateUrl(activeTab, newPage);
     }
-  }, [activeTab, vnsPages, updateUrl]);
+  }, [activeTab, vnsPages, spoilerFilter, languageFilter, updateUrl]);
 
   const handleSpoilerChange = useCallback((value: SpoilerFilterValue) => {
     prefetchCacheRef.current.clear();
     setSpoilerFilter(value);
     setVnsPage(1);
-    loadNovels(1, value);
+    loadNovels(1, value, languageFilter);
     updateUrl(activeTab, 1);
-  }, [activeTab, updateUrl]);
+  }, [activeTab, languageFilter, updateUrl]);
 
   const handleLanguageChange = useCallback((value: LanguageFilterValue) => {
     prefetchCacheRef.current.clear();

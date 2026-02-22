@@ -51,7 +51,7 @@ export function NewsCard({ item }: NewsCardProps) {
   return (
     <CardWrapper
       {...cardProps}
-      className="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group h-full"
+      className="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-[box-shadow,border-color] duration-150 group h-full"
     >
       {/* Cover Image - Always present for consistent height */}
       <div className="relative w-full h-40 shrink-0">

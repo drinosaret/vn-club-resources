@@ -139,15 +139,15 @@ export default function TraitDetailPage({ params }: PageProps) {
 
   // Handle page change for characters tab
   const handleCharsPageChange = useCallback((newPage: number) => {
-    loadCharacters(newPage);
+    loadCharacters(newPage, languageFilter);
     updateUrl(activeTab, newPage);
-  }, [activeTab, updateUrl]);
+  }, [activeTab, languageFilter, updateUrl]);
 
   // Handle page change for novels tab
   const handleVnsPageChange = useCallback((newPage: number) => {
-    loadNovels(newPage);
+    loadNovels(newPage, spoilerFilter, languageFilter);
     updateUrl(activeTab, newPage);
-  }, [activeTab, updateUrl]);
+  }, [activeTab, spoilerFilter, languageFilter, updateUrl]);
 
   // Prefetch page on pagination hover (characters)
   const handleCharsPrefetchPage = useCallback((page: number) => {
@@ -444,9 +444,9 @@ export default function TraitDetailPage({ params }: PageProps) {
     vnsPrefetchCacheRef.current.clear();
     setSpoilerFilter(value);
     setCurrentPage(1);
-    loadNovels(1, value);
+    loadNovels(1, value, languageFilter);
     updateUrl(activeTab, 1);
-  }, [activeTab, updateUrl]);
+  }, [activeTab, languageFilter, updateUrl]);
 
   const handleLanguageChange = useCallback((value: LanguageFilterValue) => {
     vnsPrefetchCacheRef.current.clear();

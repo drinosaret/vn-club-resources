@@ -81,7 +81,7 @@ function RecommendationCard({ rec, index, titlePreference, onInfoClick }: Recomm
 
   return (
     <div
-      className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 transition-all border border-gray-100 dark:border-gray-700"
+      className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-violet-500 transition-[box-shadow,ring-color] duration-150 border border-gray-100 dark:border-gray-700"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
       <Link

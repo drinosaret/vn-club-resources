@@ -1645,15 +1645,51 @@ async def update_vn_platforms_and_languages():
 
 
 async def update_browse_precomputed_counts():
-    """Compute precomputed browse counts for staff and producers.
+    """Compute precomputed browse counts for tags, staff and producers.
 
-    Updates vn_count, roles, seiyuu_vn_count, seiyuu_char_count on staff table
+    Updates vn_count on tags table (matching the paginated query filter),
+    char_count on traits table (matching the paginated characters endpoint),
+    vn_count, roles, seiyuu_vn_count, seiyuu_char_count on staff table,
     and vn_count, dev_vn_count, pub_vn_count on producers table.
     These eliminate expensive subquery joins in browse API endpoints.
     """
-    logger.info("Computing precomputed browse counts for staff and producers...")
+    logger.info("Computing precomputed browse counts for tags, traits, staff and producers...")
 
     async with async_session() as db:
+        # Tag vn_count — recompute from vn_tags using the same filter as the
+        # paginated novels endpoint (score > 0, lie = false) so the badge
+        # matches the list total exactly.
+        # Reset first so tags that lost all VNs get 0.
+        await db.execute(text("UPDATE tags SET vn_count = 0"))
+        result = await db.execute(text("""
+            UPDATE tags SET vn_count = COALESCE(sub.cnt, 0)
+            FROM (
+                SELECT tag_id, COUNT(DISTINCT vn_id) AS cnt
+                FROM vn_tags
+                WHERE score > 0 AND lie = false
+                GROUP BY tag_id
+            ) sub
+            WHERE tags.id = sub.tag_id
+        """))
+        logger.info(f"Updated vn_count for {result.rowcount} tags")
+
+        # Trait char_count — recompute from character_traits joined with
+        # characters so the badge matches the paginated list total exactly.
+        # VNDB dump "chars" count may include characters we didn't import.
+        # Reset first so traits that lost all characters get 0.
+        await db.execute(text("UPDATE traits SET char_count = 0"))
+        result = await db.execute(text("""
+            UPDATE traits SET char_count = COALESCE(sub.cnt, 0)
+            FROM (
+                SELECT ct.trait_id, COUNT(DISTINCT ct.character_id) AS cnt
+                FROM character_traits ct
+                JOIN characters c ON c.id = ct.character_id
+                GROUP BY ct.trait_id
+            ) sub
+            WHERE traits.id = sub.trait_id
+        """))
+        logger.info(f"Updated char_count for {result.rowcount} traits")
+
         # Reset counts to 0 first (handles staff/producers that lost all credits)
         await db.execute(text("UPDATE staff SET vn_count = 0, roles = NULL, seiyuu_vn_count = 0, seiyuu_char_count = 0"))
         await db.execute(text("UPDATE producers SET vn_count = 0, dev_vn_count = 0, pub_vn_count = 0"))

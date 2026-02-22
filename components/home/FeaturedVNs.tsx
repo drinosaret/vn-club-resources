@@ -92,7 +92,7 @@ function FeaturedVNCard({ vn, preference }: { vn: FeaturedVNData; preference: 'j
       href={`/vn/${vn.id.replace('v', '')}`}
       className="group"
     >
-      <div className="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 group-hover:-translate-y-1">
+      <div className="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-150 group-hover:-translate-y-1">
         <div className="aspect-2/3 relative bg-linear-to-br from-primary-100 to-primary-200 dark:from-gray-700 dark:to-gray-600">
           {vn.imageUrl && (
             <Image

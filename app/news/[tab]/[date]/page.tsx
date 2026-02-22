@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return generatePageMetadata({
     title: `${label} - ${formattedDate} | Visual Novel News`,
-    description: `${label} for ${formattedDate}. Stay updated with Japanese visual novel news and find your next reading target for immersion-based Japanese learning.`,
+    description: `Japanese visual novel news for ${formattedDate}. New releases, announcements, and updates from across the VN community.`,
     path: `/news/${tab}/${date}/`,
     type: 'article',
   });

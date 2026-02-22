@@ -30,7 +30,7 @@ export function VNCard({ id, title, titleJp, titleRomaji, imageUrl, imageSexual,
   return (
     <Link
       href={`/vn/${id}`}
-      className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-[box-shadow,ring-color] duration-150"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
       <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
