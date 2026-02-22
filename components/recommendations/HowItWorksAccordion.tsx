@@ -71,7 +71,7 @@ export function HowItWorksAccordion() {
             It combines <strong className="text-gray-900 dark:text-white">8 independent signals</strong> with
             different weights. The maximum possible raw score is 10.4 (sum of all weights).
           </p>
-          <p className="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
+          <p className="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded-sm">
             normalized_score = (total_weighted_score / 10.4) × 100
           </p>
         </div>
@@ -82,7 +82,7 @@ export function HowItWorksAccordion() {
         <div className="space-y-2">
           {signals.map((signal) => (
             <div key={signal.name} className="flex items-center gap-3">
-              <signal.Icon className={`w-4 h-4 flex-shrink-0 ${colorClasses[signal.color]}`} />
+              <signal.Icon className={`w-4 h-4 shrink-0 ${colorClasses[signal.color]}`} />
               <span className={`font-medium w-28 ${colorClasses[signal.color]}`}>{signal.name}</span>
               <span className="text-gray-500 dark:text-gray-500 w-16 text-right">
                 ×{signal.weight.toFixed(1)}
@@ -235,7 +235,7 @@ export function HowItWorksAccordion() {
               This makes niche preferences (like &quot;Nakige&quot; or &quot;Chuunige&quot;) more influential than
               generic tags (like &quot;Romance&quot; or &quot;Comedy&quot;).
             </p>
-            <p className="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded mt-1">
+            <p className="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded-sm mt-1">
               IDF = log(total_vns / tag_vn_count)
             </p>
           </div>

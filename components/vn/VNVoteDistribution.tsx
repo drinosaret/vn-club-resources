@@ -41,7 +41,7 @@ export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VN
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Vote Distribution
           </h3>
-          <ChartHelpTooltip text="VNDB votes are on a 10–100 scale. Each bar groups votes rounded to the nearest 10 (e.g. Score 8 = votes 75–84)." />
+          <ChartHelpTooltip text="VNDB votes are on a 10–100 scale. Each bar groups votes rounded-sm to the nearest 10 (e.g. Score 8 = votes 75–84)." />
         </div>
       </div>
 
@@ -58,11 +58,11 @@ export function VNVoteDistribution({ distribution, totalVotes, publicVotes }: VN
                 {d.count > 0 && <div>{d.count}</div>}
               </div>
               <div
-                className="w-full rounded-t transition-colors relative bg-gradient-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600"
+                className="w-full rounded-t transition-colors relative bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600"
                 style={{ height: `${Math.max(heightPx, 4)}px` }}
               >
                 {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                   {d.count} votes ({percentage}%)
                 </div>
               </div>

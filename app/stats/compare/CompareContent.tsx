@@ -279,7 +279,7 @@ export default function CompareContent() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             {mode === 'similar' ? 'Find Similar Users' : 'Compare Lists'}
-            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
               BETA
             </span>
           </h1>
@@ -341,7 +341,7 @@ export default function CompareContent() {
                     }
                   }}
                   placeholder="Enter your VNDB username"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 />
                 {isLookingUp1 && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -402,7 +402,7 @@ export default function CompareContent() {
                         }
                       }}
                       placeholder="VNDB username"
-                      className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                     />
                     {isLookingUp1 && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -440,7 +440,7 @@ export default function CompareContent() {
                         }
                       }}
                       placeholder="VNDB username"
-                      className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                     />
                     {isLookingUp2 && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -914,10 +914,10 @@ function VNComparisonCard({
   return (
     <Link
       href={`/vn/${vn.vn_id}`}
-      className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
+      className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
     >
       {/* Image */}
-      <div className="w-16 h-20 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+      <div className="w-16 h-20 shrink-0 bg-gray-200 dark:bg-gray-700 rounded-sm overflow-hidden">
         {vn.image_url ? (
           <img
             src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.vn_id }) ?? undefined}

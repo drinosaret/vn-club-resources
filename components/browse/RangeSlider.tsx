@@ -244,7 +244,7 @@ export function RangeSlider({
           onTouchStart={handleTouchStart('min')}
         >
           <div
-            className={`w-3.5 h-3.5 bg-white dark:bg-gray-200 border-2 border-primary-500 rounded-full shadow-sm transition-transform hover:scale-110 ${
+            className={`w-3.5 h-3.5 bg-white dark:bg-gray-200 border-2 border-primary-500 rounded-full shadow-xs transition-transform hover:scale-110 ${
               isDragging === 'min' ? 'scale-125 cursor-grabbing' : ''
             }`}
           />
@@ -263,7 +263,7 @@ export function RangeSlider({
           onTouchStart={handleTouchStart('max')}
         >
           <div
-            className={`w-3.5 h-3.5 bg-white dark:bg-gray-200 border-2 border-primary-500 rounded-full shadow-sm transition-transform hover:scale-110 ${
+            className={`w-3.5 h-3.5 bg-white dark:bg-gray-200 border-2 border-primary-500 rounded-full shadow-xs transition-transform hover:scale-110 ${
               isDragging === 'max' ? 'scale-125 cursor-grabbing' : ''
             }`}
           />

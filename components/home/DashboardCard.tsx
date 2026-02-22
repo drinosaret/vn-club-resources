@@ -60,7 +60,7 @@ export function DashboardCard({
     <div
       onClick={handleClick}
       className={`
-        group block bg-gradient-to-br ${theme.bg}
+        group block bg-linear-to-br ${theme.bg}
         rounded-2xl border border-gray-200 dark:border-gray-700 ${theme.border}
         p-4 md:p-6 min-h-[280px] md:min-h-[320px] flex flex-col cursor-pointer
         hover:shadow-xl transition-all duration-300
@@ -68,14 +68,14 @@ export function DashboardCard({
     >
       {/* Header */}
       <div className="flex items-start gap-3 mb-3 md:mb-4">
-        <div className={`w-10 h-10 rounded-xl ${theme.icon} flex items-center justify-center flex-shrink-0`}>
+        <div className={`w-10 h-10 rounded-xl ${theme.icon} flex items-center justify-center shrink-0`}>
           {icon}
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-0.5 flex items-center gap-2 flex-wrap">
             <span className="truncate">{title}</span>
             {badge && (
-              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-white/60 dark:bg-white/10 text-gray-500 dark:text-gray-400 flex-shrink-0">
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-white/60 dark:bg-white/10 text-gray-500 dark:text-gray-400 shrink-0">
                 {badge}
               </span>
             )}

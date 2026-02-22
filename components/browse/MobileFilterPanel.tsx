@@ -53,7 +53,7 @@ export function MobileFilterPanel({
         <div className="bg-white dark:bg-gray-800 rounded-lg border
                        border-gray-200 dark:border-gray-700 flex flex-col max-h-[70vh]">
           {/* Sticky header with close button */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0">
             <span className="text-sm font-semibold text-gray-900 dark:text-white">Filters</span>
             <button
               type="button"
@@ -71,7 +71,7 @@ export function MobileFilterPanel({
           </div>
 
           {/* Sticky footer with Apply button */}
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0">
             <button
               type="button"
               onClick={onToggle}

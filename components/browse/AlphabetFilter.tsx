@@ -14,8 +14,8 @@ export function AlphabetFilter({ activeChar, onSelect, compact = false, strip = 
   if (strip) {
     return (
       <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-white dark:from-gray-800 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-white dark:from-gray-800 to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-3 bg-linear-to-r from-white dark:from-gray-800 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-3 bg-linear-to-l from-white dark:from-gray-800 to-transparent z-10 pointer-events-none" />
         <div className="flex gap-0.5 overflow-x-auto scrollbar-none px-1">
           {LETTERS.map((letter) => {
             const isActive = letter === 'ALL' ? !activeChar : activeChar === letter;
@@ -24,7 +24,7 @@ export function AlphabetFilter({ activeChar, onSelect, compact = false, strip = 
                 key={letter}
                 onClick={() => onSelect(letter === 'ALL' ? null : letter)}
                 aria-pressed={isActive}
-                className={`px-1.5 py-0.5 text-[10px] font-medium rounded whitespace-nowrap flex-shrink-0 transition-colors ${
+                className={`px-1.5 py-0.5 text-[10px] font-medium rounded whitespace-nowrap shrink-0 transition-colors ${
                   isActive
                     ? 'bg-primary-600 text-white'
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'

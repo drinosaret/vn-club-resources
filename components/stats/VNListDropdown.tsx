@@ -219,7 +219,7 @@ export function VNListDropdown({
                   {getDisplayTitle({ title: vn.title, title_jp: vn.title_jp || vn.alttitle, title_romaji: vn.title_romaji }, preference)}
                 </span>
                 {vn.rating && (
-                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
                     <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                     {vn.rating.toFixed(1)}
                   </span>

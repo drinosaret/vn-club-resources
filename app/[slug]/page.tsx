@@ -226,7 +226,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
       <div className="container mx-auto px-4 py-12">
         <div className="flex gap-6 max-w-[1600px] mx-auto">
           {/* Left Sidebar - Page Navigation */}
-          <aside className="hidden lg:block w-56 flex-shrink-0">
+          <aside className="hidden lg:block w-56 shrink-0">
             <PageNavigation currentSlug={slug} />
           </aside>
 
@@ -281,7 +281,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
           </article>
 
           {/* Right Sidebar - Table of Contents */}
-          <aside className="hidden xl:block w-64 flex-shrink-0">
+          <aside className="hidden xl:block w-64 shrink-0">
             <TableOfContents content={guide.content} />
           </aside>
         </div>

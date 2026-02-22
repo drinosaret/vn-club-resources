@@ -111,7 +111,7 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
         `}
       >
         <span className="truncate">{displayText}</span>
-        <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -137,7 +137,7 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
               `}
             >
-              <span className="w-4 flex-shrink-0">
+              <span className="w-4 shrink-0">
                 {option.value === value && <Check className="w-4 h-4 text-primary-500" />}
               </span>
               {option.label}

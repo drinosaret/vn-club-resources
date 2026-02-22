@@ -25,7 +25,7 @@ export function PrevNextNavigation({ currentSlug }: PrevNextNavigationProps) {
             href={prevPage.slug === '' ? '/' : `/${prevPage.slug}`}
             className="group flex-1 flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors flex-shrink-0" />
+            <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors shrink-0" />
             <div className="flex flex-col min-w-0">
               <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 Previous
@@ -53,7 +53,7 @@ export function PrevNextNavigation({ currentSlug }: PrevNextNavigationProps) {
                 {nextPage.title}
               </span>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors shrink-0" />
           </Link>
         ) : (
           <div className="flex-1" />

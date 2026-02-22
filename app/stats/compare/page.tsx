@@ -20,7 +20,7 @@ function LoadingFallback() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             Compare Lists
-            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
               BETA
             </span>
           </h1>
@@ -43,11 +43,11 @@ function LoadingFallback() {
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <div className="w-24 h-5 rounded mb-2 image-placeholder" />
+            <div className="w-24 h-5 rounded-sm mb-2 image-placeholder" />
             <div className="w-full h-10 rounded-lg image-placeholder" />
           </div>
           <div>
-            <div className="w-24 h-5 rounded mb-2 image-placeholder" />
+            <div className="w-24 h-5 rounded-sm mb-2 image-placeholder" />
             <div className="w-full h-10 rounded-lg image-placeholder" />
           </div>
         </div>

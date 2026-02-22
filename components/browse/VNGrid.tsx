@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useReducer, memo, startTransi
 import Link from 'next/link';
 import { Star, Loader2, BookOpen } from 'lucide-react';
 import { VNSearchResult } from '@/lib/vndb-stats-api';
-import { getProxiedImageUrl, ImageWidth } from '@/lib/vndb-image-cache';
+import { getProxiedImageUrl, getTinySrc, ImageWidth } from '@/lib/vndb-image-cache';
 import { getDisplayTitle, TitlePreference } from '@/lib/title-preference';
 import { GridSize, flexItemClasses } from './ViewModeToggle';
 import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
@@ -138,7 +138,14 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       };
       const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
       const url = getProxiedImageUrl(vn.image_url!, { width: GRID_IMAGE_WIDTHS[gridSize], vnId });
-      if (url) img.src = url;
+      if (url) {
+        img.src = url;
+        // Also preload the 20px micro-thumbnail for NSFW mosaic overlay so it
+        // appears at the same time as non-NSFW covers (no delayed grey flash)
+        if (isNsfwContent(vn.image_sexual)) {
+          new Image().src = getTinySrc(url);
+        }
+      }
     });
 
     // Don't wait forever — swap after timeout regardless
@@ -168,15 +175,15 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   // Show skeleton grid only during true initial load (no cached results)
   if ((isLoading || isSwapping) && displayResults.length === 0) {
     return (
-      <div className="flex flex-wrap justify-center gap-x-3 gap-y-5 my-6">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 my-6">
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className={flexItemClasses[gridSize]}>
-            <div className="aspect-[3/4] rounded-lg overflow-hidden">
+            <div className="aspect-3/4 rounded-lg overflow-hidden">
               <div className="w-full h-full image-placeholder" />
             </div>
             <div className="mt-1.5 px-0.5 space-y-1">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse" />
-              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse" />
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4 animate-pulse" />
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2 animate-pulse" />
             </div>
           </div>
         ))}
@@ -192,13 +199,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
 
   // Show grid — keeps old results visible during loading and image preloading
   return (
-    <div className="relative" style={{ contain: 'content' }}>
-      {/* Thin progress bar for pagination feedback */}
-      {hasMounted && isPaginating && isLoading && (
-        <div className="absolute top-0 left-0 right-0 z-20 h-0.5 bg-gray-200 dark:bg-gray-700 overflow-hidden rounded-full">
-          <div className="h-full bg-primary-500 animate-progress-indeterminate" />
-        </div>
-      )}
+    <div className="browse-vn-grid relative" style={{ contain: 'content' }}>
       {/* Loading overlay for filter/search changes (delayed, NOT shown for pagination) */}
       {hasMounted && (
         <div
@@ -211,7 +212,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
         </div>
       )}
       {/* Flexbox layout centers incomplete last row like VNDB */}
-      <div className={`flex flex-wrap justify-center gap-x-3 gap-y-5 my-6 ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-80' : ''}`}>
+      <div className={`browse-vn-grid-content flex flex-wrap justify-center gap-x-4 gap-y-6 my-6 transition-opacity duration-150 ease-out motion-reduce:transition-none ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-[0.85]' : ''}`}>
         {displayResults.map((vn, index) => (
           <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
         ))}
@@ -240,7 +241,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
   // All image state in a single ref — mutations don't trigger renders.
   // useReducer provides a lightweight re-render trigger for onLoad/onError.
   const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [, rerender] = useReducer(x => x + 1, 0);
 
   // Reset when VN changes (key={index} reuses the component instance).
@@ -289,7 +290,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
   }, []);
 
-
   const handleImageError = useCallback(() => {
     const s = imgState.current;
     if (s.retryCount < 2) {
@@ -320,7 +320,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
       className={`group block ${itemClass || ''}`}
     >
       {/* Cover image container */}
-      <div className="relative aspect-[3/4] rounded-lg overflow-hidden sm:shadow-sm sm:group-hover:shadow-md sm:transition-shadow bg-gray-200 dark:bg-gray-700">
+      <div className="browse-vn-card relative aspect-3/4 rounded-lg overflow-hidden shadow-xs group-hover:shadow-lg group-hover:-translate-y-0.5 transition-all duration-200 bg-gray-200 dark:bg-gray-700">
         {/* Shimmer placeholder — unmounted once image loads (no flash for preloaded images) */}
         {showImage && !imageLoaded && (
           <div className="absolute inset-0 image-placeholder" />
@@ -348,7 +348,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
 
         {/* NSFW badge */}
         {isNsfw && (
-          <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded z-10">
+          <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-sm z-10">
             18+
           </div>
         )}
@@ -356,7 +356,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
 
       {/* Info section below the cover - always visible */}
       <div className="mt-1.5 px-0.5">
-        <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={title}>
+        <p className="browse-vn-title text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={title}>
           {title}
         </p>
         <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">

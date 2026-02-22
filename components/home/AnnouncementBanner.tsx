@@ -21,11 +21,11 @@ export function AnnouncementBanner({
       <div className="container mx-auto max-w-6xl">
         <Link
           href={href}
-          className="group block relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-50 via-blue-50 to-indigo-50 dark:from-primary-900/20 dark:via-blue-900/20 dark:to-indigo-900/20 border border-primary-200 dark:border-primary-700/50 p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+          className="group block relative overflow-hidden rounded-2xl bg-linear-to-r from-primary-50 via-blue-50 to-indigo-50 dark:from-primary-900/20 dark:via-blue-900/20 dark:to-indigo-900/20 border border-primary-200 dark:border-primary-700/50 p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
         >
           <div className="flex items-center gap-4">
             {icon && (
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-800/50 flex items-center justify-center text-primary-600 dark:text-primary-400">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-800/50 flex items-center justify-center text-primary-600 dark:text-primary-400">
                 {icon}
               </div>
             )}
@@ -44,7 +44,7 @@ export function AnnouncementBanner({
                 {description}
               </p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <ArrowRight className="w-5 h-5 text-primary-600 dark:text-primary-400 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>

@@ -92,13 +92,13 @@ export function ScoreDistributionChart({
               <div
                 className={`w-full rounded-t transition-colors relative ${
                   isAverage
-                    ? 'bg-gradient-to-t from-primary-600 to-primary-400'
-                    : 'bg-gradient-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
+                    ? 'bg-linear-to-t from-primary-600 to-primary-400'
+                    : 'bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
                 } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
                 style={{ height: `${Math.max(heightPx, 4)}px` }}
               >
                 {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                   <div className="flex flex-col items-center">
                     <span>{d.count} VNs ({percentage}%)</span>
                     {jpDistribution && d.jpCount > 0 && (

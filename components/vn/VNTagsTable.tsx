@@ -78,7 +78,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange, showSexu
 
   if (!tags || tags.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xs p-6">
         <div className="flex items-center gap-2 mb-4">
           <Tag className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tags</h2>
@@ -91,7 +91,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange, showSexu
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xs overflow-hidden">
       <div className="flex items-center justify-between flex-wrap gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-primary-500" />
@@ -103,7 +103,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange, showSexu
             <button
               onClick={() => onShowSexualChange(!showSexual)}
               aria-pressed={showSexual}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
                 showSexual
                   ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -117,7 +117,7 @@ export function VNTagsTable({ tags, showSpoilers, onShowSpoilersChange, showSexu
             <button
               onClick={() => onShowSpoilersChange(!showSpoilers)}
               aria-pressed={showSpoilers}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
                 showSpoilers
                   ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'

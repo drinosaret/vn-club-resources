@@ -96,7 +96,7 @@ export default function GlobalStatsClient() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Globe className="w-6 h-6 text-primary-500" />
               Global VNDB Stats
-              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
                 BETA
               </span>
             </h1>
@@ -122,13 +122,13 @@ export default function GlobalStatsClient() {
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
             </div>
             <button
               onClick={() => loadData()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors flex-shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors shrink-0"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Retry
@@ -142,18 +142,18 @@ export default function GlobalStatsClient() {
         <div className="space-y-8">
           {/* Top VNs Skeleton */}
           <div>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4 image-placeholder" />
+            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {[0, 1].map((i) => (
                 <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-4 image-placeholder" />
+                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
                   <div className="space-y-3">
                     {Array.from({ length: 5 }).map((_, j) => (
                       <div key={j} className="flex items-center gap-3">
-                        <div className="w-10 h-14 bg-gray-200 dark:bg-gray-700 rounded image-placeholder" />
+                        <div className="w-10 h-14 bg-gray-200 dark:bg-gray-700 rounded-sm image-placeholder" />
                         <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 image-placeholder" />
-                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 image-placeholder" />
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4 image-placeholder" />
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2 image-placeholder" />
                         </div>
                       </div>
                     ))}
@@ -164,12 +164,12 @@ export default function GlobalStatsClient() {
           </div>
           {/* Stats Cards Skeleton */}
           <div>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4 image-placeholder" />
+            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                  <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-3 image-placeholder" />
-                  <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded image-placeholder" />
+                  <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded-sm mb-3 image-placeholder" />
+                  <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded-sm image-placeholder" />
                 </div>
               ))}
             </div>
@@ -189,7 +189,7 @@ export default function GlobalStatsClient() {
               {topRated.length === 0 && mostPopular.length === 0 ? (
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
                   <div className="flex items-start gap-3">
-                    <BarChart3 className="w-6 h-6 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <BarChart3 className="w-6 h-6 text-gray-400 shrink-0 mt-0.5" />
                     <div>
                       <h3 className="font-medium text-gray-900 dark:text-white mb-1">
                         Top lists unavailable
@@ -306,7 +306,7 @@ export default function GlobalStatsClient() {
             <FadeIn delay={100}>
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
                 <div className="flex items-start gap-3">
-                  <BarChart3 className="w-6 h-6 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <BarChart3 className="w-6 h-6 text-gray-400 shrink-0 mt-0.5" />
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-white mb-1">
                       Distribution Charts Unavailable

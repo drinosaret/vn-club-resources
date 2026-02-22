@@ -99,7 +99,7 @@ export function QuizSettings({ settings, onSettingsChange }: QuizSettingsProps) 
             type="checkbox"
             checked={settings.includeCombo}
             onChange={handleComboToggle}
-            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700 cursor-pointer"
+            className="w-4 h-4 rounded-sm border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700 cursor-pointer"
           />
           <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
             Include combo characters (kya, sha, cha..)

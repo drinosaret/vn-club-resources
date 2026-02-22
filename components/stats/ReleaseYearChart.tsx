@@ -112,7 +112,7 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
           {hasRatings && (
             <div className="flex items-center gap-3 sm:gap-4 text-gray-400">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-gradient-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 rounded-sm" />
+                <div className="w-3 h-3 bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 rounded-xs" />
                 <span># Novels</span>
               </div>
               <div className="flex items-center gap-1">
@@ -177,10 +177,10 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
                   <div
                     className={`w-full rounded-t transition-colors duration-75 relative ${
                       isPeak
-                        ? 'bg-gradient-to-t from-primary-600 to-primary-400'
+                        ? 'bg-linear-to-t from-primary-600 to-primary-400'
                         : hoveredYear === d.year
-                          ? 'bg-gradient-to-t from-primary-500 to-primary-300 dark:from-primary-600 dark:to-primary-400'
-                          : 'bg-gradient-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
+                          ? 'bg-linear-to-t from-primary-500 to-primary-300 dark:from-primary-600 dark:to-primary-400'
+                          : 'bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
                     } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
                     style={{ height: `${Math.max(heightPx, 4)}px` }}
                   />

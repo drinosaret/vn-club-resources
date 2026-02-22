@@ -182,7 +182,7 @@ export default function CharacterDetailPage({ params }: PageProps) {
         <div className="lg:sticky lg:top-20 lg:self-start">
           {imageUrl ? (
             <ImageLightbox src={imageUrl} alt={displayName} imageSexual={character.image_sexual} vnId={character.id}>
-              <div className="relative aspect-[3/4] max-w-[240px] mx-auto lg:mx-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg cursor-pointer">
+              <div className="relative aspect-3/4 max-w-[240px] mx-auto lg:mx-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg cursor-pointer">
                 <div className={mainImageShimmer} />
                 <NSFWNextImage
                   src={imageUrl}
@@ -200,7 +200,7 @@ export default function CharacterDetailPage({ params }: PageProps) {
               </div>
             </ImageLightbox>
           ) : (
-            <div className="relative aspect-[3/4] max-w-[240px] mx-auto lg:mx-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg">
+            <div className="relative aspect-3/4 max-w-[240px] mx-auto lg:mx-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg">
               <div className="w-full h-full flex items-center justify-center">
                 <User className="w-16 h-16 text-gray-400" />
               </div>
@@ -345,7 +345,7 @@ export default function CharacterDetailPage({ params }: PageProps) {
               <div className="p-4 space-y-3">
                 {Object.entries(traitsByGroup).map(([group, traits]) => (
                   <div key={group} className="flex flex-wrap items-start gap-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-24 flex-shrink-0 pt-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-24 shrink-0 pt-1">
                       {group}:
                     </span>
                     <div className="flex flex-wrap gap-1.5 flex-1">
@@ -459,8 +459,8 @@ function SimilarCharactersSection({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[...Array(5)].map((_, i) => (
             <div key={i}>
-              <div className="aspect-[3/4] rounded-lg mb-2 image-placeholder" />
-              <div className="h-4 rounded w-3/4 image-placeholder" />
+              <div className="aspect-3/4 rounded-lg mb-2 image-placeholder" />
+              <div className="h-4 rounded-sm w-3/4 image-placeholder" />
             </div>
           ))}
         </div>
@@ -513,7 +513,7 @@ function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number];
       className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
-      <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
+      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
         {vnImageUrl ? (
           <>
             <div className={shimmerClass} />
@@ -533,7 +533,7 @@ function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number];
             <User className="w-8 h-8" />
           </div>
         )}
-        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] rounded z-10">
+        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] rounded-sm z-10">
           {roleLabels[vn.role] || vn.role}
         </div>
       </div>
@@ -558,7 +558,7 @@ function SimilarCharacterCard({ char, preference }: { char: SimilarCharacter; pr
       className="group block relative bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
-      <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
+      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
         {charImageUrl ? (
           <>
             <div className={shimmerClass} />
@@ -578,7 +578,7 @@ function SimilarCharacterCard({ char, preference }: { char: SimilarCharacter; pr
             <User className="w-8 h-8" />
           </div>
         )}
-        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-primary-600/90 text-white text-[10px] rounded z-10">
+        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-primary-600/90 text-white text-[10px] rounded-sm z-10">
           {Math.round(char.similarity * 100)}% match
         </div>
       </div>

@@ -270,7 +270,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                       <span className="font-medium">{dev.name}</span>
                     </span>
                     <span
-                      className="text-sm font-medium text-orange-600 dark:text-orange-400 ml-2 flex-shrink-0"
+                      className="text-sm font-medium text-orange-600 dark:text-orange-400 ml-2 shrink-0"
                       title={`Based on ${dev.count} VN(s) from this developer`}
                     >
                       {dev.weighted_score.toFixed(0)}
@@ -310,7 +310,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                       <span className="font-medium">{staff.name}</span>
                     </span>
                     <span
-                      className="text-sm font-medium text-amber-600 dark:text-amber-400 ml-2 flex-shrink-0"
+                      className="text-sm font-medium text-amber-600 dark:text-amber-400 ml-2 shrink-0"
                       title={`Based on ${staff.count} VN(s) with this staff member`}
                     >
                       {staff.weighted_score.toFixed(0)}
@@ -350,7 +350,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                       {seiyuu.name}
                     </span>
                     <span
-                      className="text-sm font-medium text-pink-600 dark:text-pink-400 ml-2 flex-shrink-0"
+                      className="text-sm font-medium text-pink-600 dark:text-pink-400 ml-2 shrink-0"
                       title={`Based on ${seiyuu.count} VN(s) with this voice actor`}
                     >
                       {seiyuu.weighted_score.toFixed(0)}
@@ -390,7 +390,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                       {trait.name}
                     </span>
                     <span
-                      className="text-sm font-medium text-rose-600 dark:text-rose-400 ml-2 flex-shrink-0"
+                      className="text-sm font-medium text-rose-600 dark:text-rose-400 ml-2 shrink-0"
                       title={`Based on ${trait.count} VN(s) with this character trait`}
                     >
                       {trait.weighted_score.toFixed(0)}
@@ -436,7 +436,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                     >
                       {match.source_title || match.source_vn_id}
                     </Link>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400 ml-2 flex-shrink-0">
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400 ml-2 shrink-0">
                       {(match.similarity * 100).toFixed(0)}% similar
                     </span>
                   </div>
@@ -474,7 +474,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                     >
                       {match.source_title || match.source_vn_id}
                     </Link>
-                    <span className="text-sm text-teal-600 dark:text-teal-400 ml-2 flex-shrink-0">
+                    <span className="text-sm text-teal-600 dark:text-teal-400 ml-2 shrink-0">
                       <span className="font-medium">{match.user_count}</span> in common
                     </span>
                   </div>
@@ -526,12 +526,12 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
       />
 
       {/* Modal */}
-      <div ref={modalRef} tabIndex={-1} className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden outline-none">
+      <div ref={modalRef} tabIndex={-1} className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden outline-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 z-10">
           <div className="flex items-start gap-4">
             {/* Cover Image */}
-            <div className="relative w-16 h-20 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+            <div className="relative w-16 h-20 shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
               {image_url ? (
                 <NSFWNextImage
                   src={getProxiedImageUrl(image_url, { width: 128, vnId: vn_id }) ?? image_url}
@@ -564,7 +564,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
             {/* Close button */}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -603,7 +603,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
             <div className="flex items-center gap-3">
               <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-violet-500 to-violet-600 rounded-full transition-all"
+                  className="h-full bg-linear-to-r from-violet-500 to-violet-600 rounded-full transition-all"
                   style={{ width: `${Math.min(overallPercent, 100)}%` }}
                 />
               </div>

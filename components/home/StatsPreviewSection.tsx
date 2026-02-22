@@ -70,7 +70,7 @@ export function StatsPreviewSection() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your VNDB username"
-                    className="w-full px-5 py-4 pr-14 text-base rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
+                    className="w-full px-5 py-4 pr-14 text-base rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
                     disabled={isLoading}
                   />
                   <button
@@ -186,8 +186,8 @@ function StatsFeatureCard({
   description: string;
 }) {
   return (
-    <div className="flex gap-4 p-5 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400">
+    <div className="flex gap-4 p-5 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md transition-shadow">
+      <div className="shrink-0 w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400">
         {icon}
       </div>
       <div>

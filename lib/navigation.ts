@@ -37,7 +37,6 @@ export function getHeaderNavigation() {
       { name: 'Stats', href: '/stats' },
       // { name: 'Recommendations', href: '/recommendations' },
       { name: 'News', href: '/news' },
-      { name: 'Quiz', href: '/quiz' },
     ],
     desktop: [
       { name: 'Home', href: '/' },
@@ -47,7 +46,6 @@ export function getHeaderNavigation() {
       { name: 'Stats', href: '/stats' },
       // { name: 'Recommendations', href: '/recommendations' },
       { name: 'News', href: '/news' },
-      { name: 'Quiz', href: '/quiz' },
     ],
   };
 }

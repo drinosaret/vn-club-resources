@@ -113,7 +113,7 @@ export function VNTabs({ activeTab, onTabChange, onTabHover, tagCount, traitCoun
               {tab.id !== 'summary' && tab.id !== 'stats' && tab.id !== 'language' && (
                 <span
                   suppressHydrationWarning
-                  className={`text-xs px-1.5 py-0.5 rounded-full min-w-[1.5rem] text-center transition-all duration-300 ${
+                  className={`text-xs px-1.5 py-0.5 rounded-full min-w-6 text-center transition-all duration-300 ${
                     tab.count !== undefined
                       ? activeTab === tab.id
                         ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 opacity-100'

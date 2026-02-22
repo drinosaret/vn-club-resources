@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use, Fragment, useRef, useCallback } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, ExternalLink, Tag, Star, Users, BarChart3,
@@ -43,18 +43,8 @@ import { SpoilerFilter, SpoilerFilterValue } from '@/components/stats/SpoilerFil
 import { sortTagsByWeight } from '@/lib/weighted-score-utils';
 import { LastUpdated } from '@/components/stats/LastUpdated';
 import { NSFWImage } from '@/components/NSFWImage';
-import { useImageFade } from '@/hooks/useImageFade';
-
-/** Preload VN cover images into browser cache using Image() objects */
-function preloadVNImages(vns: Array<{ image_url?: string | null; id: string }>) {
-  vns.forEach(vn => {
-    if (vn.image_url) {
-      const img = new Image();
-      const url = getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id });
-      if (url) img.src = url;
-    }
-  });
-}
+import { useImageRetry } from '@/hooks/useImageRetry';
+import { preloadVNImages, addRetryKey } from '@/lib/preload-images';
 
 interface PageProps {
   params: Promise<{ tagId: string }>;
@@ -66,7 +56,6 @@ export default function TagDetailPage({ params }: PageProps) {
 
   // URL-based tab + page state
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const tabFromUrl = searchParams.get('tab') as TagTabId | null;
   const pageFromUrl = searchParams.get('page');
@@ -96,14 +85,13 @@ export default function TagDetailPage({ params }: PageProps) {
   const [totalVns, setTotalVns] = useState(0);
 
   const updateUrl = useCallback((tab: TagTabId, page: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === 'summary') params.delete('tab');
-    else params.set('tab', tab);
-    if (page <= 1) params.delete('page');
-    else params.set('page', String(page));
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(newUrl, { scroll: false });
-  }, [pathname, router, searchParams]);
+    const params = new URLSearchParams();
+    if (tab !== 'summary') params.set('tab', tab);
+    if (page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(window.history.state, '', newUrl);
+  }, [pathname]);
 
   // Ref for caching previous data during pagination (smooth loading overlay)
   const previousVnsRef = useRef<TagVN[]>([]);
@@ -141,6 +129,23 @@ export default function TagDetailPage({ params }: PageProps) {
     updateUrl(activeTab, newPage);
   }, [activeTab, updateUrl]);
 
+  // Prefetch page on hover — preload images from cached response or trigger API fetch
+  const handlePrefetchPage = useCallback((page: number) => {
+    const cacheKey = `${page}-${spoilerFilter}-${languageFilter}`;
+    if (prefetchCacheRef.current.has(cacheKey)) {
+      preloadVNImages(prefetchCacheRef.current.get(cacheKey)!.vns);
+      return;
+    }
+    vndbStatsApi.getTagVNs(tagId, page, 24, 'rating', spoilerFilter, languageFilter === 'all' ? undefined : languageFilter)
+      .then(result => {
+        if (result) {
+          prefetchCacheRef.current.set(cacheKey, result);
+          preloadVNImages(result.vns);
+        }
+      })
+      .catch(() => {});
+  }, [tagId, spoilerFilter, languageFilter]);
+
   // Sync URL -> state for back/forward navigation
   useEffect(() => {
     const urlTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'summary';
@@ -162,13 +167,6 @@ export default function TagDetailPage({ params }: PageProps) {
   useEffect(() => {
     loadInitialData();
   }, [tagId]);
-
-  // Set page title
-  useEffect(() => {
-    if (tag) {
-      document.title = `${tag.name} - Tag Stats | VN Club`;
-    }
-  }, [tag]);
 
   const handleRefresh = async () => {
     const now = Date.now();
@@ -357,8 +355,8 @@ export default function TagDetailPage({ params }: PageProps) {
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700">
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
             <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing…</span>
           </div>
@@ -380,7 +378,7 @@ export default function TagDetailPage({ params }: PageProps) {
                 <Link href="/browse?tab=tags" className="hover:text-primary-600 dark:hover:text-primary-400">Tags</Link>
                 {parents.map((p) => (
                   <Fragment key={p.id}>
-                    <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                    <ChevronRight className="w-3 h-3 shrink-0" />
                     <Link
                       href={`/stats/tag/${p.id}`}
                       className="hover:text-primary-600 dark:hover:text-primary-400"
@@ -389,7 +387,7 @@ export default function TagDetailPage({ params }: PageProps) {
                     </Link>
                   </Fragment>
                 ))}
-                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <ChevronRight className="w-3 h-3 shrink-0" />
                 <span className="text-gray-700 dark:text-gray-300">{tag.name}</span>
               </div>
             )}
@@ -399,7 +397,7 @@ export default function TagDetailPage({ params }: PageProps) {
                 {tag.name}
               </h1>
               {tag.category && (
-                <span className="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                <span className="px-2 py-0.5 text-xs rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                   {categoryLabels[tag.category] || tag.category}
                 </span>
               )}
@@ -413,7 +411,7 @@ export default function TagDetailPage({ params }: PageProps) {
               View on VNDB <ExternalLink className="w-3 h-3" />
             </a>
             {tag.description && (
-              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl break-words">
+              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl wrap-break-word">
                 <p>
                   {parseBBCode(
                     !showFullDescription && tag.description.length > 300
@@ -453,7 +451,7 @@ export default function TagDetailPage({ params }: PageProps) {
       {usingFallback && (tag.vn_count ?? 0) > 0 && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                 Limited Data Mode
@@ -606,6 +604,7 @@ export default function TagDetailPage({ params }: PageProps) {
                       currentPage={currentPage}
                       totalPages={totalPages}
                       onPageChange={handlePageChange}
+                      onPrefetchPage={handlePrefetchPage}
                       totalItems={totalVns}
                       itemsPerPage={24}
                     />
@@ -620,6 +619,7 @@ export default function TagDetailPage({ params }: PageProps) {
                       currentPage={currentPage}
                       totalPages={totalPages}
                       onPageChange={handlePageChange}
+                      onPrefetchPage={handlePrefetchPage}
                       totalItems={totalVns}
                       itemsPerPage={24}
                       scrollTargetRef={resultsRef}
@@ -679,24 +679,26 @@ export default function TagDetailPage({ params }: PageProps) {
 
 function VNCard({ vn }: { vn: TagVN }) {
   const { preference } = useTitlePreference();
-  const { onLoad, shimmerClass, fadeClass } = useImageFade();
+  const { loaded, error, retryKey, onLoad, onError } = useImageRetry();
   const displayTitle = getDisplayTitle({ title: vn.title, title_jp: vn.title_jp || vn.alttitle, title_romaji: vn.title_romaji }, preference);
+  const showImage = vn.image_url && !error;
 
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
     >
-      <div className="w-16 h-20 flex-shrink-0 relative overflow-hidden rounded">
-        <div className={shimmerClass} />
-        {vn.image_url ? (
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+        {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
+        {showImage ? (
           <NSFWImage
-            src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
+            src={addRetryKey(getProxiedImageUrl(vn.image_url!, { width: 128, vnId: vn.id }) || '', retryKey)}
             alt={displayTitle}
             vnId={vn.id}
             imageSexual={vn.image_sexual}
-            className={`w-full h-full object-cover ${fadeClass}`}
+            className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={onLoad}
+            onError={onError}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
@@ -731,7 +733,7 @@ function VNCard({ vn }: { vn: TagVN }) {
             {sortTagsByWeight(vn.tags).slice(0, 3).map((t) => (
               <span
                 key={t.id}
-                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded"
+                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm"
               >
                 {t.name}
               </span>
@@ -752,7 +754,7 @@ function SimilarTagRow({ tag }: { tag: SimilarTag }) {
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Tag className="w-4 h-4 text-primary-500 flex-shrink-0" />
+        <Tag className="w-4 h-4 text-primary-500 shrink-0" />
         <span className="font-medium text-gray-900 dark:text-white truncate">{tag.name}</span>
       </div>
       <div className="flex items-center justify-between sm:justify-end gap-4">
@@ -784,11 +786,11 @@ function TraitRow({ trait }: { trait: SimilarTrait }) {
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Users className="w-4 h-4 text-purple-500 flex-shrink-0" />
+        <Users className="w-4 h-4 text-purple-500 shrink-0" />
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium text-gray-900 dark:text-white truncate">{trait.name}</span>
           {trait.group_name && (
-            <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 flex-shrink-0">
+            <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 shrink-0">
               {trait.group_name}
             </span>
           )}
@@ -861,19 +863,19 @@ function VNCardSkeleton() {
   return (
     <div className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
       {/* Image placeholder */}
-      <div className="w-16 h-20 flex-shrink-0 rounded image-placeholder" />
+      <div className="w-16 h-20 shrink-0 rounded-sm image-placeholder" />
       <div className="flex-1 min-w-0 space-y-2">
         {/* Title */}
-        <div className="h-4 w-4/5 rounded image-placeholder" />
+        <div className="h-4 w-4/5 rounded-sm image-placeholder" />
         {/* Year */}
-        <div className="h-3 w-12 rounded image-placeholder" />
+        <div className="h-3 w-12 rounded-sm image-placeholder" />
         {/* Rating */}
-        <div className="h-3 w-20 rounded image-placeholder" />
+        <div className="h-3 w-20 rounded-sm image-placeholder" />
         {/* Tags */}
         <div className="flex gap-1 mt-2">
-          <div className="h-4 w-14 rounded image-placeholder" />
-          <div className="h-4 w-12 rounded image-placeholder" />
-          <div className="h-4 w-16 rounded image-placeholder" />
+          <div className="h-4 w-14 rounded-sm image-placeholder" />
+          <div className="h-4 w-12 rounded-sm image-placeholder" />
+          <div className="h-4 w-16 rounded-sm image-placeholder" />
         </div>
       </div>
     </div>

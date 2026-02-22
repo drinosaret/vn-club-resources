@@ -36,7 +36,7 @@ const TabLoadingFallback = () => (
     </div>
     <div className="h-9 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
     <div className="flex items-center justify-between">
-      <div className="w-24 h-5 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+      <div className="w-24 h-5 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
       <div className="flex gap-2">
         <div className="w-28 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
         <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
@@ -46,9 +46,9 @@ const TabLoadingFallback = () => (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {[...Array(10)].map((_, i) => (
         <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
-          <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-          <div className="w-16 h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-          <div className="w-20 h-4 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+          <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
+          <div className="w-16 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
+          <div className="w-20 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
         </div>
       ))}
     </div>
@@ -1138,7 +1138,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
 
   // Handle page change - immediate fetch (no debounce)
   const handlePageChange = (page: number) => {
-    setSkipPreload(true); // Skip image preload buffer — VNCover shimmers handle it
+    setSkipPreload(false); // Use preload buffer — old page stays visible while new images load, avoids grey flash
     setIsPaginatingOnly(true); // Mark as pagination-only to avoid "Searching..." flash
     const updated = { ...filters, page };
     setFilters(updated);
@@ -1359,7 +1359,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 type="checkbox"
                 checked={filters.include_children ?? true}
                 onChange={(e) => handleFilterChange({ include_children: e.target.checked })}
-                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
+                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-sm focus:ring-primary-500"
               />
               <span className="text-xs text-gray-600 dark:text-gray-400">Include child tags</span>
             </label>
@@ -1404,25 +1404,17 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
           {/* RIGHT CONTENT */}
           <div className="flex-1 min-w-0">
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="mb-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Search by title..."
-                    aria-label="Search visual novels by title"
-                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
-                >
-                  Search
-                </button>
+            <form onSubmit={handleSearch} className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search by title..."
+                  aria-label="Search visual novels by title"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                />
               </div>
             </form>
 
@@ -1439,13 +1431,13 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             {fetchError && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-6 mb-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-red-800 dark:text-red-200">{fetchError}</p>
                   </div>
                   <button
                     onClick={() => fetchResults(filters)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors flex-shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors shrink-0"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Retry
@@ -1455,9 +1447,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             )}
 
             {/* Results Header */}
-            <div ref={resultsContainerRef} className="scroll-mt-20 flex flex-wrap items-center justify-between gap-4 mb-4 mt-4">
+            <div ref={resultsContainerRef} className="scroll-mt-20 flex flex-wrap items-center justify-between gap-4 mb-3 mt-3">
               <div className="flex items-center gap-4">
-                <span className="text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   {isLoading && !isPaginatingOnly ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1465,7 +1457,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                     </span>
                   ) : (
                     <>
-                      <span className="font-semibold text-gray-900 dark:text-white">
+                      <span className="text-gray-700 dark:text-gray-200">
                         {(totalWithSpoilers ?? total).toLocaleString()}
                       </span>
                       {' '}results
@@ -1513,7 +1505,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                   title={filters.sort_order === 'desc' ? 'Descending' : 'Ascending'}
                 >
                   {filters.sort_order === 'desc' ? '↓' : '↑'}
-                  <span className="hidden sm:inline text-xs ml-1">{filters.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
+                  <span className="hidden sm:inline ml-1">{filters.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
                 </button>
                 <RandomButton entityType="vn" />
                 <ViewModeToggle size={gridSize} onChange={setGridSize} />

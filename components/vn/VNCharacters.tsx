@@ -115,7 +115,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
 
   if (isEmpty) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 transition-opacity duration-200 ease-out ${isReady ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xs p-6 transition-opacity duration-200 ease-out ${isReady ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Characters</h2>
@@ -262,9 +262,9 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
       {/* Character image */}
       <Link
         href={`/character/${character.id}`}
-        className="flex-shrink-0 group"
+        className="shrink-0 group"
       >
-        <div className="w-20 h-28 rounded overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
+        <div className="w-20 h-28 rounded-sm overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
           {imageUrl && !imageError ? (
             <>
               <div className={shimmerClass} />
@@ -312,7 +312,7 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
           <div className="mt-2 space-y-1.5">
             {Object.entries(traitsByGroup).slice(0, 4).map(([group, traits]) => (
               <div key={group} className="flex flex-wrap items-center gap-1">
-                <span className="text-[11px] text-gray-400 dark:text-gray-500 w-14 flex-shrink-0 truncate">
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 w-14 shrink-0 truncate">
                   {group}:
                 </span>
                 {traits.slice(0, 4).map((trait) => (

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Roboto, Noto_Sans_JP } from "next/font/google";
+import { Roboto } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -19,12 +19,6 @@ const roboto = Roboto({
   display: 'swap',
 });
 
-const notoSansJP = Noto_Sans_JP({
-  subsets: ["latin"],
-  display: 'swap',
-  variable: '--font-jp',
-  preload: false,
-});
 
 const ALLOWED_HOSTS = new Set(['vnclub.org', 'www.vnclub.org', 'beta.vnclub.org']);
 const DEFAULT_ORIGIN = 'https://vnclub.org';
@@ -104,7 +98,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`light ${notoSansJP.variable}`} suppressHydrationWarning>
+    <html lang="en" className="light" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
         {process.env.NEXT_PUBLIC_VNDB_STATS_API && (
@@ -145,7 +139,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <div className="flex flex-col min-h-screen overflow-x-clip">
               <Header />
-              <main className="flex-grow pt-16 md:pt-[72px]" style={{ contain: 'layout paint' }}>
+              <main className="grow pt-16 md:pt-[72px]" style={{ contain: 'layout paint' }}>
                 {children}
               </main>
               <Footer />

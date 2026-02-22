@@ -30,9 +30,9 @@ export function SidebarFilters({
   onClearFilters,
 }: SidebarFiltersProps) {
   return (
-    <aside className="hidden lg:block w-[280px] flex-shrink-0">
+    <aside className="hidden lg:block w-[280px] shrink-0">
       <div className="sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin
-                      bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                      bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Filters</h3>

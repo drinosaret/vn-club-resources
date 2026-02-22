@@ -69,16 +69,16 @@ function LoadingFallback() {
           {[1, 2, 3].map((i) => (
             <div key={i} className="p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
               <div className="w-10 h-10 rounded-lg mb-3 image-placeholder" />
-              <div className="w-24 h-5 rounded mb-2 image-placeholder" />
-              <div className="w-full h-4 rounded mb-1 image-placeholder" />
-              <div className="w-3/4 h-4 rounded image-placeholder" />
+              <div className="w-24 h-5 rounded-sm mb-2 image-placeholder" />
+              <div className="w-full h-4 rounded-sm mb-1 image-placeholder" />
+              <div className="w-3/4 h-4 rounded-sm image-placeholder" />
             </div>
           ))}
         </div>
 
         {/* Note skeleton */}
         <div className="mt-10 text-center">
-          <div className="w-64 h-4 rounded mx-auto image-placeholder" />
+          <div className="w-64 h-4 rounded-sm mx-auto image-placeholder" />
         </div>
       </div>
     </div>

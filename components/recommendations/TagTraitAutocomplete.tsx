@@ -229,7 +229,7 @@ export default function TagTraitAutocomplete({
 
         {/* Search input */}
         <div className="flex-1 min-w-[120px] flex items-center">
-          <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+          <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -240,7 +240,7 @@ export default function TagTraitAutocomplete({
             placeholder={selectedItems.length === 0 ? placeholder : 'Add more...'}
             disabled={disabled || selectedItems.length >= maxItems}
             className={`
-              flex-1 bg-transparent border-none outline-none
+              flex-1 bg-transparent border-none outline-hidden
               text-sm text-gray-900 dark:text-gray-100
               placeholder-gray-400 dark:placeholder-gray-500
             `}

@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import Link from 'next/link';
 import { ExternalLink, BookOpen } from 'lucide-react';
 import type { ResourceItem } from '@/lib/resource-parser';
@@ -10,7 +11,7 @@ interface ResourceCardProps {
 function renderDescription(description: string) {
   // Match markdown links: [text](url)
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | ReactElement)[] = [];
   let lastIndex = 0;
   let match;
 
@@ -66,7 +67,7 @@ export function ResourceCard({ resource }: ResourceCardProps) {
   const cardClasses = `
     relative rounded-xl bg-white dark:bg-gray-800
     border border-gray-200 dark:border-gray-700
-    p-5 shadow-sm transition-all duration-200
+    p-5 shadow-xs transition-all duration-200
     ${hasLink ? 'hover:shadow-md hover:border-primary-300 dark:hover:border-primary-600' : ''}
   `;
 
@@ -139,7 +140,7 @@ export function ResourceCard({ resource }: ResourceCardProps) {
           </div>
           {hasLink && isExternal && (
             <ExternalLink
-              className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1"
+              className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-1"
               aria-hidden="true"
             />
           )}

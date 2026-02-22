@@ -31,7 +31,7 @@ export function StatsSearchPreview() {
                        border border-gray-200 dark:border-gray-700 text-sm
                        text-gray-900 dark:text-white
                        placeholder:text-gray-400 dark:placeholder:text-gray-500
-                       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+                       focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:border-transparent
                        transition-all duration-200"
           />
           <button

@@ -96,7 +96,7 @@ export default function StatsPageClient() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Enter your VNDB username"
-              className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
+              className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
               disabled={isLoading}
             />
             <button

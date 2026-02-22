@@ -78,6 +78,58 @@ export const newsSources: NewsSourceConfig[] = [
   { id: 'announcement', label: 'Announcements', color: 'bg-purple-100 text-purple-800', darkColor: 'dark:bg-purple-500/20 dark:text-purple-300' },
 ];
 
+// URL slug mapping for digest permalinks (legacy)
+export const DIGEST_SLUG_MAP: Record<string, string> = {
+  vndb: 'recently-added',
+  vndb_release: 'releases',
+};
+
+export const SLUG_TO_SOURCE: Record<string, string> = {
+  'recently-added': 'vndb',
+  releases: 'vndb_release',
+};
+
+export const DIGEST_TYPE_LABELS: Record<string, string> = {
+  'recently-added': 'Recently Added to VNDB',
+  releases: 'VN Releases',
+};
+
+// ============ Tab-based routing ============
+
+/** Tab slug → backend source value (undefined = all sources) */
+export const TAB_SLUGS: Record<string, string | undefined> = {
+  all: undefined,
+  'recently-added': 'vndb',
+  releases: 'vndb_release',
+  rss: 'rss',
+  twitter: 'twitter',
+  announcements: 'announcement',
+};
+
+/** Tab slug → display label */
+export const TAB_LABELS: Record<string, string> = {
+  all: 'All Sources',
+  'recently-added': 'Recently Added to VNDB',
+  releases: 'VN Releases',
+  rss: 'RSS Feeds',
+  twitter: 'Twitter',
+  announcements: 'Announcements',
+};
+
+/** Ordered list of tab configs for rendering navigation */
+export const TAB_LIST = [
+  { slug: 'all', label: 'All Sources' },
+  { slug: 'recently-added', label: 'Recently Added' },
+  { slug: 'releases', label: 'Releases' },
+  { slug: 'rss', label: 'RSS Feeds' },
+  { slug: 'twitter', label: 'Twitter' },
+  { slug: 'announcements', label: 'Announcements' },
+] as const;
+
+export function isValidTab(tab: string): boolean {
+  return tab in TAB_SLUGS;
+}
+
 // API base URL - can be overridden via environment variable
 const API_BASE_URL = process.env.NEXT_PUBLIC_NEWS_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -97,7 +149,9 @@ const EMPTY_RESPONSE: NewsListResponse = {
   sources: {},
 };
 
-// Fetch news from API
+// ============ Fetch functions ============
+
+/** Fetch news from API (legacy paginated feed) */
 export async function fetchNews(options?: {
   page?: number;
   limit?: number;
@@ -115,8 +169,8 @@ export async function fetchNews(options?: {
   const url = `${API_BASE_URL}/api/v1/news${params.toString() ? `?${params}` : ''}`;
 
   const response = await fetch(url, {
-    next: { revalidate: 60 }, // Cache for 60 seconds
-    signal: AbortSignal.timeout(15000), // 15s timeout
+    next: { revalidate: 60 },
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!response.ok) {
@@ -125,7 +179,6 @@ export async function fetchNews(options?: {
 
   const data = await response.json();
 
-  // Basic shape validation
   if (!data || typeof data !== 'object') {
     return { ...EMPTY_RESPONSE, error: 'Invalid response from news service' };
   }
@@ -134,6 +187,114 @@ export async function fetchNews(options?: {
   }
 
   return data;
+}
+
+/** Fetch news items for a specific date (flat, no digest grouping) */
+export async function fetchNewsForDate(options: {
+  date: string;
+  source?: string;
+  limit?: number;
+}): Promise<NewsListResponse> {
+  if (!API_BASE_URL) {
+    return { ...EMPTY_RESPONSE, error: 'News service is not configured' };
+  }
+
+  const params = new URLSearchParams();
+  params.set('date', options.date);
+  params.set('limit', (options.limit ?? 200).toString());
+  if (options.source) params.set('source', options.source);
+
+  const url = `${API_BASE_URL}/api/v1/news?${params}`;
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 300 }, // 5 min for date pages
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      return { ...EMPTY_RESPONSE, error: `Failed to fetch news: ${response.statusText}` };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch {
+    return { ...EMPTY_RESPONSE, error: 'Unable to load news right now.' };
+  }
+}
+
+/** Date info returned by /dates endpoint */
+export interface NewsDateInfo {
+  date: string;       // YYYY-MM-DD
+  count: number;
+  sources: Record<string, number>;
+}
+
+/** Fetch available dates with content (for date picker) */
+export async function fetchNewsDates(options?: {
+  source?: string;
+  days?: number;
+}): Promise<NewsDateInfo[]> {
+  if (!API_BASE_URL) return [];
+
+  const params = new URLSearchParams();
+  if (options?.source) params.set('source', options.source);
+  if (options?.days) params.set('days', options.days.toString());
+
+  const url = `${API_BASE_URL}/api/v1/news/dates?${params}`;
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 3600 }, // 1 hour cache
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.dates || [];
+  } catch {
+    return [];
+  }
+}
+
+// Response type for a single digest
+export interface DigestResponse {
+  type: 'digest';
+  id: string;
+  source: string;
+  sourceLabel: string;
+  title: string;
+  date: string;
+  count: number;
+  items: NewsItem[];
+  publishedAt: string;
+  previewImages: string[];
+}
+
+/**
+ * Fetch a specific digest by type slug and date.
+ * Used by digest permalink pages (server-side).
+ */
+export async function fetchDigest(
+  typeSlug: string,
+  date: string,
+): Promise<DigestResponse | null> {
+  if (!API_BASE_URL) return null;
+
+  const url = `${API_BASE_URL}/api/v1/news/digest/${encodeURIComponent(typeSlug)}/${encodeURIComponent(date)}`;
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) return null;
+
+    return response.json();
+  } catch {
+    return null;
+  }
 }
 
 // Empty fallback when API is unavailable

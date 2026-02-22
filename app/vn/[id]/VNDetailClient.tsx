@@ -461,8 +461,8 @@ export default function VNDetailClient({
   return (
     <div className="relative max-w-6xl mx-auto px-4 pt-6 pb-12">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700">
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
             <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing...</span>
           </div>
@@ -473,12 +473,12 @@ export default function VNDetailClient({
       <div className="flex items-center justify-between gap-2 mb-4">
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex-shrink-0"
+          className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="hidden sm:inline text-sm">Back</span>
         </button>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <JitenLink vnId={vn.id} deckId={jitenDeckId} />
           <a
             href={vndbUrl}
@@ -515,7 +515,7 @@ export default function VNDetailClient({
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
         {/* Left column — Cover + Sidebar */}
         <div className="lg:sticky lg:top-20 lg:self-start lg:flex lg:flex-col lg:max-h-[calc(100vh-5rem)] z-10">
-          <div className="max-w-[280px] mx-auto lg:max-w-none lg:mx-0 flex-shrink-0">
+          <div className="max-w-[280px] mx-auto lg:max-w-none lg:mx-0 shrink-0">
             <VNCover
               imageUrl={vn.image_url}
               imageSexual={vn.image_sexual}
@@ -524,7 +524,7 @@ export default function VNDetailClient({
             />
           </div>
           {vn.rating != null && vn.votecount != null && vn.votecount > 0 && (
-            <div className="mt-3 flex-shrink-0">
+            <div className="mt-3 shrink-0">
               <RatingArc rating={vn.rating} votecount={vn.votecount} />
             </div>
           )}
@@ -549,7 +549,7 @@ export default function VNDetailClient({
 
           {/* Sticky tabs — negative margin + padding extends the frosted background
              upward to cover the space-y-4 gap between this and the previous sibling */}
-          <div className="sticky top-16 lg:top-[71px] z-20 -mt-4 pt-4 bg-white dark:bg-[color:var(--background)]">
+          <div className="sticky top-16 lg:top-[71px] z-20 -mt-4 pt-4 bg-white dark:bg-(--background)">
             <VNTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -725,25 +725,25 @@ function LoadingState() {
       </div>
       {/* Title skeleton */}
       <div className="mb-4">
-        <div className="w-3/4 h-7 rounded image-placeholder" />
-        <div className="w-1/2 h-5 rounded image-placeholder mt-1.5" />
+        <div className="w-3/4 h-7 rounded-sm image-placeholder" />
+        <div className="w-1/2 h-5 rounded-sm image-placeholder mt-1.5" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
         {/* Left column: cover + sidebar */}
         <div>
-          <div className="aspect-[3/4] max-w-[280px] mx-auto lg:mx-0 rounded-xl image-placeholder" />
+          <div className="aspect-3/4 max-w-[280px] mx-auto lg:mx-0 rounded-xl image-placeholder" />
           <div className="mt-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-[52px] h-[52px] rounded-full image-placeholder" />
               <div className="space-y-1">
-                <div className="w-20 h-3.5 rounded image-placeholder" />
-                <div className="w-16 h-3 rounded image-placeholder" />
+                <div className="w-20 h-3.5 rounded-sm image-placeholder" />
+                <div className="w-16 h-3 rounded-sm image-placeholder" />
               </div>
             </div>
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i}>
-                <div className="w-16 h-3 rounded image-placeholder mb-1" />
-                <div className="h-4 rounded image-placeholder" style={{ width: `${60 + i * 15}px` }} />
+                <div className="w-16 h-3 rounded-sm image-placeholder mb-1" />
+                <div className="h-4 rounded-sm image-placeholder" style={{ width: `${60 + i * 15}px` }} />
               </div>
             ))}
           </div>
@@ -751,9 +751,9 @@ function LoadingState() {
         {/* Right column: description + tabs + content */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <div className="h-4 w-full rounded image-placeholder" />
-            <div className="h-4 w-full rounded image-placeholder" />
-            <div className="h-4 w-3/4 rounded image-placeholder" />
+            <div className="h-4 w-full rounded-sm image-placeholder" />
+            <div className="h-4 w-full rounded-sm image-placeholder" />
+            <div className="h-4 w-3/4 rounded-sm image-placeholder" />
           </div>
           <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 pb-1">
             {['Overview', 'Stats', 'Language', 'Tags', 'Traits', 'Characters'].map((tab) => (

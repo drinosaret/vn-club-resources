@@ -891,6 +891,19 @@ class NewsSourcesResponse(BaseModel):
     total: int
 
 
+class NewsDateInfo(BaseModel):
+    """Info about a single date's news content."""
+    date: str  # YYYY-MM-DD
+    count: int
+    sources: dict[str, int]  # Per-source counts
+
+
+class NewsDateListResponse(BaseModel):
+    """List of dates that have news content."""
+    dates: list[NewsDateInfo]
+    total_dates: int
+
+
 class AnnouncementCreate(BaseModel):
     """Create a new announcement."""
     title: str

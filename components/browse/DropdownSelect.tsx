@@ -190,7 +190,7 @@ export function DropdownSelect({
         `}
       >
         <span className="truncate">{getDisplayText()}</span>
-        <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
@@ -242,7 +242,7 @@ export function DropdownSelect({
                 `}
               >
                 {/* State indicator */}
-                <span className="w-4 flex-shrink-0">
+                <span className="w-4 shrink-0">
                   {state === 'include' && <Plus className="w-4 h-4 text-blue-500" />}
                   {state === 'exclude' && <Minus className="w-4 h-4 text-red-500" />}
                 </span>

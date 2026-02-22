@@ -48,7 +48,7 @@ export function EntityTable<T>({
                 <tr key={i}>
                   {columns.map((col) => (
                     <td key={col.key} className="px-4 py-3">
-                      <div className="h-4 rounded w-3/4 image-placeholder" />
+                      <div className="h-4 rounded-sm w-3/4 image-placeholder" />
                     </td>
                   ))}
                 </tr>

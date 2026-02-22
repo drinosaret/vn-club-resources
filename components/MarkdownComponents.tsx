@@ -13,7 +13,7 @@ const getTextFromChildren = (children: ReactNode): string => {
     .map((child) => {
       if (typeof child === 'string') return child;
       if (typeof child === 'number') return String(child);
-      if (isValidElement(child) && child.props.children) {
+      if (isValidElement<{ children?: ReactNode }>(child) && child.props.children) {
         return getTextFromChildren(child.props.children);
       }
       return '';
@@ -113,8 +113,8 @@ export const markdownComponents: Components = {
 
   // Images with lightbox support and lazy loading
   img: (props) => {
-    const src = props.src || '';
-    const alt = props.alt || '';
+    const src = String(props.src || '');
+    const alt = String(props.alt || '');
     const hasInlineStyle = props.style && Object.keys(props.style).length > 0;
 
     // If inline styles are provided (from raw HTML), render a plain img
@@ -125,7 +125,7 @@ export const markdownComponents: Components = {
         <img
           src={src}
           alt={alt}
-          className="rounded-lg shadow-sm mx-auto"
+          className="rounded-lg shadow-xs mx-auto"
           decoding="async"
           style={props.style}
         />
@@ -137,7 +137,7 @@ export const markdownComponents: Components = {
       <LazyImage
         src={src}
         alt={alt}
-        className="rounded-lg shadow-sm mx-auto my-4"
+        className="rounded-lg shadow-xs mx-auto my-4"
         style={{ maxWidth: '600px', width: '100%' }}
       />
     );
@@ -242,7 +242,7 @@ export const markdownComponents: Components = {
 
     if (isInline) {
       return (
-        <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono text-pink-600 dark:text-pink-400 break-all">
+        <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-sm text-sm font-mono text-pink-600 dark:text-pink-400 break-all">
           {props.children}
         </code>
       );

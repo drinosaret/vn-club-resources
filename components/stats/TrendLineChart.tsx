@@ -110,7 +110,7 @@ export function TrendLineChart<T extends Record<string, any>>({
         </div>
         {headerRight}
       </div>
-      <ResponsiveContainer width="100%" height={height} className="[&_svg]:outline-none [&_svg_*]:outline-none [&_svg]:[-webkit-tap-highlight-color:transparent]">
+      <ResponsiveContainer width="100%" height={height} className="[&_svg]:outline-hidden [&_svg_*]:outline-hidden [&_svg]:[-webkit-tap-highlight-color:transparent]">
         <ChartComponent data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id={`gradient-${dataKey as string}`} x1="0" y1="0" x2="0" y2="1">

@@ -32,7 +32,7 @@ function QuickLinkCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col p-5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-[box-shadow,transform] duration-300"
+      className="group flex flex-col p-5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-[box-shadow,transform] duration-300"
     >
       <div className="flex items-start justify-between mb-3">
         <div className={`p-3 rounded-xl ${iconBg}`}>

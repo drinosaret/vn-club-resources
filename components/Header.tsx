@@ -49,11 +49,11 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-50">
+    <header className="bg-white dark:bg-gray-900 shadow-xs border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-50">
       <nav className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="flex justify-between items-center gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-1.5 sm:space-x-2 group flex-shrink-0">
+          <Link href="/" className="flex items-center space-x-1.5 sm:space-x-2 group shrink-0">
             <Image
               src="/assets/hikaru-icon2.webp"
               alt="Hikaru"
@@ -62,7 +62,7 @@ export default function Header() {
               className="w-7 h-7 sm:w-8 sm:h-8"
             />
             <div className="flex items-center gap-0.5 sm:gap-1">
-              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+              <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
                 VN
               </span>
               <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">

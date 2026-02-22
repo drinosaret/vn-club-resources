@@ -36,7 +36,7 @@ export function VNSimilar({ similar, isLoading, error }: VNSimilarProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -46,8 +46,8 @@ export function VNSimilar({ similar, isLoading, error }: VNSimilarProps) {
         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {[...Array(5)].map((_, i) => (
             <div key={i}>
-              <div className="aspect-[3/4] rounded-lg mb-2 image-placeholder" />
-              <div className="h-4 rounded w-3/4 image-placeholder" />
+              <div className="aspect-3/4 rounded-lg mb-2 image-placeholder" />
+              <div className="h-4 rounded-sm w-3/4 image-placeholder" />
             </div>
           ))}
         </div>
@@ -57,7 +57,7 @@ export function VNSimilar({ similar, isLoading, error }: VNSimilarProps) {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
         <div className="flex items-center gap-2 mb-3">
           <Users className="w-5 h-5 text-gray-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -77,7 +77,7 @@ export function VNSimilar({ similar, isLoading, error }: VNSimilarProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
       <div className="flex items-center gap-2 mb-4">
         <Users className="w-5 h-5 text-primary-500" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -126,7 +126,7 @@ function SimilarVNCard({ vn }: { vn: SimilarVN }) {
       imageSexual={vn.image_sexual}
       rating={vn.rating}
       badge={
-        <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-purple-600/90 text-white text-xs rounded flex items-center gap-1">
+        <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-purple-600/90 text-white text-xs rounded-sm flex items-center gap-1">
           {vn.user_count ? (
             <>
               <Users className="w-3 h-3" />

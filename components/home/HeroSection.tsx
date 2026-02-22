@@ -23,7 +23,7 @@ const heroResponsiveStyles = `
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
+    <section className="relative overflow-hidden bg-linear-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
       <style dangerouslySetInnerHTML={{ __html: heroResponsiveStyles }} />
 
       {/* Background decoration orbs */}
@@ -41,7 +41,7 @@ export function HeroSection() {
             </h1>
 
             <div className="mb-4 select-none">
-              <span className="text-3xl md:text-4xl font-black tracking-wider bg-gradient-to-br from-white via-primary-200 to-white bg-clip-text text-transparent">
+              <span className="text-3xl md:text-4xl font-black tracking-wider bg-linear-to-br from-white via-primary-200 to-white bg-clip-text text-transparent">
                 魑魅魍魎
               </span>
             </div>

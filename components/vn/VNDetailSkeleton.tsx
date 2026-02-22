@@ -18,28 +18,28 @@ export function VNDetailSkeleton() {
 
       {/* Title skeleton */}
       <div className="mb-4">
-        <div className="w-3/4 h-7 rounded image-placeholder" />
-        <div className="w-1/2 h-5 rounded image-placeholder mt-1.5" />
+        <div className="w-3/4 h-7 rounded-sm image-placeholder" />
+        <div className="w-1/2 h-5 rounded-sm image-placeholder mt-1.5" />
       </div>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
         {/* Left column: cover + sidebar */}
         <div>
-          <div className="aspect-[3/4] max-w-[280px] mx-auto lg:mx-0 rounded-xl image-placeholder" />
+          <div className="aspect-3/4 max-w-[280px] mx-auto lg:mx-0 rounded-xl image-placeholder" />
           {/* Sidebar skeleton */}
           <div className="mt-4 space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-[52px] h-[52px] rounded-full image-placeholder" />
               <div className="space-y-1">
-                <div className="w-20 h-3.5 rounded image-placeholder" />
-                <div className="w-16 h-3 rounded image-placeholder" />
+                <div className="w-20 h-3.5 rounded-sm image-placeholder" />
+                <div className="w-16 h-3 rounded-sm image-placeholder" />
               </div>
             </div>
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i}>
-                <div className="w-16 h-3 rounded image-placeholder mb-1" />
-                <div className="h-4 rounded image-placeholder" style={{ width: `${60 + i * 15}px` }} />
+                <div className="w-16 h-3 rounded-sm image-placeholder mb-1" />
+                <div className="h-4 rounded-sm image-placeholder" style={{ width: `${60 + i * 15}px` }} />
               </div>
             ))}
           </div>
@@ -49,9 +49,9 @@ export function VNDetailSkeleton() {
         <div className="space-y-4">
           {/* Description skeleton */}
           <div className="space-y-2">
-            <div className="h-4 w-full rounded image-placeholder" />
-            <div className="h-4 w-full rounded image-placeholder" />
-            <div className="h-4 w-3/4 rounded image-placeholder" />
+            <div className="h-4 w-full rounded-sm image-placeholder" />
+            <div className="h-4 w-full rounded-sm image-placeholder" />
+            <div className="h-4 w-3/4 rounded-sm image-placeholder" />
           </div>
 
           {/* Tab bar skeleton */}

@@ -95,7 +95,7 @@ export default async function Home() {
         <ExploreSection guides={guides} />
 
         {/* 5. Community CTA */}
-        <section className="bg-gradient-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">
+        <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">
           <div className="container mx-auto px-4 max-w-4xl text-center">
             <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">
               Get Involved

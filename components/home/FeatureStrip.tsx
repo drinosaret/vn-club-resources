@@ -7,7 +7,7 @@ interface FeatureStripProps {
 const backgroundClasses = {
   white: 'bg-white dark:bg-gray-950',
   gray: 'bg-gray-50 dark:bg-gray-900/50',
-  gradient: 'bg-gradient-to-r from-primary-50/30 to-transparent dark:from-primary-900/10 dark:to-transparent',
+  gradient: 'bg-linear-to-r from-primary-50/30 to-transparent dark:from-primary-900/10 dark:to-transparent',
 };
 
 export function FeatureStrip({

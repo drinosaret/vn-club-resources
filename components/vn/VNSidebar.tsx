@@ -88,7 +88,7 @@ export function VNSidebar({
               {(showAllPlatforms ? platforms : platforms.slice(0, 5)).map(p => (
                 <span
                   key={p}
-                  className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded"
+                  className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded-sm"
                 >
                   {platformNames[p] || p}
                 </span>
@@ -112,7 +112,7 @@ export function VNSidebar({
               {(showAllLanguages ? languages : languages.slice(0, 8)).map(lang => (
                 <span
                   key={lang}
-                  className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded uppercase"
+                  className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded-sm uppercase"
                 >
                   {lang}
                 </span>

@@ -38,7 +38,7 @@ export function RelatedPages({ categories }: RelatedPagesProps) {
                     href={link.url}
                     className="group flex items-start gap-2 text-sm hover:bg-white dark:hover:bg-gray-800 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
                   >
-                    <ArrowRight className="w-4 h-4 mt-0.5 text-primary-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="w-4 h-4 mt-0.5 text-primary-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-primary-600 dark:text-primary-400 group-hover:underline">
                         {link.text}

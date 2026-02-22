@@ -33,7 +33,7 @@ export function VNCard({ id, title, titleJp, titleRomaji, imageUrl, imageSexual,
       className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
-      <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
+      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
         {imageUrl ? (
           <>
             <div className={shimmerClass} />
@@ -56,7 +56,7 @@ export function VNCard({ id, title, titleJp, titleRomaji, imageUrl, imageSexual,
         )}
 
         {rating != null && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded">
+          <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded-sm">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
             {rating.toFixed(1)}
           </div>

@@ -74,7 +74,7 @@ export function AgeRatingChart({ distribution, entityId, entityType, entityName,
         </div>
         <div className="flex items-center gap-4 text-xs text-gray-400">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-gradient-to-t from-gray-400 to-gray-300 dark:from-gray-600 dark:to-gray-500 rounded-sm" />
+            <div className="w-3 h-3 bg-linear-to-t from-gray-400 to-gray-300 dark:from-gray-600 dark:to-gray-500 rounded-xs" />
             <span># Novels</span>
           </div>
           <div className="flex items-center gap-1">
@@ -121,13 +121,13 @@ export function AgeRatingChart({ distribution, entityId, entityType, entityName,
                 <div
                   className={`w-full rounded-t transition-colors relative ${
                     isPeak
-                      ? 'bg-gradient-to-t from-primary-600 to-primary-400'
-                      : 'bg-gradient-to-t from-gray-400 to-gray-300 dark:from-gray-600 dark:to-gray-500 group-hover:from-gray-500 group-hover:to-gray-400 dark:group-hover:from-gray-500 dark:group-hover:to-gray-400'
+                      ? 'bg-linear-to-t from-primary-600 to-primary-400'
+                      : 'bg-linear-to-t from-gray-400 to-gray-300 dark:from-gray-600 dark:to-gray-500 group-hover:from-gray-500 group-hover:to-gray-400 dark:group-hover:from-gray-500 dark:group-hover:to-gray-400'
                   } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
                   style={{ height: `${Math.max(barHeight, d.count > 0 ? 4 : 0)}px` }}
                 >
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
                     <div className="flex flex-col items-center">
                       <span>
                         {d.label}: {d.count} VNs

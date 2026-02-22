@@ -20,7 +20,7 @@ function GuideCard({ guide }: GuideCardProps) {
       href={`/${guide.slug}`}
       className="group relative overflow-hidden rounded-xl"
     >
-      <div className="relative aspect-[4/3]">
+      <div className="relative aspect-4/3">
         {guide.image ? (
           <Image
             src={guide.image}
@@ -31,10 +31,10 @@ function GuideCard({ guide }: GuideCardProps) {
             sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-400 to-gray-600" />
+          <div className="absolute inset-0 bg-linear-to-br from-gray-400 to-gray-600" />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
 
         <div className="absolute bottom-0 left-0 right-0 p-2.5">
           <h4 className="text-xs sm:text-sm font-semibold text-white line-clamp-1">

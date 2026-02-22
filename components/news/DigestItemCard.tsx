@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { X, ExternalLink, Calendar, Building2, ImageOff } from 'lucide-react';
+import { ExternalLink, Calendar, Building2, ImageOff } from 'lucide-react';
 import type { NewsItem } from '@/lib/sample-news-data';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -42,6 +40,13 @@ function extractString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+interface ReleaseEdition {
+  id: string;
+  title: string;
+  alttitle?: string;
+  platforms?: string[];
+}
+
 function extractReleases(value: unknown): ReleaseEdition[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is ReleaseEdition => {
@@ -54,87 +59,7 @@ function extractReleases(value: unknown): ReleaseEdition[] {
   });
 }
 
-interface DigestModalProps {
-  title: string;
-  items: NewsItem[];
-  onClose: () => void;
-}
-
-export function DigestModal({ title, items, onClose }: DigestModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // Close on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
-
-  // Focus management: focus modal on mount, restore focus on unmount
-  useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    modalRef.current?.focus();
-    return () => {
-      previouslyFocused?.focus();
-    };
-  }, []);
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="digest-modal-title">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div ref={modalRef} tabIndex={-1} className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden outline-none">
-        {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
-          <h2 id="digest-modal-title" className="text-xl font-bold text-gray-900 dark:text-white">
-            {title}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(85vh-70px)] p-4 sm:p-6">
-          <div className="grid gap-4">
-            {items.map((item) => (
-              <DigestItemCard key={item.id} item={item} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-// Type for release editions
-interface ReleaseEdition {
-  id: string;
-  title: string;
-  alttitle?: string;
-  platforms?: string[];
-}
-
-function DigestItemCard({ item }: { item: NewsItem }) {
+export function DigestItemCard({ item }: { item: NewsItem }) {
   const hasValidImage = item.imageUrl && !item.imageIsNsfw;
   const { preference } = useTitlePreference();
 
@@ -165,7 +90,7 @@ function DigestItemCard({ item }: { item: NewsItem }) {
           href={safeUrl || '#'}
           target="_blank"
           rel="noopener noreferrer"
-          className="relative w-16 h-[5.5rem] sm:w-24 sm:h-32 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+          className="relative w-16 h-22 sm:w-24 sm:h-32 shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
         >
           {hasValidImage ? (
             <Image

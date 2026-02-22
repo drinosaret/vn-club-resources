@@ -746,6 +746,7 @@ class NewsItem(Base):
         Index("idx_news_source", "source"),
         Index("idx_news_published", published_at.desc()),
         Index("idx_news_hidden", "is_hidden"),
+        Index("idx_news_source_published", "source", published_at.desc()),
     )
 
 

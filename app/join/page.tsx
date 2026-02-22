@@ -94,14 +94,14 @@ export default function JoinPage() {
       />
       <div className="w-full">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
+        <section className="relative overflow-hidden bg-linear-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
             <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-primary-400/10 rounded-full blur-3xl" />
           </div>
 
           <div className="relative container mx-auto px-4 py-16 md:py-24 max-w-4xl text-center">
-            <div className="inline-flex items-center justify-center w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/15 backdrop-blur-sm mb-6 overflow-hidden">
+            <div className="inline-flex items-center justify-center w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/15 backdrop-blur-xs mb-6 overflow-hidden">
               <Image
                 src="/assets/servericon.webp"
                 alt="VN Club Resurrection"
@@ -143,7 +143,7 @@ export default function JoinPage() {
               {features.map((feature) => (
                 <div
                   key={feature.title}
-                  className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                  className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                 >
                   <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
                     <feature.icon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
@@ -161,7 +161,7 @@ export default function JoinPage() {
         </section>
 
         {/* Closing CTA */}
-        <section className="bg-gradient-to-br from-primary-600 to-primary-700 text-white py-12 md:py-16">
+        <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-16">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
               Ready to join?

@@ -35,7 +35,7 @@ export function ExploreSection({ guides }: ExploreSectionProps) {
             </div>
             <Link
               href="/guide/"
-              className="inline-flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium flex-shrink-0"
+              className="inline-flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium shrink-0"
             >
               View all guides
               <ChevronRight className="w-4 h-4 ml-1" />

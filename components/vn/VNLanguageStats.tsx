@@ -387,7 +387,7 @@ function TextProfile({ deck }: { deck: JitenDeckDto }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       {/* Reading style header */}
-      <div className={`px-4 sm:px-5 py-4 border-b bg-gradient-to-r ${style.bgClass}`}>
+      <div className={`px-4 sm:px-5 py-4 border-b bg-linear-to-r ${style.bgClass}`}>
         <div className="flex items-center gap-2.5 mb-1">
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -474,7 +474,7 @@ function DifficultyFlow({ segments, average }: { segments: Array<{ segment: numb
         </p>
       </div>
 
-      <ResponsiveContainer width="100%" height={200} className="[&_svg]:outline-none [&_svg_*]:outline-none [&_svg]:[-webkit-tap-highlight-color:transparent]">
+      <ResponsiveContainer width="100%" height={200} className="[&_svg]:outline-hidden [&_svg_*]:outline-hidden [&_svg]:[-webkit-tap-highlight-color:transparent]">
         <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="peakRangeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -599,7 +599,7 @@ function CoverageCurveChart({ data }: { data: JitenCoveragePoint[] }) {
           How much of the text you&apos;ll understand based on vocabulary size
         </p>
       </div>
-      <ResponsiveContainer width="100%" height={240} className="[&_svg]:outline-none [&_svg_*]:outline-none [&_svg]:[-webkit-tap-highlight-color:transparent]">
+      <ResponsiveContainer width="100%" height={240} className="[&_svg]:outline-hidden [&_svg_*]:outline-hidden [&_svg]:[-webkit-tap-highlight-color:transparent]">
         <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="coverageGrad" x1="0" y1="0" x2="0" y2="1">
@@ -778,7 +778,7 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const retryCountRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
@@ -815,7 +815,7 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
       href={`/vn/${vnId}/`}
       className="group block rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 bg-gray-50 dark:bg-gray-700/50 transition-shadow"
     >
-      <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700">
+      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
         {showImage && !imageLoaded && (
           <div className="absolute inset-0 image-placeholder" />
         )}
@@ -836,7 +836,7 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
           </div>
         )}
         <div
-          className="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-white text-[10px] font-medium rounded z-10"
+          className="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-white text-[10px] font-medium rounded-sm z-10"
           style={{ backgroundColor: badgeColor }}
         >
           {badgeLabel}
@@ -918,12 +918,12 @@ function LanguageStatsSkeleton() {
       <div className="h-28 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80" />
       {/* Radar chart */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80">
-        <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700 mb-4" />
-        <div className="h-64 rounded bg-gray-100 dark:bg-gray-700/40" />
+        <div className="h-4 w-24 rounded-sm bg-gray-200 dark:bg-gray-700 mb-4" />
+        <div className="h-64 rounded-sm bg-gray-100 dark:bg-gray-700/40" />
       </div>
       {/* Heatmap */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80">
-        <div className="h-4 w-36 rounded bg-gray-200 dark:bg-gray-700 mb-4" />
+        <div className="h-4 w-36 rounded-sm bg-gray-200 dark:bg-gray-700 mb-4" />
         <div className="h-10 rounded-lg bg-gray-100 dark:bg-gray-700/40" />
       </div>
       {/* Coverage curve */}

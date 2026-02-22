@@ -148,7 +148,7 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-sm px-2 py-1 text-gray-700 dark:text-gray-300 text-sm focus:outline-hidden focus:ring-1 focus:ring-primary-500"
           >
             <option value="weighted">Weighted</option>
             <option value="count">Count</option>
@@ -171,7 +171,7 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-none">
           <button
             onClick={() => setTypeFilter('all')}
-            className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
+            className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap shrink-0 ${
               typeFilter === 'all'
                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -183,7 +183,7 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
             <button
               key={type}
               onClick={() => setTypeFilter(type)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap flex-shrink-0 ${
+              className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap shrink-0 ${
                 typeFilter === type
                   ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -235,7 +235,7 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
                     <Link
                       key={pref.id}
                       href={`/stats/producer/${pref.id}`}
-                      className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors"
+                      className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-sm hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors"
                     >
                       {getEntityDisplayName(pref, preference)}
                     </Link>
@@ -253,7 +253,7 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
                     <Link
                       key={pref.id}
                       href={`/stats/producer/${pref.id}`}
-                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
+                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-sm hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
                     >
                       {getEntityDisplayName(pref, preference)}
                     </Link>
@@ -300,12 +300,12 @@ function DeveloperBar({ developer, maxValue, sortMode, preference }: { developer
           </Link>
           {/* Hide type badge on mobile */}
           {developer.type && (
-            <span className="hidden sm:inline text-xs text-gray-400 flex-shrink-0">
+            <span className="hidden sm:inline text-xs text-gray-400 shrink-0">
               {developer.type === 'co' ? 'Company' : developer.type === 'in' ? 'Individual' : 'Group'}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 text-sm flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 text-sm shrink-0">
           {/* On mobile: only show primary metric. On desktop: show all */}
           <Link
             href={`/browse?developer=${encodeURIComponent(developer.id)}&tag_names=${encodeURIComponent(`developer:${developer.id}:${displayName}`)}`}
@@ -339,7 +339,7 @@ function DeveloperBar({ developer, maxValue, sortMode, preference }: { developer
       </div>
       <div className="h-2.5 bg-gray-100 dark:bg-gray-700/60 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-400 rounded-full transition-all duration-300"
+          className="h-full bg-linear-to-r from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-400 rounded-full transition-all duration-300"
           style={{ width: `${Math.min(100, width)}%` }}
         />
       </div>

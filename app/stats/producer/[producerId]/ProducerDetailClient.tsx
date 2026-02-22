@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, use, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import {
   ArrowLeft, ExternalLink, Building2, Star, Users, BarChart3,
   AlertCircle, RefreshCw, BookOpen, ChevronRight
@@ -28,18 +28,8 @@ import { sortTagsByWeight } from '@/lib/weighted-score-utils';
 import { parseBBCode } from '@/lib/bbcode';
 import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
 import { NSFWImage } from '@/components/NSFWImage';
-import { useImageFade } from '@/hooks/useImageFade';
-
-/** Preload VN cover images into browser cache using Image() objects */
-function preloadVNImages(vns: Array<{ image_url?: string | null; id: string }>) {
-  vns.forEach(vn => {
-    if (vn.image_url) {
-      const img = new Image();
-      const url = getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id });
-      if (url) img.src = url;
-    }
-  });
-}
+import { useImageRetry } from '@/hooks/useImageRetry';
+import { preloadVNImages, addRetryKey } from '@/lib/preload-images';
 
 // Human-readable type labels
 const typeLabels: Record<string, string> = {
@@ -60,7 +50,6 @@ export default function ProducerDetailPage({ params }: PageProps) {
   const producerId = resolvedParams.producerId;
 
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const tabFromUrl = searchParams.get('tab') as TabId | null;
   const pageFromUrl = searchParams.get('page');
@@ -86,18 +75,18 @@ export default function ProducerDetailPage({ params }: PageProps) {
   const { preference } = useTitlePreference();
 
   const updateUrl = useCallback((tab: TabId, page: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === 'summary') params.delete('tab');
-    else params.set('tab', tab);
-    if (page <= 1) params.delete('page');
-    else params.set('page', String(page));
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(newUrl, { scroll: false });
-  }, [pathname, router, searchParams]);
+    const params = new URLSearchParams();
+    if (tab !== 'summary') params.set('tab', tab);
+    if (page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(window.history.state, '', newUrl);
+  }, [pathname]);
 
   // Cache previous VNs for smooth loading overlay
   const previousVnsRef = useRef<TagVN[]>([]);
   const prefetchCacheRef = useRef<Map<string, { vns: TagVN[]; page: number; pages: number; total: number }>>(new Map());
+  const resultsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (vns.length > 0) previousVnsRef.current = vns;
   }, [vns]);
@@ -105,13 +94,6 @@ export default function ProducerDetailPage({ params }: PageProps) {
   useEffect(() => {
     loadInitialData();
   }, [producerId]);
-
-  // Set page title
-  useEffect(() => {
-    if (stats) {
-      document.title = `${getEntityDisplayName(stats.producer, preference)} | VN Club`;
-    }
-  }, [stats, preference]);
 
   const handleRefresh = async () => {
     const now = Date.now();
@@ -274,6 +256,23 @@ export default function ProducerDetailPage({ params }: PageProps) {
     updateUrl(activeTab, 1);
   }, [activeTab, spoilerFilter, updateUrl]);
 
+  const handlePrefetchPage = useCallback((page: number) => {
+    const cacheKey = `${page}-${spoilerFilter}-${languageFilter}`;
+    if (prefetchCacheRef.current.has(cacheKey)) {
+      const cached = prefetchCacheRef.current.get(cacheKey)!;
+      preloadVNImages(cached.vns);
+      return;
+    }
+    vndbStatsApi.getProducerVNsWithTags(producerId, page, 24, 'rating', spoilerFilter, languageFilter === 'all' ? undefined : languageFilter)
+      .then(result => {
+        if (result) {
+          prefetchCacheRef.current.set(cacheKey, result);
+          preloadVNImages(result.vns);
+        }
+      })
+      .catch(() => {});
+  }, [producerId, spoilerFilter, languageFilter]);
+
   if (isLoading) {
     return <LoadingScreen title="Loading developer stats..." subtitle="Crunching VNDB data for this developer" />;
   }
@@ -289,8 +288,8 @@ export default function ProducerDetailPage({ params }: PageProps) {
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700">
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
             <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing...</span>
           </div>
@@ -310,7 +309,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
             {/* Breadcrumb */}
             <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-2 flex-wrap">
               <Link href="/browse?tab=producers" className="hover:text-primary-600 dark:hover:text-primary-400">Producers</Link>
-              <ChevronRight className="w-3 h-3 flex-shrink-0" />
+              <ChevronRight className="w-3 h-3 shrink-0" />
               <span className="text-gray-700 dark:text-gray-300">{producerDisplayName}</span>
             </div>
             <div className="flex items-center gap-2 mb-1">
@@ -319,7 +318,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
                 {producerDisplayName}
               </h1>
               {producer.type && (
-                <span className="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                <span className="px-2 py-0.5 text-xs rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
                   {typeLabels[producer.type] || producer.type}
                 </span>
               )}
@@ -338,7 +337,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
               View on VNDB <ExternalLink className="w-3 h-3" />
             </a>
             {producer.description && (
-              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl break-words">
+              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl wrap-break-word">
                 <p>
                   {parseBBCode(
                     !showFullDescription && producer.description.length > 300
@@ -463,7 +462,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
 
       {/* Novels Tab */}
       {activeTab === 'novels' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div ref={resultsRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
           <div className="flex flex-wrap justify-end gap-2 mb-4">
             <div className="flex flex-wrap items-center gap-2">
               <SpoilerFilter value={spoilerFilter} onChange={handleSpoilerChange} />
@@ -477,7 +476,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
               return displayVns.length > 0 ? (
                 <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
                   {vnsPages > 1 && (
-                    <Pagination currentPage={vnsPage} totalPages={vnsPages} onPageChange={handlePageChange} />
+                    <Pagination currentPage={vnsPage} totalPages={vnsPages} onPageChange={handlePageChange} onPrefetchPage={handlePrefetchPage} totalItems={vnsTotal} itemsPerPage={24} />
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {displayVns.map((vn) => (
@@ -485,7 +484,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
                     ))}
                   </div>
                   {vnsPages > 1 && (
-                    <Pagination currentPage={vnsPage} totalPages={vnsPages} onPageChange={handlePageChange} scrollToTop={true} />
+                    <Pagination currentPage={vnsPage} totalPages={vnsPages} onPageChange={handlePageChange} onPrefetchPage={handlePrefetchPage} totalItems={vnsTotal} itemsPerPage={24} scrollTargetRef={resultsRef} />
                   )}
                 </div>
               ) : !isLoadingTab ? (
@@ -500,11 +499,11 @@ export default function ProducerDetailPage({ params }: PageProps) {
                     {Array.from({ length: 12 }).map((_, i) => (
                       <div key={i} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                         <div className="flex gap-3">
-                          <div className="w-16 h-20 rounded image-placeholder" />
+                          <div className="w-16 h-20 rounded-sm image-placeholder" />
                           <div className="flex-1 space-y-2">
-                            <div className="h-4 w-3/4 rounded image-placeholder" />
-                            <div className="h-3 w-1/2 rounded image-placeholder" />
-                            <div className="h-3 w-1/3 rounded image-placeholder" />
+                            <div className="h-4 w-3/4 rounded-sm image-placeholder" />
+                            <div className="h-3 w-1/2 rounded-sm image-placeholder" />
+                            <div className="h-3 w-1/3 rounded-sm image-placeholder" />
                           </div>
                         </div>
                       </div>
@@ -570,24 +569,26 @@ function TabButton({
 
 function VNCard({ vn }: { vn: TagVN }) {
   const { preference } = useTitlePreference();
-  const { onLoad, shimmerClass, fadeClass } = useImageFade();
+  const { loaded, error, retryKey, onLoad, onError } = useImageRetry();
   const displayTitle = getDisplayTitle({ title: vn.title, title_jp: vn.title_jp || vn.alttitle, title_romaji: vn.title_romaji }, preference);
+  const showImage = vn.image_url && !error;
 
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
     >
-      <div className="w-16 h-20 flex-shrink-0 relative overflow-hidden rounded">
-        <div className={shimmerClass} />
-        {vn.image_url ? (
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+        {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
+        {showImage ? (
           <NSFWImage
-            src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
+            src={addRetryKey(getProxiedImageUrl(vn.image_url!, { width: 128, vnId: vn.id }) || '', retryKey)}
             alt={displayTitle}
             vnId={vn.id}
             imageSexual={vn.image_sexual}
-            className={`w-full h-full object-cover ${fadeClass}`}
+            className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={onLoad}
+            onError={onError}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
@@ -622,7 +623,7 @@ function VNCard({ vn }: { vn: TagVN }) {
             {sortTagsByWeight(vn.tags).slice(0, 3).map((t) => (
               <span
                 key={t.id}
-                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded"
+                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm"
               >
                 {t.name}
               </span>
@@ -645,7 +646,7 @@ function SimilarProducerRow({ producer }: { producer: SimilarProducerResult }) {
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Building2 className="w-4 h-4 text-primary-500 flex-shrink-0" />
+        <Building2 className="w-4 h-4 text-primary-500 shrink-0" />
         <div className="min-w-0">
           <span className="font-medium text-gray-900 dark:text-white truncate">{displayName}</span>
           {producer.type && (

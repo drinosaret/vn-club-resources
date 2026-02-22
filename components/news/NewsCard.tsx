@@ -54,7 +54,7 @@ export function NewsCard({ item }: NewsCardProps) {
       className="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 group h-full"
     >
       {/* Cover Image - Always present for consistent height */}
-      <div className="relative w-full h-40 flex-shrink-0">
+      <div className="relative w-full h-40 shrink-0">
         {/* Shimmer placeholder - visible until image loads */}
         {hasValidImage && (
           <div className={shimmerClass} />
@@ -71,7 +71,7 @@ export function NewsCard({ item }: NewsCardProps) {
             unoptimized
           />
         ) : (
-          <div className={`absolute inset-0 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden`}>
+          <div className={`absolute inset-0 bg-linear-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden`}>
             {/* Decorative circles */}
             <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 dark:bg-white/5" />
             <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/30 dark:bg-white/5" />
@@ -80,11 +80,11 @@ export function NewsCard({ item }: NewsCardProps) {
         )}
       </div>
 
-      <div className="p-4 flex flex-col flex-grow">
+      <div className="p-4 flex flex-col grow">
         {/* Source Badge & Time */}
         <div className="flex items-center gap-2 mb-2">
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${sourceConfig?.color} ${sourceConfig?.darkColor}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium ${sourceConfig?.color} ${sourceConfig?.darkColor}`}
           >
             {item.sourceLabel}
           </span>
@@ -103,7 +103,7 @@ export function NewsCard({ item }: NewsCardProps) {
 
         {/* Summary - fills remaining space */}
         {item.summary && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 flex-grow">
+          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 grow">
             {item.summary}
           </p>
         )}

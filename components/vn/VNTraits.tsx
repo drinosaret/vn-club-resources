@@ -150,7 +150,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden ${isReady ? '' : 'opacity-0'}`}
+      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xs overflow-hidden ${isReady ? '' : 'opacity-0'}`}
     >
       {isEmpty ? (
         <div className="p-6">
@@ -175,7 +175,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
                 <button
                   onClick={() => onShowSexualChange(!showSexual)}
                   aria-pressed={showSexual}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
                     showSexual
                       ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -189,7 +189,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
                 <button
                   onClick={() => onShowSpoilersChange(!showSpoilers)}
                   aria-pressed={showSpoilers}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
                     showSpoilers
                       ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'

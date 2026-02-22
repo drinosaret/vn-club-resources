@@ -80,7 +80,7 @@ export function TagsSection({ tags, expanded = false }: TagsSectionProps) {
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-2 py-1 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-sm px-2 py-1 text-gray-700 dark:text-gray-300 text-sm focus:outline-hidden focus:ring-1 focus:ring-primary-500"
           >
             <option value="weighted">Weighted</option>
             <option value="count">Count</option>
@@ -138,7 +138,7 @@ export function TagsSection({ tags, expanded = false }: TagsSectionProps) {
                     <Link
                       key={pref.tag_id}
                       href={`/stats/tag/g${pref.tag_id}`}
-                      className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors"
+                      className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-sm hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors"
                     >
                       {pref.name}
                     </Link>
@@ -156,7 +156,7 @@ export function TagsSection({ tags, expanded = false }: TagsSectionProps) {
                     <Link
                       key={pref.tag_id}
                       href={`/stats/tag/g${pref.tag_id}`}
-                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
+                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-sm hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
                     >
                       {pref.name}
                     </Link>
@@ -227,7 +227,7 @@ function TagBar({ tag, maxValue, sortMode }: { tag: TagStats; maxValue: number; 
       </div>
       <div className="h-2.5 bg-gray-100 dark:bg-gray-700/60 rounded-full overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-400 rounded-full transition-all duration-300"
+          className="h-full bg-linear-to-r from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-400 rounded-full transition-all duration-300"
           style={{ width: `${Math.min(100, width)}%` }}
         />
       </div>

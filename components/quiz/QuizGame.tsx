@@ -196,7 +196,7 @@ export function QuizGame() {
                     spellCheck={false}
                     placeholder="Type romaji..."
                     aria-label="Type the romaji reading for the displayed kana character"
-                    className="w-full text-center text-2xl px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-center text-2xl px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     onClick={handleSubmit}

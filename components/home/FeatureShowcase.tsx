@@ -23,7 +23,7 @@ function BentoCard({ href, children, className = '' }: BentoCardProps) {
   return (
     <Link
       href={href}
-      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-300 ${className}`}
+      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-300 ${className}`}
     >
       {children}
     </Link>
@@ -63,7 +63,7 @@ function MiniStatsPreview() {
         {bars.map((height, i) => (
           <div
             key={i}
-            className="w-8 md:w-10 rounded-t-md bg-gradient-to-t from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-500 opacity-80 group-hover:opacity-100 transition-opacity duration-500"
+            className="w-8 md:w-10 rounded-t-md bg-linear-to-t from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-500 opacity-80 group-hover:opacity-100 transition-opacity duration-500"
             style={{
               height: `${height}%`,
               transitionDelay: `${i * 50}ms`,
@@ -85,7 +85,7 @@ function ToolsPreview() {
   return (
     <div className="h-full p-5 flex flex-col">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+        <div className="w-10 h-10 shrink-0 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
           <Wrench className="w-5 h-5 text-amber-600 dark:text-amber-400" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
@@ -118,7 +118,7 @@ function QuizPreview() {
   return (
     <div className="h-full p-5 flex flex-col">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+        <div className="w-10 h-10 shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
           <Languages className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
@@ -140,7 +140,7 @@ function RecommendationsPreview() {
   return (
     <div className="h-full p-5 pb-10 flex flex-col">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+        <div className="w-10 h-10 shrink-0 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
           <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
@@ -160,7 +160,7 @@ function NewsPreview() {
   return (
     <div className="h-full p-5 pb-10 flex flex-col">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+        <div className="w-10 h-10 shrink-0 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
           <Newspaper className="w-5 h-5 text-rose-600 dark:text-rose-400" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">

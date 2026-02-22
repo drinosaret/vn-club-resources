@@ -74,9 +74,9 @@ export function AdmonitionBlock({ type, title, children }: AdmonitionBlockProps)
   const { Icon } = config;
 
   return (
-    <div className={`rounded-xl bg-gradient-to-r ${config.gradient} border ${config.border} overflow-hidden`}>
+    <div className={`rounded-xl bg-linear-to-r ${config.gradient} border ${config.border} overflow-hidden`}>
       <div className="flex gap-4 p-5">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           <div className={`w-10 h-10 rounded-full ${config.badgeBg} flex items-center justify-center`}>
             <Icon className={`w-5 h-5 ${config.iconColor}`} />
           </div>
@@ -107,7 +107,7 @@ export function AdmonitionBlock({ type, title, children }: AdmonitionBlockProps)
                 ol: ({ children }) => <ol className="list-decimal list-outside ml-4 space-y-1 my-3">{children}</ol>,
                 li: ({ children }) => <li className="pl-1">{children}</li>,
                 code: ({ children }) => (
-                  <code className="bg-white/50 dark:bg-black/20 px-1.5 py-0.5 rounded text-sm font-mono">
+                  <code className="bg-white/50 dark:bg-black/20 px-1.5 py-0.5 rounded-sm text-sm font-mono">
                     {children}
                   </code>
                 ),

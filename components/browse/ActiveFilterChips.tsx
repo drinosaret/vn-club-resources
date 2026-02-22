@@ -24,7 +24,7 @@ function Chip({ label, onRemove, isExclude, icon }: ChipProps) {
   return (
     <span
       className={`
-        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0
+        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0
         ${isExclude
           ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
           : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
@@ -287,7 +287,7 @@ export function ActiveFilterChips({
           <button
             type="button"
             onClick={onClearAll}
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline whitespace-nowrap flex-shrink-0"
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline whitespace-nowrap shrink-0"
           >
             Clear all
           </button>

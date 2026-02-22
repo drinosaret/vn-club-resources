@@ -93,7 +93,7 @@ function FeaturedVNCard({ vn, preference }: { vn: FeaturedVNData; preference: 'j
       className="group"
     >
       <div className="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-300 group-hover:-translate-y-1">
-        <div className="aspect-[2/3] relative bg-gradient-to-br from-primary-100 to-primary-200 dark:from-gray-700 dark:to-gray-600">
+        <div className="aspect-2/3 relative bg-linear-to-br from-primary-100 to-primary-200 dark:from-gray-700 dark:to-gray-600">
           {vn.imageUrl && (
             <Image
               src={vn.imageUrl}

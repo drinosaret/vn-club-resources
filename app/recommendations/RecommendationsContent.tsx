@@ -89,7 +89,7 @@ function RecommendationCard({ rec, index, titlePreference, onInfoClick }: Recomm
         className="block"
       >
         {/* Image */}
-        <div className="relative aspect-[3/4]">
+        <div className="relative aspect-3/4">
           {/* Shimmer placeholder - visible until image loads */}
           <div className={shimmerClass} />
           {rec.image_url ? (
@@ -109,18 +109,18 @@ function RecommendationCard({ rec, index, titlePreference, onInfoClick }: Recomm
             </div>
           )}
           {/* Rank Badge */}
-          <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 text-white text-xs font-bold rounded">
+          <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/70 text-white text-xs font-bold rounded-sm">
             #{index + 1}
           </div>
           {/* Rating Badge */}
           {rec.rating && (
-            <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded">
+            <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded-sm">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
               {rec.rating.toFixed(1)}
             </div>
           )}
           {/* Match Score Badge */}
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-violet-600/90 text-white text-xs font-bold rounded">
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-violet-600/90 text-white text-xs font-bold rounded-sm">
             <Sparkles className="w-3 h-3" />
             {rec.normalized_score ?? Math.min(100, Math.round(rec.score * 18))}%
           </div>
@@ -585,7 +585,7 @@ export default function RecommendationsContent() {
                   type="text"
                   name="username"
                   placeholder="Enter your VNDB username"
-                  className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-violet-500 dark:focus:border-violet-400 transition-colors"
+                  className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-violet-500 dark:focus:border-violet-400 transition-colors"
                   disabled={isLoadingUser}
                 />
                 <button
@@ -760,17 +760,17 @@ export default function RecommendationsContent() {
                     className="bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700"
                   >
                     {/* Skeleton Image */}
-                    <div className="relative aspect-[3/4] bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-300/50 dark:via-gray-600/50 to-transparent animate-shimmer" />
+                    <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-gray-300/50 dark:via-gray-600/50 to-transparent animate-shimmer" />
                       {/* Skeleton Rank Badge */}
-                      <div className="absolute top-2 left-2 w-8 h-5 bg-gray-300 dark:bg-gray-600 rounded" />
+                      <div className="absolute top-2 left-2 w-8 h-5 bg-gray-300 dark:bg-gray-600 rounded-sm" />
                       {/* Skeleton Match Score */}
-                      <div className="absolute bottom-2 left-2 w-12 h-5 bg-violet-300/50 dark:bg-violet-700/50 rounded" />
+                      <div className="absolute bottom-2 left-2 w-12 h-5 bg-violet-300/50 dark:bg-violet-700/50 rounded-sm" />
                     </div>
                     {/* Skeleton Content */}
                     <div className="p-2 space-y-1.5">
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-full" />
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-2/3" />
                     </div>
                   </div>
                 ))}

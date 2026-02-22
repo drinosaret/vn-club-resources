@@ -73,7 +73,7 @@ export function StatsLoadingScreen({
               `}
             >
               {/* Status icon */}
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 {isCompleted ? (
                   <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 ) : isActive ? (
@@ -111,7 +111,7 @@ export function StatsLoadingScreen({
               </div>
 
               {/* Step counter */}
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <span className="text-xs text-gray-400 dark:text-gray-500">
                   {index + 1}/{stages.length}
                 </span>

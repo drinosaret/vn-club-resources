@@ -70,7 +70,7 @@ export function parseBBCode(text: string, options: BBCodeOptions = {}): React.Re
       parts.push(
         <span
           key={`spoiler-${keyCounter++}`}
-          className="inline-block text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded select-none"
+          className="inline-block text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-sm select-none"
         >
           (spoiler hidden)
         </span>

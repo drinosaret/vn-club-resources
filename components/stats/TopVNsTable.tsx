@@ -77,7 +77,7 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
       </span>
 
       {/* Cover thumbnail */}
-      <div className="w-10 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
+      <div className="w-10 h-14 shrink-0 rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
         {vn.image_url ? (
           <>
             <div className={shimmerClass} />

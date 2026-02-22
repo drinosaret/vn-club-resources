@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use, Fragment, useRef, useCallback } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, ExternalLink, Heart, Star, Users,
@@ -31,35 +31,14 @@ import { consumePendingScroll } from '@/components/ScrollToTop';
 
 const VALID_TABS: TraitTabId[] = ['summary', 'characters', 'novels', 'similar-traits', 'related-tags'];
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
-import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
+import { useTitlePreference, getDisplayTitle, getEntityDisplayName } from '@/lib/title-preference';
 import { LanguageFilter, LanguageFilterValue } from '@/components/stats/LanguageFilter';
 import { SpoilerFilter, SpoilerFilterValue } from '@/components/stats/SpoilerFilter';
 import { LastUpdated } from '@/components/stats/LastUpdated';
 import { sortTagsByWeight } from '@/lib/weighted-score-utils';
 import { NSFWImage } from '@/components/NSFWImage';
-import { useImageFade } from '@/hooks/useImageFade';
-
-/** Preload VN cover images into browser cache using Image() objects */
-function preloadVNImages(vns: Array<{ image_url?: string | null; id: string }>) {
-  vns.forEach(vn => {
-    if (vn.image_url) {
-      const img = new Image();
-      const url = getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id });
-      if (url) img.src = url;
-    }
-  });
-}
-
-/** Preload character images into browser cache */
-function preloadCharacterImages(chars: Array<{ image_url?: string | null }>) {
-  chars.forEach(c => {
-    if (c.image_url) {
-      const img = new Image();
-      const url = getProxiedImageUrl(c.image_url, { width: 128 });
-      if (url) img.src = url;
-    }
-  });
-}
+import { useImageRetry } from '@/hooks/useImageRetry';
+import { preloadVNImages, preloadCharacterImages, addRetryKey } from '@/lib/preload-images';
 
 interface PageProps {
   params: Promise<{ traitId: string }>;
@@ -81,7 +60,6 @@ export default function TraitDetailPage({ params }: PageProps) {
 
   // URL-based tab + page state
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const tabFromUrl = searchParams.get('tab') as TraitTabId | null;
   const pageFromUrl = searchParams.get('page');
@@ -113,14 +91,13 @@ export default function TraitDetailPage({ params }: PageProps) {
   const [charsPages, setCharsPages] = useState(1);
 
   const updateUrl = useCallback((tab: TraitTabId, page: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === 'summary') params.delete('tab');
-    else params.set('tab', tab);
-    if (page <= 1) params.delete('page');
-    else params.set('page', String(page));
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.replace(newUrl, { scroll: false });
-  }, [pathname, router, searchParams]);
+    const params = new URLSearchParams();
+    if (tab !== 'summary') params.set('tab', tab);
+    if (page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    window.history.replaceState(window.history.state, '', newUrl);
+  }, [pathname]);
 
   // Refs for caching previous data during pagination (smooth loading overlay)
   const previousCharsRef = useRef<TraitCharacter[]>([]);
@@ -172,6 +149,42 @@ export default function TraitDetailPage({ params }: PageProps) {
     updateUrl(activeTab, newPage);
   }, [activeTab, updateUrl]);
 
+  // Prefetch page on pagination hover (characters)
+  const handleCharsPrefetchPage = useCallback((page: number) => {
+    const cacheKey = `${page}-${languageFilter}`;
+    if (charsPrefetchCacheRef.current.has(cacheKey)) {
+      const cached = charsPrefetchCacheRef.current.get(cacheKey)!;
+      preloadCharacterImages(cached.characters);
+      return;
+    }
+    vndbStatsApi.getTraitCharacters(traitId, page, 24, languageFilter === 'all' ? undefined : languageFilter)
+      .then(result => {
+        if (result) {
+          charsPrefetchCacheRef.current.set(cacheKey, result);
+          preloadCharacterImages(result.characters);
+        }
+      })
+      .catch(() => {});
+  }, [traitId, languageFilter]);
+
+  // Prefetch page on pagination hover (novels)
+  const handleVnsPrefetchPage = useCallback((page: number) => {
+    const cacheKey = `${page}-${spoilerFilter}-${languageFilter}`;
+    if (vnsPrefetchCacheRef.current.has(cacheKey)) {
+      const cached = vnsPrefetchCacheRef.current.get(cacheKey)!;
+      preloadVNImages(cached.vns);
+      return;
+    }
+    vndbStatsApi.getTraitVNsWithTags(traitId, page, 24, 'rating', spoilerFilter, languageFilter === 'all' ? undefined : languageFilter)
+      .then(result => {
+        if (result) {
+          vnsPrefetchCacheRef.current.set(cacheKey, result);
+          preloadVNImages(result.vns);
+        }
+      })
+      .catch(() => {});
+  }, [traitId, spoilerFilter, languageFilter]);
+
   // Sync URL -> state for back/forward navigation
   useEffect(() => {
     const urlTab = tabFromUrl && VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'summary';
@@ -200,13 +213,6 @@ export default function TraitDetailPage({ params }: PageProps) {
   useEffect(() => {
     loadInitialData();
   }, [traitId]);
-
-  // Set page title
-  useEffect(() => {
-    if (trait) {
-      document.title = `${trait.name} - Trait Stats | VN Club`;
-    }
-  }, [trait]);
 
   // Lazy load tab data
   useEffect(() => {
@@ -495,8 +501,8 @@ export default function TraitDetailPage({ params }: PageProps) {
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700">
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
             <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing…</span>
           </div>
@@ -518,7 +524,7 @@ export default function TraitDetailPage({ params }: PageProps) {
                 <Link href="/browse?tab=traits" className="hover:text-primary-600 dark:hover:text-primary-400">Traits</Link>
                 {parents.map((p) => (
                   <Fragment key={p.id}>
-                    <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                    <ChevronRight className="w-3 h-3 shrink-0" />
                     <Link
                       href={`/stats/trait/${p.id}`}
                       className="hover:text-primary-600 dark:hover:text-primary-400"
@@ -527,7 +533,7 @@ export default function TraitDetailPage({ params }: PageProps) {
                     </Link>
                   </Fragment>
                 ))}
-                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <ChevronRight className="w-3 h-3 shrink-0" />
                 <span className="text-gray-700 dark:text-gray-300">{trait.name}</span>
               </div>
             )}
@@ -537,7 +543,7 @@ export default function TraitDetailPage({ params }: PageProps) {
                 {trait.name}
               </h1>
               {trait.group_name && (
-                <span className="px-2 py-0.5 text-xs rounded bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
+                <span className="px-2 py-0.5 text-xs rounded-sm bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
                   {trait.group_name}
                 </span>
               )}
@@ -551,7 +557,7 @@ export default function TraitDetailPage({ params }: PageProps) {
               View on VNDB <ExternalLink className="w-3 h-3" />
             </a>
             {trait.description && (
-              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl break-words">
+              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl wrap-break-word">
                 <p>
                   {parseBBCode(
                     !showFullDescription && trait.description.length > 300
@@ -588,7 +594,7 @@ export default function TraitDetailPage({ params }: PageProps) {
       {usingFallback && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                 Limited Data Mode
@@ -708,7 +714,7 @@ export default function TraitDetailPage({ params }: PageProps) {
 
       {/* Characters Tab */}
       {activeTab === 'characters' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div ref={charsResultsRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {charsTotal > 0 && `${charsTotal.toLocaleString()} characters`}
@@ -738,6 +744,7 @@ export default function TraitDetailPage({ params }: PageProps) {
                       currentPage={charsPage}
                       totalPages={charsPages}
                       onPageChange={handleCharsPageChange}
+                      onPrefetchPage={handleCharsPrefetchPage}
                       totalItems={charsTotal}
                       itemsPerPage={24}
                     />
@@ -752,9 +759,10 @@ export default function TraitDetailPage({ params }: PageProps) {
                       currentPage={charsPage}
                       totalPages={charsPages}
                       onPageChange={handleCharsPageChange}
+                      onPrefetchPage={handleCharsPrefetchPage}
                       totalItems={charsTotal}
                       itemsPerPage={24}
-                      scrollToTop={true}
+                      scrollTargetRef={charsResultsRef}
                     />
                   )}
                 </div>
@@ -770,7 +778,7 @@ export default function TraitDetailPage({ params }: PageProps) {
 
       {/* Novels Tab */}
       {activeTab === 'novels' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div ref={vnsResultsRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {totalVns > 0 && `${totalVns.toLocaleString()} visual novels`}
@@ -803,6 +811,7 @@ export default function TraitDetailPage({ params }: PageProps) {
                       currentPage={currentPage}
                       totalPages={totalPages}
                       onPageChange={handleVnsPageChange}
+                      onPrefetchPage={handleVnsPrefetchPage}
                       totalItems={totalVns}
                       itemsPerPage={24}
                     />
@@ -817,9 +826,10 @@ export default function TraitDetailPage({ params }: PageProps) {
                       currentPage={currentPage}
                       totalPages={totalPages}
                       onPageChange={handleVnsPageChange}
+                      onPrefetchPage={handleVnsPrefetchPage}
                       totalItems={totalVns}
                       itemsPerPage={24}
-                      scrollToTop={true}
+                      scrollTargetRef={vnsResultsRef}
                     />
                   )}
                 </div>
@@ -876,24 +886,25 @@ export default function TraitDetailPage({ params }: PageProps) {
 
 function CharacterCard({ character }: { character: TraitCharacter }) {
   const { preference } = useTitlePreference();
-  const { onLoad, shimmerClass, fadeClass } = useImageFade();
+  const { loaded, error, retryKey, onLoad, onError } = useImageRetry();
+  const showImage = character.image_url && !error;
 
   return (
     <Link
       href={`/character/${character.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
     >
-      <div className="w-16 h-20 flex-shrink-0 relative overflow-hidden rounded">
-        <div className={shimmerClass} />
-        {character.image_url ? (
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+        {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
+        {showImage ? (
           <NSFWImage
-            src={getProxiedImageUrl(character.image_url, { width: 128 })}
+            src={addRetryKey(getProxiedImageUrl(character.image_url!, { width: 128 }) || '', retryKey)}
             alt={character.name}
             vnId={character.id}
             imageSexual={character.image_sexual}
-            className={`w-full h-full object-cover ${fadeClass}`}
+            className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={onLoad}
-            onError={onLoad}
+            onError={onError}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
@@ -903,11 +914,11 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
       </div>
       <div className="flex-1 min-w-0">
         <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
-          {character.name}
+          {getEntityDisplayName(character, preference)}
         </h4>
         {character.original && (
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-            {character.original}
+            {preference === 'romaji' ? character.name : character.original}
           </p>
         )}
         {character.vns.length > 0 && (
@@ -921,7 +932,7 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
                 return (
                   <span
                     key={`${vn.id}-${idx}`}
-                    className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded truncate max-w-[120px]"
+                    className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm truncate max-w-[120px]"
                     title={vnDisplayTitle}
                   >
                     {vnDisplayTitle}
@@ -943,25 +954,26 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
 
 function VNCard({ vn }: { vn: TagVN }) {
   const { preference } = useTitlePreference();
-  const { onLoad, shimmerClass, fadeClass } = useImageFade();
+  const { loaded, error, retryKey, onLoad, onError } = useImageRetry();
   const displayTitle = getDisplayTitle({ title: vn.title, title_jp: vn.title_jp || vn.alttitle, title_romaji: vn.title_romaji }, preference);
+  const showImage = vn.image_url && !error;
 
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
     >
-      <div className="w-16 h-20 flex-shrink-0 relative overflow-hidden rounded">
-        <div className={shimmerClass} />
-        {vn.image_url ? (
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+        {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
+        {showImage ? (
           <NSFWImage
-            src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
+            src={addRetryKey(getProxiedImageUrl(vn.image_url!, { width: 128, vnId: vn.id }) || '', retryKey)}
             alt={displayTitle}
             vnId={vn.id}
             imageSexual={vn.image_sexual}
-            className={`w-full h-full object-cover ${fadeClass}`}
+            className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={onLoad}
-            onError={onLoad}
+            onError={onError}
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
@@ -996,7 +1008,7 @@ function VNCard({ vn }: { vn: TagVN }) {
             {sortTagsByWeight(vn.tags).slice(0, 3).map((t) => (
               <span
                 key={t.id}
-                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded"
+                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm"
               >
                 {t.name}
               </span>
@@ -1017,11 +1029,11 @@ function SimilarTraitRow({ trait }: { trait: SimilarTraitResult }) {
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Heart className="w-4 h-4 text-pink-500 flex-shrink-0" />
+        <Heart className="w-4 h-4 text-pink-500 shrink-0" />
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium text-gray-900 dark:text-white truncate">{trait.name}</span>
           {trait.group_name && (
-            <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 flex-shrink-0">
+            <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 shrink-0">
               {trait.group_name}
             </span>
           )}
@@ -1056,7 +1068,7 @@ function RelatedTagRow({ tag }: { tag: RelatedTag }) {
       className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Tags className="w-4 h-4 text-primary-500 flex-shrink-0" />
+        <Tags className="w-4 h-4 text-primary-500 shrink-0" />
         <span className="font-medium text-gray-900 dark:text-white truncate">{tag.name}</span>
       </div>
       <div className="flex items-center justify-between sm:justify-end gap-4">
@@ -1126,16 +1138,16 @@ function CharacterCardSkeleton() {
   return (
     <div className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
       {/* Image placeholder */}
-      <div className="w-16 h-20 flex-shrink-0 rounded image-placeholder" />
+      <div className="w-16 h-20 shrink-0 rounded-sm image-placeholder" />
       <div className="flex-1 min-w-0 space-y-2">
         {/* Name */}
-        <div className="h-4 w-3/4 rounded image-placeholder" />
+        <div className="h-4 w-3/4 rounded-sm image-placeholder" />
         {/* Original name */}
-        <div className="h-3 w-1/2 rounded image-placeholder" />
+        <div className="h-3 w-1/2 rounded-sm image-placeholder" />
         {/* VN badges */}
         <div className="flex gap-1 mt-2">
-          <div className="h-4 w-20 rounded image-placeholder" />
-          <div className="h-4 w-16 rounded image-placeholder" />
+          <div className="h-4 w-20 rounded-sm image-placeholder" />
+          <div className="h-4 w-16 rounded-sm image-placeholder" />
         </div>
       </div>
     </div>
@@ -1146,19 +1158,19 @@ function VNCardSkeleton() {
   return (
     <div className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
       {/* Image placeholder */}
-      <div className="w-16 h-20 flex-shrink-0 rounded image-placeholder" />
+      <div className="w-16 h-20 shrink-0 rounded-sm image-placeholder" />
       <div className="flex-1 min-w-0 space-y-2">
         {/* Title */}
-        <div className="h-4 w-4/5 rounded image-placeholder" />
+        <div className="h-4 w-4/5 rounded-sm image-placeholder" />
         {/* Year */}
-        <div className="h-3 w-12 rounded image-placeholder" />
+        <div className="h-3 w-12 rounded-sm image-placeholder" />
         {/* Rating */}
-        <div className="h-3 w-20 rounded image-placeholder" />
+        <div className="h-3 w-20 rounded-sm image-placeholder" />
         {/* Tags */}
         <div className="flex gap-1 mt-2">
-          <div className="h-4 w-14 rounded image-placeholder" />
-          <div className="h-4 w-12 rounded image-placeholder" />
-          <div className="h-4 w-16 rounded image-placeholder" />
+          <div className="h-4 w-14 rounded-sm image-placeholder" />
+          <div className="h-4 w-12 rounded-sm image-placeholder" />
+          <div className="h-4 w-16 rounded-sm image-placeholder" />
         </div>
       </div>
     </div>

@@ -110,7 +110,7 @@ export function CollapsibleTagFilter({
                 type="checkbox"
                 checked={filters.include_children ?? true}
                 onChange={(e) => onChange({ include_children: e.target.checked })}
-                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-primary-500"
+                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-sm focus:ring-primary-500"
               />
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 Include child tags
@@ -127,7 +127,7 @@ export function CollapsibleTagFilter({
               <select
                 value={filters.spoiler_level ?? 0}
                 onChange={(e) => onChange({ spoiler_level: Number(e.target.value) })}
-                className="text-xs px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
+                className="text-xs px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
               >
                 {SPOILER_LEVELS.map((level) => (
                   <option key={level.value} value={level.value}>

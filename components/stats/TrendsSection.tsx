@@ -91,8 +91,8 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
         {/* Loading skeleton */}
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-            <div className="h-4 w-48 rounded mb-4 image-placeholder" />
-            <div className="h-48 rounded image-placeholder" />
+            <div className="h-4 w-48 rounded-sm mb-4 image-placeholder" />
+            <div className="h-48 rounded-sm image-placeholder" />
           </div>
         ))}
       </div>
@@ -237,7 +237,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
 
       {/* Info note */}
       <div className="flex items-start gap-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-xs text-gray-500 dark:text-gray-400">
-        <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <Info className="w-4 h-4 shrink-0 mt-0.5" />
         <div>
           <p className="mb-1">
             <strong>How trends are calculated:</strong> All charts use finish dates or vote timestamps to place VNs on the timeline.

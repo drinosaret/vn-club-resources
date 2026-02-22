@@ -234,6 +234,13 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.6,
     },
+    // News tab pages
+    ...['all', 'recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
+      url: `${SITE_URL}/news/${slug}/`,
+      lastModified: BUILD_DATE,
+      changeFrequency: 'daily' as const,
+      priority: 0.5,
+    })),
     {
       url: `${SITE_URL}/quiz/`,
       lastModified: BUILD_DATE,

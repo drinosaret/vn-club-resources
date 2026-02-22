@@ -59,7 +59,7 @@ function InfoTooltip({ text }: { text: string }) {
         onClick={() => setIsOpen(!isOpen)}
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
-        className="cursor-help text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
+        className="cursor-help text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-hidden"
         aria-label="More info"
       >
         <Info className="w-3.5 h-3.5" />

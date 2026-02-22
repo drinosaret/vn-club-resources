@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useMemo, useEffect, memo } from 'react';
+import { useState, useMemo, useEffect, useRef, useReducer, useCallback, memo, startTransition } from 'react';
 import Link from 'next/link';
 import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } from 'lucide-react';
 import { Pagination } from '@/components/browse/Pagination';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
-import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
-import { COMPACT_CARD_IMAGE_WIDTH, COMPACT_CARD_IMAGE_SIZES, buildCompactCardSrcSet } from '@/components/vn/card-image-utils';
+import { getProxiedImageUrl, getTinySrc, type ImageWidth } from '@/lib/vndb-image-cache';
+import { COMPACT_CARD_IMAGE_WIDTH, COMPACT_CARD_IMAGE_SIZES } from '@/components/vn/card-image-utils';
 import { LanguageFilter, LanguageFilterValue } from './LanguageFilter';
 import { useDisplayTitle, useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
-import { NSFWImage } from '@/components/NSFWImage';
-import { useImageFade } from '@/hooks/useImageFade';
+import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
 
 type ViewMode = 'list' | 'gallery';
 type SortOption = 'score' | 'rating' | 'title' | 'date';
@@ -53,6 +52,12 @@ function getStatusFromLabels(labels?: Array<{ id: number; label?: string }>): st
 
 const ITEMS_PER_PAGE = 30;
 const SKELETON_COUNT = 18;
+// Preload buffer constants (matches VNGrid pattern)
+const PRELOAD_COUNT = 12;
+const PRELOAD_THRESHOLD = 0.4;
+const PRELOAD_TIMEOUT_MS = 800;
+// srcSet widths for compact gallery cards
+const COMPACT_SRCSET_WIDTHS: ImageWidth[] = [128, 256];
 
 export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
@@ -64,6 +69,15 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const { preference: titlePreference } = useTitlePreference();
+
+  // Preload buffer state — old items stay visible while new page images load
+  const [displayedItems, setDisplayedItems] = useState<VNDBListItem[]>([]);
+  const [isPreloading, setIsPreloading] = useState(false);
+  const isPaginatingRef = useRef(false);
+  const preloadCleanupRef = useRef<(() => void) | null>(null);
+  const hasDisplayedRef = useRef(false);
+  // Scroll target for bottom pagination (scrolls to section, not window top)
+  const sectionRef = useRef<HTMLDivElement>(null);
 
   const filteredAndSorted = useMemo(() => {
     // Filter by status
@@ -136,20 +150,101 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     return filteredAndSorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSorted, currentPage]);
 
-  // Preload first ~2 rows of images for the next page
+  // Preload buffer — old gallery items stay visible while new page images load.
+  // Once enough above-fold images are cached (40% threshold or 800ms timeout),
+  // swap the grid at once so each <img> loads from browser cache instantly.
   useEffect(() => {
-    if (currentPage < totalPages) {
-      const nextStart = currentPage * ITEMS_PER_PAGE;
-      const nextPageItems = filteredAndSorted.slice(nextStart, nextStart + 12);
-      nextPageItems.forEach(novel => {
-        if (novel.vn?.image?.url) {
-          const img = new Image();
-          const url = getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id });
-          if (url) img.src = url;
-        }
-      });
+    preloadCleanupRef.current?.();
+    preloadCleanupRef.current = null;
+
+    if (paginatedItems.length === 0) {
+      setDisplayedItems([]);
+      setIsPreloading(false);
+      hasDisplayedRef.current = true;
+      return;
     }
-  }, [currentPage, totalPages, filteredAndSorted]);
+
+    // First render → show immediately
+    if (!hasDisplayedRef.current) {
+      hasDisplayedRef.current = true;
+      setDisplayedItems(paginatedItems);
+      return;
+    }
+
+    // Non-pagination change (filter/sort) → swap immediately, per-card shimmer handles loading
+    if (!isPaginatingRef.current) {
+      startTransition(() => {
+        setDisplayedItems(paginatedItems);
+      });
+      setIsPreloading(false);
+      return;
+    }
+
+    // Pagination → preload above-fold images before swapping
+    isPaginatingRef.current = false;
+    setIsPreloading(true);
+    let cancelled = false;
+    let loaded = 0;
+    const toPreload = paginatedItems.slice(0, PRELOAD_COUNT).filter(n => n.vn?.image?.url);
+    const threshold = Math.max(1, Math.ceil(toPreload.length * PRELOAD_THRESHOLD));
+
+    const doSwap = () => {
+      if (cancelled) return;
+      cancelled = true;
+      startTransition(() => { setDisplayedItems(paginatedItems); });
+      setIsPreloading(false);
+    };
+
+    if (toPreload.length === 0) { doSwap(); return; }
+
+    toPreload.forEach(novel => {
+      const img = new Image();
+      img.onload = img.onerror = () => {
+        loaded++;
+        if (loaded >= threshold) doSwap();
+      };
+      const url = getProxiedImageUrl(novel.vn!.image!.url, {
+        width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id,
+      });
+      if (url) {
+        img.src = url;
+        // Also preload NSFW micro-thumbnail for mosaic overlay
+        if (isNsfwContent(novel.vn?.image?.sexual)) {
+          new Image().src = getTinySrc(url);
+        }
+      }
+    });
+
+    const timeout = setTimeout(doSwap, PRELOAD_TIMEOUT_MS);
+    preloadCleanupRef.current = () => { cancelled = true; clearTimeout(timeout); setIsPreloading(false); };
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [paginatedItems]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle page change — sets pagination flag so preload buffer kicks in
+  const handlePageChange = useCallback((page: number) => {
+    isPaginatingRef.current = true;
+    setCurrentPage(page);
+  }, []);
+
+  // Preload images from target page on hover (Pagination calls this on mouseenter)
+  const handlePrefetchPage = useCallback((page: number) => {
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const pageItems = filteredAndSorted.slice(startIndex, startIndex + PRELOAD_COUNT);
+    pageItems.forEach(novel => {
+      if (novel.vn?.image?.url) {
+        const img = new Image();
+        const url = getProxiedImageUrl(novel.vn.image.url, {
+          width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id,
+        });
+        if (url) {
+          img.src = url;
+          if (isNsfwContent(novel.vn?.image?.sexual)) {
+            new Image().src = getTinySrc(url);
+          }
+        }
+      }
+    });
+  }, [filteredAndSorted]);
 
   const sortLabels: Record<SortOption, string> = {
     score: 'My Score',
@@ -186,8 +281,10 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     return counts;
   }, [novels]);
 
+  const isBusy = isLoading || isPreloading;
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <div ref={sectionRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none scroll-mt-20">
       {/* Header with title and filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
@@ -278,7 +375,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === 'list'
-                  ? 'bg-white dark:bg-gray-600 shadow-sm'
+                  ? 'bg-white dark:bg-gray-600 shadow-xs'
                   : 'hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title="List view"
@@ -289,7 +386,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
               onClick={() => setViewMode('gallery')}
               className={`p-1.5 rounded-md transition-colors ${
                 viewMode === 'gallery'
-                  ? 'bg-white dark:bg-gray-600 shadow-sm'
+                  ? 'bg-white dark:bg-gray-600 shadow-xs'
                   : 'hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
               title="Gallery view"
@@ -327,10 +424,10 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 my-4">
           {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
             <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden">
-              <div className="aspect-[3/4] image-placeholder" />
+              <div className="aspect-3/4 image-placeholder" />
               <div className="p-3 space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded image-placeholder" />
-                <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded image-placeholder" />
+                <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
+                <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
               </div>
             </div>
           ))}
@@ -340,7 +437,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       {/* Content with loading overlay */}
       {novels.length > 0 && (
         <div className="relative">
-          {/* Loading overlay - visible during data refresh */}
+          {/* Loading overlay - only during initial data refresh, NOT during pagination */}
           <div
             className={`absolute inset-0 z-10 flex items-center justify-center
               bg-gray-50/70 dark:bg-gray-900/70 backdrop-blur-[1px]
@@ -352,7 +449,14 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* Pagination Top */}
           {totalPages > 1 && (
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              onPrefetchPage={handlePrefetchPage}
+              totalItems={filteredAndSorted.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+            />
           )}
 
           {/* Empty state */}
@@ -377,8 +481,8 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* List View */}
           {viewMode === 'list' && filteredAndSorted.length > 0 && (
-            <div className={`divide-y divide-gray-100 dark:divide-gray-700 ${isLoading ? 'pointer-events-none' : ''}`}>
-              {paginatedItems.map((novel) => (
+            <div className={`divide-y divide-gray-100 dark:divide-gray-700 ${isBusy ? 'pointer-events-none' : ''}`}>
+              {displayedItems.map((novel) => (
                 <NovelRow key={novel.id} novel={novel} />
               ))}
             </div>
@@ -386,8 +490,8 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* Gallery View */}
           {viewMode === 'gallery' && filteredAndSorted.length > 0 && (
-            <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 ${isLoading ? 'pointer-events-none' : ''}`}>
-              {paginatedItems.map((novel) => (
+            <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 transition-opacity duration-150 ease-out ${isBusy ? 'pointer-events-none' : ''} ${isPreloading ? 'opacity-[0.85]' : ''}`}>
+              {displayedItems.map((novel) => (
                 <NovelCard key={novel.id} novel={novel} />
               ))}
             </div>
@@ -395,7 +499,15 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* Pagination Bottom */}
           {totalPages > 1 && (
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} scrollToTop />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              onPrefetchPage={handlePrefetchPage}
+              totalItems={filteredAndSorted.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              scrollTargetRef={sectionRef}
+            />
           )}
         </div>
       )}
@@ -405,7 +517,49 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
 const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   const getDisplayTitle = useDisplayTitle();
-  const { onLoad, shimmerClass, fadeClass } = useImageFade();
+  // Lightweight image state — ref mutations don't trigger renders; useReducer is the re-render trigger
+  const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [, rerender] = useReducer(x => x + 1, 0);
+
+  // Reset when novel changes (memo reuse)
+  const prevIdRef = useRef(novel.id);
+  if (novel.id !== prevIdRef.current) {
+    prevIdRef.current = novel.id;
+    imgState.current = { loaded: false, error: false, retryKey: 0, retryCount: 0 };
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }
+
+  const { loaded: imageLoaded, error: imageError, retryKey } = imgState.current;
+
+  useEffect(() => {
+    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    imgState.current.loaded = true;
+    rerender();
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    const s = imgState.current;
+    if (s.retryCount < 2) {
+      const delay = s.retryCount === 0 ? 2000 : 5000;
+      s.retryCount++;
+      s.error = true;
+      rerender();
+      retryTimerRef.current = setTimeout(() => {
+        s.error = false;
+        s.loaded = false;
+        s.retryKey++;
+        rerender();
+      }, delay);
+    } else {
+      s.error = true;
+      rerender();
+    }
+  }, []);
+
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : '-';
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : '-';
   const releaseYear = novel.vn?.released?.substring(0, 4) || '-';
@@ -413,30 +567,38 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   const statusColor = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
 
+  const baseImageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id }) : null;
+  const imageUrl = baseImageUrl && retryKey > 0
+    ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}_r=${retryKey}`
+    : baseImageUrl;
+  const showImage = imageUrl && !imageError;
+
   return (
     <Link
       href={`/vn/${novel.id}`}
       className="flex items-center gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors -mx-2 px-2 rounded-lg"
     >
       {/* Thumbnail */}
-      <div className="flex-shrink-0 w-12 h-16 relative rounded overflow-hidden">
-        <div className={shimmerClass} />
-        {novel.vn?.image?.url ? (
+      <div className="shrink-0 w-12 h-16 relative rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700">
+        {showImage && !imageLoaded && (
+          <div className="absolute inset-0 image-placeholder" />
+        )}
+        {showImage ? (
           <NSFWImage
-            src={getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id })}
+            src={imageUrl}
             alt={typeof displayTitle === 'string' ? displayTitle : ''}
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
-            className={`w-full h-full object-cover object-top ${fadeClass}`}
+            className={`w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
-            onLoad={onLoad}
-            onError={onLoad}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
-        ) : (
-          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+        ) : !imageError ? (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
             <BookOpen className="w-5 h-5" />
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Title and info */}
@@ -446,7 +608,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
         </h4>
         <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
           <span>{releaseYear}</span>
-          <span className={`px-1.5 py-0.5 text-xs rounded ${statusColor}`}>
+          <span className={`px-1.5 py-0.5 text-xs rounded-sm ${statusColor}`}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
         </div>
@@ -474,50 +636,111 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
 
 const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
   const getDisplayTitle = useDisplayTitle();
-  const { onLoad, shimmerClass, fadeClass } = useImageFade();
+  // Lightweight image state — ref mutations don't trigger renders; useReducer is the re-render trigger
+  const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [, rerender] = useReducer(x => x + 1, 0);
+
+  // Reset when novel changes (memo reuse)
+  const prevIdRef = useRef(novel.id);
+  if (novel.id !== prevIdRef.current) {
+    prevIdRef.current = novel.id;
+    imgState.current = { loaded: false, error: false, retryKey: 0, retryCount: 0 };
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }
+
+  const { loaded: imageLoaded, error: imageError, retryKey } = imgState.current;
+
+  useEffect(() => {
+    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
+  }, []);
+
+  const handleImageLoad = useCallback(() => {
+    imgState.current.loaded = true;
+    rerender();
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    const s = imgState.current;
+    if (s.retryCount < 2) {
+      const delay = s.retryCount === 0 ? 2000 : 5000;
+      s.retryCount++;
+      s.error = true;
+      rerender();
+      retryTimerRef.current = setTimeout(() => {
+        s.error = false;
+        s.loaded = false;
+        s.retryKey++;
+        rerender();
+      }, delay);
+    } else {
+      s.error = true;
+      rerender();
+    }
+  }, []);
+
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : null;
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : null;
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
-  const imageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id }) : null;
-  const srcSet = novel.vn?.image?.url ? buildCompactCardSrcSet(novel.vn.image.url, novel.id) : undefined;
+
+  const baseImageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id }) : null;
+  const imageUrl = baseImageUrl && retryKey > 0
+    ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}_r=${retryKey}`
+    : baseImageUrl;
+
+  // Build srcset with retry cache-buster
+  const srcSet = novel.vn?.image?.url
+    ? COMPACT_SRCSET_WIDTHS
+        .map(w => {
+          const url = getProxiedImageUrl(novel.vn!.image!.url, { width: w, vnId: novel.id });
+          return url ? `${url}${retryKey > 0 ? `${url.includes('?') ? '&' : '?'}_r=${retryKey}` : ''} ${w}w` : null;
+        })
+        .filter(Boolean)
+        .join(', ')
+    : undefined;
+
+  const showImage = imageUrl && !imageError;
 
   return (
     <div
-      className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden sm:shadow-sm sm:hover:shadow-md sm:transition-shadow"
+      className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden sm:shadow-xs sm:hover:shadow-md sm:transition-shadow"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 240px' }}
     >
       {/* Image */}
-      <Link href={`/vn/${novel.id}`} className="block relative aspect-[3/4]">
-        <div className={shimmerClass} />
-        {imageUrl ? (
+      <Link href={`/vn/${novel.id}`} className="block relative aspect-3/4">
+        {/* Shimmer placeholder — unmounted once image loads (no flash for preloaded images) */}
+        {showImage && !imageLoaded && (
+          <div className="absolute inset-0 image-placeholder" />
+        )}
+        {showImage ? (
           <NSFWImage
             src={imageUrl}
             alt={displayTitle}
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
-            className={`w-full h-full object-cover object-top ${fadeClass}`}
+            className={`absolute inset-0 w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
             srcSet={srcSet}
             sizes={COMPACT_CARD_IMAGE_SIZES}
-            onLoad={onLoad}
-            onError={onLoad}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
-        ) : (
+        ) : !imageError ? (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
             <BookOpen className="w-6 h-6" />
           </div>
-        )}
+        ) : null}
 
         {/* User score badge */}
         {userScore && (
-          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-white text-[11px] font-semibold rounded z-10">
+          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-white text-[11px] font-semibold rounded-sm z-10">
             {userScore}
           </div>
         )}
 
         {/* Global rating badge */}
         {globalRating && (
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/70 text-white text-[11px] font-medium rounded z-10">
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/70 text-white text-[11px] font-medium rounded-sm z-10">
             <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
             {globalRating}
           </div>

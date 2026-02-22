@@ -12,6 +12,8 @@ const NAV_CLICK_KEY = 'stt-forward-nav';
 const PENDING_SCROLL_KEY = 'stt-pending-scroll';
 /** CSS class applied to <html> during scroll restoration to hide main content */
 const RESTORING_CLASS = 'stt-restoring';
+/** Key to skip scroll handling for the next navigation (e.g., news page filter changes) */
+const NO_SCROLL_KEY = 'stt-no-scroll';
 
 /**
  * Manages scroll position across navigation:
@@ -112,6 +114,14 @@ export function ScrollToTop() {
       const isForwardNav = sessionStorage.getItem(NAV_CLICK_KEY) === 'true';
       sessionStorage.removeItem(NAV_CLICK_KEY);
 
+      // Skip all scroll handling if a component requested it (e.g., news filters)
+      const skipScroll = sessionStorage.getItem(NO_SCROLL_KEY) === 'true';
+      sessionStorage.removeItem(NO_SCROLL_KEY);
+      if (skipScroll) {
+        prevPathname.current = pathname;
+        return;
+      }
+
       if (isForwardNav) {
         // Forward navigation (link click) - scroll to top
         window.scrollTo(0, 0);
@@ -194,6 +204,15 @@ export function ScrollToTop() {
   }, [pathname]);
 
   return null;
+}
+
+/**
+ * Call before a programmatic navigation (router.push, Link click) to prevent
+ * ScrollToTop from scrolling on the next pathname change. Useful for filter-like
+ * interactions (news dates/tabs) where the user should stay at their current position.
+ */
+export function skipNextScroll(): void {
+  sessionStorage.setItem(NO_SCROLL_KEY, 'true');
 }
 
 /**

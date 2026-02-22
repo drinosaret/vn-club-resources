@@ -23,7 +23,7 @@ export function LanguageFilter({ value, onChange, className = '' }: LanguageFilt
           onClick={() => onChange('ja')}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
             value === 'ja'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
           }`}
         >
@@ -33,7 +33,7 @@ export function LanguageFilter({ value, onChange, className = '' }: LanguageFilt
           onClick={() => onChange('all')}
           className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
             value === 'all'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
           }`}
         >

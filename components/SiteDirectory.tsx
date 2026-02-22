@@ -68,7 +68,7 @@ function ItemCard({ item, compact = false }: { item: NavItem; compact?: boolean 
 
   const content = compact ? (
     <div className="flex flex-col items-center justify-center text-center w-full">
-      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200 mb-2">
+      <div className="w-10 h-10 rounded-lg bg-linear-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200 mb-2">
         <Icon className="w-5 h-5 text-white" />
       </div>
       <h4 className="font-medium text-sm text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
@@ -80,7 +80,7 @@ function ItemCard({ item, compact = false }: { item: NavItem; compact?: boolean 
     </div>
   ) : (
     <>
-      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200">
+      <div className="shrink-0 w-10 h-10 rounded-lg bg-linear-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-200">
         <Icon className="w-5 h-5 text-white" />
       </div>
       <div className="flex-1 min-w-0">
@@ -91,7 +91,7 @@ function ItemCard({ item, compact = false }: { item: NavItem; compact?: boolean 
           {item.description}
         </p>
       </div>
-      <EndIcon className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-[color,transform] duration-200 flex-shrink-0 mt-2" />
+      <EndIcon className="w-5 h-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-[color,transform] duration-200 shrink-0 mt-2" />
     </>
   );
 
@@ -119,7 +119,7 @@ function SectionHeader({ title, gradient }: { title: string; gradient: string })
   const Icon = config?.icon ?? Wrench;
   return (
     <div className="flex items-center gap-3 mb-4">
-      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shadow-md`}>
+      <div className={`w-8 h-8 rounded-lg bg-linear-to-br ${gradient} flex items-center justify-center shadow-md`}>
         <Icon className="w-4 h-4 text-white" />
       </div>
       <h3 className="font-bold text-lg text-gray-900 dark:text-white">
@@ -131,7 +131,7 @@ function SectionHeader({ title, gradient }: { title: string; gradient: string })
 
 export function SiteDirectory() {
   return (
-    <section className="py-12 md:py-20 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
+    <section className="py-12 md:py-20 bg-linear-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="text-center mb-8 md:mb-12">
           <h2 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">

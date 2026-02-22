@@ -217,14 +217,14 @@ function KanaRowDisplay({ kana, isSelected, onToggle }: KanaRowDisplayProps) {
       onClick={onToggle}
       aria-pressed={isSelected}
       aria-label={`Toggle ${kana[0]?.row || 'kana'} row`}
-      className={`w-full flex items-center gap-2 p-1.5 rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
+      className={`w-full flex items-center gap-2 p-1.5 rounded-lg transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
         isSelected
           ? 'bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-500/50'
           : 'bg-gray-50 dark:bg-gray-700/30 opacity-50 hover:opacity-75'
       }`}
     >
       {/* Checkbox */}
-      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
         isSelected
           ? 'bg-emerald-500 border-emerald-500'
           : 'border-gray-300 dark:border-gray-600'

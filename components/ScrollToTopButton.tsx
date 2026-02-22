@@ -37,7 +37,7 @@ export function ScrollToTopButton() {
         text-white shadow-lg hover:shadow-xl
         flex items-center justify-center
         transition-[opacity,transform,box-shadow,background-color] duration-300 ease-out
-        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+        focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
         dark:focus:ring-offset-gray-900
         ${isVisible
           ? 'opacity-100 translate-y-0'

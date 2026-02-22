@@ -1,26 +1,110 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-jp: 'Hiragino Kaku Gothic Pro', 'Hiragino Sans', Meiryo, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* Restore cursor: pointer on interactive elements (Tailwind v4 follows CSS spec default) */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  a,
+  select,
+  summary {
+    cursor: pointer;
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
 
 /* Prevent layout shift when scrollbar appears/disappears */
 html {
   scrollbar-gutter: stable;
 }
 
-/* Font-Flash Fix
+/* Font-Flash Fix */
 
 /* Fix 1 — make transition-all safe by excluding font/text-layout properties.
-   Unlayered so it beats Tailwind's @layer utilities version of .transition-all. */
+   Unlayered so it beats Tailwind's version of .transition-all. */
 .transition-all {
-  transition-property: color, background-color, border-color,
-    text-decoration-color, fill, stroke, opacity, box-shadow,
-    transform, filter, -webkit-backdrop-filter, backdrop-filter,
-    width, height, max-width, max-height, min-width, min-height,
-    padding, margin, gap, inset, top, right, bottom, left,
-    border-radius, outline-color, outline-offset,
-    flex, flex-grow, flex-shrink, flex-basis,
-    grid-template-columns, grid-template-rows, column-gap, row-gap,
-    visibility, z-index, order, translate, rotate, scale;
+  transition-property:
+    color,
+    background-color,
+    border-color,
+    text-decoration-color,
+    fill,
+    stroke,
+    opacity,
+    box-shadow,
+    transform,
+    filter,
+    -webkit-backdrop-filter,
+    backdrop-filter,
+    width,
+    height,
+    max-width,
+    max-height,
+    min-width,
+    min-height,
+    padding,
+    margin,
+    gap,
+    inset,
+    top,
+    right,
+    bottom,
+    left,
+    border-radius,
+    outline-color,
+    outline-offset,
+    flex,
+    flex-grow,
+    flex-shrink,
+    flex-basis,
+    grid-template-columns,
+    grid-template-rows,
+    column-gap,
+    row-gap,
+    visibility,
+    z-index,
+    order,
+    translate,
+    rotate,
+    scale;
 }
 
 /* Fix 2 — kill all transitions during initial load (class removed after hydration) */
@@ -33,8 +117,14 @@ html.no-transitions *::after {
 }
 
 @keyframes slide-down {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-slide-down {
@@ -47,24 +137,24 @@ html.no-transitions *::after {
 
   /* Design System Tokens (see .interface-design/system.md) */
   /* Text hierarchy */
-  --text-primary: #111827;      /* gray-900 */
-  --text-secondary: #4b5563;    /* gray-600 */
-  --text-muted: #6b7280;        /* gray-500 */
-  --text-faint: #9ca3af;        /* gray-400 */
+  --text-primary: #111827; /* gray-900 */
+  --text-secondary: #4b5563; /* gray-600 */
+  --text-muted: #6b7280; /* gray-500 */
+  --text-faint: #9ca3af; /* gray-400 */
 
   /* Surfaces */
   --surface-base: #ffffff;
   --surface-raised: #ffffff;
   --surface-overlay: #ffffff;
-  --surface-inset: #f9fafb;     /* gray-50 */
+  --surface-inset: #f9fafb; /* gray-50 */
 
   /* Borders */
-  --border-default: #e5e7eb;    /* gray-200 */
-  --border-subtle: #f3f4f6;     /* gray-100 */
-  --border-strong: #d1d5db;     /* gray-300 */
+  --border-default: #e5e7eb; /* gray-200 */
+  --border-subtle: #f3f4f6; /* gray-100 */
+  --border-strong: #d1d5db; /* gray-300 */
 
   /* Brand */
-  --brand-primary: #4f46e5;     /* indigo-600 */
+  --brand-primary: #4f46e5; /* indigo-600 */
   --brand-primary-hover: #4338ca; /* indigo-700 */
 }
 
@@ -74,26 +164,263 @@ html.no-transitions *::after {
 
   /* Design System Tokens (dark mode) */
   --text-primary: #ffffff;
-  --text-secondary: #9ca3af;    /* gray-400 */
-  --text-muted: #9ca3af;        /* gray-400 */
-  --text-faint: #6b7280;        /* gray-500 */
+  --text-secondary: #9ca3af; /* gray-400 */
+  --text-muted: #9ca3af; /* gray-400 */
+  --text-faint: #6b7280; /* gray-500 */
 
-  --surface-base: #111827;      /* gray-900 */
-  --surface-raised: #1f2937;    /* gray-800 */
-  --surface-overlay: #1f2937;   /* gray-800 */
-  --surface-inset: #1f2937;     /* gray-800 */
+  --surface-base: #111827; /* gray-900 */
+  --surface-raised: #1f2937; /* gray-800 */
+  --surface-overlay: #1f2937; /* gray-800 */
+  --surface-inset: #1f2937; /* gray-800 */
 
-  --border-default: #374151;    /* gray-700 */
+  --border-default: #374151; /* gray-700 */
   --border-subtle: rgba(75, 85, 99, 0.5); /* gray-600/50 */
-  --border-strong: #4b5563;     /* gray-600 */
+  --border-strong: #4b5563; /* gray-600 */
 
-  --brand-primary: #818cf8;     /* indigo-400 */
+  --brand-primary: #818cf8; /* indigo-400 */
   --brand-primary-hover: #a5b4fc; /* indigo-300 */
 }
 
-html, body {
+html,
+body {
   color: var(--foreground);
   background: var(--background);
+}
+
+/* Firefox-only rendering debug profiles.
+  Controlled via Settings menu (session-scoped flags in sessionStorage). */
+@supports (-moz-appearance: none) {
+  html.ffdbg-motion *,
+  html.ffdbg-motion *::before,
+  html.ffdbg-motion *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  html.ffdbg-filters *,
+  html.ffdbg-filters *::before,
+  html.ffdbg-filters *::after {
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html.ffdbg-contain-main main,
+  html.ffdbg-contain-grid .browse-vn-grid,
+  html.ffdbg-contain-grid .browse-vn-grid-content {
+    contain: none !important;
+  }
+
+  html.ffdbg-cover-hover .browse-vn-card,
+  html.ffdbg-cover-hover .browse-vn-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  html.ffdbg-grid-fade .browse-vn-grid-content,
+  html.ffdbg-grid-fade .browse-vn-title,
+  html.ffdbg-grid-fade .browse-tab-button,
+  html.ffdbg-grid-fade .title-language-label {
+    transition: none !important;
+    opacity: 1 !important;
+  }
+
+  html.ffdbg-text .browse-vn-title,
+  html.ffdbg-text .browse-tab-button,
+  html.ffdbg-text .title-language-label {
+    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Disable scroll-restoration opacity hide — tests if stt-restoring causes blink */
+  html.ffdbg-nostt.stt-restoring main {
+    opacity: 1 !important;
+  }
+
+  /* Paint diagnostic — red tint on blinking elements.
+     If background disappears too → DOM/React issue.
+     If only text disappears → Firefox WebRender async raster. */
+  html.ffdbg-paint .browse-vn-title,
+  html.ffdbg-paint .browse-tab-button,
+  html.ffdbg-paint .title-language-label {
+    background: rgba(255, 0, 0, 0.15) !important;
+  }
+
+  /* Remove line-clamp from VN titles — tests webkit-line-clamp paint quirks */
+  html.ffdbg-noclamp .browse-vn-title {
+    -webkit-line-clamp: unset !important;
+    display: block !important;
+    -webkit-box-orient: unset !important;
+  }
+
+  /* Force system font stack — tests webfont rendering/loading issues */
+  html.ffdbg-sysfont body,
+  html.ffdbg-sysfont .browse-vn-title,
+  html.ffdbg-sysfont .browse-tab-button,
+  html.ffdbg-sysfont .title-language-label {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  }
+
+  /* Force text into its own composited layer — tests WebRender text raster path */
+  html.ffdbg-textlayer .browse-vn-title,
+  html.ffdbg-textlayer .browse-tab-button,
+  html.ffdbg-textlayer .title-language-label {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+    will-change: transform !important;
+  }
+
+  /* Disable clipping/overflow constraints around cards — tests clip invalidation issues */
+  html.ffdbg-noclip .browse-vn-card {
+    overflow: visible !important;
+    contain: none !important;
+  }
+
+  /* Promote major containers to GPU layers — tests if broader layer promotion
+     prevents text blink even with web fonts (Roboto) */
+  html.ffdbg-gpulayer main,
+  html.ffdbg-gpulayer .browse-vn-grid-content,
+  html.ffdbg-gpulayer .browse-vn-title,
+  html.ffdbg-gpulayer .browse-tab-button,
+  html.ffdbg-gpulayer .title-language-label {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+    will-change: transform !important;
+  }
+}
+
+/* ═══ Firefox Text Blink Fix ═══
+   Firefox WebRender rasterizes web font glyphs asynchronously, causing text to
+   briefly disappear (1-2 frames). System fonts use pre-cached OS glyphs.
+
+   Fix: metric-adjusted system fonts in Firefox so text occupies the same space
+   as Roboto, plus GPU layer promotion on affected elements. The @font-face
+   uses size-adjust and *-override to match Segoe UI to Roboto's metrics.
+
+   Weight coverage: Roboto loads 400/500/700. Each needs its own @font-face so
+   Firefox uses real weight variants (not faux-bold synthesis) and applies the
+   metric overrides at every weight. On Win 11, Segoe UI Variable (a variable
+   font) handles all weights natively. On Win 10, Segoe UI Semibold/Bold are
+   separate font files. macOS falls through to system-ui (SF Pro). */
+@supports (-moz-appearance: none) {
+  /* Regular (400) — body text, descriptions */
+  @font-face {
+    font-family: 'RobotoSystemFallback';
+    src: local('Segoe UI Variable'), local('Segoe UI'), local('system-ui');
+    font-weight: 400;
+    font-style: normal;
+    size-adjust: 100%;
+    ascent-override: 92.8%;
+    descent-override: 24.4%;
+    line-gap-override: 0%;
+  }
+
+  /* Medium (500) — button labels, nav links, filter chips, table headers */
+  @font-face {
+    font-family: 'RobotoSystemFallback';
+    src: local('Segoe UI Variable'), local('Segoe UI'), local('system-ui');
+    font-weight: 500;
+    font-style: normal;
+    size-adjust: 100%;
+    ascent-override: 92.8%;
+    descent-override: 24.4%;
+    line-gap-override: 0%;
+  }
+
+  /* Semibold (600) — card titles, section headers, admonition titles */
+  @font-face {
+    font-family: 'RobotoSystemFallback';
+    src: local('Segoe UI Variable'), local('Segoe UI Semibold'), local('Segoe UI'), local('system-ui');
+    font-weight: 600;
+    font-style: normal;
+    size-adjust: 100%;
+    ascent-override: 92.8%;
+    descent-override: 24.4%;
+    line-gap-override: 0%;
+  }
+
+  /* Bold (700) — page headings, hero text, site logo */
+  @font-face {
+    font-family: 'RobotoSystemFallback';
+    src: local('Segoe UI Variable'), local('Segoe UI Bold'), local('Segoe UI'), local('system-ui');
+    font-weight: 700;
+    font-style: normal;
+    size-adjust: 100%;
+    ascent-override: 92.8%;
+    descent-override: 24.4%;
+    line-gap-override: 0%;
+  }
+
+  /* Extra-bold (800) — used by weight compensation rules below */
+  @font-face {
+    font-family: 'RobotoSystemFallback';
+    src: local('Segoe UI Variable'), local('Segoe UI Bold'), local('Segoe UI'), local('system-ui');
+    font-weight: 800;
+    font-style: normal;
+    size-adjust: 100%;
+    ascent-override: 92.8%;
+    descent-override: 24.4%;
+    line-gap-override: 0%;
+  }
+
+  body {
+    font-family: 'RobotoSystemFallback', system-ui, -apple-system, sans-serif !important;
+    letter-spacing: -0.011em;
+    font-variation-settings: 'wght' 430;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Weight compensation: Segoe UI has lighter stroke weight than Roboto at the
+     same nominal value, reducing visual contrast between body and bold text.
+     Bump bold contexts up ~100 to restore the hierarchy Roboto provides.
+     On Win 11 (variable font), 800 clamps to 700 (axis max).
+     On Win 10 (static faces), 800 synthesizes slightly from Bold (700). */
+  h1, h2 {
+    font-weight: 800 !important;
+  }
+
+  h3, h4, h5, h6 {
+    font-weight: 700 !important;
+  }
+
+  strong, b {
+    font-weight: 800 !important;
+  }
+
+  /* Tailwind weight class compensation: Segoe UI appears ~100 weight units
+     lighter than Roboto at the same nominal value. Bump each tier up one step
+     to match the visual hierarchy Chrome/Roboto provides. */
+  .font-medium {
+    font-weight: 600 !important;
+  }
+
+  .font-semibold {
+    font-weight: 700 !important;
+  }
+
+  .font-bold {
+    font-weight: 800 !important;
+  }
+
+  .font-black {
+    font-weight: 900 !important;
+  }
+
+  /* Opt-out: don't over-compensate tiny text */
+  .text-xs.font-medium {
+    font-weight: 500 !important;
+  }
+
+  .browse-vn-title,
+  .browse-tab-button,
+  .title-language-label {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+    will-change: transform !important;
+  }
 }
 
 /* Smooth scroll only for in-page anchor navigation (not page changes) */
@@ -101,12 +428,6 @@ html, body {
 
 body {
   overscroll-behavior-y: contain; /* Prevent pull-to-refresh and scroll chaining on mobile */
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
 }
 
 /* ═══ View Transition Defensive Rules ═══
@@ -215,7 +536,7 @@ h1[id], h2[id], h3[id], h4[id], h5[id], h6[id] {
 }
 
 .prose code {
-  @apply bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply bg-gray-100 px-1.5 py-0.5 rounded-sm text-sm font-mono;
   color: #db2777 !important;
 }
 

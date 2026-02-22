@@ -16,7 +16,7 @@ export function ViewModeToggle({ size, onChange }: ViewModeToggleProps) {
         onClick={() => onChange('small')}
         className={`p-1.5 rounded transition-colors ${
           size === 'small'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
         }`}
         title="Small grid (7 per row)"
@@ -27,7 +27,7 @@ export function ViewModeToggle({ size, onChange }: ViewModeToggleProps) {
         onClick={() => onChange('medium')}
         className={`p-1.5 rounded transition-colors ${
           size === 'medium'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
         }`}
         title="Medium grid (5 per row)"
@@ -38,7 +38,7 @@ export function ViewModeToggle({ size, onChange }: ViewModeToggleProps) {
         onClick={() => onChange('large')}
         className={`p-1.5 rounded transition-colors ${
           size === 'large'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
         }`}
         title="Large grid (3 per row)"
@@ -58,12 +58,13 @@ export const gridSizeClasses: Record<GridSize, string> = {
 };
 
 // Item width classes for flexbox layout (centers last row)
-// Percentages calculated from column counts with gap consideration
+// Formula: for N cols with gap G, item_w = (100/N)% - ((N-1)*G/N)px
+// Gap is gap-x-4 = 16px. Values must be exact to prevent wrapping at sidebar widths.
 export const flexItemClasses: Record<GridSize, string> = {
-  // small: 6 cols at xl (16.66%), 5 at lg/md (20%), 4 at sm (25%), 3 at base (33.33%)
-  small: 'w-[calc(33.33%-8px)] sm:w-[calc(25%-9px)] md:w-[calc(20%-9.6px)] xl:w-[calc(16.66%-10px)]',
-  // medium: 5 cols at xl (20%), 4 at lg/md (25%), 3 at sm (33.33%), 2 at base (50%)
-  medium: 'w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] md:w-[calc(25%-9px)] xl:w-[calc(20%-9.6px)]',
-  // large: 4 cols at xl (25%), 3 at lg/md/sm (33.33%), 2 at base (50%)
-  large: 'w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] xl:w-[calc(25%-9px)]',
+  // small: 6 cols at xl, 5 at md, 4 at sm, 3 at base
+  small: 'w-[calc(33.333%-10.667px)] sm:w-[calc(25%-12px)] md:w-[calc(20%-12.8px)] xl:w-[calc(16.667%-13.333px)]',
+  // medium: 5 cols at xl, 4 at md, 3 at sm, 2 at base
+  medium: 'w-[calc(50%-8px)] sm:w-[calc(33.333%-10.667px)] md:w-[calc(25%-12px)] xl:w-[calc(20%-12.8px)]',
+  // large: 4 cols at xl, 3 at sm, 2 at base
+  large: 'w-[calc(50%-8px)] sm:w-[calc(33.333%-10.667px)] xl:w-[calc(25%-12px)]',
 };

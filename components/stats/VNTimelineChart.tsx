@@ -358,7 +358,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
                 title="Zoom out"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
@@ -374,7 +374,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
               />
               <button
                 onClick={() => setZoom(z => Math.min(3, z + 0.25))}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
                 title="Zoom in"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
@@ -438,12 +438,12 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-28 pl-6 pr-6 py-1 text-xs bg-gray-100 dark:bg-gray-700 border-none rounded-md text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-28 pl-6 pr-6 py-1 text-xs bg-gray-100 dark:bg-gray-700 border-none rounded-md text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-hidden focus:ring-1 focus:ring-primary-500"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-1.5 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                  className="absolute right-1.5 p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
                 >
                   <X className="w-3 h-3 text-gray-400" />
                 </button>
@@ -457,7 +457,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                   <button
                     key={year}
                     onClick={() => scrollToYear(year)}
-                    className="px-1.5 py-0.5 text-[10px] rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-primary-900/30 dark:hover:text-primary-400 transition-colors"
+                    className="px-1.5 py-0.5 text-[10px] rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-primary-900/30 dark:hover:text-primary-400 transition-colors"
                   >
                     {year}
                   </button>
@@ -550,7 +550,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                       <Link
                         key={item.vnId}
                         href={`/vn/${item.vnId}`}
-                        className={`absolute rounded-sm shadow-sm transition-all hover:ring-2 hover:ring-primary-400 hover:brightness-110 ${
+                        className={`absolute rounded-xs shadow-xs transition-all hover:ring-2 hover:ring-primary-400 hover:brightness-110 ${
                           highlighted ? 'ring-2 ring-primary-500 z-10' : ''
                         }`}
                         style={{
@@ -570,7 +570,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                       <Link
                         key={item.vnId}
                         href={`/vn/${item.vnId}`}
-                        className={`absolute rounded-sm shadow-sm transition-all hover:ring-2 hover:ring-primary-400 hover:brightness-110 ${
+                        className={`absolute rounded-xs shadow-xs transition-all hover:ring-2 hover:ring-primary-400 hover:brightness-110 ${
                           highlighted ? 'ring-2 ring-primary-500 z-10' : ''
                         }`}
                         style={{
@@ -630,23 +630,23 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
       {/* Legend */}
       <div className="flex justify-center gap-4 mt-4 text-[10px] text-gray-400 dark:text-gray-500">
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded" style={{ backgroundColor: '#22c55e', border: '1px solid #16a34a' }} />
+          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#22c55e', border: '1px solid #16a34a' }} />
           <span>8-10</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded" style={{ backgroundColor: '#eab308', border: '1px solid #ca8a04' }} />
+          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#eab308', border: '1px solid #ca8a04' }} />
           <span>6-8</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded" style={{ backgroundColor: '#f97316', border: '1px solid #ea580c' }} />
+          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#f97316', border: '1px solid #ea580c' }} />
           <span>4-6</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded" style={{ backgroundColor: '#ef4444', border: '1px solid #dc2626' }} />
+          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#ef4444', border: '1px solid #dc2626' }} />
           <span>&lt;4</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded" style={{ backgroundColor: '#6b7280', border: '1px solid #4b5563' }} />
+          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#6b7280', border: '1px solid #4b5563' }} />
           <span>Unrated</span>
         </div>
       </div>

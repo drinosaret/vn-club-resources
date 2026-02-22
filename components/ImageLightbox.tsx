@@ -125,7 +125,7 @@ export function ImageLightbox({ children, src, alt, imageSexual, vnId }: ImageLi
       {/* Lightbox overlay - rendered via portal to avoid HTML nesting issues */}
       {mounted && isOpen && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xs"
           onClick={closeLightbox}
         >
           {/* Close button */}

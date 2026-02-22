@@ -104,7 +104,7 @@ export const UserStatsTabs = memo(function UserStatsTabs({ activeTab, onTabChang
   return (
     <>
       {/* Desktop: Vertical sidebar */}
-      <nav className="hidden md:block w-48 flex-shrink-0" aria-label="Stats navigation">
+      <nav className="hidden md:block w-48 shrink-0" aria-label="Stats navigation">
         <div className="sticky top-20 z-10 space-y-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;

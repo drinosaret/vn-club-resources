@@ -215,7 +215,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
 
     return parts.map((part, i) =>
       regex.test(part) ? (
-        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 text-inherit rounded px-0.5">
+        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 text-inherit rounded-sm px-0.5">
           {part}
         </mark>
       ) : (
@@ -254,7 +254,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
             rounded-lg
             text-sm text-gray-900 dark:text-gray-100
             placeholder-gray-500 dark:placeholder-gray-400
-            focus:outline-none transition-colors
+            focus:outline-hidden transition-colors
             ${isMobile
               ? 'text-base focus:border-gray-400 dark:focus:border-gray-600'
               : 'focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent'
@@ -286,7 +286,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
             absolute z-50 mt-2
             bg-white dark:bg-gray-900
             shadow-lg
-            max-h-[28rem] overflow-y-auto
+            max-h-112 overflow-y-auto
             ${isMobile
               ? '-mx-4 w-[calc(100%+2rem)] rounded-b-lg border-b border-gray-200 dark:border-gray-700'
               : 'w-full min-w-[420px] rounded-lg border border-gray-200 dark:border-gray-700'
@@ -323,13 +323,13 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                           className={`
                             w-full px-4 py-3 text-left
                             hover:bg-gray-100 dark:hover:bg-gray-800
-                            focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800
+                            focus:outline-hidden focus:bg-gray-100 dark:focus:bg-gray-800
                             border-b border-gray-100 dark:border-gray-800 last:border-b-0
                             ${index === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
                           `}
                         >
                           <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 mt-0.5">
+                            <div className="shrink-0 mt-0.5">
                               {result.type === 'guide' ? (
                                 <FileText className="w-4 h-4 text-indigo-500" />
                               ) : (
@@ -387,14 +387,14 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                             className={`
                               w-full px-4 py-2.5 text-left
                               hover:bg-gray-100 dark:hover:bg-gray-800
-                              focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800
+                              focus:outline-hidden focus:bg-gray-100 dark:focus:bg-gray-800
                               border-b border-gray-100 dark:border-gray-800 last:border-b-0
                               ${flatIndex === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
                             `}
                           >
                             <div className="flex items-start gap-3">
                               {/* Thumbnail */}
-                              <div className="flex-shrink-0 w-10 h-14 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
+                              <div className="shrink-0 w-10 h-14 rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700">
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
@@ -455,7 +455,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                       w-full px-4 py-2.5 text-left text-sm
                       text-indigo-600 dark:text-indigo-400
                       hover:bg-gray-100 dark:hover:bg-gray-800
-                      focus:outline-none
+                      focus:outline-hidden
                       border-t border-gray-200 dark:border-gray-700
                       flex items-center gap-2
                       ${selectedIndex === guideResults.length + vnResults.length ? 'bg-gray-100 dark:bg-gray-800' : ''}

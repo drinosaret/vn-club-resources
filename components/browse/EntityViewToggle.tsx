@@ -11,7 +11,7 @@ export function EntityViewToggle({ mode, onChange }: { mode: ViewMode; onChange:
         onClick={() => onChange('table')}
         className={`p-1.5 rounded transition-colors ${
           mode === 'table'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
         }`}
         title="Table view"
@@ -22,7 +22,7 @@ export function EntityViewToggle({ mode, onChange }: { mode: ViewMode; onChange:
         onClick={() => onChange('cards')}
         className={`p-1.5 rounded transition-colors ${
           mode === 'cards'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
         }`}
         title="Card view"

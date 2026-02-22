@@ -207,7 +207,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
       {/* Search input */}
       <div ref={containerRef} className="relative">
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent">
-          <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -216,7 +216,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
             onKeyDown={handleKeyDown}
             onFocus={() => query.length >= 2 && results.length > 0 && setIsOpen(true)}
             placeholder="Search tags, traits, staff, developers..."
-            className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400"
+            className="flex-1 bg-transparent border-none outline-hidden text-sm text-gray-900 dark:text-white placeholder-gray-400"
           />
         </div>
 
@@ -243,7 +243,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
                           index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
                         }`}
                       >
-                        <IconComponent className={`w-4 h-4 ${config.color} flex-shrink-0`} />
+                        <IconComponent className={`w-4 h-4 ${config.color} shrink-0`} />
                         <span
                           className="flex-1 text-sm text-gray-900 dark:text-white truncate"
                           title={`${getEntityDisplayName(result, preference)}${result.category ? ` (${result.category})` : ''}`}
@@ -255,7 +255,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
                             </span>
                           )}
                         </span>
-                        <span className="text-xs text-gray-400 flex-shrink-0">
+                        <span className="text-xs text-gray-400 shrink-0">
                           {result.count.toLocaleString()}
                         </span>
                       </button>

@@ -23,7 +23,7 @@ export function VNCover({ imageUrl, imageSexual, title, vnId, className = '' }: 
   return (
     <div className={`relative w-full ${className}`}>
       <ImageLightbox src={proxiedUrl ?? ''} alt={title} imageSexual={imageSexual} vnId={vnId}>
-        <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-xl cursor-pointer ring-1 ring-black/5 dark:ring-white/10">
+        <div className="relative aspect-3/4 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-xl cursor-pointer ring-1 ring-black/5 dark:ring-white/10">
           {imageUrl ? (
             <>
               <div className={shimmerClass} />

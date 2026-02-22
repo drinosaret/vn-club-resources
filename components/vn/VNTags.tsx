@@ -55,7 +55,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
   const sexualCount = tags.filter(t => t.category === 'ero' && (showSpoilers || t.spoiler === 0)).length;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -72,7 +72,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
             <button
               onClick={() => setShowSexual(!showSexual)}
               aria-pressed={showSexual}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
                 showSexual
                   ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -86,7 +86,7 @@ export function VNTags({ tags, maxTags = 30 }: VNTagsProps) {
             <button
               onClick={() => setShowSpoilers(!showSpoilers)}
               aria-pressed={showSpoilers}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
                 showSpoilers
                   ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'

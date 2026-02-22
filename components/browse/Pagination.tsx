@@ -35,15 +35,15 @@ export function PaginationSkeleton() {
         <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg image-placeholder" />
       </div>
       {/* "Showing X-Y of Z" skeleton */}
-      <div className="w-44 h-4 rounded image-placeholder" />
+      <div className="w-44 h-4 rounded-sm image-placeholder" />
     </div>
   );
 }
 
 const skipButtonClass = `
-  px-2 h-8 text-xs font-medium rounded-md tabular-nums
-  text-gray-500 dark:text-gray-400
-  hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200
+  px-1.5 h-7 text-[11px] font-normal rounded-md tabular-nums
+  text-gray-400 dark:text-gray-500
+  hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300
   disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
   transition-colors duration-150
 `;
@@ -222,10 +222,10 @@ export const Pagination = memo(function Pagination({
           ref={triggerRef}
           onClick={handleToggleDropdown}
           className={`
-            px-3 h-9 flex items-center gap-1 rounded-lg
-            bg-gray-100 dark:bg-gray-800
+            px-3 h-8 flex items-center gap-1 rounded-lg
+            bg-gray-50 dark:bg-gray-800/50
             text-sm font-medium text-gray-700 dark:text-gray-300
-            hover:bg-gray-200 dark:hover:bg-gray-700
+            hover:bg-gray-100 dark:hover:bg-gray-700
             transition-colors duration-150
           `}
           aria-expanded={isDropdownOpen}
@@ -242,14 +242,14 @@ export const Pagination = memo(function Pagination({
           <>
             {/* Backdrop */}
             <div
-              className="fixed inset-0 z-[99]"
+              className="fixed inset-0 z-99"
               onClick={handleCloseDropdown}
               aria-hidden="true"
             />
 
             {/* Dropdown menu */}
             <div
-              className={`absolute left-1/2 -translate-x-1/2 z-[100] w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${
+              className={`absolute left-1/2 -translate-x-1/2 z-100 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${
                 openUpward ? 'bottom-full mb-2' : 'top-full mt-2'
               }`}
               role="dialog"
@@ -270,7 +270,7 @@ export const Pagination = memo(function Pagination({
                       if (e.key === 'Enter') handleJump();
                     }}
                     placeholder={String(currentPage)}
-                    className={`flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors ${
+                    className={`flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded-lg focus:outline-hidden focus:ring-2 focus:border-transparent transition-colors ${
                       jumpError
                         ? 'border-red-500 dark:border-red-500 focus:ring-red-500'
                         : 'border-gray-200 dark:border-gray-600 focus:ring-primary-500'

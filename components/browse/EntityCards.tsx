@@ -43,7 +43,7 @@ export const EntityCard = memo(function EntityCard({ title, subtitle, link, fiel
           <div className="mt-2 space-y-1">
             {fields.map((field) => (
               <div key={field.label} className="flex items-center gap-2 text-xs">
-                <span className="text-gray-400 dark:text-gray-500 w-20 flex-shrink-0">{field.label}:</span>
+                <span className="text-gray-400 dark:text-gray-500 w-20 shrink-0">{field.label}:</span>
                 <span className="text-gray-700 dark:text-gray-300">{field.value}</span>
               </div>
             ))}
@@ -55,7 +55,7 @@ export const EntityCard = memo(function EntityCard({ title, subtitle, link, fiel
 
         {/* Right content (e.g., count) */}
         {rightContent && (
-          <div className="flex-shrink-0 text-right">
+          <div className="shrink-0 text-right">
             {rightContent}
           </div>
         )}
@@ -84,11 +84,11 @@ export function EntityCards({ children, isLoading, isValidating, emptyMessage = 
             key={i}
             className="w-full md:w-[calc(50%-8px)] lg:w-[calc(33.33%-11px)] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
           >
-            <div className="h-5 rounded w-2/3 mb-2 image-placeholder" />
-            <div className="h-3 rounded w-1/2 mb-3 image-placeholder" />
+            <div className="h-5 rounded-sm w-2/3 mb-2 image-placeholder" />
+            <div className="h-3 rounded-sm w-1/2 mb-3 image-placeholder" />
             <div className="space-y-1.5">
-              <div className="h-3 rounded w-full image-placeholder" />
-              <div className="h-3 rounded w-3/4 image-placeholder" />
+              <div className="h-3 rounded-sm w-full image-placeholder" />
+              <div className="h-3 rounded-sm w-3/4 image-placeholder" />
             </div>
           </div>
         ))}

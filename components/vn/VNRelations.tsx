@@ -27,7 +27,7 @@ export function VNRelations({ relations }: VNRelationsProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
       <div className="flex items-center gap-2 mb-4">
         <GitBranch className="w-5 h-5 text-primary-500" />
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -55,7 +55,7 @@ function RelationCard({ rel }: { rel: VNRelation }) {
       imageSexual={rel.image_sexual}
       rating={rel.rating}
       badge={
-        <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-900/80 text-white text-xs rounded">
+        <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-900/80 text-white text-xs rounded-sm">
           {relationLabels[rel.relation] || rel.relation}
         </div>
       }
