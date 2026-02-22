@@ -20,7 +20,7 @@ interface NewsDatePageClientProps {
 }
 
 /** Source display order for the "all" tab */
-const SOURCE_ORDER = ['vndb', 'vndb_release', 'rss', 'twitter', 'announcement'] as const;
+const SOURCE_ORDER = ['vndb_release', 'vndb', 'rss', 'twitter', 'announcement'] as const;
 
 /** Source labels for section headers */
 const SOURCE_SECTION_LABELS: Record<string, string> = {
@@ -31,8 +31,8 @@ const SOURCE_SECTION_LABELS: Record<string, string> = {
   announcement: 'Announcements',
 };
 
-/** Whether a source uses the DigestItemCard (list layout) vs NewsCard (grid layout) */
-function isListSource(source: string): boolean {
+/** Whether a source uses the DigestItemCard vs NewsCard */
+function isVndbSource(source: string): boolean {
   return source === 'vndb' || source === 'vndb_release';
 }
 
@@ -81,8 +81,8 @@ export function NewsDatePageClient({ tab, date, initialData }: NewsDatePageClien
         <EmptyState tab={tab} date={formattedDate} />
       ) : tab === 'all' ? (
         <AllSourcesView items={items} sourceCounts={sourceCounts} />
-      ) : isListSource(TAB_SLUGS[tab] ?? '') ? (
-        <ListView items={items} />
+      ) : isVndbSource(TAB_SLUGS[tab] ?? '') ? (
+        <VndbGridView items={items} />
       ) : (
         <GridView items={items} />
       )}
@@ -131,8 +131,8 @@ function AllSourcesView({ items, sourceCounts }: { items: NewsListItem[]; source
                 {sectionItems.length} {sectionItems.length === 1 ? 'item' : 'items'}
               </span>
             </div>
-            {isListSource(src) ? (
-              <ListView items={sectionItems} />
+            {isVndbSource(src) ? (
+              <VndbGridView items={sectionItems} />
             ) : (
               <GridView items={sectionItems} />
             )}
@@ -143,12 +143,14 @@ function AllSourcesView({ items, sourceCounts }: { items: NewsListItem[]; source
   );
 }
 
-/** Single-column list layout for VNDB sources */
-function ListView({ items }: { items: NewsListItem[] }) {
+/** Responsive grid layout for VNDB sources */
+function VndbGridView({ items }: { items: NewsListItem[] }) {
   return (
-    <div className="grid gap-3">
+    <div className="flex flex-wrap justify-center gap-4">
       {items.map(item => (
-        <DigestItemCard key={item.id} item={item as any} />
+        <div key={item.id} className="w-full md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.6667rem)]">
+          <DigestItemCard item={item as any} />
+        </div>
       ))}
     </div>
   );

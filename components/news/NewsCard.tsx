@@ -37,7 +37,6 @@ export function NewsCard({ item }: NewsCardProps) {
 
   const hasValidImage = item.imageUrl && !item.imageIsNsfw && !imageError;
   const isTwitter = item.source === 'twitter';
-  const isRss = item.source === 'rss';
 
   // Get placeholder icon based on source
   const PlaceholderIcon = isTwitter ? Twitter : Newspaper;
@@ -96,14 +95,16 @@ export function NewsCard({ item }: NewsCardProps) {
           )}
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
-          {displayTitle}
-        </h3>
+        {/* Title (skip for Twitter — summary already has the full tweet text) */}
+        {!isTwitter && (
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+            {displayTitle}
+          </h3>
+        )}
 
-        {/* Summary - fills remaining space */}
+        {/* Summary */}
         {item.summary && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 grow">
+          <p className={`text-sm text-gray-600 dark:text-gray-400 grow ${isTwitter ? 'line-clamp-5' : 'line-clamp-3'}`}>
             {item.summary}
           </p>
         )}

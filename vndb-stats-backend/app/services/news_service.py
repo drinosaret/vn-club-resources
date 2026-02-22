@@ -69,6 +69,36 @@ class NewsService:
             "url": "https://game.watch.impress.co.jp/data/rss/1.0/gmw/feed.rdf",
             "keywords": ["ビジュアルノベル", "ギャルゲ", "エロゲ", "美少女ゲーム", "ノベルゲーム", "アダルトゲーム", "18禁", "乙女ゲーム"],
             "exclude_keywords": ["アクション", "アクションアドベンチャー", "FPS", "TPS", "格闘", "シューティング", "レース", "RPG", "MMORPG", "ストラテジー", "シミュレーション", "スポーツ", "パズル", "ホラー"]
+        },
+        {
+            "name": "BugBug Bishoujo Games",
+            "url": "https://www.bugbug.news/category/b_game/feed/",
+            "keywords": [],
+            "exclude_keywords": []
+        },
+        {
+            "name": "Moepedia",
+            "url": "https://moepedia.net/feed/",
+            "keywords": [],
+            "exclude_keywords": []
+        },
+        {
+            "name": "iNSIDE VN News",
+            "url": "https://www.inside-games.jp/rss/index.rdf",
+            "keywords": ["ビジュアルノベル", "ギャルゲ", "エロゲ", "美少女ゲーム", "ノベルゲーム", "乙女ゲーム", "BLゲーム", "恋愛アドベンチャー", "アダルトゲーム"],
+            "exclude_keywords": ["アクション", "アクションアドベンチャー", "FPS", "TPS", "格闘", "シューティング", "レース", "RPG", "MMORPG", "ストラテジー", "シミュレーション", "スポーツ", "パズル"]
+        },
+        {
+            "name": "Denfaminicogamer VN News",
+            "url": "https://news.denfaminicogamer.jp/feed",
+            "keywords": ["ビジュアルノベル", "ギャルゲ", "エロゲ", "美少女ゲーム", "ノベルゲーム", "乙女ゲーム", "BLゲーム", "恋愛アドベンチャー", "アダルトゲーム", "18禁"],
+            "exclude_keywords": ["アクション", "アクションアドベンチャー", "FPS", "TPS", "格闘", "シューティング", "レース", "RPG", "MMORPG", "ストラテジー", "シミュレーション", "スポーツ", "パズル", "ホラー"]
+        },
+        {
+            "name": "Ima-ero",
+            "url": "https://www.ima-ero.com/feed/",
+            "keywords": [],
+            "exclude_keywords": []
         }
     ]
 
@@ -96,6 +126,18 @@ class NewsService:
             "username": "cybernhmksk",
             "exclude_phrases": [],
             "include_phrases": ["fanza.co.jp", "dlaf.jp"],
+            "exclude_images": True
+        },
+        {
+            "username": "Moepedia_net",
+            "exclude_phrases": [],
+            "include_phrases": [],
+            "exclude_images": True
+        },
+        {
+            "username": "getchucom",
+            "exclude_phrases": [],
+            "include_phrases": ["美少女ゲーム", "PCゲーム", "発売", "予約"],
             "exclude_images": True
         }
     ]

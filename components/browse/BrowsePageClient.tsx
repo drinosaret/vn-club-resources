@@ -1138,7 +1138,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
 
   // Handle page change - immediate fetch (no debounce)
   const handlePageChange = (page: number) => {
-    setSkipPreload(false); // Use preload buffer — old page stays visible while new images load, avoids grey flash
+    setSkipPreload(true); // Skip preload buffer — show results immediately, per-card shimmer handles loading
     setIsPaginatingOnly(true); // Mark as pagination-only to avoid "Searching..." flash
     const updated = { ...filters, page };
     setFilters(updated);

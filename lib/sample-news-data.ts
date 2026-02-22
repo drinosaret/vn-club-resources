@@ -119,8 +119,8 @@ export const TAB_LABELS: Record<string, string> = {
 /** Ordered list of tab configs for rendering navigation */
 export const TAB_LIST = [
   { slug: 'all', label: 'All Sources' },
-  { slug: 'recently-added', label: 'Recently Added' },
   { slug: 'releases', label: 'Releases' },
+  { slug: 'recently-added', label: 'Recently Added' },
   { slug: 'rss', label: 'RSS Feeds' },
   { slug: 'twitter', label: 'Twitter' },
   { slug: 'announcements', label: 'Announcements' },
