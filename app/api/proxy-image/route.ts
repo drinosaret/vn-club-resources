@@ -122,15 +122,9 @@ async function doFetchAndCache(
         'Accept': 'image/*',
       },
       signal: controller.signal,
-      redirect: 'manual',
     });
 
     clearTimeout(timeoutId);
-
-    // Reject redirects (SSRF protection)
-    if (response.status >= 300 && response.status < 400) {
-      return null;
-    }
 
     if (!response.ok) {
       return null;

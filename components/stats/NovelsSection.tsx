@@ -660,7 +660,6 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
   return (
     <div
       className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden sm:shadow-xs sm:hover:shadow-md sm:transition-shadow"
-      style={{ contentVisibility: 'auto', containIntrinsicSize: '0 240px' }}
     >
       {/* Image */}
       <Link href={`/vn/${novel.id}`} className="block relative aspect-3/4">
