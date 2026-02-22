@@ -566,7 +566,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
             {(() => {
               const displayVns = isLoadingTab && vns.length === 0 ? previousVnsRef.current : vns;
               return displayVns.length > 0 ? (
-                <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={isLoadingTab ? 'pointer-events-none' : ''}>
                   {vnsPages > 1 && (
                     <Pagination currentPage={vnsPage} totalPages={vnsPages} onPageChange={handlePageChange} onPrefetchPage={handleVnsPrefetchPage} totalItems={vnsTotal} itemsPerPage={24} />
                   )}
@@ -617,7 +617,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
             {(() => {
               const displayChars = isLoadingTab && characters.length === 0 ? previousCharsRef.current : characters;
               return displayChars.length > 0 ? (
-                <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={isLoadingTab ? 'pointer-events-none' : ''}>
                   {charsPages > 1 && (
                     <Pagination currentPage={charsPage} totalPages={charsPages} onPageChange={handleCharsPageChange} onPrefetchPage={handleCharsPrefetchPage} totalItems={charsTotal} itemsPerPage={24} />
                   )}

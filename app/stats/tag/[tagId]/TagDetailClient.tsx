@@ -598,7 +598,7 @@ export default function TagDetailPage({ params }: PageProps) {
             <div>
               {/* Content - show current or cached data */}
               {(vns.length > 0 || previousVnsRef.current.length > 0) ? (
-                <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={isLoadingTab ? 'pointer-events-none' : ''}>
                   {totalPages > 1 && (
                     <Pagination
                       currentPage={currentPage}

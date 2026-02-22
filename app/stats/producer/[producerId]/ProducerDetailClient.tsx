@@ -474,7 +474,7 @@ export default function ProducerDetailPage({ params }: PageProps) {
             {(() => {
               const displayVns = isLoadingTab && vns.length === 0 ? previousVnsRef.current : vns;
               return displayVns.length > 0 ? (
-                <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={isLoadingTab ? 'pointer-events-none' : ''}>
                   {vnsPages > 1 && (
                     <Pagination currentPage={vnsPage} totalPages={vnsPages} onPageChange={handlePageChange} onPrefetchPage={handlePrefetchPage} totalItems={vnsTotal} itemsPerPage={24} />
                   )}

@@ -738,7 +738,7 @@ export default function TraitDetailPage({ params }: PageProps) {
             <div>
               {/* Content - show current or cached data */}
               {(characters.length > 0 || previousCharsRef.current.length > 0) ? (
-                <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={isLoadingTab ? 'pointer-events-none' : ''}>
                   {charsPages > 1 && (
                     <Pagination
                       currentPage={charsPage}
@@ -805,7 +805,7 @@ export default function TraitDetailPage({ params }: PageProps) {
             <div>
               {/* Content - show current or cached data */}
               {(vns.length > 0 || previousVnsRef.current.length > 0) ? (
-                <div className={`transition-opacity duration-150 ${isLoadingTab ? 'opacity-60 pointer-events-none' : ''}`}>
+                <div className={isLoadingTab ? 'pointer-events-none' : ''}>
                   {totalPages > 1 && (
                     <Pagination
                       currentPage={currentPage}

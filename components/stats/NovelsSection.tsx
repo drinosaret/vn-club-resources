@@ -52,10 +52,7 @@ function getStatusFromLabels(labels?: Array<{ id: number; label?: string }>): st
 
 const ITEMS_PER_PAGE = 30;
 const SKELETON_COUNT = 18;
-// Preload buffer constants (matches VNGrid pattern)
 const PRELOAD_COUNT = 12;
-const PRELOAD_THRESHOLD = 0.4;
-const PRELOAD_TIMEOUT_MS = 800;
 // srcSet widths for compact gallery cards
 const COMPACT_SRCSET_WIDTHS: ImageWidth[] = [128, 256];
 
@@ -171,53 +168,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       return;
     }
 
-    // Non-pagination change (filter/sort) → swap immediately, per-card shimmer handles loading
-    if (!isPaginatingRef.current) {
-      startTransition(() => {
-        setDisplayedItems(paginatedItems);
-      });
-      setIsPreloading(false);
-      return;
-    }
-
-    // Pagination → preload above-fold images before swapping
+    // Swap immediately — per-card shimmer handles image loading
     isPaginatingRef.current = false;
-    setIsPreloading(true);
-    let cancelled = false;
-    let loaded = 0;
-    const toPreload = paginatedItems.slice(0, PRELOAD_COUNT).filter(n => n.vn?.image?.url);
-    const threshold = Math.max(1, Math.ceil(toPreload.length * PRELOAD_THRESHOLD));
-
-    const doSwap = () => {
-      if (cancelled) return;
-      cancelled = true;
-      startTransition(() => { setDisplayedItems(paginatedItems); });
-      setIsPreloading(false);
-    };
-
-    if (toPreload.length === 0) { doSwap(); return; }
-
-    toPreload.forEach(novel => {
-      const img = new Image();
-      img.onload = img.onerror = () => {
-        loaded++;
-        if (loaded >= threshold) doSwap();
-      };
-      const url = getProxiedImageUrl(novel.vn!.image!.url, {
-        width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id,
-      });
-      if (url) {
-        img.src = url;
-        // Also preload NSFW micro-thumbnail for mosaic overlay
-        if (isNsfwContent(novel.vn?.image?.sexual)) {
-          new Image().src = getTinySrc(url);
-        }
-      }
+    startTransition(() => {
+      setDisplayedItems(paginatedItems);
     });
-
-    const timeout = setTimeout(doSwap, PRELOAD_TIMEOUT_MS);
-    preloadCleanupRef.current = () => { cancelled = true; clearTimeout(timeout); setIsPreloading(false); };
-    return () => { cancelled = true; clearTimeout(timeout); };
+    setIsPreloading(false);
   }, [paginatedItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle page change — sets pagination flag so preload buffer kicks in
@@ -490,7 +446,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* Gallery View */}
           {viewMode === 'gallery' && filteredAndSorted.length > 0 && (
-            <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 transition-opacity duration-150 ease-out ${isBusy ? 'pointer-events-none' : ''} ${isPreloading ? 'opacity-[0.85]' : ''}`}>
+            <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 ${isBusy ? 'pointer-events-none' : ''}`}>
               {displayedItems.map((novel) => (
                 <NovelCard key={novel.id} novel={novel} />
               ))}
