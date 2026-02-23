@@ -96,7 +96,7 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
       <div className="relative w-full h-40 shrink-0">
         {hasImage ? (
           <NSFWNextImage
-            src={getProxiedImageUrl(item.imageUrl, { width: 256 })}
+            src={getProxiedImageUrl(item.imageUrl, { width: 512 })}
             alt={item.title}
             imageSexual={item.imageIsNsfw ? 2 : 0}
             vnId={vnId}

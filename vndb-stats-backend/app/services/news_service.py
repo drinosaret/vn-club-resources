@@ -71,12 +71,6 @@ class NewsService:
             "exclude_keywords": ["アクション", "アクションアドベンチャー", "FPS", "TPS", "格闘", "シューティング", "レース", "RPG", "MMORPG", "ストラテジー", "シミュレーション", "スポーツ", "パズル", "ホラー"]
         },
         {
-            "name": "BugBug Bishoujo Games",
-            "url": "https://www.bugbug.news/category/b_game/feed/",
-            "keywords": [],
-            "exclude_keywords": []
-        },
-        {
             "name": "Moepedia",
             "url": "https://moepedia.net/feed/",
             "keywords": [],
