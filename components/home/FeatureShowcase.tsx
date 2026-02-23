@@ -23,7 +23,7 @@ function BentoCard({ href, children, className = '' }: BentoCardProps) {
   return (
     <Link
       href={href}
-      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md hover:-translate-y-1 transition-[box-shadow,transform] duration-300 ${className}`}
+      className={`group relative block overflow-hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md transition-shadow duration-300 ${className}`}
     >
       {children}
     </Link>
@@ -179,7 +179,7 @@ function NewsPreview() {
 export function FeatureShowcase() {
   return (
     <FadeIn delay={100}>
-      <div className="py-8 md:py-12">
+      <div className="py-8 md:py-12 bg-gray-50 dark:bg-gray-900/50">
         <div className="container mx-auto px-4 max-w-6xl">
           <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-6">
             More to Explore

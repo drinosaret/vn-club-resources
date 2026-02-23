@@ -74,6 +74,7 @@ async def lifespan(app: FastAPI):
         run_news_cleanup,
         run_news_catch_up,
     )
+    from app.services.vn_of_the_day_service import run_vn_of_the_day_selection
     from app.logging import AsyncDBLogHandler, DiscordWebhookLogHandler
     from app.logging.cleanup import cleanup_old_logs
 
@@ -161,6 +162,14 @@ async def lifespan(app: FastAPI):
         replace_existing=True,
     )
 
+    # VN of the Day - 00:05 UTC daily (after cleanup, before news)
+    scheduler.add_job(
+        run_vn_of_the_day_selection,
+        CronTrigger(hour=0, minute=5),
+        id="vn_of_the_day",
+        replace_existing=True,
+    )
+
     # News catch-up - every 2 hours from 10:30 to 22:30 UTC
     # Checks if today's news was fetched, catches up if missing
     scheduler.add_job(
@@ -173,6 +182,7 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("Scheduler started - daily updates at 4:00 AM UTC")
     logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), RSS (06:00, 18:00), Twitter (01:00, 07:00, 13:00, 19:00)")
+    logger.info("VN of the Day scheduled: 00:05 UTC daily")
     logger.info("News catch-up job scheduled: every 2 hours from 10:30 to 22:30 UTC")
     logger.info("App logs cleanup scheduled: 03:00 UTC daily (30 day retention)")
 
@@ -181,7 +191,12 @@ async def lifespan(app: FastAPI):
         await asyncio.sleep(30)  # Wait 30 seconds after startup
         await run_news_catch_up()
 
+    async def delayed_votd_check():
+        await asyncio.sleep(35)  # After news catch-up
+        await run_vn_of_the_day_selection()
+
     task_manager.create_task(delayed_catch_up(), name="startup_news_catch_up")
+    task_manager.create_task(delayed_votd_check(), name="startup_votd_check")
 
     yield
 

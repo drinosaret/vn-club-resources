@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { HeroSection } from '@/components/home/HeroSection';
 import { FeaturedVNs } from '@/components/home/FeaturedVNs';
+import { VNOfTheDay } from '@/components/home/VNOfTheDay';
 import { ExploreSection } from '@/components/home/ExploreSection';
 import { getGuidesWithImages } from '@/lib/navigation-server';
 import { getFeaturedVNsData } from '@/lib/featured-vns';
+import { getVNOfTheDay } from '@/lib/vn-of-the-day';
 import type { Metadata } from 'next';
 import { safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
@@ -72,8 +74,11 @@ const websiteSchema = {
 export default async function Home() {
   // Get guides with images for the visual showcase
   const guides = getGuidesWithImages();
-  // Fetch featured VNs server-side with ISR caching
-  const featuredVNs = await getFeaturedVNsData();
+  // Fetch featured VNs and VN of the Day server-side with ISR caching
+  const [featuredVNs, vnOfTheDay] = await Promise.all([
+    getFeaturedVNsData(),
+    getVNOfTheDay(),
+  ]);
 
   return (
     <>
@@ -93,6 +98,9 @@ export default async function Home() {
 
         {/* 3. Explore Section - Site Directory */}
         <ExploreSection guides={guides} />
+
+        {/* 4. VN of the Day */}
+        <VNOfTheDay data={vnOfTheDay} />
 
         {/* 5. Community CTA */}
         <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">

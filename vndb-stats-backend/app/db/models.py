@@ -771,6 +771,36 @@ class Announcement(Base):
     )
 
 
+class VNOfTheDay(Base):
+    """Daily VN spotlight — one randomly selected quality VN per day."""
+
+    __tablename__ = "vn_of_the_day"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vn_id = Column(String(10), ForeignKey("visual_novels.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False, unique=True)
+    is_override = Column(Boolean, default=False)
+    override_by = Column(String(100))
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+
+    visual_novel = relationship("VisualNovel")
+
+    __table_args__ = (
+        Index("idx_votd_date", date.desc()),
+        Index("idx_votd_vn_id", "vn_id"),
+    )
+
+
+class BotConfig(Base):
+    """Key-value store for Discord bot settings (e.g., channel IDs)."""
+
+    __tablename__ = "bot_config"
+
+    key = Column(String(100), primary_key=True)
+    value = Column(Text, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class RSSFeedConfig(Base):
     """Configurable RSS feed sources."""
 

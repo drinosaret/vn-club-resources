@@ -15,6 +15,11 @@ from app.db import schemas
 
 router = APIRouter()
 
+# Per-source daily caps (only show this many per day in date-filtered mode)
+SOURCE_DAILY_CAPS: dict[str, int] = {
+    "vndb": 5,
+}
+
 # Sources that should be grouped into daily digests
 DIGEST_SOURCES = {"vndb", "vndb_release"}
 
@@ -163,13 +168,41 @@ async def list_news(
 
         # Items query
         query = select(NewsItem).where(*base_filter)
-        count_query = select(func.count()).select_from(query.subquery())
-        total = (await db.execute(count_query)).scalar_one_or_none() or 0
+        query = query.order_by(NewsItem.published_at.desc())
 
-        offset = (page - 1) * limit
-        query = query.order_by(NewsItem.published_at.desc()).offset(offset).limit(limit)
-        result = await db.execute(query)
-        items = result.scalars().all()
+        # Apply per-source daily caps if not filtering by a single source
+        if not source and SOURCE_DAILY_CAPS:
+            result = await db.execute(query)
+            all_items = list(result.scalars().all())
+
+            # Cap items per source
+            source_seen: dict[str, int] = {}
+            capped_items: list[NewsItem] = []
+            for item in all_items:
+                cap = SOURCE_DAILY_CAPS.get(item.source)
+                if cap is not None:
+                    seen = source_seen.get(item.source, 0)
+                    if seen >= cap:
+                        continue
+                    source_seen[item.source] = seen + 1
+                capped_items.append(item)
+
+            total = len(capped_items)
+            offset = (page - 1) * limit
+            items = capped_items[offset:offset + limit]
+
+            # Adjust source counts to reflect caps
+            for src, cap in SOURCE_DAILY_CAPS.items():
+                if src in sources and sources[src] > cap:
+                    sources[src] = cap
+        else:
+            count_query = select(func.count()).select_from(query.subquery())
+            total = (await db.execute(count_query)).scalar_one_or_none() or 0
+
+            offset = (page - 1) * limit
+            query = query.offset(offset).limit(limit)
+            result = await db.execute(query)
+            items = result.scalars().all()
 
         return schemas.NewsListResponse(
             items=[_news_item_to_list_item(item) for item in items],

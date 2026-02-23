@@ -5,6 +5,7 @@ import { TabNavigation } from './TabNavigation';
 import { DateStrip } from './DateStrip';
 import { NewsCard } from './NewsCard';
 import { DigestItemCard } from './DigestItemCard';
+import { VNOfTheDayBanner } from './VNOfTheDayBanner';
 import {
   TAB_LABELS,
   TAB_SLUGS,
@@ -12,11 +13,13 @@ import {
   type NewsListResponse,
   newsSources,
 } from '@/lib/sample-news-data';
+import type { VNOfTheDayData } from '@/lib/vn-of-the-day';
 
 interface NewsDatePageClientProps {
   tab: string;
   date: string;
   initialData: NewsListResponse | null;
+  vnOfTheDay?: VNOfTheDayData | null;
 }
 
 /** Source display order for the "all" tab */
@@ -46,7 +49,7 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export function NewsDatePageClient({ tab, date, initialData }: NewsDatePageClientProps) {
+export function NewsDatePageClient({ tab, date, initialData, vnOfTheDay }: NewsDatePageClientProps) {
   const items = initialData?.items ?? [];
   const sourceCounts = initialData?.sources ?? {};
   const formattedDate = formatDate(date);
@@ -73,6 +76,13 @@ export function NewsDatePageClient({ tab, date, initialData }: NewsDatePageClien
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm">
           {error}
+        </div>
+      )}
+
+      {/* VN of the Day banner (all tab only) */}
+      {tab === 'all' && vnOfTheDay && (
+        <div className="mb-6">
+          <VNOfTheDayBanner data={vnOfTheDay} />
         </div>
       )}
 

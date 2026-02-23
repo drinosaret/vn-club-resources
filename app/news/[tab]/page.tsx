@@ -13,6 +13,7 @@ import {
   generateBreadcrumbJsonLd,
 } from '@/lib/metadata-utils';
 import { NewsDatePageClient } from '@/components/news/NewsDatePageClient';
+import { getVNOfTheDay } from '@/lib/vn-of-the-day';
 
 interface PageProps {
   params: Promise<{ tab: string }>;
@@ -59,10 +60,10 @@ export default async function NewsTabPage({ params }: PageProps) {
 
   const today = getToday();
   const source = TAB_SLUGS[tab];
-  const data = await fetchNewsForDate({
-    date: today,
-    source: source || undefined,
-  });
+  const [data, vnOfTheDay] = await Promise.all([
+    fetchNewsForDate({ date: today, source: source || undefined }),
+    tab === 'all' ? getVNOfTheDay() : Promise.resolve(null),
+  ]);
 
   const label = TAB_LABELS[tab] || 'News';
   const formattedDate = formatDate(today);
@@ -93,7 +94,7 @@ export default async function NewsTabPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
-      <NewsDatePageClient tab={tab} date={today} initialData={data} />
+      <NewsDatePageClient tab={tab} date={today} initialData={data} vnOfTheDay={vnOfTheDay} />
     </>
   );
 }

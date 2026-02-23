@@ -19,7 +19,7 @@ class BotSettings:
         ]
 
         # Frontend cache refresh settings
-        self.frontend_url: str = os.environ.get("FRONTEND_URL", "")
+        self.frontend_url: str = os.environ.get("FRONTEND_URL", "https://vnclub.org")
         self.blacklist_refresh_secret: str = os.environ.get("BLACKLIST_REFRESH_SECRET", "")
 
 

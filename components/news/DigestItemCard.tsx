@@ -75,10 +75,6 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
   const formattedDate = released ? formatReleaseDate(released) : null;
 
   const safeUrl = item.url && /^https?:\/\//.test(item.url) ? item.url : undefined;
-  const CardWrapper = safeUrl ? 'a' : 'div';
-  const cardProps = safeUrl
-    ? { href: safeUrl, target: '_blank', rel: 'noopener noreferrer' }
-    : {};
 
   const hasImage = !!item.imageUrl;
   const vnId = extractString(item.extraData?.vn_id);
@@ -88,10 +84,20 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
   const contentTags = vnTags.length > 0 ? vnTags : (item.tags || []);
 
   return (
-    <CardWrapper
-      {...cardProps}
-      className="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-[box-shadow,border-color] duration-150 group h-full"
+    <div
+      className="relative flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-[box-shadow,border-color] duration-150 group h-full"
     >
+      {/* Stretched link — makes entire card clickable */}
+      {safeUrl && (
+        <a
+          href={safeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 z-0"
+          aria-label={displayTitle}
+        />
+      )}
+
       {/* Cover Image */}
       <div className="relative w-full h-40 shrink-0">
         {hasImage ? (
@@ -139,20 +145,23 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
           {displayTitle}
         </h3>
 
-        {/* Release Editions */}
+        {/* Release Editions — clickable links above the stretched card link */}
         {releases.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
+          <div className="relative z-10 flex flex-wrap gap-1.5 mb-2">
             {releases.slice(0, 3).map((release) => {
               const vndbUrl = getVndbUrl(release.id);
               if (!vndbUrl) return null;
               return (
-                <span
+                <a
                   key={release.id}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                  href={vndbUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                 >
                   <ExternalLink className="w-2.5 h-2.5" />
                   {getDisplayTitle({ title: release.title, title_jp: release.alttitle }, preference) || release.id}
-                </span>
+                </a>
               );
             })}
             {releases.length > 3 && (
@@ -177,6 +186,6 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
           </div>
         )}
       </div>
-    </CardWrapper>
+    </div>
   );
 }

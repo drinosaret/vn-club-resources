@@ -16,6 +16,9 @@ COG_EXTENSIONS = [
     "discord_bot.cogs.blacklist_new",   # /blacklist - cover blacklist management
     "discord_bot.cogs.news_new",        # /news - news feed management
     "discord_bot.cogs.announcements",   # /announcements - announcement management
+    "discord_bot.cogs.vn_of_the_day",  # /vnotd - VN of the Day management
+    "discord_bot.cogs.settings",       # /settings - bot configuration
+    "discord_bot.cogs.daily_posts",    # Automated daily VOTD + news posts
 ]
 
 # Legacy cogs (kept for reference, can be removed once new cogs are verified)

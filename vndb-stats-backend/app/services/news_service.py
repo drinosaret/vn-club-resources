@@ -235,6 +235,24 @@ class NewsService:
     async def fetch_vndb_new_vns(self, db: AsyncSession) -> list[dict[str, Any]]:
         """Fetch newly added VN entries from VNDB database."""
         try:
+            # Hard daily cap: check how many VNDB items already exist for today
+            today_start = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            existing_today = await db.scalar(
+                select(func.count())
+                .select_from(NewsItem)
+                .where(NewsItem.source == "vndb")
+                .where(NewsItem.published_at >= today_start)
+            ) or 0
+            remaining = self.MAX_NEW_VNS_PER_CHECK - existing_today
+            if remaining <= 0:
+                logger.info(
+                    f"Already have {existing_today} VNDB items today "
+                    f"(limit {self.MAX_NEW_VNS_PER_CHECK}), skipping fetch"
+                )
+                return []
+
             query = {
                 "filters": ["olang", "=", "ja"],
                 "fields": "id,title,alttitle,description,released,languages,platforms,image.url,image.sexual,image.violence,developers.name,tags.name,tags.rating,tags.category",
@@ -254,13 +272,13 @@ class NewsService:
                 data = await resp.json()
                 vns = data.get("results", [])
 
-                # Filter out already posted VNs
+                # Filter out already posted VNs, respect daily cap
                 new_vns = []
                 for vn in vns:
                     vn_id = vn.get("id")
                     if not await self.is_duplicate(db, "vndb", vn_id):
                         new_vns.append(vn)
-                    if len(new_vns) >= self.MAX_NEW_VNS_PER_CHECK:
+                    if len(new_vns) >= remaining:
                         break
 
                 # Process VNs: check cover NSFW status
