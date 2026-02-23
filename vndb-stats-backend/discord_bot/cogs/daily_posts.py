@@ -154,8 +154,9 @@ class DailyPostsCog(commands.Cog):
         vndb_url = f"https://vndb.org/{vn.id}"
 
         title = vn.title_jp or vn.title
+        date_str = pick.date.strftime("%b %d, %Y")
         embed = discord.Embed(
-            title=f"VN of the Day: {title}",
+            title=f"VN of the Day — {date_str}: {title}",
             color=0x7C3AED,
         )
 
@@ -291,7 +292,7 @@ class DailyPostsCog(commands.Cog):
         icon_url = f"{settings.frontend_url}/assets/hikaru-icon2.webp"
 
         embed = discord.Embed(
-            title=f"\U0001f4f0 Daily News Summary: {today.strftime('%B %d, %Y')}",
+            title=f"\U0001f4f0 Daily News Summary — {today.strftime('%b %d, %Y')}",
             description=f"**{total}** news item{'s' if total != 1 else ''} today",
             color=0x3B82F6,
         )
