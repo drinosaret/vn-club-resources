@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useReducer, useCallback, memo, startTransition } from 'react';
 import Link from 'next/link';
 import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } from 'lucide-react';
-import { Pagination } from '@/components/browse/Pagination';
+import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl, getTinySrc, type ImageWidth } from '@/lib/vndb-image-cache';
 import { COMPACT_CARD_IMAGE_WIDTH, COMPACT_CARD_IMAGE_SIZES } from '@/components/vn/card-image-utils';
@@ -377,17 +377,21 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
       {/* Skeleton Loading State - shown during initial load */}
       {isLoading && novels.length === 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 my-4">
-          {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-            <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden">
-              <div className="aspect-3/4 image-placeholder" />
-              <div className="p-3 space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
-                <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
+        <>
+          <PaginationSkeleton />
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 my-4">
+            {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+              <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden">
+                <div className="aspect-3/4 image-placeholder" />
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
+                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <PaginationSkeleton />
+        </>
       )}
 
       {/* Content with loading overlay */}
