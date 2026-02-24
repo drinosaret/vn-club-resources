@@ -1,6 +1,7 @@
 'use client';
 
-import { Newspaper } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Clock, Newspaper } from 'lucide-react';
 import { TabNavigation } from './TabNavigation';
 import { DateStrip } from './DateStrip';
 import { NewsCard } from './NewsCard';
@@ -67,10 +68,13 @@ export function NewsDatePageClient({ tab, date, initialData, vnOfTheDay }: NewsD
         <DateStrip currentDate={date} tab={tab} />
       </div>
 
-      {/* Date heading */}
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        {formattedDate}
-      </h2>
+      {/* Date heading + server clock */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {formattedDate}
+        </h2>
+        <UTCClock />
+      </div>
 
       {/* Error state */}
       {error && (
@@ -176,6 +180,37 @@ function GridView({ items }: { items: NewsListItem[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/** Live UTC clock showing server time */
+function UTCClock() {
+  const [time, setTime] = useState('');
+
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      setTime(
+        now.toLocaleTimeString('en-US', {
+          timeZone: 'UTC',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+      );
+    }
+    update();
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!time) return null;
+
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400" title="Server time (UTC) — news updates daily at midnight UTC">
+      <Clock className="w-3.5 h-3.5" />
+      {time} UTC
+    </span>
   );
 }
 
