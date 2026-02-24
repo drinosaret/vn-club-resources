@@ -35,8 +35,8 @@ import {
 // Cache sitemap data for 24 hours (VNDB dumps update daily)
 export const revalidate = 86400;
 
-// Stable timestamp per build — avoids new lastModified on every crawl
-const BUILD_DATE = new Date();
+// No BUILD_DATE — static pages omit lastmod so Google doesn't distrust
+// the signal when it drifts every revalidation cycle.
 
 // ============ API helpers ============
 
@@ -174,97 +174,27 @@ export default async function sitemap(props: {
 
 function generateStaticSitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: `${SITE_URL}/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 1.0,
-    },
-    {
-      url: `${SITE_URL}/guide/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 1.0,
-    },
-    {
-      url: `${SITE_URL}/join/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${SITE_URL}/browse/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/guides/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/stats/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/stats/global/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/stats/compare/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/recommendations/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/news/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'daily',
-      priority: 0.6,
-    },
+    { url: `${SITE_URL}/`, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${SITE_URL}/guide/`, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${SITE_URL}/join/`, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE_URL}/browse/`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/random/`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/guides/`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/stats/`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/stats/global/`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/stats/compare/`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/recommendations/`, changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${SITE_URL}/news/`, changeFrequency: 'daily', priority: 0.6 },
     // News tab pages
     ...['all', 'recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
       url: `${SITE_URL}/news/${slug}/`,
-      lastModified: BUILD_DATE,
       changeFrequency: 'daily' as const,
       priority: 0.5,
     })),
-    {
-      url: `${SITE_URL}/quiz/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${SITE_URL}/tools/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${SITE_URL}/sources/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${SITE_URL}/find/`,
-      lastModified: BUILD_DATE,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
+    { url: `${SITE_URL}/quiz/`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/tools/`, changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${SITE_URL}/sources/`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/find/`, changeFrequency: 'weekly', priority: 0.8 },
   ];
 
   // Add guide pages from MDX content
@@ -284,7 +214,7 @@ function generateStaticSitemap(): MetadataRoute.Sitemap {
           ? new Date(guide.updated)
           : guide.date
             ? new Date(guide.date)
-            : BUILD_DATE,
+            : undefined,
         changeFrequency: (sitemapMeta?.changefreq as MetadataRoute.Sitemap[number]['changeFrequency']) || 'monthly',
         priority: sitemapMeta?.priority || 0.7,
       });

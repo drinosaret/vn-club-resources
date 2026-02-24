@@ -51,7 +51,7 @@ export function FeaturedVNs({ vns }: FeaturedVNsProps) {
   const displayedVNs = shuffledVNs.length > 0 ? shuffledVNs : vns.slice(0, DISPLAY_COUNT);
 
   return (
-    <section className="py-8 md:py-12 bg-gray-50 dark:bg-gray-900/50">
+    <section className="pt-8 md:pt-12 pb-6 md:pb-8 bg-gray-50 dark:bg-gray-900/50">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="text-center mb-6">
           <h2 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">
@@ -69,13 +69,13 @@ export function FeaturedVNs({ vns }: FeaturedVNsProps) {
           ))}
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="text-center mt-5">
           <Link
-            href="/browse"
-            className="inline-flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium text-sm md:text-base"
+            href="/browse/"
+            className="inline-flex items-center text-base font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
           >
             Browse all visual novels
-            <ChevronRight className="w-4 h-4 ml-1" />
+            <ChevronRight className="w-4 h-4 ml-0.5" />
           </Link>
         </div>
       </div>

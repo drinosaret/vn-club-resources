@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, startTransition, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Search, Loader2, X, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Search, Loader2, X, AlertCircle, RefreshCw, Eye, EyeOff, Dices } from 'lucide-react';
 import { mutate } from 'swr';
 import { vndbStatsApi, VNSearchResult, BrowseFilters, BrowseResponse } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
@@ -1158,6 +1158,47 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
   }, [pages, prefetchPage]);
 
+  // Build /random/ URL carrying over current browse filters (skip browse-only: q, first_char, sort, page)
+  const buildRandomUrl = useCallback(() => {
+    const p = new URLSearchParams();
+    const f = filters;
+    if (f.tags) p.set('tags', f.tags);
+    if (f.exclude_tags) p.set('exclude_tags', f.exclude_tags);
+    if (f.traits) p.set('traits', f.traits);
+    if (f.exclude_traits) p.set('exclude_traits', f.exclude_traits);
+    if (f.tag_mode && f.tag_mode !== 'and') p.set('tag_mode', f.tag_mode);
+    if (f.include_children !== undefined) p.set('include_children', String(f.include_children));
+    if (f.year_min) p.set('year_min', String(f.year_min));
+    if (f.year_max) p.set('year_max', String(f.year_max));
+    if (f.min_rating) p.set('min_rating', String(f.min_rating));
+    if (f.max_rating) p.set('max_rating', String(f.max_rating));
+    if (f.min_votecount) p.set('min_votecount', String(f.min_votecount));
+    if (f.max_votecount) p.set('max_votecount', String(f.max_votecount));
+    if (f.length) p.set('length', f.length);
+    if (f.exclude_length) p.set('exclude_length', f.exclude_length);
+    if (f.minage) p.set('minage', f.minage);
+    if (f.exclude_minage) p.set('exclude_minage', f.exclude_minage);
+    if (f.devstatus && f.devstatus !== '-1') p.set('devstatus', f.devstatus);
+    if (f.exclude_devstatus) p.set('exclude_devstatus', f.exclude_devstatus);
+    if (f.olang) p.set('olang', f.olang);
+    if (f.exclude_olang) p.set('exclude_olang', f.exclude_olang);
+    if (f.platform) p.set('platform', f.platform);
+    if (f.exclude_platform) p.set('exclude_platform', f.exclude_platform);
+    if (f.spoiler_level !== undefined && f.spoiler_level > 0) p.set('spoiler_level', String(f.spoiler_level));
+    if (f.staff) p.set('staff', f.staff);
+    if (f.seiyuu) p.set('seiyuu', f.seiyuu);
+    if (f.developer) p.set('developer', f.developer);
+    if (f.publisher) p.set('publisher', f.publisher);
+    if (f.producer) p.set('producer', f.producer);
+    // Tag/trait names for display on random page
+    const incTags = selectedTags.filter(t => t.mode === 'include');
+    const excTags = selectedTags.filter(t => t.mode === 'exclude');
+    if (incTags.length > 0) p.set('tag_names', incTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+    if (excTags.length > 0) p.set('exclude_tag_names', excTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+    const qs = p.toString();
+    return `/random/${qs ? `?${qs}` : ''}`;
+  }, [filters, selectedTags]);
+
   // Clear all filters (reset to defaults: Japanese VNs, all dev status, include child tags)
   const handleClearFilters = () => {
     setSkipPreload(false); // Filter change — use preload buffer
@@ -1508,6 +1549,13 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                   <span className="hidden sm:inline ml-1">{filters.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
                 </button>
                 <RandomButton entityType="vn" />
+                <a
+                  href={buildRandomUrl()}
+                  title="Random with filters"
+                  className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Dices className="w-4 h-4" />
+                </a>
                 <ViewModeToggle size={gridSize} onChange={setGridSize} />
               </div>
             </div>

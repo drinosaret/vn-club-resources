@@ -166,6 +166,10 @@ const nextConfig = {
         source: '/sitemap.xml',
         destination: '/api/sitemap-index',
       },
+      {
+        source: '/feed.xml',
+        destination: '/api/feed',
+      },
     ];
   },
   experimental: {

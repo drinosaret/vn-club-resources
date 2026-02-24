@@ -51,9 +51,10 @@ interface VNGridProps {
   skipPreload?: boolean;
   preference: TitlePreference;
   gridSize?: GridSize;
+  skeletonCount?: number;
 }
 
-export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = false, isPaginating = false, skipPreload = false, preference, gridSize = 'medium' }: VNGridProps) {
+export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = false, isPaginating = false, skipPreload = false, preference, gridSize = 'medium', skeletonCount = 12 }: VNGridProps) {
   // Track if component has mounted to avoid hydration mismatches
   const [hasMounted, setHasMounted] = useState(false);
   // Buffered results — only updated after images are preloaded
@@ -176,7 +177,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   if ((isLoading || isSwapping) && displayResults.length === 0) {
     return (
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 my-6">
-        {Array.from({ length: 12 }).map((_, i) => (
+        {Array.from({ length: skeletonCount }).map((_, i) => (
           <div key={i} className={flexItemClasses[gridSize]}>
             <div className="aspect-3/4 rounded-lg overflow-hidden">
               <div className="w-full h-full image-placeholder" />

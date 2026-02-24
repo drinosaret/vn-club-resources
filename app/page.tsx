@@ -114,7 +114,7 @@ export default async function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/join"
-                className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-[background-color,box-shadow] duration-200"
+                className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-[background-color,box-shadow] duration-200 border-2 border-white/50"
               >
                 <Users className="w-5 h-5" />
                 Join Discord

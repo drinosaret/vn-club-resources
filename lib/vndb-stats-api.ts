@@ -659,7 +659,7 @@ export interface BrowseFilters {
   developer?: string;            // Comma-separated developer (producer) IDs to filter by
   publisher?: string;            // Comma-separated publisher (producer) IDs to filter by
   producer?: string;             // Comma-separated producer IDs (matches developer OR publisher role)
-  sort?: 'rating' | 'released' | 'votecount' | 'title';
+  sort?: 'rating' | 'released' | 'votecount' | 'title' | 'random';
   sort_order?: 'asc' | 'desc';
   page?: number;
   limit?: number;

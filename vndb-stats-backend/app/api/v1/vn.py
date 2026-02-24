@@ -183,7 +183,7 @@ async def search_vns(
     nsfw: bool = Query(default=False, description="Include adult (18+) content"),
 
     # Sorting & pagination
-    sort: str = Query(default="rating", description="Sort: rating, released, votecount, title"),
+    sort: str = Query(default="rating", description="Sort: rating, released, votecount, title, random"),
     sort_order: str = Query(default="desc", description="Sort order: asc, desc"),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=24, ge=1, le=100),
@@ -217,10 +217,11 @@ async def search_vns(
         spoiler_level, nsfw, sort, sort_order, page, limit,
     )
     cache_key = f"browse:{hashlib.sha256(str(cache_params).encode()).hexdigest()}"
-    cached = await cache.get(cache_key)
-    if cached:
-        cached["query_time"] = round(time.time() - start_time, 3)
-        return schemas.VNSearchResponse(**cached)
+    if sort != "random":
+        cached = await cache.get(cache_key)
+        if cached:
+            cached["query_time"] = round(time.time() - start_time, 3)
+            return schemas.VNSearchResponse(**cached)
 
     # Only select the columns needed for VNSummary response
     _browse_columns = [
@@ -650,17 +651,20 @@ async def search_vns(
             count_query = count_query.where(VisualNovel.id.in_(prod_sub))
 
     # Sorting - always include secondary sort by ID for stable pagination
-    sort_columns = {
-        "rating": VisualNovel.rating,
-        "released": VisualNovel.released,
-        "votecount": VisualNovel.votecount,
-        "title": VisualNovel.title,
-    }
-    sort_col = sort_columns.get(sort, VisualNovel.rating)
-    if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), VisualNovel.id.asc())
+    if sort == "random":
+        query = query.order_by(func.random())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), VisualNovel.id.asc())
+        sort_columns = {
+            "rating": VisualNovel.rating,
+            "released": VisualNovel.released,
+            "votecount": VisualNovel.votecount,
+            "title": VisualNovel.title,
+        }
+        sort_col = sort_columns.get(sort, VisualNovel.rating)
+        if sort_order == "asc":
+            query = query.order_by(sort_col.asc().nullslast(), VisualNovel.id.asc())
+        else:
+            query = query.order_by(sort_col.desc().nullslast(), VisualNovel.id.asc())
 
     # Pagination
     offset = (page - 1) * limit
@@ -960,7 +964,8 @@ async def search_vns(
     )
 
     # Cache the response for 60 seconds (data only changes daily)
-    await cache.set(cache_key, response.model_dump(mode="json"), ttl=60)
+    if sort != "random":
+        await cache.set(cache_key, response.model_dump(mode="json"), ttl=60)
 
     return response
 

@@ -15,9 +15,10 @@ interface SimpleSelectProps {
   label?: string;
   compact?: boolean;
   className?: string;
+  align?: 'left' | 'right';
 }
 
-export function SimpleSelect({ options, value, onChange, label, compact, className }: SimpleSelectProps) {
+export function SimpleSelect({ options, value, onChange, label, compact, className, align = 'left' }: SimpleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const ref = useRef<HTMLDivElement>(null);
@@ -118,7 +119,7 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
         <div
           ref={listRef}
           role="listbox"
-          className="absolute z-50 mt-1 w-full sm:min-w-[180px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto"
+          className={`absolute z-50 mt-1 w-full sm:min-w-[180px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto ${align === 'right' ? 'right-0' : ''}`}
         >
           {options.map((option, index) => (
             <button

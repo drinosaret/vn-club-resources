@@ -1,0 +1,150 @@
+# VN Club
+
+> Learn Japanese with visual novels. Comprehensive guides, tools, VNDB browser, and community resources for immersion-based Japanese learning through VNs.
+
+VN Club is a resource site for learning Japanese through visual novels (VNs). It provides step-by-step guides for text hooking, popup dictionaries, Anki mining, and other tools needed to read Japanese VNs. The site also features a VNDB browser, personalized recommendations, quizzes, and aggregated VN news.
+
+The philosophy is immersion-first: read the original Japanese text from the start, using tools to assist comprehension rather than relying on translations. All tools covered (Textractor, JL, Yomitan) help read the original Japanese text, not bypass it.
+
+## Core Concepts
+
+Visual novel text hooking is the process of intercepting Japanese text displayed in a VN and making it available for dictionary lookups and Anki card creation. The typical setup involves:
+
+1. **Text Hooker** (Textractor or Agent) — extracts text from the VN process
+2. **Popup Dictionary** (JL or Yomitan) — provides instant word lookups with definitions, pitch accent, and frequency data
+3. **Anki Mining** — creates flashcards from words encountered while reading, with sentence context
+4. **OCR** (OwOCR or Meikipop) — for games where text hooking is not possible (images, console games)
+
+The recommended learning path: learn kana → set up Textractor + JL → start reading a beginner VN → mine unknown words to Anki → gradually increase difficulty.
+
+## Guides
+
+### Learning Japanese with Visual Novels (Main Guide)
+URL: https://vnclub.org/guide/
+The comprehensive beginner's guide. Covers learning kana (hiragana and katakana), setting up Textractor for text hooking, configuring JL as a popup dictionary, creating Anki flashcards from VN text, and developing an immersion-based study routine. This is the recommended starting point for anyone new to reading Japanese visual novels.
+
+### Textractor Setup Guide
+URL: https://vnclub.org/textractor-guide/
+Detailed setup guide for Textractor, the primary text hooking tool for Windows visual novels. Covers installation, attaching to VN processes, selecting the correct text thread, WebSocket extension setup for browser-based dictionary lookups, regex pattern configuration for cleaning extracted text, and troubleshooting common issues.
+
+### JL Setup Guide
+URL: https://vnclub.org/jl-guide/
+Setup guide for JL (Japanese Learner), a popup dictionary application designed for visual novel reading. Features include instant word lookups, pitch accent display, word frequency information, Anki mining integration, and customizable appearance. Receives text from Textractor via clipboard or WebSocket.
+
+### Yomitan Setup Guide
+URL: https://vnclub.org/yomitan-guide/
+Setup guide for Yomitan, a browser extension that provides popup Japanese dictionary lookups. Used with texthooker web pages to look up words while reading VNs. Covers dictionary installation, Anki integration for mining, and customization.
+
+### Anki Setup Guide
+URL: https://vnclub.org/anki-guide/
+Comprehensive Anki configuration guide for Japanese learners. Covers FSRS (Free Spaced Repetition Scheduler) setup, optimal scheduling parameters, recommended add-ons for Japanese learning, card template design, and best practices for vocabulary retention through VN mining.
+
+### Useful Tools
+URL: https://vnclub.org/tools/
+Curated collection of tools and utilities that enhance the visual novel reading experience. Includes text extraction tools, dictionary applications, game compatibility layers, upscalers, and productivity tools.
+
+### VN Recommendations & Discovery
+URL: https://vnclub.org/find/
+Guide to finding visual novels appropriate for your Japanese reading level. Covers VNDB difficulty ratings, community recommendation lists, curated beginner VN picks, and strategies for discovering new titles.
+
+### Where to Get Japanese Visual Novels
+URL: https://vnclub.org/sources/
+Guide to purchasing and downloading untranslated Japanese visual novels. Covers legitimate sources including DLsite, DMM, Steam (Japanese releases), and physical retailers. Explains purchasing with non-Japanese payment methods.
+
+### Agent Text Hooker Guide
+URL: https://vnclub.org/agent-guide/
+Setup guide for Agent, an alternative text hooking tool that uses scripts for text extraction. Useful for games where Textractor fails, including some emulated games and titles with non-standard text rendering.
+
+### OwOCR Guide
+URL: https://vnclub.org/owocr-guide/
+Setup guide for OwOCR, an optical character recognition tool for extracting Japanese text from images. Essential for untexthookable VNs, console games played via emulator, and any situation where text is rendered as images rather than selectable text. Integrates with JL for dictionary lookups.
+
+### Meikipop Guide
+URL: https://vnclub.org/meikipop-guide/
+Setup guide for Meikipop, an OCR-based popup dictionary that provides instant Japanese lookups for any text displayed on screen. Works with any application by performing OCR on the screen region under the cursor.
+
+### Bottles Guide (Linux)
+URL: https://vnclub.org/bottles-guide/
+Guide to playing Japanese visual novels on Linux using Bottles (Wine wrapper). Covers creating Wine prefixes, configuring Japanese locale settings, installing VNs, and running Textractor for text hooking on Linux.
+
+### GameHub Lite Guide (Android)
+URL: https://vnclub.org/gamehub-lite-guide/
+Setup guide for GameHub Lite, an application for running Windows visual novels and games on Android devices.
+
+### Kirikiroid2 Guide (Android)
+URL: https://vnclub.org/kirikiroid-guide/
+Setup guide for Kirikiroid2, which allows playing Kirikiri engine visual novels natively on Android without Windows emulation. Covers extracting game files and configuring the app.
+
+### Neko Project II Guide (PC-98)
+URL: https://vnclub.org/np2-guide/
+Emulator setup guide for playing classic PC-98 visual novels. Covers NP21W installation, Japanese font configuration, disk image mounting, and text hooking retro VNs for Japanese learning.
+
+### Magpie Guide
+URL: https://vnclub.org/magpie-guide/
+Setup guide for Magpie, a window upscaling tool for visual novels. Upscales low-resolution VNs using advanced algorithms including Anime4K, AMD FSR, CuNNy, and CRT shaders for crisp display on modern monitors.
+
+### ShaderGlass Guide
+URL: https://vnclub.org/shaderglass-guide/
+Setup guide for ShaderGlass, a transparent overlay tool that applies CRT shaders, upscaling filters, and retro visual effects to VNs and games without modifying the original application.
+
+### JDownloader Guide
+URL: https://vnclub.org/jdownloader-guide/
+Setup guide for JDownloader, a download manager for downloading visual novels from direct download sites. Covers handling split archives, automatic extraction, browser extension integration, and premium account usage.
+
+### VNTimeTracker Guide
+URL: https://vnclub.org/timetracker-guide/
+Setup guide for VNTimeTracker, a tool for tracking time spent reading visual novels. Monitors active reading sessions and displays statistics about your Japanese learning progress.
+
+## Site Features
+
+### Browse VNs
+URL: https://vnclub.org/browse/
+Search and filter the VNDB visual novel database. Features include full-text search, tag filtering, sorting by rating/popularity/release date, difficulty level indicators, and detailed VN information pages with character data, screenshots, and related titles. Data is updated daily from VNDB data dumps.
+
+### VN Detail Pages
+URL pattern: https://vnclub.org/vn/{vndb_id}/
+Individual pages for each visual novel in the database. Include title (Japanese and romaji), description, cover image, release dates, developer info, tags, characters, aggregate ratings, and related VNs. Over 50,000 VNs indexed.
+
+### Character Pages
+URL pattern: https://vnclub.org/character/{character_id}/
+Individual pages for visual novel characters. Include character name, image, traits, associated VNs, voice actors, and physical attributes.
+
+### VN Recommendations
+URL: https://vnclub.org/recommendations/
+Personalized visual novel recommendation engine. Users can rate VNs they've read and receive ML-powered recommendations based on collaborative filtering and content-based analysis. Includes difficulty-appropriate suggestions for Japanese learners.
+
+### Stats & Rankings
+URL: https://vnclub.org/stats/
+Visual novel database statistics and rankings. Browse top-rated VNs, popular tags, prolific staff members, voice actors (seiyuu), and production companies. Each entity has its own detail page with associated works.
+
+Sub-pages:
+- Tag pages: https://vnclub.org/stats/tag/{tag_id}/
+- Staff pages: https://vnclub.org/stats/staff/{staff_id}/
+- Seiyuu pages: https://vnclub.org/stats/seiyuu/{staff_id}/
+- Producer pages: https://vnclub.org/stats/producer/{producer_id}/
+- Trait pages: https://vnclub.org/stats/trait/{trait_id}/
+
+### VN News
+URL: https://vnclub.org/news/all/
+Aggregated Japanese visual novel news from multiple sources: VNDB (newly added titles and releases), Twitter/X posts from VN developers, RSS feeds from VN news sites, and community announcements. Updated daily. Available as RSS feed at /feed.xml.
+
+### Japanese Quiz
+URL: https://vnclub.org/quiz/
+Interactive quiz to test Japanese reading comprehension using visual novel vocabulary and kanji. Suitable for beginner to intermediate learners.
+
+## Community
+
+### Join Discord
+URL: https://vnclub.org/join/
+The VN Club Resurrection Discord server is a community of Japanese learners who read visual novels. Members share reading progress, help with tool setup, discuss VNs, and recommend titles for different skill levels.
+
+Discord invite: https://discord.gg/Ze7dYKVTHf
+
+## Technical Details
+
+- Built with Next.js, backed by FastAPI + PostgreSQL
+- VNDB data updated daily from official data dumps (not the API)
+- Over 50,000 visual novels indexed with characters, tags, staff, and release data
+- Open source: https://github.com/drinosaret/vn-club-resources
+- RSS feed: https://vnclub.org/feed.xml
+- Sitemap: https://vnclub.org/sitemap.xml

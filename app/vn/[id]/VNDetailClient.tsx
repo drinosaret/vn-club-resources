@@ -299,7 +299,7 @@ export default function VNDetailClient({
   // Override document title based on user preference.
   useEffect(() => {
     if (!vn) return;
-    const wanted = `${getDisplayTitle({ title: vn.title, title_jp: vn.title_jp, title_romaji: vn.title_romaji }, preference)} | VN Club`;
+    const wanted = `${getDisplayTitle({ title: vn.title, title_jp: vn.title_jp, title_romaji: vn.title_romaji }, preference)} (Visual Novel) | VN Club`;
     document.title = wanted;
 
     const observer = new MutationObserver(() => {

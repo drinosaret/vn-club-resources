@@ -149,29 +149,98 @@ export function generateBreadcrumbJsonLd(items: Array<{ name: string; path: stri
 }
 
 /**
+ * Build a keyword-rich meta description for VN detail pages.
+ * Includes VN name, release year, developer, rating, and keywords.
+ * Falls back to a composed description instead of generic text.
+ */
+export function buildVNMetaDescription(vn: {
+  title: string;
+  description?: string;
+  released?: string;
+  rating?: number;
+  developers?: Array<{ name: string }>;
+}): string {
+  // Try composing a structured description with key VN info
+  const parts: string[] = [];
+
+  const year = vn.released?.substring(0, 4);
+  const developer = vn.developers?.[0]?.name;
+  const ratingStr = vn.rating ? (vn.rating / 100).toFixed(1) : null;
+
+  // Lead with title + year + developer
+  if (year && developer) {
+    parts.push(`${vn.title} (${year}) by ${developer}`);
+  } else if (year) {
+    parts.push(`${vn.title} (${year})`);
+  } else {
+    parts.push(vn.title);
+  }
+
+  // Add rating
+  if (ratingStr) {
+    parts.push(`rated ${ratingStr}/10`);
+  }
+
+  const prefix = parts.join(' — ');
+
+  // If VNDB description exists, append a truncated version
+  if (vn.description) {
+    const cleaned = truncateDescription(vn.description, 155 - prefix.length - 3);
+    if (cleaned.length > 20) {
+      return truncateDescription(`${prefix}. ${cleaned}`, 155);
+    }
+  }
+
+  // Fallback: structured info + generic tail
+  return truncateDescription(
+    `${prefix}. Visual novel details, characters, tags, and screenshots on VN Club.`,
+    155,
+  );
+}
+
+/**
  * Generate JSON-LD VideoGame schema for VN detail pages.
  */
 export function generateVNJsonLd(vn: {
   id: string;
   title: string;
+  title_jp?: string;
   description?: string;
   image_url?: string;
   released?: string;
+  updated_at?: string;
   rating?: number;
   votecount?: number;
   developers?: Array<{ name: string }>;
+  platforms?: string[];
+  tags?: Array<{ name: string; category?: string; score: number; spoiler: number }>;
 }) {
   const cleanDescription = vn.description
     ? truncateDescription(vn.description, 500)
     : undefined;
 
+  // Build genre array from content tags (non-spoiler, high-scoring)
+  const genreTags = vn.tags
+    ?.filter((t) => t.category === 'cont' && t.spoiler === 0 && t.score >= 2)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map((t) => t.name) ?? [];
+  const genres = ['Visual Novel', ...genreTags];
+
+  // Use actual platforms if available
+  const platforms = vn.platforms?.length ? vn.platforms : ['PC'];
+
+  const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'VideoGame',
     name: vn.title,
+    ...(vn.title_jp && { alternateName: vn.title_jp }),
     description: cleanDescription,
     image: vn.image_url,
     datePublished: vn.released,
+    ...(vn.updated_at && { dateModified: vn.updated_at }),
     aggregateRating:
       vn.rating && vn.votecount
         ? {
@@ -186,9 +255,10 @@ export function generateVNJsonLd(vn: {
       '@type': 'Organization',
       name: d.name,
     })),
-    url: `${SITE_URL}/vn/${vn.id}`,
-    genre: 'Visual Novel',
-    gamePlatform: 'PC',
+    url: `${SITE_URL}/vn/${vnId}/`,
+    sameAs: `https://vndb.org/${vnId}`,
+    genre: genres,
+    gamePlatform: platforms,
     inLanguage: 'ja',
   };
 }

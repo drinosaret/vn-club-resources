@@ -4,7 +4,7 @@ import {
   generatePageMetadata,
   generateVNJsonLd,
   getOGImagePath,
-  truncateDescription,
+  buildVNMetaDescription,
   safeJsonLdStringify,
   generateBreadcrumbJsonLd,
 } from '@/lib/metadata-utils';
@@ -26,13 +26,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: `Visual Novel ${id}`,
       description: 'Visual novel information, ratings, and details on VN Club.',
+      robots: { index: false, follow: true },
     };
   }
 
   const ogImage = getOGImagePath(vn.image_url, vn.image_sexual);
-  const cleanDescription = vn.description
-    ? truncateDescription(vn.description, 200)
-    : `${vn.title} - Visual novel information, ratings, and details on VN Club.`;
+  const cleanDescription = buildVNMetaDescription(vn);
 
   // Prefer romaji title for metadata (matches default user preference)
   const metaTitle = (vn.title_romaji && !/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(vn.title_romaji))
@@ -40,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : vn.title;
 
   return generatePageMetadata({
-    title: metaTitle,
+    title: `${metaTitle} (Visual Novel)`,
     description: cleanDescription,
     path: `/vn/${id}/`,
     image: ogImage,

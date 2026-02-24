@@ -17,6 +17,7 @@ interface SidebarFiltersProps {
   onAlphabetClick: (char: string | null) => void;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  hideAlphabet?: boolean;
 }
 
 export function SidebarFilters({
@@ -28,6 +29,7 @@ export function SidebarFilters({
   onAlphabetClick,
   hasActiveFilters,
   onClearFilters,
+  hideAlphabet,
 }: SidebarFiltersProps) {
   return (
     <aside className="hidden lg:block w-[280px] shrink-0">
@@ -67,13 +69,15 @@ export function SidebarFilters({
         </div>
 
         {/* Alphabet Filter */}
-        <div className="border-t border-gray-100 dark:border-gray-700/50 mt-3 pt-3">
-          <AlphabetFilter
-            activeChar={activeChar}
-            onSelect={onAlphabetClick}
-            compact
-          />
-        </div>
+        {!hideAlphabet && (
+          <div className="border-t border-gray-100 dark:border-gray-700/50 mt-3 pt-3">
+            <AlphabetFilter
+              activeChar={activeChar}
+              onSelect={onAlphabetClick}
+              compact
+            />
+          </div>
+        )}
       </div>
     </aside>
   );

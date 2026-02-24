@@ -101,6 +101,7 @@ export default function RootLayout({
     <html lang="en" className="light" suppressHydrationWarning>
       <head>
         <meta name="color-scheme" content="light dark" />
+        <link rel="alternate" type="application/rss+xml" title="VN Club - Visual Novel News" href="/feed.xml" />
         {process.env.NEXT_PUBLIC_VNDB_STATS_API && (
           <link rel="preconnect" href={process.env.NEXT_PUBLIC_VNDB_STATS_API} />
         )}

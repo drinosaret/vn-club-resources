@@ -16,7 +16,7 @@ export function FeatureStrip({
   className = '',
 }: FeatureStripProps) {
   return (
-    <section className={`py-12 md:py-16 ${backgroundClasses[background]} ${className}`}>
+    <section className={`py-10 md:py-12 ${backgroundClasses[background]} ${className}`}>
       <div className="container mx-auto px-4 max-w-6xl">
         {children}
       </div>

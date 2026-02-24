@@ -1,0 +1,44 @@
+# VN Club
+
+> Learn Japanese with visual novels. Comprehensive guides, tools, VNDB browser, and community resources for immersion-based Japanese learning through VNs.
+
+VN Club is a resource site for learning Japanese through visual novels (VNs). It provides step-by-step guides for text hooking, popup dictionaries, Anki mining, and other tools needed to read Japanese VNs. The site also features a VNDB browser, personalized recommendations, quizzes, and aggregated VN news.
+
+The philosophy is immersion-first: read the original Japanese text from the start, using tools to assist comprehension rather than relying on translations.
+
+## Guides
+
+- [Learning Japanese with Visual Novels](https://vnclub.org/guide/): Complete beginner's guide covering kana, Textractor, JL dictionary, Anki mining, and immersion strategies for reading VNs in Japanese.
+- [Textractor Setup Guide](https://vnclub.org/textractor-guide/): Text hooking setup for extracting Japanese text from visual novels with WebSocket extension and regex patterns.
+- [JL Setup Guide](https://vnclub.org/jl-guide/): Popup dictionary with Anki mining, pitch accents, and frequency display for reading Japanese VNs.
+- [Yomitan Setup Guide](https://vnclub.org/yomitan-guide/): Browser popup dictionary for instant Japanese lookups and Anki mining while reading visual novels.
+- [Anki Setup Guide](https://vnclub.org/anki-guide/): FSRS scheduling, recommended settings, add-ons, and best practices for Japanese vocabulary retention.
+- [Useful Tools](https://vnclub.org/tools/): Essential tools and utilities to enhance the visual novel reading experience.
+- [VN Recommendations & Discovery](https://vnclub.org/find/): Find visual novels for your Japanese level with difficulty ratings and community recommendations.
+- [Where to Get Japanese VNs](https://vnclub.org/sources/): Guide to buying and downloading untranslated Japanese visual novels from DLsite, DMM, and other sources.
+
+## Tool Guides
+
+- [Agent Text Hooker](https://vnclub.org/agent-guide/): Script-based text extraction for games where standard text hookers fail.
+- [OwOCR Guide](https://vnclub.org/owocr-guide/): OCR for extracting Japanese text from images, untexthookable VNs, and console games.
+- [Meikipop Guide](https://vnclub.org/meikipop-guide/): OCR popup dictionary for instant lookups on any on-screen Japanese text.
+- [Bottles Guide](https://vnclub.org/bottles-guide/): Running Japanese visual novels on Linux using Wine prefixes with Textractor support.
+- [GameHub Lite Guide](https://vnclub.org/gamehub-lite-guide/): Running Windows visual novels on Android devices.
+- [Kirikiroid2 Guide](https://vnclub.org/kirikiroid-guide/): Playing Kirikiri engine visual novels natively on Android.
+- [Neko Project II Guide](https://vnclub.org/np2-guide/): PC-98 visual novel emulation with text hooking for Japanese learning.
+- [Magpie Guide](https://vnclub.org/magpie-guide/): Window upscaling for low-resolution VNs using Anime4K, FSR, and CRT shaders.
+- [ShaderGlass Guide](https://vnclub.org/shaderglass-guide/): Transparent overlay for CRT shaders, upscaling, and retro effects on VNs.
+- [JDownloader Guide](https://vnclub.org/jdownloader-guide/): Downloading visual novels from DDL sites with split archive support.
+- [VNTimeTracker Guide](https://vnclub.org/timetracker-guide/): Tracking visual novel reading time and learning statistics.
+
+## Features
+
+- [Browse VNs](https://vnclub.org/browse/): Search and filter VNDB's visual novel database with difficulty ratings and detailed info.
+- [VN Recommendations](https://vnclub.org/recommendations/): Personalized visual novel recommendations based on your preferences and reading level.
+- [Stats & Rankings](https://vnclub.org/stats/): Visual novel statistics — staff, producers, tags, traits, seiyuu, and rankings.
+- [VN News](https://vnclub.org/news/all/): Aggregated Japanese visual novel news from VNDB, Twitter, and RSS feeds.
+- [Japanese Quiz](https://vnclub.org/quiz/): Test your Japanese knowledge with visual novel-themed quizzes.
+
+## Community
+
+- [Join Discord](https://vnclub.org/join/): VN Club Resurrection community for Japanese learners reading visual novels.

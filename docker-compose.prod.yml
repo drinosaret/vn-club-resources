@@ -117,6 +117,7 @@ services:
   # PostgreSQL
   db:
     image: postgres:15.13-alpine
+    shm_size: 256m
     environment:
       - POSTGRES_USER=vndb
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}

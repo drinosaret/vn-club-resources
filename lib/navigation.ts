@@ -81,7 +81,7 @@ export const navigation: NavSection[] = [
   {
     title: 'Resources',
     items: [
-      { title: 'Recommendations', slug: 'find', description: 'Databases, trackers, and where to discover VNs' },
+      { title: 'Discovery', slug: 'find', description: 'Databases, trackers, and where to discover VNs' },
       { title: 'Where to Get VNs', slug: 'sources', description: 'Digital storefronts and download sources' },
       { title: 'Tools', slug: 'tools', description: 'Text hookers, dictionaries, and utilities' },
     ],

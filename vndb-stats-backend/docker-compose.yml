@@ -58,6 +58,7 @@ services:
   # Data is stored in the 'pgdata' volume - persists across restarts
   db:
     image: postgres:15-alpine
+    shm_size: 256m
     environment:
       - POSTGRES_USER=vndb
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vndb_dev_password}
