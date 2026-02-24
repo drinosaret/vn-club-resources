@@ -14,7 +14,7 @@ export function QuizFeedback({ isCorrect, correctAnswer, show }: QuizFeedbackPro
   return (
     <div
       className={`
-        absolute inset-0 flex items-center justify-center rounded-xl
+        absolute inset-0 flex items-center justify-center rounded-xl pointer-events-none
         transition-opacity duration-300
         ${show ? 'opacity-100' : 'opacity-0'}
         ${isCorrect
@@ -49,8 +49,8 @@ export function QuizFeedback({ isCorrect, correctAnswer, show }: QuizFeedbackPro
           {isCorrect ? 'Correct!' : 'Incorrect'}
         </p>
         {!isCorrect && correctAnswer && (
-          <p className="text-lg text-red-600 dark:text-red-400 mt-1">
-            Answer: <span className="font-bold text-xl">{correctAnswer}</span>
+          <p className="text-xl text-red-600 dark:text-red-400 mt-1">
+            Answer: <span className="font-bold text-3xl">{correctAnswer}</span>
           </p>
         )}
       </div>

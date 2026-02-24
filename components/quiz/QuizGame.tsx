@@ -70,10 +70,9 @@ export function QuizGame() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Focus input when feedback is dismissed (input becomes enabled again)
+  // Focus input when feedback is dismissed (next question appears)
   useEffect(() => {
     if (!feedback.show && inputRef.current) {
-      // Only focus if not already focused, to prevent keyboard flickering on mobile
       if (document.activeElement !== inputRef.current) {
         inputRef.current.focus();
       }
@@ -133,10 +132,7 @@ export function QuizGame() {
       nextQuestion();
       return;
     }
-    if (e.key === 'Enter') {
-      handleSubmit();
-    }
-  }, [handleSubmit, feedback.show, nextQuestion]);
+  }, [feedback.show, nextQuestion]);
 
   // Reset quiz
   const handleReset = useCallback(() => {
@@ -183,29 +179,33 @@ export function QuizGame() {
                 </div>
 
                 {/* Answer Input */}
-                <div className="w-full max-w-xs">
+                <form
+                  className="w-full max-w-xs"
+                  onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+                >
                   <input
                     ref={inputRef}
                     type="text"
                     value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onChange={(e) => { if (!feedback.show) setUserAnswer(e.target.value); }}
                     onKeyDown={handleKeyDown}
-                    disabled={feedback.show}
+                    enterKeyHint="go"
                     autoComplete="off"
                     autoCapitalize="off"
                     spellCheck={false}
                     placeholder="Type romaji..."
                     aria-label="Type the romaji reading for the displayed kana character"
-                    className="w-full text-center text-2xl px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`w-full text-center text-2xl px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${feedback.show ? 'opacity-50' : ''}`}
                   />
                   <button
-                    onClick={handleSubmit}
+                    type="submit"
                     disabled={!userAnswer.trim() || feedback.show}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="w-full mt-3 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Check Answer
                   </button>
-                </div>
+                </form>
 
                 {/* Feedback Overlay */}
                 <QuizFeedback
