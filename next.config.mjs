@@ -166,7 +166,7 @@ const nextConfig = {
         destination: '/api/sitemap-index',
       },
       {
-        source: '/sitemap/:id.xml',
+        source: '/sitemap-:id.xml',
         destination: '/api/sitemap/:id',
       },
       {

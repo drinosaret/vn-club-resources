@@ -76,7 +76,7 @@ export async function GET() {
   }
 
   const entries = ids
-    .map((id) => `  <sitemap>\n    <loc>${SITE_URL}/sitemap/${id}.xml</loc>\n    <lastmod>${lastmod}</lastmod>\n  </sitemap>`)
+    .map((id) => `  <sitemap>\n    <loc>${SITE_URL}/sitemap-${id}.xml</loc>\n    <lastmod>${lastmod}</lastmod>\n  </sitemap>`)
     .join('\n');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
