@@ -158,13 +158,16 @@ const nextConfig = {
       },
     ],
   },
-  // Rewrite /sitemap.xml to the manual sitemap index route handler.
-  // Next.js bug #77304: generateSitemaps() doesn't auto-generate a sitemap index.
+  // Rewrite sitemaps to custom route handlers.
   async rewrites() {
     return [
       {
         source: '/sitemap.xml',
         destination: '/api/sitemap-index',
+      },
+      {
+        source: '/sitemap/:id.xml',
+        destination: '/api/sitemap/:id',
       },
       {
         source: '/feed.xml',

@@ -46,6 +46,8 @@ jobs:
             node scripts/generate-git-dates.js
 
             docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
-            # Reload nginx config — `up -d` doesn't restart containers for bind-mount changes
-            docker compose -f docker-compose.prod.yml exec nginx nginx -s reload
+            # Recreate nginx — git pull creates new file inodes, but Docker bind mounts
+            # track the old inode. `nginx -s reload` reads the stale mount. Recreating
+            # the container rebinds to the current inode. --no-deps prevents cascading.
+            docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --force-recreate --no-deps nginx
             docker image prune -f
