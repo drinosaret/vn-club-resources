@@ -167,7 +167,8 @@ async def main(args):
         cache = get_cache()
         flushed_lists = await cache.flush_pattern("user:list:*")
         flushed_stats = await cache.flush_pattern("user:stats:*")
-        logger.info(f"Flushed {flushed_lists} user list caches and {flushed_stats} user stats caches")
+        flushed_browse = await cache.flush_pattern("browse:*")
+        logger.info(f"Flushed {flushed_lists} user list caches, {flushed_stats} user stats caches, and {flushed_browse} browse caches")
 
         # Record import time
         await update_last_import_time()

@@ -25,7 +25,7 @@ export function ImageLightbox({ children, src, alt, imageSexual, vnId }: ImageLi
   const isNsfw = (imageSexual ?? 0) >= NSFW_THRESHOLD;
   // Use context state if vnId provided, otherwise fall back to local state
   const isRevealed = vnId && nsfwContext ? nsfwContext.isRevealed(vnId) : localRevealed;
-  const shouldBlockLightbox = isNsfw && !isRevealed;
+  const shouldBlockLightbox = isNsfw && !isRevealed && !nsfwContext?.allRevealed;
 
   const [lightboxLoaded, setLightboxLoaded] = useState(false);
 

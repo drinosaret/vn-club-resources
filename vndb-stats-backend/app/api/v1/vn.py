@@ -1,10 +1,11 @@
 """Visual Novel metadata endpoints."""
 
+import asyncio
 import logging
 import re
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, case, and_, or_, text
 from sqlalchemy.dialects.postgresql import insert
@@ -12,7 +13,7 @@ from sqlalchemy.dialects.postgresql import insert
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.db.database import get_db
+from app.db.database import get_db, async_session_maker
 from app.db import schemas
 from app.db.models import VisualNovel, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
 from app.services.extlinks_service import build_extlink_url, build_wikidata_links, get_site_label, SHOP_SITES, LINK_SITES, LINK_SORT_ORDER, SHOP_SORT_ORDER, DEPRECATED_SITES, TRANSLATION_ONLY_SITES, NON_JP_CONSOLE_STORES
@@ -188,6 +189,7 @@ async def search_vns(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=24, ge=1, le=100),
 
+    response: Response = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -221,6 +223,8 @@ async def search_vns(
         cached = await cache.get(cache_key)
         if cached:
             cached["query_time"] = round(time.time() - start_time, 3)
+            if response is not None:
+                response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=300"
             return schemas.VNSearchResponse(**cached)
 
     # Only select the columns needed for VNSummary response
@@ -670,12 +674,19 @@ async def search_vns(
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
 
-    # Execute (result rows are named tuples, not ORM objects)
-    result = await db.execute(query)
-    vns = result.all()
+    # Execute main query and count query in parallel using separate sessions.
+    # asyncpg doesn't support concurrent queries on the same connection, so
+    # the count query runs on a separate session from the pool.
+    async def _run_count(q):
+        async with async_session_maker() as s:
+            r = await s.execute(q)
+            return r.scalar_one_or_none() or 0
 
-    count_result = await db.execute(count_query)
-    total = count_result.scalar_one_or_none() or 0
+    result, total = await asyncio.gather(
+        db.execute(query),
+        _run_count(count_query),
+    )
+    vns = result.all()
 
     # Calculate total_with_spoilers when filtering by tags/traits with spoiler_level < 2
     total_with_spoilers = None
@@ -933,13 +944,12 @@ async def search_vns(
                 )
                 spoiler_count_query = spoiler_count_query.where(VisualNovel.id.in_(pub_sub))
 
-        # Execute spoiler-inclusive count query
-        spoiler_count_result = await db.execute(spoiler_count_query)
-        total_with_spoilers = spoiler_count_result.scalar_one_or_none() or 0
+        # Execute spoiler-inclusive count query on a separate session
+        total_with_spoilers = await _run_count(spoiler_count_query)
 
     elapsed_time = time.time() - start_time
 
-    response = schemas.VNSearchResponse(
+    search_response = schemas.VNSearchResponse(
         results=[
             schemas.VNSummary(
                 id=vn.id,
@@ -963,11 +973,17 @@ async def search_vns(
         query_time=round(elapsed_time, 3),
     )
 
-    # Cache the response for 60 seconds (data only changes daily)
+    # Cache the response for 1 hour (data only changes daily via VNDB dumps).
+    # browse:* keys are flushed after each import in worker.py / initial_import.py.
     if sort != "random":
-        await cache.set(cache_key, response.model_dump(mode="json"), ttl=60)
+        await cache.set(cache_key, search_response.model_dump(mode="json"), ttl=3600)
 
-    return response
+    # HTTP cache headers for browser caching (production uses fetch cache: 'default').
+    # 30s hard cache + 5min stale-while-revalidate = revisiting same filters is instant.
+    if sort != "random" and response is not None:
+        response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=300"
+
+    return search_response
 
 
 @router.get("/traits/counts")

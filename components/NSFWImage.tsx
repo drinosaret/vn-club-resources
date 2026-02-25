@@ -24,7 +24,7 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
 
   // Use context state if vnId provided and context available, otherwise fall back to local state
   const isRevealed = vnId && context ? context.isRevealed(vnId) : localRevealed;
-  const shouldBlur = isNsfw && !isRevealed;
+  const shouldBlur = isNsfw && !isRevealed && !context?.allRevealed;
 
   // Ref to hold latest state for native event handler (avoids stale closures)
   const stateRef = useRef({ shouldBlur, vnId, context, setLocalRevealed });

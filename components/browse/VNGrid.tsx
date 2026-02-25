@@ -72,15 +72,13 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   }, [gridSize]);
 
   // Preload buffer — keeps old grid visible while new images load in background.
-  // Pagination uses aggressive config: for prefetched pages images decode from
-  // browser cache in ~5-15ms (no white flash). Non-prefetched pages timeout at
-  // 150ms — still fast, and any remaining images pop in via per-card shimmer.
+  // Pagination (skipPreload=true) disables the buffer for instant swap — prefetched
+  // images are already decoded in browser cache, per-card shimmers handle stragglers.
+  // Filter/search changes go through preload for a polished batch swap.
   const preloadCount = PRELOAD_COUNTS[gridSize] ?? 12;
-  const config = skipPreload
-    ? { preloadCount, threshold: 0.9, timeoutMs: 150 }
-    : { ...PRELOAD_DEFAULTS, preloadCount };
+  const config = { ...PRELOAD_DEFAULTS, preloadCount };
   const { displayItems: displayResults, isSwapping } = usePreloadBuffer(results, getPreloadUrls, {
-    isLoading, config,
+    isLoading, config, disabled: skipPreload,
   });
 
   // Show empty state when query completes with no results
@@ -131,19 +129,18 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       {/* Flexbox layout centers incomplete last row like VNDB */}
       <div className={`browse-vn-grid-content flex flex-wrap justify-center gap-x-4 gap-y-6 my-6 ${hasMounted && isBusy ? 'pointer-events-none' : ''}`}>
         {displayResults.map((vn, index) => (
-          <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
+          <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} aboveFold={index < preloadCount && !hasMounted} />
         ))}
       </div>
     </div>
   );
 });
 
-// All browse grid images use loading="lazy" to prevent React 19 from injecting
-// <link rel="preload" as="image"> into <head> for every non-lazy image.
-// Those preload links accumulate across SWR re-renders and are never cleaned up,
-// spamming the console with "preloaded with link preload was not used" warnings.
-// The VNGrid's own preloading (new Image() for PRELOAD_COUNT above-fold images
-// before grid swap) already handles the above-fold UX.
+// Above-fold images use loading="eager" on SSR (before hydration) so the browser
+// starts downloading them during HTML parse — before React hydrates and the
+// preload buffer kicks in. After hydration (hasMounted=true), aboveFold is false
+// for all items, so subsequent renders use loading="lazy" to avoid React 19's
+// <link rel="preload"> accumulation across SWR re-renders.
 
 interface VNCoverProps {
   vn: VNSearchResult;
@@ -152,9 +149,11 @@ interface VNCoverProps {
   srcsetWidths?: ImageWidth[];
   imageSizes?: string;
   itemClass?: string;
+  /** True for above-fold images on SSR — uses loading="eager" for faster LCP */
+  aboveFold?: boolean;
 }
 
-const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass }: VNCoverProps) {
+const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass, aboveFold }: VNCoverProps) {
   const title = getDisplayTitle({
     title: vn.title,
     title_jp: vn.title_jp || vn.alttitle,
@@ -190,11 +189,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     >
       {/* Cover image container */}
       <div className="browse-vn-card relative aspect-3/4 rounded-lg overflow-hidden shadow-xs group-hover:shadow-lg group-hover:-translate-y-0.5 transition-[box-shadow,transform] duration-150 bg-gray-200 dark:bg-gray-700">
-        {/* Shimmer placeholder — unmounted once image loads (no flash for preloaded images) */}
-        {showImage && !imageLoaded && (
-          <div className="absolute inset-0 image-placeholder" />
-        )}
-
         {/* Cover Image — preloaded images display instantly from browser cache */}
         {showImage ? (
           <NSFWImage
@@ -203,7 +197,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
             imageSexual={vn.image_sexual}
             vnId={vnId}
             className={`absolute inset-0 w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            loading="lazy"
+            loading={aboveFold ? "eager" : "lazy"}
             srcSet={srcset}
             sizes={imageSizes || IMAGE_SIZES.medium}
             onLoad={handleImageLoad}
@@ -213,6 +207,12 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
           <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500">
             <BookOpen className="w-8 h-8" />
           </div>
+        )}
+
+        {/* Shimmer placeholder — rendered AFTER image so it stacks on top of NSFWOverlay,
+            preventing NSFW tiny thumbnails from appearing before non-NSFW covers load */}
+        {showImage && !imageLoaded && (
+          <div className="absolute inset-0 image-placeholder" />
         )}
 
         {/* NSFW badge */}
@@ -249,6 +249,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     prevProps.imageWidth === nextProps.imageWidth &&
     prevProps.srcsetWidths === nextProps.srcsetWidths &&
     prevProps.imageSizes === nextProps.imageSizes &&
-    prevProps.itemClass === nextProps.itemClass
+    prevProps.itemClass === nextProps.itemClass &&
+    prevProps.aboveFold === nextProps.aboveFold
   );
 });

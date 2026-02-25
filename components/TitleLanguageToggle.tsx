@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Languages, ChevronDown, Check, Settings2 } from 'lucide-react';
+import { Languages, ChevronDown, Check, Settings2, Eye } from 'lucide-react';
 import { useTitlePreference, TitlePreference } from '@/lib/title-preference';
+import { useNSFWRevealContext } from '@/lib/nsfw-reveal';
 
 
 const OPTIONS: { value: TitlePreference; label: string; description: string }[] = [
@@ -71,6 +72,7 @@ function applyRootDebugClasses(flags: DebugFlag[]) {
 
 export function TitleLanguageToggle() {
   const { preference, setPreference } = useTitlePreference();
+  const nsfwContext = useNSFWRevealContext();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isFirefox, setIsFirefox] = useState(false);
@@ -177,6 +179,28 @@ export function TitleLanguageToggle() {
               )}
             </button>
           ))}
+
+          <div className="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700" />
+
+          <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Content
+          </div>
+          <button
+            onClick={() => nsfwContext?.setAllRevealed(!nsfwContext.allRevealed)}
+            className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+              nsfwContext?.allRevealed ? 'bg-gray-50 dark:bg-gray-700/50' : ''
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Eye className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                Show NSFW uncensored
+              </div>
+            </div>
+            {nsfwContext?.allRevealed && (
+              <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+            )}
+          </button>
 
           {process.env.NODE_ENV === 'development' && (
             <>

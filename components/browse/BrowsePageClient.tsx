@@ -351,11 +351,11 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const abortControllerRef = useRef<AbortController | null>(null);
   // Ref for debouncing filter changes
   const filterDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const FILTER_DEBOUNCE_MS = 300; // Debounce rapid filter changes (300ms for multi-select filters)
+  const FILTER_DEBOUNCE_MS = 150; // Debounce rapid filter changes (reduced from 300ms — Redis cache makes repeated queries cheap)
   // Ref for prefetch cache (adjacent pages)
   const prefetchCacheRef = useRef<Map<string, BrowseResponse>>(new Map());
   const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const prefetchAbortRef = useRef<AbortController | null>(null);
+  const prefetchAbortRef = useRef<Map<number, AbortController>>(new Map());
   // Ref to track forward navigation for defensive scroll-to-top after content renders
   const isForwardNavRef = useRef(false);
   // Gate ref: prevents Strict Mode double-invocation from re-processing nav detection
@@ -419,9 +419,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       if (prefetchTimeoutRef.current) {
         clearTimeout(prefetchTimeoutRef.current);
       }
-      if (prefetchAbortRef.current) {
-        prefetchAbortRef.current.abort();
-      }
+      prefetchAbortRef.current.forEach(c => c.abort());
+      prefetchAbortRef.current.clear();
       if (overlayDelayRef.current) {
         clearTimeout(overlayDelayRef.current);
       }
@@ -796,19 +795,18 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   }, []);
 
   // Prefetch a page for faster navigation
+  // Prefetch a page for faster navigation. Uses per-page abort controllers so
+  // multiple adjacent pages can prefetch concurrently (not just the last one).
   const prefetchPage = useCallback(async (page: number) => {
     const prefetchFilters = { ...filters, page };
     const cacheKey = JSON.stringify(prefetchFilters);
 
-    // Skip if already cached
+    // Skip if already cached or already in-flight
     if (prefetchCacheRef.current.has(cacheKey)) return;
+    if (prefetchAbortRef.current.has(page)) return;
 
-    // Cancel previous prefetch and create new abort controller
-    if (prefetchAbortRef.current) {
-      prefetchAbortRef.current.abort();
-    }
     const abortController = new AbortController();
-    prefetchAbortRef.current = abortController;
+    prefetchAbortRef.current.set(page, abortController);
 
     try {
       const response = await vndbStatsApi.browseVNs(prefetchFilters, abortController.signal);
@@ -838,23 +836,29 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       }
     } catch {
       // Ignore prefetch errors - they're non-critical
+    } finally {
+      prefetchAbortRef.current.delete(page);
     }
   }, [filters]);
 
   // Prefetch adjacent pages after successful load
   useEffect(() => {
     if (!isLoading && results.length > 0 && filters.page && pages > 1) {
-      // Clear any pending prefetch
+      // Clear any pending prefetch timeouts
       if (prefetchTimeoutRef.current) {
         clearTimeout(prefetchTimeoutRef.current);
       }
+      // Abort in-flight prefetches from previous page/filters
+      prefetchAbortRef.current.forEach(c => c.abort());
+      prefetchAbortRef.current.clear();
 
       // Touch-primary devices can't hover pagination buttons to trigger prefetch,
       // so prefetch a wider range upfront.
       const isTouch = window.matchMedia?.('(hover: none)').matches;
       const p = filters.page || 1;
 
-      // Immediate neighbors — main request is done so no competing
+      // Immediate neighbors — main request is done so no competing.
+      // All calls proceed concurrently (each has its own abort controller).
       const t1 = setTimeout(() => {
         if (p < pages) prefetchPage(p + 1);
         if (p > 1) prefetchPage(p - 1);
@@ -1153,19 +1157,39 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     handleFilterChange({ first_char: char || undefined });
   };
 
-  // Handle page change - immediate fetch (no debounce)
+  // Handle page change — check prefetch cache inline for synchronous batch.
+  // When cache hits, ALL setState calls batch in one synchronous render (~5ms)
+  // instead of deferring via startTransition (~30ms, 3 renders).
   const handlePageChange = (page: number) => {
-    setSkipPreload(true); // Skip preload buffer — show results immediately, per-card shimmer handles loading
-    setIsPaginatingOnly(true); // Mark as pagination-only to avoid "Searching..." flash
     const updated = { ...filters, page };
-    setFilters(updated);
-    updateURL(updated);
+    const cacheKey = JSON.stringify(updated);
+    const cached = prefetchCacheRef.current.get(cacheKey);
 
-    // Clear any pending debounce - pagination should be immediate
-    if (filterDebounceRef.current) {
-      clearTimeout(filterDebounceRef.current);
+    if (cached) {
+      // Cache hit — batch all setState synchronously for single-render swap.
+      // Safe because pagination renders are lightweight (memo'd VNCover, same grid
+      // structure, images decoded from cache) — well under the ~10ms threshold
+      // that causes Firefox WebRender text tile drops.
+      prefetchCacheRef.current.delete(cacheKey);
+      setSkipPreload(true);
+      setFilters(updated);
+      setResults(cached.results);
+      setTotal(cached.total);
+      setTotalWithSpoilers(cached.total_with_spoilers ?? null);
+      setPages(cached.pages);
+      setQueryTime(cached.query_time);
+      setIsLoading(false);
+      setIsPaginatingOnly(false);
+    } else {
+      // Cache miss — fetch from network
+      setSkipPreload(true);
+      setIsPaginatingOnly(true);
+      setFilters(updated);
+      fetchResults(updated);
     }
-    fetchResults(updated);
+
+    updateURL(updated);
+    if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
   };
 
   // Prefetch a page on hover — triggers API fetch so data is cached when clicked

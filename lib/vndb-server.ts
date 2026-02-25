@@ -95,7 +95,7 @@ export async function browseVNsServer(
 
   try {
     const res = await fetch(`${backendUrl}/api/v1/vn/search/?${params.toString()}`, {
-      next: { revalidate: 60 }, // Cache for 1 minute
+      next: { revalidate: 300 }, // Cache for 5 minutes (data changes daily via VNDB dumps)
       signal: AbortSignal.timeout(30000), // 30 second timeout
     });
 

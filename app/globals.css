@@ -448,13 +448,16 @@ main {
   animation-duration: 0s;
 }
 
-/* ═══ Below-Fold Paint Optimization ═══
+/* ═══ Browse Grid Paint Optimization ═══
    content-visibility: auto defers paint for off-screen VN cards.
    With 42 items per page (small grid), only ~12 are above the fold —
-   the remaining ~30 skip layout/paint until scrolled into view. */
+   the remaining ~30 skip layout/paint until scrolled into view.
+   contain: layout style paint isolates each card so internal changes
+   (image load, hover) don't invalidate sibling paint. */
 .browse-vn-grid-content > a {
   content-visibility: auto;
   contain-intrinsic-size: auto 180px 300px;
+  contain: layout style paint;
 }
 
 /* Custom styles for markdown content */

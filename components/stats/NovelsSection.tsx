@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback, memo } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
 import Link from 'next/link';
 import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } from 'lucide-react';
 import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
@@ -10,7 +10,7 @@ import { COMPACT_CARD_IMAGE_WIDTH, COMPACT_CARD_IMAGE_SIZES } from '@/components
 import { LanguageFilter, LanguageFilterValue } from './LanguageFilter';
 import { useDisplayTitle, useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
-import { usePreloadBuffer, PRELOAD_DEFAULTS, PRELOAD_COUNT } from '@/lib/use-preload-buffer';
+import { usePreloadBuffer } from '@/lib/use-preload-buffer';
 import { useImageLoadState } from '@/lib/use-image-load-state';
 import { prefetchVNImages } from '@/lib/prefetch-vn-images';
 
@@ -162,13 +162,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   }, []);
 
   // Preload buffer — old gallery items stay visible while new page images load.
-  // Pagination uses lighter config (shorter timeout). List view disables preloading.
-  const preloadConfig = isPaginatingRef.current
-    ? { preloadCount: PRELOAD_COUNT, threshold: 0.9, timeoutMs: 150 }
-    : PRELOAD_DEFAULTS;
+  // Pagination uses a lighter config (lower threshold + shorter timeout) since adjacent
+  // page images are pre-decoded by the auto-prefetch effect.
+  // List view disables preloading (no images to preload).
   const { displayItems: displayedItems, isSwapping: isPreloading } = usePreloadBuffer(
     paginatedItems, getPreloadUrls,
-    { isLoading, config: preloadConfig, disabled: viewMode === 'list' },
+    { isLoading, disabled: isPaginatingRef.current || viewMode === 'list' },
   );
 
   // Handle page change — sets pagination flag so preload buffer kicks in
@@ -180,7 +179,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   // Preload images from target page on hover (Pagination calls this on mouseenter)
   const handlePrefetchPage = useCallback((page: number) => {
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
-    const pageItems = filteredAndSorted.slice(startIndex, startIndex + PRELOAD_COUNT);
+    const pageItems = filteredAndSorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     prefetchVNImages(
       pageItems
         .filter(n => n.vn?.image?.url)
@@ -188,6 +187,17 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       COMPACT_PRELOAD_WIDTH,
     );
   }, [filteredAndSorted]);
+
+  // Auto-prefetch adjacent pages' images after current page renders (mirrors browse page).
+  // Data is already client-side so we only need to pre-decode images.
+  useEffect(() => {
+    if (novels.length === 0 || filteredAndSorted.length === 0) return;
+    const t = setTimeout(() => {
+      if (currentPage < totalPages) handlePrefetchPage(currentPage + 1);
+      if (currentPage > 1) handlePrefetchPage(currentPage - 1);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [currentPage, totalPages, novels.length, filteredAndSorted.length, handlePrefetchPage]);
 
   const sortLabels: Record<SortOption, string> = {
     score: 'My Score',
@@ -483,9 +493,6 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
     >
       {/* Thumbnail */}
       <div className="shrink-0 w-12 h-16 relative rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700">
-        {showImage && !imageLoaded && (
-          <div className="absolute inset-0 image-placeholder" />
-        )}
         {showImage ? (
           <NSFWImage
             src={imageUrl}
@@ -502,6 +509,9 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
             <BookOpen className="w-5 h-5" />
           </div>
         ) : null}
+        {showImage && !imageLoaded && (
+          <div className="absolute inset-0 image-placeholder" />
+        )}
       </div>
 
       {/* Title and info */}
@@ -565,10 +575,6 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
     >
       {/* Image */}
       <Link href={`/vn/${novel.id}`} className="block relative aspect-3/4">
-        {/* Shimmer placeholder — unmounted once image loads (no flash for preloaded images) */}
-        {showImage && !imageLoaded && (
-          <div className="absolute inset-0 image-placeholder" />
-        )}
         {showImage ? (
           <NSFWImage
             src={imageUrl}
@@ -587,6 +593,10 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
             <BookOpen className="w-6 h-6" />
           </div>
         ) : null}
+        {/* Shimmer — rendered after NSFWImage so it stacks on top of NSFW overlay */}
+        {showImage && !imageLoaded && (
+          <div className="absolute inset-0 image-placeholder" />
+        )}
 
         {/* User score badge */}
         {userScore && (

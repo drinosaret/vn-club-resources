@@ -23,11 +23,11 @@ export const PRELOAD_COUNTS: Record<string, number> = {
   large: 8,
 };
 
-/** Default config for filter/search changes — longer wait for polished swap */
+/** Default config for filter/search changes — wait for polished swap */
 export const PRELOAD_DEFAULTS: Required<PreloadBufferConfig> = {
   preloadCount: PRELOAD_COUNT,
   threshold: 0.4,    // 40% of above-fold images
-  timeoutMs: 800,
+  timeoutMs: 600,    // Max wait before swap (cached images hit threshold in <10ms)
 };
 
 /** Lighter config for pagination — shorter wait since user expects fast pages.
@@ -35,7 +35,7 @@ export const PRELOAD_DEFAULTS: Required<PreloadBufferConfig> = {
 export const PAGINATION_PRELOAD: Required<PreloadBufferConfig> = {
   preloadCount: PRELOAD_COUNT,
   threshold: 0.25,   // 25% (~3 images)
-  timeoutMs: 400,
+  timeoutMs: 300,    // Reduced from 400ms — prefetched images resolve instantly
 };
 
 // ── Hook ───────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ export function usePreloadBuffer<T>(
   options?: {
     /** Don't process new items while true (e.g., API fetch in progress) */
     isLoading?: boolean;
-    /** Skip preload — immediate swap via startTransition (e.g., pagination, list view) */
+    /** Skip preload — return items directly (e.g., pagination, list view) */
     disabled?: boolean;
     /** Preload timing config — use PAGINATION_PRELOAD or PRELOAD_DEFAULTS */
     config?: PreloadBufferConfig;
@@ -100,12 +100,11 @@ export function usePreloadBuffer<T>(
       // Fall through to preload logic below
     }
 
-    // Disabled → immediate swap (e.g., pagination or list view)
+    // Disabled → sync internal state for when disabled flips back to false.
+    // No startTransition needed — the return value below handles disabled display.
     if (disabledRef.current) {
-      startTransition(() => {
-        setDisplayItems(items);
-        setIsSwapping(false);
-      });
+      setDisplayItems(items);
+      setIsSwapping(false);
       return;
     }
 
@@ -186,5 +185,12 @@ export function usePreloadBuffer<T>(
     };
   }, [items, isLoading]);
 
-  return { displayItems, isSwapping };
+  // When disabled (pagination/list view), return input items directly — no state
+  // delay, no extra render. The grid shows new items on the same render that
+  // receives them. The effect above syncs internal state for when disabled=false.
+  const disabled = options?.disabled ?? false;
+  return {
+    displayItems: disabled ? items : displayItems,
+    isSwapping: disabled ? false : isSwapping,
+  };
 }

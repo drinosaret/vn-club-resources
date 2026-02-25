@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 
 interface NSFWRevealContextType {
@@ -8,12 +8,36 @@ interface NSFWRevealContextType {
   revealVN: (vnId: string) => void;
   /** Changes on every route change — consumers use this to reset local state */
   pathname: string;
+  /** When true, all NSFW images are shown uncensored */
+  allRevealed: boolean;
+  setAllRevealed: (value: boolean) => void;
 }
 
 const NSFWRevealContext = createContext<NSFWRevealContextType | null>(null);
 
+const NSFW_UNCENSORED_KEY = 'nsfw-uncensored';
+
 export function NSFWRevealProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const [allRevealed, setAllRevealedState] = useState(false);
+
+  // Read persisted preference on mount (avoids hydration mismatch — SSR always renders blurred)
+  useEffect(() => {
+    try {
+      setAllRevealedState(localStorage.getItem(NSFW_UNCENSORED_KEY) === 'true');
+    } catch {}
+  }, []);
+
+  const setAllRevealed = useCallback((value: boolean) => {
+    setAllRevealedState(value);
+    try {
+      if (value) {
+        localStorage.setItem(NSFW_UNCENSORED_KEY, 'true');
+      } else {
+        localStorage.removeItem(NSFW_UNCENSORED_KEY);
+      }
+    } catch {}
+  }, []);
 
   // Derive revealed IDs from pathname — new pathname = new empty Set
   const [revealState, setRevealState] = useState<{ pathname: string; ids: Set<string> }>({
@@ -47,7 +71,9 @@ export function NSFWRevealProvider({ children }: { children: ReactNode }) {
     isRevealed,
     revealVN,
     pathname,
-  }), [isRevealed, revealVN, pathname]);
+    allRevealed,
+    setAllRevealed,
+  }), [isRevealed, revealVN, pathname, allRevealed, setAllRevealed]);
 
   return (
     <NSFWRevealContext.Provider value={value}>
