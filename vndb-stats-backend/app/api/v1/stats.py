@@ -1296,7 +1296,7 @@ async def get_similar_producers(
 @router.get("/staff/sitemap-ids", include_in_schema=False)
 async def get_staff_sitemap_ids(
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
+    limit: int = Query(default=10000, ge=0, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Get staff IDs for sitemap generation."""
@@ -1458,7 +1458,7 @@ async def get_staff_vns_with_tags(
 @router.get("/seiyuu/sitemap-ids", include_in_schema=False)
 async def get_seiyuu_sitemap_ids(
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
+    limit: int = Query(default=10000, ge=0, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Get seiyuu (voice actor) IDs for sitemap generation."""
@@ -1652,7 +1652,7 @@ async def get_seiyuu_characters(
 @router.get("/tags/sitemap-ids", include_in_schema=False)
 async def get_tag_sitemap_ids(
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
+    limit: int = Query(default=10000, ge=0, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Get tag IDs for sitemap generation."""
@@ -1678,7 +1678,7 @@ async def get_tag_sitemap_ids(
 @router.get("/traits/sitemap-ids", include_in_schema=False)
 async def get_trait_sitemap_ids(
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
+    limit: int = Query(default=10000, ge=0, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Get trait IDs for sitemap generation."""
@@ -1704,7 +1704,7 @@ async def get_trait_sitemap_ids(
 @router.get("/producers/sitemap-ids", include_in_schema=False)
 async def get_producer_sitemap_ids(
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
+    limit: int = Query(default=10000, ge=0, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Get producer IDs for sitemap generation."""

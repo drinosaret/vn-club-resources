@@ -298,6 +298,24 @@ async function main() {
   // Ensure cache directory exists
   ensureDir(CACHE_DIR);
 
+  // Quick backend connectivity check — if unreachable, skip gracefully.
+  // This is expected during Docker builds where the backend isn't running yet.
+  // Images will be cached on-demand at runtime via the /img/ route.
+  try {
+    const healthCheck = await fetch(`${BACKEND_URL}/api/v1/browse/vns?limit=1&page=1`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!healthCheck.ok) {
+      console.log(`Backend not available (HTTP ${healthCheck.status}) — skipping image pre-cache.`);
+      console.log('Images will be cached on-demand at runtime.\n');
+      return;
+    }
+  } catch {
+    console.log('Backend not reachable — skipping image pre-cache.');
+    console.log('Images will be cached on-demand at runtime.\n');
+    return;
+  }
+
   // Default: fetch top 100 VNs (covers most commonly viewed)
   const topCount = args.top ?? 100;
 

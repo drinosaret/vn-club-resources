@@ -21,7 +21,7 @@ router = APIRouter()
 @router.get("/sitemap-ids", include_in_schema=False)
 async def get_character_sitemap_ids(
     offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=50000, ge=0, le=50000),
+    limit: int = Query(default=10000, ge=0, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Get character IDs for sitemap generation.
