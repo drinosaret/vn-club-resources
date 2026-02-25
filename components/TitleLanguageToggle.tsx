@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Languages, ChevronDown, Check, Settings2 } from 'lucide-react';
 import { useTitlePreference, TitlePreference } from '@/lib/title-preference';
 
+
 const OPTIONS: { value: TitlePreference; label: string; description: string }[] = [
   { value: 'romaji', label: 'EN', description: 'Romaji / English' },
   { value: 'japanese', label: 'JP', description: 'Japanese (日本語)' },
@@ -83,14 +84,16 @@ export function TitleLanguageToggle() {
 
     try {
       const raw = (sessionStorage.getItem('ffdbg') || '').toLowerCase();
-      if (!raw) return;
-      const parsed = raw.split(',').map(s => s.trim()).filter(Boolean) as DebugFlag[];
-      const valid = parsed.filter(flag => DEBUG_OPTIONS.some(opt => opt.key === flag));
-      setDebugFlags(valid);
-      applyRootDebugClasses(valid);
+      if (raw) {
+        const parsed = raw.split(',').map(s => s.trim()).filter(Boolean) as DebugFlag[];
+        const valid = parsed.filter(flag => DEBUG_OPTIONS.some(opt => opt.key === flag));
+        setDebugFlags(valid);
+        applyRootDebugClasses(valid);
+      }
     } catch {
       setDebugFlags([]);
     }
+
   }, []);
 
   // Close dropdown when clicking outside
@@ -217,6 +220,7 @@ export function TitleLanguageToggle() {
                   Active: {debugValue}
                 </div>
               )}
+
             </>
           )}
         </div>

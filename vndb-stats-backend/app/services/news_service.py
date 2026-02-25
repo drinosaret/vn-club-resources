@@ -50,6 +50,11 @@ class NewsService:
     VNDB_VN_API = "https://api.vndb.org/kana/vn"
     VNDB_RELEASE_API = "https://api.vndb.org/kana/release"
 
+    # Fallback banner images for RSS feeds that lack og:image
+    FEED_FALLBACK_IMAGES: dict[str, str] = {
+        "Ima-ero": "https://www.ima-ero.com/wp/wp-content/uploads/2019/04/suiseiseki-topgazou.jpg.webp",
+    }
+
     # Default RSS feeds for Japanese VN news
     DEFAULT_RSS_FEEDS = [
         {
@@ -747,7 +752,7 @@ class NewsService:
                 title=entry['title'][:500],
                 summary=entry['description'],
                 url=entry['link'],
-                image_url=entry.get('thumbnail'),
+                image_url=entry.get('thumbnail') or self.FEED_FALLBACK_IMAGES.get(feed_name),
                 image_is_nsfw=False,
                 published_at=entry['published'] or datetime.now(timezone.utc),
                 fetched_at=datetime.now(timezone.utc),

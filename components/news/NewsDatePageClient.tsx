@@ -214,9 +214,18 @@ function UTCClock() {
   );
 }
 
+const EMPTY_LABELS: Record<string, string> = {
+  all: 'news',
+  'recently-added': 'recently added VNs',
+  releases: 'releases',
+  rss: 'RSS feed items',
+  twitter: 'tweets',
+  announcements: 'announcements',
+};
+
 /** Empty state when no items for a date + tab */
 function EmptyState({ tab, date }: { tab: string; date: string }) {
-  const label = TAB_LABELS[tab] || 'news';
+  const label = EMPTY_LABELS[tab] || 'news';
 
   return (
     <div className="text-center py-16">
@@ -224,7 +233,7 @@ function EmptyState({ tab, date }: { tab: string; date: string }) {
         <Newspaper className="w-10 h-10 text-gray-400" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-        No {label.toLowerCase()} for {date}
+        No {label} for {date}
       </h3>
       <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
         Try selecting a different date using the date picker above, or check another source tab.

@@ -113,11 +113,11 @@ export default function JoinPage() {
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-              Join the VN Club Resurrection Community
+              VN Club Resurrection
             </h1>
 
             <p className="text-lg md:text-xl mb-8 text-primary-100 max-w-2xl mx-auto leading-relaxed">
-              Connect with other Japanese learners and VN readers in our Discord server!
+              A server for Japanese learners passionate about reading visual novels in their original, untranslated form.
             </p>
 
             <a
@@ -136,7 +136,7 @@ export default function JoinPage() {
         <section className="py-12 md:py-20 bg-gray-50 dark:bg-gray-900/50">
           <div className="container mx-auto px-4 max-w-6xl">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white text-center mb-10">
-              Our community is the perfect place to
+              What we do
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -164,10 +164,10 @@ export default function JoinPage() {
         <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-16">
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              Ready to join?
+              All levels welcome
             </h2>
             <p className="text-lg text-primary-100 mb-8 max-w-xl mx-auto">
-              Whether you&apos;re just starting your Japanese journey or already deep into reading VNs, everyone is welcome!
+              Whether you&apos;re just starting out or already reading untranslated VNs on your own.
             </p>
             <a
               href="https://discord.gg/Ze7dYKVTHf"
@@ -178,6 +178,55 @@ export default function JoinPage() {
               <DiscordIcon className="w-5 h-5" />
               Join Discord Server
             </a>
+          </div>
+        </section>
+
+        {/* Partner Servers */}
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-4 max-w-4xl text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8">
+              Partner Servers
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
+              <a
+                href="https://discord.gg/fqX7jgz6bt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                <Image
+                  src="/assets/partner-ljta.webp"
+                  alt="Learn Japanese through Anime"
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-xl shrink-0"
+                  unoptimized
+                />
+                <div className="text-left">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Learn Japanese through Anime</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Anime partner server</p>
+                </div>
+              </a>
+              <a
+                href="https://discord.gg/4t22SGVT3C"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                <Image
+                  src="/assets/partner-room49.webp"
+                  alt="Room No.49"
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-xl shrink-0"
+                  unoptimized
+                />
+                <div className="text-left">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Room No.49</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Dark VN partner server</p>
+                </div>
+              </a>
+            </div>
           </div>
         </section>
       </div>

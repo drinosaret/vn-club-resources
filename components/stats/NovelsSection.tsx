@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useReducer, useCallback, memo, startTransition } from 'react';
+import { useState, useMemo, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } from 'lucide-react';
 import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
@@ -10,6 +10,9 @@ import { COMPACT_CARD_IMAGE_WIDTH, COMPACT_CARD_IMAGE_SIZES } from '@/components
 import { LanguageFilter, LanguageFilterValue } from './LanguageFilter';
 import { useDisplayTitle, useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
+import { usePreloadBuffer, PRELOAD_DEFAULTS, PRELOAD_COUNT } from '@/lib/use-preload-buffer';
+import { useImageLoadState } from '@/lib/use-image-load-state';
+import { prefetchVNImages } from '@/lib/prefetch-vn-images';
 
 type ViewMode = 'list' | 'gallery';
 type SortOption = 'score' | 'rating' | 'title' | 'date';
@@ -52,9 +55,11 @@ function getStatusFromLabels(labels?: Array<{ id: number; label?: string }>): st
 
 const ITEMS_PER_PAGE = 30;
 const SKELETON_COUNT = 18;
-const PRELOAD_COUNT = 12;
 // srcSet widths for compact gallery cards
 const COMPACT_SRCSET_WIDTHS: ImageWidth[] = [128, 256];
+// Preload at the largest srcset width so the preloaded image matches what
+// retina browsers actually render (2x DPR picks 256w, not 128w).
+const COMPACT_PRELOAD_WIDTH: ImageWidth = 256;
 
 export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
@@ -67,12 +72,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   const [currentPage, setCurrentPage] = useState(1);
   const { preference: titlePreference } = useTitlePreference();
 
-  // Preload buffer state — old items stay visible while new page images load
-  const [displayedItems, setDisplayedItems] = useState<VNDBListItem[]>([]);
-  const [isPreloading, setIsPreloading] = useState(false);
   const isPaginatingRef = useRef(false);
-  const preloadCleanupRef = useRef<(() => void) | null>(null);
-  const hasDisplayedRef = useRef(false);
   // Scroll target for bottom pagination (scrolls to section, not window top)
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +138,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   if (prevFilters.statusFilter !== statusFilter || prevFilters.langFilter !== langFilter || prevFilters.sortBy !== sortBy || prevFilters.searchQuery !== searchQuery) {
     setCurrentPage(1);
     setPrevFilters({ statusFilter, langFilter, sortBy, searchQuery });
+    isPaginatingRef.current = false; // Filter change → use full preload buffer
   }
 
   // Pagination
@@ -147,34 +148,28 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     return filteredAndSorted.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSorted, currentPage]);
 
+  // Returns URLs to preload for a given novel (main image + NSFW micro-thumbnail)
+  const getPreloadUrls = useCallback((novel: VNDBListItem) => {
+    const urls: string[] = [];
+    if (novel.vn?.image?.url) {
+      const url = getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_PRELOAD_WIDTH, vnId: novel.id });
+      if (url) {
+        urls.push(url);
+        if (isNsfwContent(novel.vn.image?.sexual)) urls.push(getTinySrc(url));
+      }
+    }
+    return urls;
+  }, []);
+
   // Preload buffer — old gallery items stay visible while new page images load.
-  // Once enough above-fold images are cached (40% threshold or 800ms timeout),
-  // swap the grid at once so each <img> loads from browser cache instantly.
-  useEffect(() => {
-    preloadCleanupRef.current?.();
-    preloadCleanupRef.current = null;
-
-    if (paginatedItems.length === 0) {
-      setDisplayedItems([]);
-      setIsPreloading(false);
-      hasDisplayedRef.current = true;
-      return;
-    }
-
-    // First render → show immediately
-    if (!hasDisplayedRef.current) {
-      hasDisplayedRef.current = true;
-      setDisplayedItems(paginatedItems);
-      return;
-    }
-
-    // Swap immediately — per-card shimmer handles image loading
-    isPaginatingRef.current = false;
-    startTransition(() => {
-      setDisplayedItems(paginatedItems);
-    });
-    setIsPreloading(false);
-  }, [paginatedItems]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pagination uses lighter config (shorter timeout). List view disables preloading.
+  const preloadConfig = isPaginatingRef.current
+    ? { preloadCount: PRELOAD_COUNT, threshold: 0.9, timeoutMs: 150 }
+    : PRELOAD_DEFAULTS;
+  const { displayItems: displayedItems, isSwapping: isPreloading } = usePreloadBuffer(
+    paginatedItems, getPreloadUrls,
+    { isLoading, config: preloadConfig, disabled: viewMode === 'list' },
+  );
 
   // Handle page change — sets pagination flag so preload buffer kicks in
   const handlePageChange = useCallback((page: number) => {
@@ -186,20 +181,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   const handlePrefetchPage = useCallback((page: number) => {
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
     const pageItems = filteredAndSorted.slice(startIndex, startIndex + PRELOAD_COUNT);
-    pageItems.forEach(novel => {
-      if (novel.vn?.image?.url) {
-        const img = new Image();
-        const url = getProxiedImageUrl(novel.vn.image.url, {
-          width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id,
-        });
-        if (url) {
-          img.src = url;
-          if (isNsfwContent(novel.vn?.image?.sexual)) {
-            new Image().src = getTinySrc(url);
-          }
-        }
-      }
-    });
+    prefetchVNImages(
+      pageItems
+        .filter(n => n.vn?.image?.url)
+        .map(n => ({ imageUrl: n.vn!.image!.url, vnId: n.id, imageSexual: n.vn!.image!.sexual })),
+      COMPACT_PRELOAD_WIDTH,
+    );
   }, [filteredAndSorted]);
 
   const sortLabels: Record<SortOption, string> = {
@@ -375,8 +362,8 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
         </div>
       </div>
 
-      {/* Skeleton Loading State - shown during initial load */}
-      {isLoading && novels.length === 0 && (
+      {/* Skeleton Loading State - shown during initial API load AND initial image preload */}
+      {((isLoading && novels.length === 0) || (novels.length > 0 && displayedItems.length === 0 && filteredAndSorted.length > 0)) && (
         <>
           <PaginationSkeleton />
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 my-4">
@@ -394,8 +381,8 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
         </>
       )}
 
-      {/* Content with loading overlay */}
-      {novels.length > 0 && (
+      {/* Content with loading overlay — hidden during initial preload (skeleton covers it) */}
+      {novels.length > 0 && (displayedItems.length > 0 || filteredAndSorted.length === 0) && (
         <div className="relative">
           {/* Loading overlay - only during initial data refresh, NOT during pagination */}
           <div
@@ -477,48 +464,6 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
 const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   const getDisplayTitle = useDisplayTitle();
-  // Lightweight image state — ref mutations don't trigger renders; useReducer is the re-render trigger
-  const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [, rerender] = useReducer(x => x + 1, 0);
-
-  // Reset when novel changes (memo reuse)
-  const prevIdRef = useRef(novel.id);
-  if (novel.id !== prevIdRef.current) {
-    prevIdRef.current = novel.id;
-    imgState.current = { loaded: false, error: false, retryKey: 0, retryCount: 0 };
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-  }
-
-  const { loaded: imageLoaded, error: imageError, retryKey } = imgState.current;
-
-  useEffect(() => {
-    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
-  }, []);
-
-  const handleImageLoad = useCallback(() => {
-    imgState.current.loaded = true;
-    rerender();
-  }, []);
-
-  const handleImageError = useCallback(() => {
-    const s = imgState.current;
-    if (s.retryCount < 2) {
-      const delay = s.retryCount === 0 ? 2000 : 5000;
-      s.retryCount++;
-      s.error = true;
-      rerender();
-      retryTimerRef.current = setTimeout(() => {
-        s.error = false;
-        s.loaded = false;
-        s.retryKey++;
-        rerender();
-      }, delay);
-    } else {
-      s.error = true;
-      rerender();
-    }
-  }, []);
 
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : '-';
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : '-';
@@ -528,10 +473,8 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
 
   const baseImageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id }) : null;
-  const imageUrl = baseImageUrl && retryKey > 0
-    ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}_r=${retryKey}`
-    : baseImageUrl;
-  const showImage = imageUrl && !imageError;
+  const { imageUrl, showImage, imageLoaded, handleImageLoad, handleImageError } = useImageLoadState(novel.id, baseImageUrl);
+  const imageError = !showImage && !!baseImageUrl;
 
   return (
     <Link
@@ -596,57 +539,14 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
 
 const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
   const getDisplayTitle = useDisplayTitle();
-  // Lightweight image state — ref mutations don't trigger renders; useReducer is the re-render trigger
-  const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [, rerender] = useReducer(x => x + 1, 0);
-
-  // Reset when novel changes (memo reuse)
-  const prevIdRef = useRef(novel.id);
-  if (novel.id !== prevIdRef.current) {
-    prevIdRef.current = novel.id;
-    imgState.current = { loaded: false, error: false, retryKey: 0, retryCount: 0 };
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-  }
-
-  const { loaded: imageLoaded, error: imageError, retryKey } = imgState.current;
-
-  useEffect(() => {
-    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
-  }, []);
-
-  const handleImageLoad = useCallback(() => {
-    imgState.current.loaded = true;
-    rerender();
-  }, []);
-
-  const handleImageError = useCallback(() => {
-    const s = imgState.current;
-    if (s.retryCount < 2) {
-      const delay = s.retryCount === 0 ? 2000 : 5000;
-      s.retryCount++;
-      s.error = true;
-      rerender();
-      retryTimerRef.current = setTimeout(() => {
-        s.error = false;
-        s.loaded = false;
-        s.retryKey++;
-        rerender();
-      }, delay);
-    } else {
-      s.error = true;
-      rerender();
-    }
-  }, []);
 
   const userScore = novel.vote ? (novel.vote / 10).toFixed(1) : null;
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : null;
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
 
   const baseImageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: COMPACT_CARD_IMAGE_WIDTH, vnId: novel.id }) : null;
-  const imageUrl = baseImageUrl && retryKey > 0
-    ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}_r=${retryKey}`
-    : baseImageUrl;
+  const { imageUrl, showImage, imageLoaded, retryKey, handleImageLoad, handleImageError } = useImageLoadState(novel.id, baseImageUrl);
+  const imageError = !showImage && !!baseImageUrl;
 
   // Build srcset with retry cache-buster
   const srcSet = novel.vn?.image?.url
@@ -658,8 +558,6 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
         .filter(Boolean)
         .join(', ')
     : undefined;
-
-  const showImage = imageUrl && !imageError;
 
   return (
     <div

@@ -44,8 +44,9 @@ const skipButtonClass = `
   px-1.5 h-7 text-[11px] font-normal rounded-md tabular-nums
   text-gray-400 dark:text-gray-500
   hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300
+  active:scale-[0.92] active:bg-gray-200 dark:active:bg-gray-600
   disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
-  transition-colors duration-150
+  transition-[color,background-color,transform] duration-100
 `;
 
 function SkipButton({ delta, currentPage, totalPages, onPageChange, onPrefetchPage }: {
@@ -77,6 +78,8 @@ interface PaginationProps {
   onPrefetchPage?: (page: number) => void;
   totalItems?: number;
   itemsPerPage?: number;
+  /** Called once when this pagination component enters the viewport */
+  onVisible?: () => void;
   /** If true, scrolls to top of page on page change */
   scrollToTop?: boolean;
   /** If provided, scrolls this element into view on page change */
@@ -88,6 +91,7 @@ export const Pagination = memo(function Pagination({
   totalPages,
   onPageChange,
   onPrefetchPage,
+  onVisible,
   totalItems,
   itemsPerPage = 50,
   scrollToTop = false,
@@ -99,6 +103,33 @@ export const Pagination = memo(function Pagination({
   const [jumpError, setJumpError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasTriggeredVisibleRef = useRef(false);
+
+  // Prefetch trigger: fire onVisible once when pagination enters viewport
+  useEffect(() => {
+    if (!onVisible) return;
+    // Reset on page change so IO can fire again for the new page
+    hasTriggeredVisibleRef.current = false;
+  }, [currentPage, onVisible]);
+
+  useEffect(() => {
+    if (!onVisible) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasTriggeredVisibleRef.current) {
+          hasTriggeredVisibleRef.current = true;
+          onVisible();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onVisible, currentPage]);
 
   const handleCloseDropdown = useCallback(() => {
     setIsDropdownOpen(false);
@@ -174,8 +205,9 @@ export const Pagination = memo(function Pagination({
     w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg
     text-gray-500 dark:text-gray-400
     hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200
+    active:scale-[0.92] active:bg-gray-200 dark:active:bg-gray-600
     disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
-    transition-colors duration-150
+    transition-[color,background-color,transform] duration-100
   `;
 
   // Calculate range for progress indicator
@@ -183,7 +215,7 @@ export const Pagination = memo(function Pagination({
   const endItem = totalItems ? Math.min(currentPage * itemsPerPage, totalItems) : 0;
 
   return (
-    <div className="flex flex-col items-center gap-2 my-4">
+    <div ref={containerRef} className="flex flex-col items-center gap-2 my-4">
       <div className="flex items-center justify-center gap-1">
       {/* First page button */}
       <button
@@ -226,7 +258,8 @@ export const Pagination = memo(function Pagination({
             bg-gray-50 dark:bg-gray-800/50
             text-sm font-medium text-gray-700 dark:text-gray-300
             hover:bg-gray-100 dark:hover:bg-gray-700
-            transition-colors duration-150
+            active:scale-[0.95]
+            transition-[color,background-color,transform] duration-100
           `}
           aria-expanded={isDropdownOpen}
           aria-haspopup="dialog"

@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { Loader2, AlertCircle, RefreshCw, Dices, X, Eye, EyeOff } from 'lucide-react';
 import { vndbStatsApi, VNSearchResult, BrowseFilters } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
-import { VNGrid } from '../browse/VNGrid';
+import { VNGrid, GRID_IMAGE_WIDTHS } from '../browse/VNGrid';
+import { awaitVNImageDecode } from '@/lib/prefetch-vn-images';
 import { TagFilter, SelectedTag, FilterEntityType } from '../browse/TagFilter';
 import { CompactFilterBar } from '../browse/CompactFilterBar';
 import { ActiveFilterChips } from '../browse/ActiveFilterChips';
@@ -99,7 +100,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
   const [results, setResults] = useState<VNSearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [skipPreload, setSkipPreload] = useState(false);
+  const [skipPreload, setSkipPreload] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false);
 
@@ -220,8 +221,9 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
     });
   }, []);
 
-  // Fetch random results. `skip` = true skips VNGrid preload buffer for instant card shimmers.
-  const fetchResults = useCallback(async (currentFilters: BrowseFilters, count: number, skip = false) => {
+  // Fetch random results. Random page always uses aggressive preload config
+  // (no prefetch cache → no reason for long preload wait).
+  const fetchResults = useCallback(async (currentFilters: BrowseFilters, count: number, skip = true) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -235,6 +237,20 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
         abortController.signal,
       );
       if (!abortController.signal.aborted) {
+        // Pre-decode covers while "Rolling..." spinner is still visible.
+        // Grid swap then shows actual images instead of grey shimmers.
+        await awaitVNImageDecode(
+          response.results
+            .filter(vn => vn.image_url)
+            .map(vn => ({
+              imageUrl: vn.image_url!,
+              vnId: vn.id.startsWith('v') ? vn.id : `v${vn.id}`,
+              imageSexual: vn.image_sexual,
+            })),
+          GRID_IMAGE_WIDTHS['medium'],
+        );
+        if (abortController.signal.aborted) return;
+
         startTransition(() => {
           setResults(response.results);
           setTotal(response.total);
@@ -554,18 +570,25 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
             {/* Random Controls Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3 mt-3">
               <div className="flex items-center gap-4 min-w-0">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                      Rolling...
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-gray-700 dark:text-gray-200">{total.toLocaleString()}</span>
-                      {' '}matching VNs
-                    </>
-                  )}
+                <span className="text-sm text-gray-500 dark:text-gray-400 relative">
+                  {/* Invisible placeholder keeps width stable during loading to prevent flex reflow on mobile.
+                     Uses a fixed wide string so initial load (total=0) doesn't start narrow then shift. */}
+                  <span className="invisible" aria-hidden="true">
+                    00,000 matching VNs
+                  </span>
+                  <span className="absolute inset-0 items-center inline-flex whitespace-nowrap">
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        Rolling...
+                      </span>
+                    ) : (
+                      <span>
+                        <span className="text-gray-700 dark:text-gray-200">{total.toLocaleString()}</span>
+                        {' '}matching VNs
+                      </span>
+                    )}
+                  </span>
                 </span>
                 {hasActiveFilters && (
                   <button
@@ -608,7 +631,6 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
                 results={results}
                 isLoading={isLoading}
                 showOverlay={false}
-                isPaginating={skipPreload && isLoading}
                 skipPreload={skipPreload}
                 preference={preference}
                 gridSize="medium"

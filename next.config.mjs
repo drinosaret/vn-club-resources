@@ -172,6 +172,25 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/join/vncr/',
+        destination: 'https://discord.gg/Ze7dYKVTHf',
+        permanent: false,
+      },
+      {
+        source: '/join/ljta/',
+        destination: 'https://discord.gg/fqX7jgz6bt',
+        permanent: false,
+      },
+      {
+        source: '/join/r49/',
+        destination: 'https://discord.gg/4t22SGVT3C',
+        permanent: false,
+      },
+    ];
+  },
   experimental: {
     optimizePackageImports: ['recharts'],
   },

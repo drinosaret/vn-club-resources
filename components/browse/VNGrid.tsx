@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useReducer, memo, startTransition } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { Star, Loader2, BookOpen } from 'lucide-react';
 import { VNSearchResult } from '@/lib/vndb-stats-api';
@@ -8,6 +8,8 @@ import { getProxiedImageUrl, getTinySrc, ImageWidth } from '@/lib/vndb-image-cac
 import { getDisplayTitle, TitlePreference } from '@/lib/title-preference';
 import { GridSize, flexItemClasses } from './ViewModeToggle';
 import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
+import { usePreloadBuffer, PRELOAD_DEFAULTS, PRELOAD_COUNTS } from '@/lib/use-preload-buffer';
+import { useImageLoadState } from '@/lib/use-image-load-state';
 
 // Map grid size to the primary image width for preloading and fallback.
 // The actual rendering uses srcset with multiple widths so the browser
@@ -36,132 +38,50 @@ const IMAGE_SIZES: Record<GridSize, string> = {
   large:  '(max-width: 640px) calc(50vw - 6px), (max-width: 1024px) calc(33vw - 8px), 260px',
 };
 
-// Number of above-fold images to preload before swapping the grid
-const PRELOAD_COUNT = 12;
-// Fraction of preloaded images that must be ready before swapping
-const PRELOAD_THRESHOLD = 0.4;
-// Maximum time to wait for preloading before swapping anyway
-const PRELOAD_TIMEOUT_MS = 800;
-
 interface VNGridProps {
   results: VNSearchResult[];
   isLoading: boolean;
   showOverlay?: boolean;
-  isPaginating?: boolean;
   skipPreload?: boolean;
   preference: TitlePreference;
   gridSize?: GridSize;
   skeletonCount?: number;
 }
 
-export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = false, isPaginating = false, skipPreload = false, preference, gridSize = 'medium', skeletonCount = 12 }: VNGridProps) {
+export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = false, skipPreload = false, preference, gridSize = 'medium', skeletonCount = 12 }: VNGridProps) {
   // Track if component has mounted to avoid hydration mismatches
   const [hasMounted, setHasMounted] = useState(false);
-  // Buffered results — only updated after images are preloaded
-  const [displayResults, setDisplayResults] = useState<VNSearchResult[]>(results);
-  // True while preloading images before a grid swap
-  const [isSwapping, setIsSwapping] = useState(false);
-  // Cleanup ref for cancelling in-progress preloads
-  const preloadCleanupRef = useRef<(() => void) | null>(null);
-  // Track whether we've ever displayed results (to skip preload on initial render)
-  const hasDisplayedRef = useRef(false);
 
   // Set mounted state after hydration
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  // Buffer new results behind image preloading for smoother grid transitions.
-  // Old thumbnails stay visible while new images load in the background.
-  // Once enough above-fold images are ready (or timeout), swap the grid at once.
-  useEffect(() => {
-    // Cancel any in-progress preload
-    preloadCleanupRef.current?.();
-    preloadCleanupRef.current = null;
-
-    // Empty results and done loading → show empty state
-    if (results.length === 0 && !isLoading) {
-      setDisplayResults([]);
-      setIsSwapping(false);
-      return;
-    }
-
-    // No results yet (still loading) → keep showing whatever we have
-    if (results.length === 0) return;
-
-    // First time displaying results (SSR/initial load) → show immediately
-    if (!hasDisplayedRef.current) {
-      hasDisplayedRef.current = true;
-      setDisplayResults(results);
-      return;
-    }
-
-    // Pagination: skip preload buffer, show results immediately.
-    // Individual VNCover shimmer placeholders handle image loading.
-    // startTransition makes React render concurrently (yielding to browser for
-    // paints) instead of a single 40ms+ synchronous block that causes Firefox
-    // WebRender to drop text in tiles outside the grid.
-    if (skipPreload) {
-      startTransition(() => {
-        setDisplayResults(results);
-      });
-      setIsSwapping(false);
-      return;
-    }
-
-    // Start preloading above-fold images before swapping
-    setIsSwapping(true);
-    let cancelled = false;
-    let loaded = 0;
-    const toPreload = results.slice(0, PRELOAD_COUNT).filter(vn => vn.image_url);
-    const threshold = Math.max(1, Math.ceil(toPreload.length * PRELOAD_THRESHOLD));
-
-    const doSwap = () => {
-      if (cancelled) return;
-      cancelled = true;
-      setDisplayResults(results);
-      setIsSwapping(false);
-    };
-
-    // No images to preload → swap immediately
-    if (toPreload.length === 0) {
-      doSwap();
-      return;
-    }
-
-    // Preload images using Image() objects — populates the browser cache
-    // so when VNCover mounts, the <img> loads from cache almost instantly
-    toPreload.forEach(vn => {
-      const img = new Image();
-      img.onload = img.onerror = () => {
-        loaded++;
-        if (loaded >= threshold) doSwap();
-      };
+  // Returns URLs to preload for a given VN (main image + NSFW micro-thumbnail)
+  const getPreloadUrls = useCallback((vn: VNSearchResult) => {
+    const urls: string[] = [];
+    if (vn.image_url) {
       const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
-      const url = getProxiedImageUrl(vn.image_url!, { width: GRID_IMAGE_WIDTHS[gridSize], vnId });
+      const url = getProxiedImageUrl(vn.image_url, { width: GRID_IMAGE_WIDTHS[gridSize], vnId });
       if (url) {
-        img.src = url;
-        // Also preload the 20px micro-thumbnail for NSFW mosaic overlay so it
-        // appears at the same time as non-NSFW covers (no delayed grey flash)
-        if (isNsfwContent(vn.image_sexual)) {
-          new Image().src = getTinySrc(url);
-        }
+        urls.push(url);
+        if (isNsfwContent(vn.image_sexual)) urls.push(getTinySrc(url));
       }
-    });
+    }
+    return urls;
+  }, [gridSize]);
 
-    // Don't wait forever — swap after timeout regardless
-    const timeout = setTimeout(doSwap, PRELOAD_TIMEOUT_MS);
-
-    preloadCleanupRef.current = () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [results, isLoading, gridSize, skipPreload]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Preload buffer — keeps old grid visible while new images load in background.
+  // Pagination uses aggressive config: for prefetched pages images decode from
+  // browser cache in ~5-15ms (no white flash). Non-prefetched pages timeout at
+  // 150ms — still fast, and any remaining images pop in via per-card shimmer.
+  const preloadCount = PRELOAD_COUNTS[gridSize] ?? 12;
+  const config = skipPreload
+    ? { preloadCount, threshold: 0.9, timeoutMs: 150 }
+    : { ...PRELOAD_DEFAULTS, preloadCount };
+  const { displayItems: displayResults, isSwapping } = usePreloadBuffer(results, getPreloadUrls, {
+    isLoading, config,
+  });
 
   // Show empty state when query completes with no results
   if (!isLoading && !isSwapping && displayResults.length === 0 && results.length === 0) {
@@ -193,10 +113,6 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   }
 
   const isBusy = isLoading || isSwapping;
-  // Subtle dim only during the brief API fetch phase of pagination
-  const shouldDim = isPaginating && isLoading;
-  // Stale detection only needed for non-pagination preload transitions
-  const isStale = !skipPreload && results !== displayResults && displayResults.length > 0 && results.length > 0;
 
   // Show grid — keeps old results visible during loading and image preloading
   return (
@@ -213,7 +129,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
         </div>
       )}
       {/* Flexbox layout centers incomplete last row like VNDB */}
-      <div className={`browse-vn-grid-content flex flex-wrap justify-center gap-x-4 gap-y-6 my-6 transition-opacity duration-150 ease-out motion-reduce:transition-none ${hasMounted && isBusy ? 'pointer-events-none' : ''} ${hasMounted && (shouldDim || isStale) ? 'opacity-[0.85]' : ''}`}>
+      <div className={`browse-vn-grid-content flex flex-wrap justify-center gap-x-4 gap-y-6 my-6 ${hasMounted && isBusy ? 'pointer-events-none' : ''}`}>
         {displayResults.map((vn, index) => (
           <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} />
         ))}
@@ -239,24 +155,6 @@ interface VNCoverProps {
 }
 
 const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass }: VNCoverProps) {
-  // All image state in a single ref — mutations don't trigger renders.
-  // useReducer provides a lightweight re-render trigger for onLoad/onError.
-  const imgState = useRef({ loaded: false, error: false, retryKey: 0, retryCount: 0 });
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [, rerender] = useReducer(x => x + 1, 0);
-
-  // Reset when VN changes (key={index} reuses the component instance).
-  // Ref mutation — no setState during render, so React doesn't discard + retry.
-  // This avoids 35× double renders (and ~350-500 discarded JSX objects) per pagination.
-  const prevVnIdRef = useRef(vn.id);
-  if (vn.id !== prevVnIdRef.current) {
-    prevVnIdRef.current = vn.id;
-    imgState.current = { loaded: false, error: false, retryKey: 0, retryCount: 0 };
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-  }
-
-  const { loaded: imageLoaded, error: imageError, retryKey } = imgState.current;
-
   const title = getDisplayTitle({
     title: vn.title,
     title_jp: vn.title_jp || vn.alttitle,
@@ -268,10 +166,9 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
 
   // Pass vnId for blacklist checking
   const baseImageUrl = vn.image_url ? getProxiedImageUrl(vn.image_url, { width: imageWidth, vnId }) : null;
-  // Append cache-buster on retry to force browser to re-request
-  const imageUrl = baseImageUrl && retryKey > 0
-    ? `${baseImageUrl}${baseImageUrl.includes('?') ? '&' : '?'}_r=${retryKey}`
-    : baseImageUrl;
+
+  // Shared image state + retry logic
+  const { imageUrl, showImage, imageLoaded, retryKey, handleImageLoad, handleImageError } = useImageLoadState(vn.id, baseImageUrl);
 
   // Build srcset so the browser picks the smallest sufficient variant
   // for the actual layout width × device pixel ratio
@@ -285,35 +182,6 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
         .join(', ')
     : undefined;
   const isNsfw = isNsfwContent(vn.image_sexual);
-  const showImage = imageUrl && !imageError;
-
-  useEffect(() => {
-    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
-  }, []);
-
-  const handleImageError = useCallback(() => {
-    const s = imgState.current;
-    if (s.retryCount < 2) {
-      const delay = s.retryCount === 0 ? 2000 : 5000;
-      s.retryCount++;
-      s.error = true;
-      rerender();
-      retryTimerRef.current = setTimeout(() => {
-        s.error = false;
-        s.loaded = false;
-        s.retryKey++;
-        rerender();
-      }, delay);
-    } else {
-      s.error = true;
-      rerender();
-    }
-  }, []);
-
-  const handleImageLoad = useCallback(() => {
-    imgState.current.loaded = true;
-    rerender();
-  }, []);
 
   return (
     <Link

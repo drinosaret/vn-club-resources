@@ -8,7 +8,8 @@ import { mutate } from 'swr';
 import { vndbStatsApi, VNSearchResult, BrowseFilters, BrowseResponse } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
 import { VNGrid, GRID_IMAGE_WIDTHS } from './VNGrid';
-import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { PRELOAD_COUNTS } from '@/lib/use-preload-buffer';
+import { prefetchVNImages } from '@/lib/prefetch-vn-images';
 import { Pagination, PaginationSkeleton } from './Pagination';
 import { TagFilter, SelectedTag, FilterEntityType } from './TagFilter';
 import { ViewModeToggle, GridSize } from './ViewModeToggle';
@@ -248,6 +249,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   // Initialize from server-known grid size — SSR data already uses this limit,
   // so server and client render identically. No useLayoutEffect needed.
   const [gridSize, setGridSizeState] = useState<GridSize>(serverGridSize);
+  // Ref for gridSize — used in useCallback closures to avoid adding gridSize as a dependency
+  const gridSizeRef = useRef<GridSize>(serverGridSize);
+  gridSizeRef.current = gridSize;
   // On mount: sync grid size from localStorage and restore/refetch on back navigation.
   // Two problems this solves:
   // 1. Stale RSC cache: user changes to medium, clicks a VN, presses back → cached
@@ -733,16 +737,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     const cachedResponse = prefetchCacheRef.current.get(cacheKey);
     if (cachedResponse) {
       prefetchCacheRef.current.delete(cacheKey);
-      // Preload above-fold images — gives a head start before React renders.
-      // If prefetchPage already loaded them, this is a no-op (browser cache hit).
-      const imgWidth = GRID_IMAGE_WIDTHS[gridSize];
-      cachedResponse.results.slice(0, 8).forEach(vn => {
-        if (vn.image_url) {
-          const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
-          const url = getProxiedImageUrl(vn.image_url, { width: imgWidth, vnId });
-          if (url) { const img = new Image(); img.src = url; }
-        }
-      });
+      // Images are already pre-decoded by prefetchPage() — skip redundant preload.
       // Wrap in startTransition so these 7 setState calls don't batch synchronously
       // with handlePageChange's setState calls. Without this, the entire data update
       // renders synchronously in the click handler (~10ms), adding to the synchronous
@@ -821,20 +816,22 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       if (!abortController.signal.aborted) {
         prefetchCacheRef.current.set(cacheKey, response);
 
-        // Preload above-fold images so they're in browser cache when user navigates.
-        // On mobile (no hover), adjacent pages are auto-prefetched after load,
-        // giving images a head start before the user taps next/prev.
+        // Pre-decode above-fold images so bitmaps are ready when user navigates.
         const imgWidth = GRID_IMAGE_WIDTHS[gridSize];
-        response.results.slice(0, 8).forEach(vn => {
-          if (vn.image_url) {
-            const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
-            const url = getProxiedImageUrl(vn.image_url, { width: imgWidth, vnId });
-            if (url) { const img = new Image(); img.src = url; }
-          }
-        });
+        const preloadCount = PRELOAD_COUNTS[gridSizeRef.current] ?? 12;
+        prefetchVNImages(
+          response.results.slice(0, preloadCount)
+            .filter(vn => vn.image_url)
+            .map(vn => ({
+              imageUrl: vn.image_url!,
+              vnId: vn.id.startsWith('v') ? vn.id : `v${vn.id}`,
+              imageSexual: vn.image_sexual,
+            })),
+          imgWidth,
+        );
 
         // Limit cache size to prevent memory bloat
-        if (prefetchCacheRef.current.size > 10) {
+        if (prefetchCacheRef.current.size > 20) {
           const firstKey = prefetchCacheRef.current.keys().next().value;
           if (firstKey) prefetchCacheRef.current.delete(firstKey);
         }
@@ -852,13 +849,33 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
         clearTimeout(prefetchTimeoutRef.current);
       }
 
-      // Prefetch after a short delay to avoid competing with main request
-      prefetchTimeoutRef.current = setTimeout(() => {
-        const currentPage = filters.page || 1;
-        if (currentPage < pages) prefetchPage(currentPage + 1);
-        if (currentPage > 1) prefetchPage(currentPage - 1);
-        if (currentPage + 1 < pages) prefetchPage(currentPage + 2);
-      }, 200);
+      // Touch-primary devices can't hover pagination buttons to trigger prefetch,
+      // so prefetch a wider range upfront.
+      const isTouch = window.matchMedia?.('(hover: none)').matches;
+      const p = filters.page || 1;
+
+      // Immediate neighbors — main request is done so no competing
+      const t1 = setTimeout(() => {
+        if (p < pages) prefetchPage(p + 1);
+        if (p > 1) prefetchPage(p - 1);
+        if (p + 1 < pages) prefetchPage(p + 2);
+        if (isTouch) {
+          if (p > 2) prefetchPage(p - 2);
+          if (p + 2 < pages) prefetchPage(p + 3);
+        }
+      }, 0);
+
+      // Extended range — after initial batch settles (desktop hover fills gaps too)
+      const t2 = !isTouch ? setTimeout(() => {
+        if (p > 2) prefetchPage(p - 2);
+        if (p + 2 < pages) prefetchPage(p + 3);
+      }, 150) : undefined;
+
+      prefetchTimeoutRef.current = t1;
+      return () => {
+        clearTimeout(t1);
+        if (t2) clearTimeout(t2);
+      };
     }
   }, [isLoading, results.length, filters.page, pages, prefetchPage]);
 
@@ -1157,6 +1174,13 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       prefetchPage(page);
     }
   }, [pages, prefetchPage]);
+
+  // Prefetch next page when bottom pagination scrolls into view
+  // (catches mobile/keyboard users who don't hover pagination buttons)
+  const handleBottomPaginationVisible = useCallback(() => {
+    const p = filters.page || 1;
+    if (p < pages) prefetchPage(p + 1);
+  }, [filters.page, pages, prefetchPage]);
 
   // Build /random/ URL carrying over current browse filters (skip browse-only: q, first_char, sort, page)
   const buildRandomUrl = useCallback(() => {
@@ -1577,7 +1601,6 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 results={results}
                 isLoading={isLoading}
                 showOverlay={showLoadingOverlay}
-                isPaginating={isPaginatingOnly}
                 skipPreload={skipPreload}
                 preference={preference}
                 gridSize={gridSize}
@@ -1594,6 +1617,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                   resultsContainerRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
                 }}
                 onPrefetchPage={handlePrefetchPage}
+                onVisible={handleBottomPaginationVisible}
               />
             )}
 

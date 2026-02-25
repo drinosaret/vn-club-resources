@@ -17,6 +17,7 @@ const ALLOWED_DOMAINS = [
   'www.automaton-media.com',
   'game.watch.impress.co.jp',
   'asset.watch.impress.co.jp',
+  'www.ima-ero.com',
 ];
 
 // Cache configuration
