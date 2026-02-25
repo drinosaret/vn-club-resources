@@ -159,21 +159,27 @@ const nextConfig = {
     ],
   },
   // Rewrite sitemaps to custom route handlers.
+  // beforeFiles ensures rewrites run before filesystem/page matching,
+  // which is needed for root-level .xml URLs.
   async rewrites() {
-    return [
-      {
-        source: '/sitemap.xml',
-        destination: '/api/sitemap-index',
-      },
-      {
-        source: '/sitemap-:id.xml',
-        destination: '/api/sitemap/:id',
-      },
-      {
-        source: '/feed.xml',
-        destination: '/api/feed',
-      },
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: '/sitemap.xml',
+          destination: '/api/sitemap-index',
+        },
+        {
+          source: '/sitemap-:id.xml',
+          destination: '/api/sitemap/:id',
+        },
+        {
+          source: '/feed.xml',
+          destination: '/api/feed',
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
   async redirects() {
     return [
