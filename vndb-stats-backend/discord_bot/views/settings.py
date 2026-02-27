@@ -99,7 +99,7 @@ class ChannelSelectView(BaseView):
 
     @ui.select(
         cls=ui.ChannelSelect,
-        channel_types=[discord.ChannelType.text],
+        channel_types=[discord.ChannelType.text, discord.ChannelType.news],
         placeholder="Select a channel...",
     )
     async def channel_select(self, interaction: discord.Interaction, select: ui.ChannelSelect):
