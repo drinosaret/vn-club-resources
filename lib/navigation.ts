@@ -35,8 +35,18 @@ export function getHeaderNavigation() {
       // Features shown directly (not collapsed) since they're main site features
       { name: 'Browse', href: '/browse' },
       { name: 'Stats', href: '/stats' },
-      // { name: 'Recommendations', href: '/recommendations' },
       { name: 'News', href: '/news' },
+      {
+        name: 'More',
+        items: [
+          { name: 'Kana Quiz', href: '/quiz' },
+          { name: 'Recommendations', href: '/recommendations' },
+          { name: 'Compare', href: '/stats/compare' },
+          { name: 'Random', href: '/random' },
+          { name: 'Tier List', href: '/tierlist' },
+          { name: '3x3 Maker', href: '/3x3-maker' },
+        ],
+      },
     ],
     desktop: [
       { name: 'Home', href: '/' },
@@ -44,8 +54,18 @@ export function getHeaderNavigation() {
       { name: 'Resources', href: '/find' },
       { name: 'Browse', href: '/browse' },
       { name: 'Stats', href: '/stats' },
-      // { name: 'Recommendations', href: '/recommendations' },
       { name: 'News', href: '/news' },
+      {
+        name: 'More',
+        items: [
+          { name: 'Kana Quiz', href: '/quiz' },
+          { name: 'Recommendations', href: '/recommendations' },
+          { name: 'Compare', href: '/stats/compare' },
+          { name: 'Random', href: '/random' },
+          { name: 'Tier List', href: '/tierlist' },
+          { name: '3x3 Maker', href: '/3x3-maker' },
+        ],
+      },
     ],
   };
 }
@@ -89,9 +109,12 @@ export const navigation: NavSection[] = [
   {
     title: 'Features',
     items: [
+      { title: 'Beginner VNs', slug: 'beginner-vns', description: 'Recommended beginner visual novels' },
       { title: 'Browse', slug: 'browse', description: 'Search and browse visual novels' },
       { title: 'Stats', slug: 'stats', description: 'VNDB stats and analytics' },
       { title: 'Recommendations', slug: 'recommendations', description: 'Personalized VN recommendations' },
+      { title: 'Tier List', slug: 'tierlist', description: 'Rank your visual novels' },
+      { title: '3x3 Maker', slug: '3x3-maker', description: 'Create a VN cover collage' },
       { title: 'News', slug: 'news', description: 'VN news aggregator' },
       { title: 'Quiz', slug: 'quiz', description: 'Kana practice quiz' },
     ],

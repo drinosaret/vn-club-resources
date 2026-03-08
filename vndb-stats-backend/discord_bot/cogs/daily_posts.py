@@ -1,13 +1,16 @@
-"""Automated daily channel posts — VN of the Day and News Summary."""
+"""Automated daily channel posts — VN of the Day, News Summary, and DB Backups."""
 
+import gzip
+import io
 import logging
 import re
+import subprocess
 from datetime import date, datetime, time, timezone
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
-from sqlalchemy import select, func, and_, cast, Date
+from sqlalchemy import select, func, and_, cast, Date, text
 
 from app.core.cache import get_cache
 from app.db.database import async_session_maker
@@ -24,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Bot config keys
 CONFIG_DAILY_CHANNEL = "daily_channel_id"
+CONFIG_BACKUP_CHANNEL = "backup_channel_id"
 
 # Redis key patterns for duplicate prevention (48-hour TTL)
 REDIS_KEY_VOTD = "daily_post:votd:{date}"
@@ -55,28 +59,37 @@ class DailyPostsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._channel_id: int = 0  # Loaded from DB on startup
+        self._backup_channel_id: int = 0
 
     async def cog_load(self) -> None:
-        await self._load_channel_id()
+        await self._load_channel_ids()
         self.votd_post_loop.start()
         self.news_post_loop.start()
+        self.backup_loop.start()
 
     async def cog_unload(self) -> None:
         self.votd_post_loop.cancel()
         self.news_post_loop.cancel()
+        self.backup_loop.cancel()
 
-    async def _load_channel_id(self) -> None:
-        """Load daily channel ID from bot_config table."""
+    async def _load_channel_ids(self) -> None:
+        """Load channel IDs from bot_config table."""
         try:
             async with async_session_maker() as db:
                 result = await db.execute(
-                    select(BotConfig.value).where(BotConfig.key == CONFIG_DAILY_CHANNEL)
+                    select(BotConfig).where(
+                        BotConfig.key.in_([CONFIG_DAILY_CHANNEL, CONFIG_BACKUP_CHANNEL])
+                    )
                 )
-                row = result.scalar_one_or_none()
-                self._channel_id = int(row) if row else 0
+                for row in result.scalars():
+                    if row.key == CONFIG_DAILY_CHANNEL:
+                        self._channel_id = int(row.value) if row.value else 0
+                    elif row.key == CONFIG_BACKUP_CHANNEL:
+                        self._backup_channel_id = int(row.value) if row.value else 0
         except Exception as e:
-            logger.warning(f"Failed to load daily channel config: {e}")
+            logger.warning(f"Failed to load channel config: {e}")
             self._channel_id = 0
+            self._backup_channel_id = 0
 
     def _get_channel(self) -> discord.TextChannel | None:
         if not self._channel_id:
@@ -316,6 +329,74 @@ class DailyPostsCog(commands.Cog):
         ))
 
         return embed, view
+
+    # ── Database Backup ─────────────────────────────────────────
+
+    @tasks.loop(time=time(hour=5, minute=30, tzinfo=timezone.utc))
+    async def backup_loop(self):
+        await self._run_backup()
+
+    @backup_loop.before_loop
+    async def before_backup_loop(self):
+        await self.bot.wait_until_ready()
+
+    @backup_loop.error
+    async def backup_loop_error(self, error: Exception):
+        logger.error(f"Backup loop error: {error}", exc_info=True)
+
+    async def _run_backup(self, force: bool = False) -> str:
+        """Dump shared_layouts table and upload to backup channel."""
+        if not self._backup_channel_id:
+            return "No backup channel configured"
+
+        channel = self.bot.get_channel(self._backup_channel_id)
+        if channel is None:
+            logger.warning(f"Backup channel {self._backup_channel_id} not found")
+            return "Backup channel not found"
+
+        try:
+            # Build pg_dump connection string from DATABASE_URL env
+            import os
+            db_url = os.environ.get("DATABASE_URL", "")
+            if not db_url:
+                return "DATABASE_URL not set"
+            # pg_dump needs sync URL (not asyncpg)
+            db_url = db_url.replace("+asyncpg", "")
+
+            result = subprocess.run(
+                ["pg_dump", db_url, "-t", "shared_layouts", "--data-only", "--inserts"],
+                capture_output=True, timeout=60,
+            )
+            if result.returncode != 0:
+                err = result.stderr.decode()
+                logger.error(f"pg_dump failed: {err}")
+                return f"pg_dump failed: {err[:200]}"
+
+            compressed = gzip.compress(result.stdout)
+
+            # Get row count
+            async with async_session_maker() as db:
+                count_result = await db.execute(text("SELECT COUNT(*) FROM shared_layouts"))
+                row_count = count_result.scalar_one()
+
+            size_kb = len(compressed) / 1024
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+            filename = f"shared_layouts_{timestamp}.sql.gz"
+
+            file = discord.File(io.BytesIO(compressed), filename=filename)
+            await channel.send(
+                content=f"**Backup** — {row_count} shared layouts, {size_kb:.1f} KB",
+                file=file,
+            )
+            logger.info(f"Backup uploaded: {filename} ({row_count} rows, {size_kb:.1f} KB)")
+            return f"Backup uploaded: {row_count} rows, {size_kb:.1f} KB"
+
+        except discord.Forbidden:
+            logger.error(f"Missing permissions to send to backup channel {self._backup_channel_id}")
+            return "Missing permissions to send to backup channel"
+        except Exception as e:
+            logger.error(f"Backup failed: {e}", exc_info=True)
+            return f"Backup failed: {e}"
 
     # ── User Commands ─────────────────────────────────────────
 

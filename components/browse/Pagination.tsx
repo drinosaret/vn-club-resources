@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, memo, useCallback, type RefObject } from 'react';
+import { useRef, useEffect, useState, memo, useCallback, type RefObject, type MouseEvent, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 /**
@@ -41,33 +41,79 @@ export function PaginationSkeleton() {
 }
 
 const skipButtonClass = `
+  inline-flex items-center justify-center
   px-1.5 h-7 text-[11px] font-normal rounded-md tabular-nums
   text-gray-400 dark:text-gray-500
   hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300
   active:bg-gray-200 dark:active:bg-gray-600
-  disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
   transition-colors duration-100
 `;
 
-function SkipButton({ delta, currentPage, totalPages, onPageChange, onPrefetchPage }: {
+const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none';
+
+function PageButton({ href, disabled, onClick, onMouseEnter, className, children, title, 'aria-label': ariaLabel }: {
+  href?: string;
+  disabled?: boolean;
+  onClick: (e: MouseEvent) => void;
+  onMouseEnter?: () => void;
+  className: string;
+  children: ReactNode;
+  title?: string;
+  'aria-label'?: string;
+}) {
+  if (href && !disabled) {
+    return (
+      <a
+        href={href}
+        onClick={(e) => {
+          e.preventDefault();
+          onClick(e);
+        }}
+        onMouseEnter={onMouseEnter}
+        className={className}
+        title={title}
+        aria-label={ariaLabel}
+      >
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      disabled={disabled}
+      className={className}
+      title={title}
+      aria-label={ariaLabel}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SkipButton({ delta, currentPage, totalPages, onPageChange, onPrefetchPage, getPageHref }: {
   delta: number;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
   onPrefetchPage?: (page: number) => void;
+  getPageHref?: (page: number) => string;
 }) {
   const targetPage = Math.max(1, Math.min(totalPages, currentPage + delta));
   const disabled = currentPage + delta < 1 || currentPage + delta > totalPages;
+  const href = !disabled ? getPageHref?.(targetPage) : undefined;
   return (
-    <button
+    <PageButton
+      href={href}
       onClick={() => onPageChange(targetPage)}
       onMouseEnter={() => !disabled && onPrefetchPage?.(targetPage)}
       disabled={disabled}
-      className={skipButtonClass}
+      className={`${skipButtonClass} ${disabled ? disabledClass : ''}`}
       title={delta > 0 ? `Forward ${delta} pages` : `Back ${Math.abs(delta)} pages`}
     >
       {delta > 0 ? `+${delta}` : delta}
-    </button>
+    </PageButton>
   );
 }
 
@@ -76,6 +122,8 @@ interface PaginationProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   onPrefetchPage?: (page: number) => void;
+  /** Returns a URL for the given page number, enabling right-click "open in new tab" */
+  getPageHref?: (page: number) => string;
   totalItems?: number;
   itemsPerPage?: number;
   /** Called once when this pagination component enters the viewport */
@@ -91,6 +139,7 @@ export const Pagination = memo(function Pagination({
   totalPages,
   onPageChange,
   onPrefetchPage,
+  getPageHref,
   onVisible,
   totalItems,
   itemsPerPage = 50,
@@ -206,9 +255,10 @@ export const Pagination = memo(function Pagination({
     text-gray-500 dark:text-gray-400
     hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200
     active:bg-gray-200 dark:active:bg-gray-600
-    disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent
     transition-colors duration-100
   `;
+
+  const navButtonDisabledClass = `${navButtonClass} ${disabledClass}`;
 
   // Calculate range for progress indicator
   const startItem = totalItems ? ((currentPage - 1) * itemsPerPage) + 1 : 0;
@@ -218,35 +268,37 @@ export const Pagination = memo(function Pagination({
     <div ref={containerRef} className="flex flex-col items-center gap-2 my-4">
       <div className="flex items-center justify-center gap-1">
       {/* First page button */}
-      <button
+      <PageButton
+        href={currentPage !== 1 ? getPageHref?.(1) : undefined}
         onClick={() => handlePageChangeWithScroll(1)}
         onMouseEnter={() => currentPage !== 1 && onPrefetchPage?.(1)}
         disabled={currentPage === 1}
-        className={navButtonClass}
+        className={currentPage === 1 ? navButtonDisabledClass : navButtonClass}
         aria-label="First page"
         title="First page"
       >
         <ChevronsLeft className="w-4 h-4" />
-      </button>
+      </PageButton>
 
       {/* Back skip buttons - hidden on mobile */}
       <div className="hidden sm:flex items-center gap-1">
-        <SkipButton delta={-20} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} />
-        <SkipButton delta={-10} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} />
-        <SkipButton delta={-5} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} />
+        <SkipButton delta={-20} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} getPageHref={getPageHref} />
+        <SkipButton delta={-10} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} getPageHref={getPageHref} />
+        <SkipButton delta={-5} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} getPageHref={getPageHref} />
       </div>
 
       {/* Previous page button */}
-      <button
+      <PageButton
+        href={currentPage > 1 ? getPageHref?.(currentPage - 1) : undefined}
         onClick={() => handlePageChangeWithScroll(currentPage - 1)}
         onMouseEnter={() => currentPage > 1 && onPrefetchPage?.(currentPage - 1)}
         disabled={currentPage === 1}
-        className={navButtonClass}
+        className={currentPage === 1 ? navButtonDisabledClass : navButtonClass}
         aria-label="Previous page"
         title="Previous page"
       >
         <ChevronLeft className="w-4 h-4" />
-      </button>
+      </PageButton>
 
       {/* Page indicator / dropdown trigger */}
       <div className="relative">
@@ -323,35 +375,37 @@ export const Pagination = memo(function Pagination({
       </div>
 
       {/* Next page button */}
-      <button
+      <PageButton
+        href={currentPage < totalPages ? getPageHref?.(currentPage + 1) : undefined}
         onClick={() => handlePageChangeWithScroll(currentPage + 1)}
         onMouseEnter={() => currentPage < totalPages && onPrefetchPage?.(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className={navButtonClass}
+        className={currentPage === totalPages ? navButtonDisabledClass : navButtonClass}
         aria-label="Next page"
         title="Next page"
       >
         <ChevronRight className="w-4 h-4" />
-      </button>
+      </PageButton>
 
       {/* Forward skip buttons - hidden on mobile */}
       <div className="hidden sm:flex items-center gap-1">
-        <SkipButton delta={5} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} />
-        <SkipButton delta={10} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} />
-        <SkipButton delta={20} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} />
+        <SkipButton delta={5} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} getPageHref={getPageHref} />
+        <SkipButton delta={10} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} getPageHref={getPageHref} />
+        <SkipButton delta={20} currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChangeWithScroll} onPrefetchPage={onPrefetchPage} getPageHref={getPageHref} />
       </div>
 
       {/* Last page button */}
-      <button
+      <PageButton
+        href={currentPage !== totalPages ? getPageHref?.(totalPages) : undefined}
         onClick={() => handlePageChangeWithScroll(totalPages)}
         onMouseEnter={() => currentPage !== totalPages && onPrefetchPage?.(totalPages)}
         disabled={currentPage === totalPages}
-        className={navButtonClass}
+        className={currentPage === totalPages ? navButtonDisabledClass : navButtonClass}
         aria-label="Last page"
         title="Last page"
       >
         <ChevronsRight className="w-4 h-4" />
-      </button>
+      </PageButton>
       </div>
 
       {/* Progress indicator */}

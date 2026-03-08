@@ -15,6 +15,9 @@ interface NSFWRevealContextType {
 
 const NSFWRevealContext = createContext<NSFWRevealContextType | null>(null);
 
+/** VNDB image_sexual threshold for NSFW content (>= this value = NSFW). */
+export const NSFW_THRESHOLD = 1.5;
+
 const NSFW_UNCENSORED_KEY = 'nsfw-uncensored';
 
 export function NSFWRevealProvider({ children }: { children: ReactNode }) {

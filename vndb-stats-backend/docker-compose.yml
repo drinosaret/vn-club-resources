@@ -116,6 +116,39 @@ services:
     networks:
       - vndb-net
 
+  # Umami analytics
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_dev_password}@umami-db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:-replace-me-with-a-random-string}
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
+  # Umami PostgreSQL (separate from VNDB database)
+  umami-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami_dev_password}
+      POSTGRES_DB: umami
+    volumes:
+      - umami-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vndb-net
+
   # Dedicated worker for imports and scheduled tasks
   # Runs separately from API to avoid blocking queries during imports
   worker:
@@ -165,6 +198,8 @@ volumes:
   redisdata:
     driver: local
   dumps:
+    driver: local
+  umami-pgdata:
     driver: local
 
 networks:

@@ -238,7 +238,8 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
         )}
         <input
           ref={inputRef}
-          type="text"
+          type="search"
+          autoComplete="off"
           value={query}
           onChange={(e) => setQuery(e.target.value.slice(0, MAX_QUERY_LENGTH))}
           onKeyDown={handleKeyDown}

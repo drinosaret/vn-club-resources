@@ -29,8 +29,8 @@ export function NavigationProgress() {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
 
-      // Skip if no anchor or has special attributes
-      if (!anchor?.href || anchor.target || anchor.download) return;
+      // Skip if no anchor, has special attributes, or event was already handled
+      if (!anchor?.href || anchor.target || anchor.download || e.defaultPrevented) return;
 
       try {
         const url = new URL(anchor.href);

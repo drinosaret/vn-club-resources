@@ -119,6 +119,7 @@ def load_migrations():
         from app.ingestion.migrations import dm_002_fix_title_romaji  # noqa: F401
         from app.ingestion.migrations import dm_003_populate_trait_groups  # noqa: F401
         from app.ingestion.migrations import dm_004_populate_browse_counts  # noqa: F401
+        from app.ingestion.migrations import dm_005_fix_title_romaji_aliases  # noqa: F401
     except ImportError as e:
         logger.warning(f"Could not load data migrations: {e}")
 

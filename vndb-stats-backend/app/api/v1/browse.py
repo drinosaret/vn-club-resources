@@ -16,6 +16,7 @@ from sqlalchemy import select, func, or_, and_
 from app.db.database import get_db
 from app.db import schemas
 from app.db.models import Tag, Trait, Staff, Producer
+from app.core.search_utils import relevance_rank
 
 logger = logging.getLogger(__name__)
 
@@ -118,10 +119,15 @@ async def browse_tags(
     # Sorting
     sort_columns = {"name": Tag.name, "vn_count": Tag.vn_count}
     sort_col = sort_columns.get(sort, Tag.vn_count)
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Tag.name]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Tag.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Tag.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Tag.id.asc())
+    query = query.order_by(*order_clauses)
 
     # Pagination
     offset = (page - 1) * limit
@@ -195,10 +201,15 @@ async def browse_traits(
     # Sorting
     sort_columns = {"name": Trait.name, "char_count": Trait.char_count}
     sort_col = sort_columns.get(sort, Trait.char_count)
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Trait.name]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Trait.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Trait.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Trait.id.asc())
+    query = query.order_by(*order_clauses)
 
     # Pagination
     offset = (page - 1) * limit
@@ -282,10 +293,15 @@ async def browse_staff(
 
     # Sorting - uses precomputed vn_count column
     sort_col = Staff.name if sort == "name" else Staff.vn_count
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Staff.name, Staff.original]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Staff.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Staff.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Staff.id.asc())
+    query = query.order_by(*order_clauses)
 
     # Pagination
     offset = (page - 1) * limit
@@ -374,10 +390,15 @@ async def browse_seiyuu(
     else:
         sort_col = Staff.seiyuu_vn_count
 
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Staff.name, Staff.original]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Staff.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Staff.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Staff.id.asc())
+    query = query.order_by(*order_clauses)
 
     # Pagination
     offset = (page - 1) * limit
@@ -452,10 +473,15 @@ async def browse_developers(
         count_query = count_query.where(Producer.lang == lang)
 
     sort_col = Producer.name if sort == "name" else Producer.dev_vn_count
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Producer.name, Producer.original]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Producer.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Producer.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Producer.id.asc())
+    query = query.order_by(*order_clauses)
 
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
@@ -523,10 +549,15 @@ async def browse_publishers(
         count_query = count_query.where(Producer.lang == lang)
 
     sort_col = Producer.name if sort == "name" else Producer.pub_vn_count
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Producer.name, Producer.original]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Producer.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Producer.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Producer.id.asc())
+    query = query.order_by(*order_clauses)
 
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
@@ -613,10 +644,15 @@ async def browse_producers(
 
     # Sorting
     sort_col = Producer.name if sort == "name" else vn_count_col
+    order_clauses = []
+    if q:
+        order_clauses.append(relevance_rank(q, [Producer.name, Producer.original]).asc())
     if sort_order == "asc":
-        query = query.order_by(sort_col.asc().nullslast(), Producer.id.asc())
+        order_clauses.append(sort_col.asc().nullslast())
     else:
-        query = query.order_by(sort_col.desc().nullslast(), Producer.id.asc())
+        order_clauses.append(sort_col.desc().nullslast())
+    order_clauses.append(Producer.id.asc())
+    query = query.order_by(*order_clauses)
 
     # Pagination
     offset = (page - 1) * limit

@@ -158,7 +158,7 @@ export function TitleLanguageToggle() {
       {isOpen && (
         <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1.5 z-50">
           <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Display
+            Title Language
           </div>
           {OPTIONS.map((option) => (
             <button

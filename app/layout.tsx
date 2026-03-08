@@ -123,11 +123,13 @@ export default function RootLayout({
             `,
           }}
         />
-        <script
-          data-goatcounter="https://vnclub.goatcounter.com/count"
-          async
-          src="//gc.zgo.at/count.js"
-        />
+        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <script
+            defer
+            src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+          />
+        )}
       </head>
       <body className={roboto.className} suppressHydrationWarning>
         <Suspense fallback={null}>
@@ -140,7 +142,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <div className="flex flex-col min-h-screen overflow-x-clip">
               <Header />
-              <main className="grow pt-16 md:pt-[72px]" style={{ contain: 'layout paint' }}>
+              <main className="grow pt-16 md:pt-[72px]">
                 {children}
               </main>
               <Footer />

@@ -1,9 +1,10 @@
 """Character endpoints."""
 
+import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, case, Float, cast
+from sqlalchemy import select, func, and_, or_, case, Float, cast
 
 from app.db.database import get_db
 from app.db import schemas
@@ -12,10 +13,102 @@ from app.db.models import (
     VisualNovel, VNSeiyuu, Staff
 )
 from app.core.cache import get_cache
+from app.core.search_utils import relevance_rank
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get("/search/", response_model=schemas.CharacterSearchResponse)
+async def search_characters(
+    q: str = Query(min_length=2, description="Search query for character name"),
+    limit: int = Query(default=10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    """Search characters by name. Returns matching characters with their primary VN for context."""
+
+    # Search name, original (Japanese name), and aliases
+    # aliases is a text[] column — convert to string for ILIKE/relevance
+    search_pattern = f"%{q}%"
+    aliases_str = func.array_to_string(Character.aliases, ' ')
+    relevance = relevance_rank(q, [Character.name, Character.original, aliases_str])
+
+    # Popularity tiebreaker: characters appearing in more VNs rank higher
+    vn_count_sq = (
+        select(func.count(CharacterVN.vn_id.distinct()))
+        .where(CharacterVN.character_id == Character.id)
+        .correlate(Character)
+        .scalar_subquery()
+    )
+
+    query = (
+        select(Character)
+        .where(
+            or_(
+                Character.name.ilike(search_pattern),
+                Character.original.ilike(search_pattern),
+                aliases_str.ilike(search_pattern),
+            )
+        )
+        .order_by(relevance.asc(), vn_count_sq.desc(), Character.name.asc())
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    characters = result.scalars().all()
+
+    if not characters:
+        return schemas.CharacterSearchResponse(results=[])
+
+    # Bulk fetch primary VN for each character (prefer main role)
+    char_ids = [c.id for c in characters]
+    ranked_vns = (
+        select(
+            CharacterVN.character_id,
+            VisualNovel.id.label("vn_id"),
+            VisualNovel.title.label("vn_title"),
+            VisualNovel.title_jp.label("vn_title_jp"),
+            VisualNovel.title_romaji.label("vn_title_romaji"),
+            func.row_number()
+            .over(
+                partition_by=CharacterVN.character_id,
+                order_by=case(
+                    (CharacterVN.role == "main", 1),
+                    (CharacterVN.role == "primary", 2),
+                    (CharacterVN.role == "side", 3),
+                    else_=4,
+                ),
+            )
+            .label("rn"),
+        )
+        .join(VisualNovel, VisualNovel.id == CharacterVN.vn_id)
+        .where(CharacterVN.character_id.in_(char_ids))
+        .subquery()
+    )
+    vns_result = await db.execute(
+        select(ranked_vns.c.character_id, ranked_vns.c.vn_id, ranked_vns.c.vn_title, ranked_vns.c.vn_title_jp, ranked_vns.c.vn_title_romaji)
+        .where(ranked_vns.c.rn == 1)
+    )
+    vn_by_char = {row[0]: (row[1], row[2], row[3], row[4]) for row in vns_result.all()}
+
+    results = []
+    for char in characters:
+        vn_info = vn_by_char.get(char.id)
+        results.append(
+            schemas.CharacterSearchResult(
+                id=char.id,
+                name=char.name,
+                original=char.original,
+                image_url=char.image_url,
+                image_sexual=char.image_sexual,
+                vn_id=vn_info[0] if vn_info else None,
+                vn_name=vn_info[1] if vn_info else None,
+                vn_title_jp=vn_info[2] if vn_info else None,
+                vn_title_romaji=vn_info[3] if vn_info else None,
+            )
+        )
+
+    return schemas.CharacterSearchResponse(results=results)
 
 
 @router.get("/sitemap-ids", include_in_schema=False)
@@ -43,6 +136,41 @@ async def get_character_sitemap_ids(
         items = [{"id": row.id} for row in result]
 
     return {"items": items, "total": total}
+
+
+@router.post("/batch", response_model=list[schemas.BatchItemBrief])
+async def batch_characters(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get minimal character info for a list of IDs. Used by shared layout loading."""
+    ids = body.get("ids", [])
+    if not isinstance(ids, list) or not ids or len(ids) > 100:
+        raise HTTPException(status_code=400, detail="ids must be a list of 1-100 character IDs")
+
+    char_ids = [i for i in ids if isinstance(i, str) and re.match(r"^c\d+$", i)]
+    if not char_ids:
+        return []
+
+    result = await db.execute(
+        select(
+            Character.id,
+            Character.name,
+            Character.original,
+            Character.image_url,
+            Character.image_sexual,
+        ).where(Character.id.in_(char_ids))
+    )
+    return [
+        schemas.BatchItemBrief(
+            id=row.id,
+            title=row.name,
+            title_jp=row.original,
+            image_url=row.image_url,
+            image_sexual=row.image_sexual,
+        )
+        for row in result
+    ]
 
 
 @router.get("/{char_id}", response_model=schemas.CharacterDetailResponse)

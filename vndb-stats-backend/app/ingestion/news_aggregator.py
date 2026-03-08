@@ -153,7 +153,8 @@ async def run_rss_check():
                         entries = await news_service.fetch_rss_feed(
                             config.url,
                             config.keywords,
-                            config.exclude_keywords
+                            config.exclude_keywords,
+                            feed_name=config.name,
                         )
 
                         if entries:

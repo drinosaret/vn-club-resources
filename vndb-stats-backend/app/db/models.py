@@ -1070,3 +1070,20 @@ class CoverBlacklist(Base):
     __table_args__ = (
         Index("idx_cover_blacklist_reason", "reason"),
     )
+
+
+class SharedLayout(Base):
+    """Shareable grid and tier list layouts."""
+
+    __tablename__ = "shared_layouts"
+
+    id = Column(String(12), primary_key=True)  # Short alphanumeric ID
+    type = Column(String(10), nullable=False)   # 'grid' or 'tierlist'
+    data = Column(JSONB, nullable=False)         # Minimal state payload (IDs + layout)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default="now()")
+    view_count = Column(Integer, server_default="0")
+
+    __table_args__ = (
+        Index("idx_shared_layouts_type", "type"),
+        CheckConstraint("type IN ('grid', 'tierlist')", name="ck_shared_layouts_type"),
+    )

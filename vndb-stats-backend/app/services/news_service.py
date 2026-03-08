@@ -51,9 +51,10 @@ class NewsService:
     VNDB_RELEASE_API = "https://api.vndb.org/kana/release"
 
     # Fallback banner images for RSS feeds that lack og:image
-    FEED_FALLBACK_IMAGES: dict[str, str] = {
-        "Ima-ero": "https://www.ima-ero.com/wp/wp-content/uploads/2019/04/suiseiseki-topgazou.jpg.webp",
-    }
+    FEED_FALLBACK_IMAGES: dict[str, str] = {}
+
+    # Feeds where images are likely NSFW — skip OG image fetching entirely
+    NSFW_FEEDS: set[str] = {"Ima-ero"}
 
     # Default RSS feeds for Japanese VN news
     DEFAULT_RSS_FEEDS = [
@@ -588,7 +589,8 @@ class NewsService:
         self,
         feed_url: str,
         keywords: list[str] | None,
-        exclude_keywords: list[str] | None
+        exclude_keywords: list[str] | None,
+        feed_name: str = "",
     ) -> list[dict[str, Any]]:
         """Fetch and parse an RSS feed, filtering by keywords."""
         keywords = keywords or []
@@ -655,8 +657,8 @@ class NewsService:
                         'thumbnail': None
                     })
 
-                # Fetch thumbnails in parallel
-                if filtered_entries:
+                # Fetch thumbnails in parallel (skip for NSFW feeds)
+                if filtered_entries and feed_name not in self.NSFW_FEEDS:
                     await self._fetch_thumbnails_for_entries(filtered_entries)
 
                 # Sort by publication date (newest first)

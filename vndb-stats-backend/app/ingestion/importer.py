@@ -82,7 +82,8 @@ def get_first_romaji_alias(alias_field: str | None) -> str | None:
 
     import re
 
-    for alias in alias_field.split("\\n"):
+    # Split on both literal \n (VNDB dump format) and actual newlines
+    for alias in re.split(r'\\n|\n|\r', alias_field):
         alias = alias.strip()
         if not alias:
             continue
@@ -1134,6 +1135,16 @@ def _load_vn_titles(titles_file: str) -> dict[str, tuple[str, str | None, str | 
             elif is_official and titles[vn_id][0] == "":
                 titles[vn_id] = (title, latin, titles[vn_id][2])
 
+            # Capture romaji from Japanese entries regardless of title priority.
+            # Japanese latin field contains the romanization (e.g., "Subarashiki Hibi")
+            # which is critical for search. When the English entry arrives first in
+            # the dump (alphabetical lang order: "en" < "ja"), its latin is typically
+            # null — so the Japanese entry's latin must be captured separately.
+            if lang == "ja" and is_official and latin:
+                t = titles.get(vn_id)
+                if t is not None:
+                    titles[vn_id] = (t[0], latin, t[2])
+
     # Merge Japanese titles into results
     for vn_id, jp_title in jp_titles.items():
         if vn_id in titles:
@@ -1324,10 +1335,14 @@ async def _import_vn_table(vn_file: str, vn_titles_file: str | None = None, imag
                             aliases = None
 
                     imported_ids.add(vn_id)
+                    # Ensure title_romaji is a single title, not concatenated aliases
+                    romaji = title_romaji or get_first_romaji_alias(row.get("alias"))
+                    if romaji and ("\\n" in romaji or "\n" in romaji):
+                        romaji = get_first_romaji_alias(romaji)
                     batch.append({
                         "id": vn_id,
                         "title": title,
-                        "title_romaji": title_romaji or get_first_romaji_alias(row.get("alias")),
+                        "title_romaji": romaji,
                         "title_jp": title_jp,
                         "aliases": aliases,
                         "description": sanitize_text(row.get("description")),

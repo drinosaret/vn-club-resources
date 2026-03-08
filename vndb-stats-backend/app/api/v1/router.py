@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import stats, recommendations, vn, user, news, admin, logs, characters, browse, blacklist, vn_of_the_day
+from app.api.v1 import stats, recommendations, vn, user, news, admin, logs, characters, browse, blacklist, vn_of_the_day, shared
 
 api_router = APIRouter()
 
@@ -17,3 +17,4 @@ api_router.include_router(logs.router, prefix="/logs", tags=["logs"], include_in
 api_router.include_router(browse.router, prefix="/browse", tags=["browse"])
 api_router.include_router(blacklist.router, prefix="/blacklist", tags=["blacklist"])
 api_router.include_router(vn_of_the_day.router, prefix="/vn-of-the-day", tags=["vn-of-the-day"])
+api_router.include_router(shared.router, prefix="/shared", tags=["shared"])

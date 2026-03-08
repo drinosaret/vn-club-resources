@@ -1,0 +1,81 @@
+import type { Locale } from '../types';
+
+const en = {
+  'save': 'Save',
+  'cancel': 'Cancel',
+  'edit': 'Edit',
+  'remove': 'Remove',
+  'import': 'Import',
+  'clear': 'Clear',
+  'added': 'Added',
+  'score.placeholder': 'Score (10\u2013100)',
+  'score.clear': 'Clear score',
+  'title.resetAuto': 'Reset to auto title',
+  'vndb.placeholder': 'VNDB username or ID...',
+  'settings.scores': 'Scores',
+  'settings.nsfw': 'NSFW',
+  'settings.titles': 'Titles',
+  'settings.language': 'Language',
+  'settings.titleHeight': 'Title height',
+  'settings.displaySettings': 'Display settings',
+  'share.copied': 'Copied!',
+  'share.copyLink': 'Copy Link',
+  'share.copyLinkDesc': 'Creates a unique shareable link',
+  'share.copyImage': 'Copy Image',
+  'share.share': 'Share',
+  'share.viaDevice': 'Share via device...',
+  'share.toX': 'Share to X',
+  'share.toReddit': 'Share to Reddit',
+  'share.copiesAndOpens': 'Copies image + opens post',
+  'share.copyToClipboard': 'Copy image to clipboard',
+  'search.vnPlaceholder': 'Search VNs by title or VNDB ID (e.g. v17)...',
+  'cover.changeCover': 'Change Cover',
+  'cover.loading': 'Loading covers...',
+  'cover.noAlts': 'No alternative covers found',
+  'cover.original': 'Original',
+  'cover.error': 'Failed to load covers',
+} as const;
+
+type SharedKeys = keyof typeof en;
+
+const ja: Record<SharedKeys, string> = {
+  'save': '\u4fdd\u5b58',
+  'cancel': '\u30ad\u30e3\u30f3\u30bb\u30eb',
+  'edit': '\u7de8\u96c6',
+  'remove': '\u524a\u9664',
+  'import': '\u30a4\u30f3\u30dd\u30fc\u30c8',
+  'clear': '\u30af\u30ea\u30a2',
+  'added': '\u8ffd\u52a0\u6e08\u307f',
+  'score.placeholder': '\u30b9\u30b3\u30a2 (10\u2013100)',
+  'score.clear': '\u30b9\u30b3\u30a2\u3092\u30af\u30ea\u30a2',
+  'title.resetAuto': '\u81ea\u52d5\u30bf\u30a4\u30c8\u30eb\u306b\u623b\u3059',
+  'vndb.placeholder': 'VNDB\u30e6\u30fc\u30b6\u30fc\u540d\u307e\u305f\u306fID...',
+  'settings.scores': '\u30b9\u30b3\u30a2',
+  'settings.nsfw': 'NSFW',
+  'settings.titles': '\u30bf\u30a4\u30c8\u30eb',
+  'settings.language': '\u8a00\u8a9e',
+  'settings.titleHeight': '\u30bf\u30a4\u30c8\u30eb\u306e\u9ad8\u3055',
+  'settings.displaySettings': '\u8868\u793a\u8a2d\u5b9a',
+  'share.copied': 'コピーしました！',
+  'share.copyLink': 'リンクをコピー',
+  'share.copyLinkDesc': '共有リンクを作成',
+  'share.copyImage': '画像をコピー',
+  'share.share': '共有',
+  'share.viaDevice': 'デバイスで共有...',
+  'share.toX': 'Xに共有',
+  'share.toReddit': 'Redditに共有',
+  'share.copiesAndOpens': '画像をコピーして投稿を開く',
+  'share.copyToClipboard': '画像をクリップボードにコピー',
+  'search.vnPlaceholder': '\u30bf\u30a4\u30c8\u30eb\u307e\u305f\u306fVNDB ID\u3067\u691c\u7d22 (\u4f8b: v17)...',
+  'cover.changeCover': '\u30ab\u30d0\u30fc\u3092\u5909\u66f4',
+  'cover.loading': '\u30ab\u30d0\u30fc\u3092\u8aad\u307f\u8fbc\u307f\u4e2d...',
+  'cover.noAlts': '\u4ee3\u66ff\u30ab\u30d0\u30fc\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093',
+  'cover.original': '\u30aa\u30ea\u30b8\u30ca\u30eb',
+  'cover.error': '\u30ab\u30d0\u30fc\u306e\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557',
+};
+
+export const sharedStrings = { en, ja };
+
+export function getSharedStrings(locale: Locale) {
+  return sharedStrings[locale];
+}

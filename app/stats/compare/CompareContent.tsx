@@ -712,7 +712,7 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
                 label="Rating Agreement"
                 value={comparison.rating_agreement}
                 description="Score closeness on shared VNs"
-                tooltip="How closely you rate shared VNs. 100% = identical scores, 0% = average 5+ point difference on a 10-point scale."
+                tooltip="How close your actual scores are on shared VNs. If you both give a VN an 8, that's high agreement. 100% = identical scores, 0% = average 5+ point difference."
               />
             )}
             {comparison.tag_similarity != null && (
@@ -726,8 +726,8 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
             <MetricBar
               label="Score Correlation"
               value={Math.max(0, (comparison.score_correlation + 1) / 2)}
-              description="Rating agreement"
-              tooltip="Pearson correlation of scores on shared VNs, normalized to 0-100%. Measures if you rate the SAME VNs similarly. Requires shared rated VNs to be meaningful."
+              description="Relative ranking similarity"
+              tooltip="Whether you rank VNs in the same relative order (Pearson correlation). A harsh rater and a generous rater who agree on which VNs are better or worse will score high here, even if their absolute scores differ."
             />
           </div>
         </div>

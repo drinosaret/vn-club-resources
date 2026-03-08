@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import type { FeaturedVNData } from '@/lib/featured-vns';
 import { useImageFade } from '@/hooks/useImageFade';
+import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 
 interface FeaturedVNsProps {
   vns: FeaturedVNData[];
@@ -71,10 +72,10 @@ export function FeaturedVNs({ vns }: FeaturedVNsProps) {
 
         <div className="text-center mt-5">
           <Link
-            href="/browse/"
+            href="/beginner-vns/"
             className="inline-flex items-center text-base font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
           >
-            Browse all visual novels
+            See all beginner recommendations
             <ChevronRight className="w-4 h-4 ml-0.5" />
           </Link>
         </div>
@@ -86,6 +87,7 @@ export function FeaturedVNs({ vns }: FeaturedVNsProps) {
 function FeaturedVNCard({ vn, preference }: { vn: FeaturedVNData; preference: 'japanese' | 'romaji' }) {
   const { onLoad, fadeClass } = useImageFade();
   const displayTitle = getDisplayTitle(vn, preference);
+  const proxiedUrl = getProxiedImageUrl(vn.imageUrl, { width: 256, vnId: vn.id });
 
   return (
     <Link
@@ -94,9 +96,9 @@ function FeaturedVNCard({ vn, preference }: { vn: FeaturedVNData; preference: 'j
     >
       <div className="relative overflow-hidden rounded-lg shadow-lg transition-transform duration-150 group-hover:-translate-y-1">
         <div className="aspect-2/3 relative bg-linear-to-br from-primary-100 to-primary-200 dark:from-gray-700 dark:to-gray-600">
-          {vn.imageUrl && (
+          {proxiedUrl && (
             <Image
-              src={vn.imageUrl}
+              src={proxiedUrl}
               alt={displayTitle}
               fill
               loading="lazy"

@@ -4,7 +4,7 @@
  * Automatically starts Docker containers and imports data if needed
  */
 
-const { spawn, exec, execSync } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -115,25 +115,6 @@ function runImport() {
   }
 }
 
-function openBackendLogs() {
-  log('Opening backend logs in new terminal...');
-  const isWindows = process.platform === 'win32';
-
-  if (isWindows) {
-    // Open a new Windows terminal with Docker logs
-    exec('start cmd /k "docker logs -f vndb-stats-backend-api-1"');
-  } else {
-    // macOS/Linux - try to open in new terminal
-    const terminal = process.platform === 'darwin'
-      ? ['open', ['-a', 'Terminal', '--args', 'docker', 'logs', '-f', 'vndb-stats-backend-api-1']]
-      : ['gnome-terminal', ['--', 'docker', 'logs', '-f', 'vndb-stats-backend-api-1']];
-
-    spawn(terminal[0], terminal[1], {
-      stdio: 'ignore',
-      detached: true,
-    });
-  }
-}
 
 function startDiscordBot() {
   // Check if DISCORD_BOT_TOKEN is set
@@ -177,13 +158,10 @@ function startDiscordBot() {
 function startDevServers() {
   log('Starting development servers...');
 
-  // Open backend logs in separate terminal
-  openBackendLogs();
-
   // Start Discord bot if configured
   const bot = startDiscordBot();
 
-  const next = spawn('npx next dev --turbo', [], {
+  const next = spawn('npx next dev --turbo -p 3001', [], {
     stdio: 'inherit',
     cwd: path.join(__dirname, '..'),
     shell: true,

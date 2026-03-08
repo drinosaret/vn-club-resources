@@ -82,7 +82,7 @@ async def get_history(
     ]
 
 
-@router.post("/override")
+@router.post("/override", include_in_schema=False)
 async def override_vn_of_the_day(
     body: OverrideRequest,
     admin: str = Depends(require_admin),
@@ -111,7 +111,7 @@ async def override_vn_of_the_day(
     return votd.build_votd_response(pick, tags, developers=devs)
 
 
-@router.post("/reroll")
+@router.post("/reroll", include_in_schema=False)
 async def reroll_vn_of_the_day(
     admin: str = Depends(require_admin),
     db: AsyncSession = Depends(get_db),

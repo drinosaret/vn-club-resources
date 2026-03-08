@@ -123,6 +123,15 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
     }, SEARCH_DEBOUNCE_MS);
   };
 
+  const getPageHref = useCallback((page: number) => {
+    if (typeof window === 'undefined') return '#';
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', 'producers');
+    if (page > 1) params.set('page', String(page));
+    else params.delete('page');
+    return `/browse/?${params.toString()}`;
+  }, []);
+
   // Prefetch a page into SWR cache for instant navigation
   const handlePrefetchPage = useCallback((targetPage: number) => {
     if (targetPage < 1 || targetPage > pages) return;
@@ -193,7 +202,8 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            type="text"
+            type="search"
+            autoComplete="off"
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search producers..."
@@ -270,6 +280,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
           totalPages={pages}
           onPageChange={(p) => updateParams({ page: p })}
           onPrefetchPage={handlePrefetchPage}
+          getPageHref={getPageHref}
           totalItems={total}
           itemsPerPage={ITEMS_PER_PAGE}
         />
@@ -323,6 +334,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
           totalPages={pages}
           onPageChange={(p) => updateParams({ page: p })}
           onPrefetchPage={handlePrefetchPage}
+          getPageHref={getPageHref}
           totalItems={total}
           itemsPerPage={ITEMS_PER_PAGE}
           scrollTargetRef={resultsRef}

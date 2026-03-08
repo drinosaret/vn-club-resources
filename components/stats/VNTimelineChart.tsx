@@ -434,7 +434,8 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
             <div className="relative flex items-center">
               <Search className="w-3 h-3 absolute left-2 text-gray-400" />
               <input
-                type="text"
+                type="search"
+                autoComplete="off"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."

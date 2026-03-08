@@ -1,6 +1,7 @@
 'use client';
 
-import { ExternalLink, Calendar, Building2, ImageOff } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, Calendar, Building2 } from 'lucide-react';
 import type { NewsItem } from '@/lib/sample-news-data';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -76,7 +77,9 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
 
   const safeUrl = item.url && /^https?:\/\//.test(item.url) ? item.url : undefined;
 
-  const hasImage = !!item.imageUrl;
+  const [imageError, setImageError] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
+  const hasImage = !!item.imageUrl && !imageError;
   const vnId = extractString(item.extraData?.vn_id);
 
   // For releases, use extraData.vn_tags; for new VNs, use item.tags
@@ -100,7 +103,34 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
 
       {/* Cover Image */}
       <div className="relative w-full h-40 shrink-0">
-        {hasImage ? (
+        {/* Gradient placeholder — always rendered behind the image */}
+        <div className="absolute inset-0 bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/50 dark:via-purple-950/50 dark:to-pink-950/50 flex items-center justify-center overflow-hidden">
+          <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 dark:bg-white/5" />
+          <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/30 dark:bg-white/5" />
+          {!faviconError ? (
+            <div className="flex flex-col items-center gap-2">
+              <img
+                src="https://icons.duckduckgo.com/ip3/vndb.org.ico"
+                alt=""
+                width={48}
+                height={48}
+                className="rounded-lg shadow-sm"
+                style={{ imageRendering: 'auto' }}
+                onError={() => setFaviconError(true)}
+              />
+              <span className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/50">
+                {item.sourceLabel}
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm font-medium text-indigo-400/70 dark:text-indigo-500/50">
+              {item.sourceLabel}
+            </span>
+          )}
+        </div>
+
+        {/* Actual image — layered on top */}
+        {hasImage && (
           <NSFWNextImage
             src={getProxiedImageUrl(item.imageUrl, { width: 512 })}
             alt={item.title}
@@ -110,13 +140,8 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
             loading="lazy"
             className="object-cover"
             unoptimized
+            onError={() => setImageError(true)}
           />
-        ) : (
-          <div className="absolute inset-0 bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/50 dark:via-purple-950/50 dark:to-pink-950/50 flex items-center justify-center overflow-hidden">
-            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 dark:bg-white/5" />
-            <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/30 dark:bg-white/5" />
-            <ImageOff className="w-12 h-12 text-indigo-300 dark:text-indigo-700" />
-          </div>
         )}
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { ExternalLink, Newspaper, Twitter } from 'lucide-react';
+import { ExternalLink, Gamepad2, Newspaper, Twitter } from 'lucide-react';
 import type { NewsListItem } from '@/lib/sample-news-data';
 import { getSourceConfig, getRelativeTime } from '@/lib/sample-news-data';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
@@ -18,6 +18,7 @@ export function NewsCard({ item }: NewsCardProps) {
   const sourceConfig = getSourceConfig(item.source);
   const relativeTime = getRelativeTime(item.publishedAt);
   const [imageError, setImageError] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
   const { onLoad: onImageLoad, shimmerClass, fadeClass } = useImageFade();
   const { preference } = useTitlePreference();
 
@@ -35,14 +36,28 @@ export function NewsCard({ item }: NewsCardProps) {
   const hasValidImage = item.imageUrl && !item.imageIsNsfw && !imageError;
   const isTwitter = item.source === 'twitter';
 
-  // Get placeholder icon based on source
-  const PlaceholderIcon = isTwitter ? Twitter : Newspaper;
+  // Placeholder config per source type
+  const isRss = item.source === 'rss';
+  const PlaceholderIcon = isTwitter ? Twitter : isVndbSource ? Gamepad2 : Newspaper;
   const placeholderGradient = isTwitter
     ? 'from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/50 dark:via-blue-950/50 dark:to-indigo-950/50'
+    : isVndbSource
+    ? 'from-indigo-50 via-purple-50 to-fuchsia-50 dark:from-indigo-950/50 dark:via-purple-950/50 dark:to-fuchsia-950/50'
     : 'from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-950/50 dark:via-amber-950/50 dark:to-yellow-950/50';
   const placeholderIconColor = isTwitter
     ? 'text-sky-300 dark:text-sky-700'
+    : isVndbSource
+    ? 'text-indigo-300 dark:text-indigo-700'
     : 'text-amber-300 dark:text-amber-700';
+
+  // For RSS items, extract domain for favicon; for VNDB, use vndb.org favicon
+  const faviconUrl = !faviconError && (
+    isRss && safeUrl
+      ? `https://icons.duckduckgo.com/ip3/${new URL(safeUrl).hostname}.ico`
+      : isVndbSource
+      ? 'https://icons.duckduckgo.com/ip3/vndb.org.ico'
+      : null
+  );
 
   return (
     <div
@@ -61,28 +76,45 @@ export function NewsCard({ item }: NewsCardProps) {
 
       {/* Cover Image - Always present for consistent height */}
       <div className="relative w-full h-40 shrink-0">
-        {/* Shimmer placeholder - visible until image loads */}
-        {hasValidImage && (
-          <div className={shimmerClass} />
-        )}
-        {hasValidImage ? (
-          <Image
-            src={getNewsImageUrl(item.imageUrl)!}
-            alt={item.title}
-            fill
-            loading="lazy"
-            className={`object-cover ${fadeClass}`}
-            onError={() => setImageError(true)}
-            onLoad={onImageLoad}
-            unoptimized
-          />
-        ) : (
-          <div className={`absolute inset-0 bg-linear-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden`}>
-            {/* Decorative circles */}
-            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 dark:bg-white/5" />
-            <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/30 dark:bg-white/5" />
+        {/* Gradient placeholder — always rendered behind the image */}
+        <div className={`absolute inset-0 bg-linear-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden`}>
+          <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 dark:bg-white/5" />
+          <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/30 dark:bg-white/5" />
+          {faviconUrl ? (
+            <div className="flex flex-col items-center gap-2">
+              <img
+                src={faviconUrl}
+                alt=""
+                width={48}
+                height={48}
+                className="rounded-lg shadow-sm"
+                style={{ imageRendering: 'auto' }}
+                onError={() => setFaviconError(true)}
+              />
+              <span className={`text-sm font-medium ${isVndbSource ? 'text-indigo-600/70 dark:text-indigo-400/50' : 'text-amber-600/70 dark:text-amber-400/50'}`}>
+                {item.sourceLabel}
+              </span>
+            </div>
+          ) : (
             <PlaceholderIcon className={`w-12 h-12 ${placeholderIconColor}`} />
-          </div>
+          )}
+        </div>
+
+        {/* Actual image — layered on top, fades in on load */}
+        {hasValidImage && (
+          <>
+            <div className={shimmerClass} />
+            <Image
+              src={getNewsImageUrl(item.imageUrl)!}
+              alt={item.title}
+              fill
+              loading="lazy"
+              className={`object-cover ${fadeClass}`}
+              onError={() => setImageError(true)}
+              onLoad={onImageLoad}
+              unoptimized
+            />
+          </>
         )}
       </div>
 

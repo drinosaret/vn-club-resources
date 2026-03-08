@@ -35,6 +35,8 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
+      umami:
+        condition: service_started
     restart: unless-stopped
     networks:
       - vnclub
@@ -47,6 +49,8 @@ services:
       args:
         NEXT_PUBLIC_VNDB_STATS_API: ${NEXT_PUBLIC_VNDB_STATS_API:-}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_UMAMI_URL: ${NEXT_PUBLIC_UMAMI_URL:-}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
     environment:
       - NODE_ENV=production
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
@@ -216,6 +220,42 @@ services:
       - --
     command: []
 
+  # Umami analytics
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-}@umami-db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:-}
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    restart: unless-stopped
+    networks:
+      - vnclub
+
+  # Umami PostgreSQL (separate from VNDB database)
+  umami-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-}
+      POSTGRES_DB: umami
+    volumes:
+      - umami-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vnclub
+
   # Worker for scheduled imports and heavy computation (similarity matrices, model training).
   # Memory limit set to 8GB — similarity computation needs ~6GB peak for loading 60K tag vectors.
   # CPU capped at 3 cores — prevents import/ML jobs from starving live services on a 6-core VPS.
@@ -255,6 +295,7 @@ volumes:
   redisdata:
   dumps:
   vndb-cache:
+  umami-pgdata:
 
 networks:
   vnclub:

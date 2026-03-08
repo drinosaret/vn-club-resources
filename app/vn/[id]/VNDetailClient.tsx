@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, type ComponentType } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, type ComponentType } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { ArrowLeft, ExternalLink, AlertCircle, RefreshCw, Globe } from 'lucide-react';
 
@@ -123,6 +123,9 @@ export default function VNDetailClient({
   // Track which tabs have been visited so we can lazy-mount but keep-alive
   const [visitedTabs, setVisitedTabs] = useState<Set<VNTabId>>(() => new Set([initialTab]));
 
+  // Ref for tab content container — used to lock height during tab switches
+  const tabContentRef = useRef<HTMLDivElement>(null);
+
   // Similar VNs
   const [similarData, setSimilarData] = useState<SimilarVNsResponse | null>(initialSimilar ?? null);
   const [similarLoading, setSimilarLoading] = useState(false);
@@ -217,6 +220,11 @@ export default function VNDetailClient({
 
   // Handle tab change - update URL without triggering RSC re-render
   const handleTabChange = useCallback((newTab: VNTabId) => {
+    // Lock container height to prevent layout shift while the old panel
+    // collapses (position:absolute) and the new panel renders in.
+    const el = tabContentRef.current;
+    if (el) el.style.minHeight = `${el.offsetHeight}px`;
+
     void loadTabModule(newTab);
     setActiveTab(newTab);
     setVisitedTabs(prev => {
@@ -260,6 +268,15 @@ export default function VNDetailClient({
     setActiveTab(urlTab);
     setVisitedTabs(prev => prev.has(urlTab) ? prev : new Set(prev).add(urlTab));
   }, [tabFromUrl, loadTabModule]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Release the tab-content height lock after React commits the new panel to the DOM.
+  // One rAF waits for the browser to paint, then we clear the inline min-height.
+  useEffect(() => {
+    const el = tabContentRef.current;
+    if (!el || !el.style.minHeight) return;
+    const id = requestAnimationFrame(() => { el.style.minHeight = ''; });
+    return () => cancelAnimationFrame(id);
+  }, [activeTab]);
 
   const loadVN = useCallback(async () => {
     setIsLoading(true);
@@ -562,7 +579,7 @@ export default function VNDetailClient({
 
           {/* Tab Content — lazy-mount / keep-alive: tabs mount on first visit,
              then stay in the DOM (hidden via CSS) for instant re-visits. */}
-          <div className="relative min-h-[400px]">
+          <div ref={tabContentRef} className="relative min-h-[400px]">
           <div
             className={activeTab === 'summary' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
             role="tabpanel"

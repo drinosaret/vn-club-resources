@@ -87,6 +87,12 @@ export default function Footer() {
               <li>
                 <FooterLink href="/quiz">Kana Quiz</FooterLink>
               </li>
+              <li>
+                <FooterLink href="/tierlist">Tier List</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/3x3-maker">3x3 Maker</FooterLink>
+              </li>
             </ul>
           </div>
 
@@ -119,6 +125,14 @@ export default function Footer() {
                   </a>
                 </li>
               )}
+              <li>
+                <a
+                  href="mailto:contact@vnclub.org"
+                  className="hover:text-primary-400 transition-colors"
+                >
+                  Contact
+                </a>
+              </li>
             </ul>
           </div>
         </div>

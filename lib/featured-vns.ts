@@ -4,7 +4,6 @@
  */
 
 import { getBackendUrlOptional } from './config';
-import { getProxiedImageUrl } from './vndb-image-cache';
 
 export interface FeaturedVNData {
   id: string;
@@ -12,10 +11,11 @@ export interface FeaturedVNData {
   title_jp?: string;
   title_romaji?: string;
   imageUrl: string | null;
+  image_sexual?: number;
 }
 
 // Recommended First VNs from /guide page
-const FEATURED_VN_IDS = [
+export const FEATURED_VN_IDS = [
   'v15473', // Nanairo Reincarnation
   'v31212', // Tsuyuchiru Letter
   'v711', // Gyakuten Saiban (Ace Attorney)
@@ -56,7 +56,8 @@ export async function getFeaturedVNsData(): Promise<FeaturedVNData[]> {
             title: data.title,
             title_jp: data.title_jp,
             title_romaji: data.title_romaji,
-            imageUrl: data.image_url ? getProxiedImageUrl(data.image_url, { width: 256 }) : null,
+            imageUrl: data.image_url || null,
+            image_sexual: data.image_sexual ?? 0,
           };
         } catch {
           return null;

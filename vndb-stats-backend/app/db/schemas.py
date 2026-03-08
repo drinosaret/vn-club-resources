@@ -1061,6 +1061,16 @@ class CharacterDetailResponse(BaseModel):
     voiced_by: list[VoiceActorInfo]
 
 
+class BatchItemBrief(BaseModel):
+    """Minimal VN or character info for batch loading shared layouts."""
+    id: str
+    title: str
+    title_jp: str | None = None
+    title_romaji: str | None = None
+    image_url: str | None = None
+    image_sexual: float | None = None
+
+
 class VNCharacterResponse(BaseModel):
     """Character information for a VN's character list."""
     id: str
@@ -1085,6 +1095,26 @@ class SimilarCharacterResponse(BaseModel):
     vn_title_jp: str | None = None  # Japanese title of primary VN
     vn_title_romaji: str | None = None  # Romanized title of primary VN
     olang: str | None = None  # Original language of primary VN
+
+
+# ============ Character Search Schemas ============
+
+class CharacterSearchResult(BaseModel):
+    """A character in search results."""
+    id: str
+    name: str
+    original: str | None = None
+    image_url: str | None = None
+    image_sexual: float | None = None
+    vn_id: str | None = None
+    vn_name: str | None = None
+    vn_title_jp: str | None = None
+    vn_title_romaji: str | None = None
+
+
+class CharacterSearchResponse(BaseModel):
+    """Response for character search."""
+    results: list[CharacterSearchResult]
 
 
 # ============ Browse Schemas ============

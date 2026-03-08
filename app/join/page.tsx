@@ -1,19 +1,11 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import {
-  BookOpen,
-  MessageCircle,
-  Wrench,
-  TrendingUp,
-  Bot,
-  CalendarDays,
-} from 'lucide-react';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Join the VN Club Resurrection Discord',
+  title: 'Visual Novel Discord Server for Japanese Learners',
   description:
-    'Join the VN Club Resurrection Discord. Connect with Japanese learners reading VNs, get setup help, share progress, and discover new visual novels.',
+    'Join the VN Club Resurrection Discord, the visual novel community for Japanese learners. Discuss untranslated VNs, get setup help, and join monthly group reads.',
   path: '/join/',
 });
 
@@ -21,13 +13,13 @@ const communityJsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'Join VN Club Resurrection Discord',
+    name: 'Visual Novel Discord Server for Japanese Learners',
     description:
-      'Join the Visual Novel Club Resurrection Discord community. Connect with other Japanese learners reading VNs.',
+      'Join the VN Club Resurrection visual novel Discord community. Connect with Japanese learners reading VNs in their original language.',
     url: `${SITE_URL}/join/`,
     mainEntity: {
       '@type': 'Organization',
-      name: 'VN Club Resurrection',
+      name: 'VN Club Resurrection - Visual Novel Discord Community',
       url: 'https://discord.gg/Ze7dYKVTHf',
       sameAs: ['https://discord.gg/Ze7dYKVTHf'],
     },
@@ -47,41 +39,23 @@ function DiscordIcon({ className }: { className?: string }) {
 }
 
 const features = [
+  'Discuss untranslated VNs and Japanese games',
+  'Get help with text hookers, dictionaries, and setup',
+  'Monthly group reading events',
+  'Share and track your reading progress',
+  'Custom Discord bot with community tools',
+];
+
+const partners = [
   {
-    icon: BookOpen,
-    title: 'Discuss VNs & Games',
-    description:
-      'Talk about untranslated VNs and games you\'re reading, or get recommendations for your next read.',
+    name: 'Learn Japanese through Anime',
+    icon: '/assets/partner-ljta.webp',
+    url: 'https://discord.gg/fqX7jgz6bt',
   },
   {
-    icon: MessageCircle,
-    title: 'Ask Questions',
-    description:
-      'Get answers about Japanese learning, reading strategies, and anything VN-related.',
-  },
-  {
-    icon: Wrench,
-    title: 'Get Technical Help',
-    description:
-      'Troubleshoot text hookers, dictionary tools, and other setup issues with experienced readers.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Share Your Progress',
-    description:
-      'Celebrate milestones and track your reading journey with our progress logging bot.',
-  },
-  {
-    icon: Bot,
-    title: 'Custom Bot Features',
-    description:
-      'Use our custom Discord bot for various community features and tools.',
-  },
-  {
-    icon: CalendarDays,
-    title: 'Monthly Group Reads',
-    description:
-      'Join VN of the month group reading events for shared reading experiences.',
+    name: 'Room No.49',
+    icon: '/assets/partner-room49.webp',
+    url: 'https://discord.gg/4t22SGVT3C',
   },
 ];
 
@@ -92,143 +66,75 @@ export default function JoinPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(communityJsonLd) }}
       />
-      <div className="w-full">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden bg-linear-to-br from-primary-600 via-primary-700 to-primary-800 text-white">
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
-            <div className="absolute -bottom-1/2 -left-1/4 w-96 h-96 bg-primary-400/10 rounded-full blur-3xl" />
+      <div className="w-full min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-72px)] flex items-center justify-center py-12 md:py-16">
+        <div className="max-w-md mx-auto px-4 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full overflow-hidden mb-5">
+            <Image
+              src="/assets/servericon.webp"
+              alt="VN Club Resurrection"
+              width={80}
+              height={80}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
           </div>
 
-          <div className="relative container mx-auto px-4 py-16 md:py-24 max-w-4xl text-center">
-            <div className="inline-flex items-center justify-center w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/15 backdrop-blur-xs mb-6 overflow-hidden">
-              <Image
-                src="/assets/servericon.webp"
-                alt="VN Club Resurrection"
-                width={128}
-                height={128}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
+            Visual Novel Discord Server
+          </h1>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-              VN Club Resurrection
-            </h1>
+          <p className="text-base text-gray-500 dark:text-gray-400 font-medium mb-3">
+            VN Club Resurrection
+          </p>
 
-            <p className="text-lg md:text-xl mb-8 text-primary-100 max-w-2xl mx-auto leading-relaxed">
-              A server for Japanese learners passionate about reading visual novels in their original, untranslated form.
-            </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            A community for reading visual novels in Japanese.
+          </p>
 
-            <a
-              href="https://discord.gg/Ze7dYKVTHf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-50 hover:shadow-lg transition-all duration-200"
-            >
-              <DiscordIcon className="w-5 h-5" />
-              Join Discord Server
-            </a>
-          </div>
-        </section>
+          <a
+            href="https://discord.gg/Ze7dYKVTHf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+          >
+            <DiscordIcon className="w-5 h-5" />
+            Join Server
+          </a>
 
-        {/* Feature Cards */}
-        <section className="py-12 md:py-20 bg-gray-50 dark:bg-gray-900/50">
-          <div className="container mx-auto px-4 max-w-6xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white text-center mb-10">
-              What we do
-            </h2>
+          <ul className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
+            {features.map((feature) => (
+              <li key={feature} className="flex items-start gap-2">
+                <span className="text-gray-400 dark:text-gray-500 mt-0.5 shrink-0">·</span>
+                {feature}
+              </li>
+            ))}
+          </ul>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Partner servers</p>
+            <div className="flex items-center justify-center gap-4">
+              {partners.map((partner) => (
+                <a
+                  key={partner.name}
+                  href={partner.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-4">
-                    <feature.icon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
+                  <Image
+                    src={partner.icon}
+                    alt={partner.name}
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 rounded-md shrink-0"
+                    unoptimized
+                  />
+                  {partner.name}
+                </a>
               ))}
             </div>
           </div>
-        </section>
-
-        {/* Closing CTA */}
-        <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-16">
-          <div className="container mx-auto px-4 max-w-3xl text-center">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              All levels welcome
-            </h2>
-            <p className="text-lg text-primary-100 mb-8 max-w-xl mx-auto">
-              Whether you&apos;re just starting out or already reading untranslated VNs on your own.
-            </p>
-            <a
-              href="https://discord.gg/Ze7dYKVTHf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-50 hover:shadow-lg transition-all duration-200"
-            >
-              <DiscordIcon className="w-5 h-5" />
-              Join Discord Server
-            </a>
-          </div>
-        </section>
-
-        {/* Partner Servers */}
-        <section className="py-12 md:py-16">
-          <div className="container mx-auto px-4 max-w-4xl text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8">
-              Partner Servers
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 max-w-2xl mx-auto">
-              <a
-                href="https://discord.gg/fqX7jgz6bt"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-              >
-                <Image
-                  src="/assets/partner-ljta.webp"
-                  alt="Learn Japanese through Anime"
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-xl shrink-0"
-                  unoptimized
-                />
-                <div className="text-left">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Learn Japanese through Anime</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Anime partner server</p>
-                </div>
-              </a>
-              <a
-                href="https://discord.gg/4t22SGVT3C"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-              >
-                <Image
-                  src="/assets/partner-room49.webp"
-                  alt="Room No.49"
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-xl shrink-0"
-                  unoptimized
-                />
-                <div className="text-left">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Room No.49</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Dark VN partner server</p>
-                </div>
-              </a>
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
     </>
   );

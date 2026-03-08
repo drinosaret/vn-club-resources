@@ -5,9 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/start-dev.js",
-    "dev:frontend": "next dev",
-    "dev:all": "concurrently -n next,api -c blue,green \"next dev\" \"npm run api:dev\"",
-    "prebuild": "npx tsx scripts/generate-search-index.ts && npx tsx scripts/cache-vndb-images.ts",
+    "dev:frontend": "next dev -p 3001",
+    "dev:all": "concurrently -n next,api -c blue,green \"next dev -p 3001\" \"npm run api:dev\"",
+    "prebuild": "npx tsx scripts/generate-search-index.ts",
+    "prebuild:prod": "npx tsx scripts/generate-search-index.ts && npx tsx scripts/cache-vndb-images.ts",
     "build": "next build",
     "start": "next start",
     "prod": "next build && next start",
@@ -34,6 +35,9 @@
     "docker:restart": "powershell -ExecutionPolicy Bypass -File scripts/restart-docker.ps1"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@mdx-js/mdx": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "flexsearch": "^0.8.212",
@@ -43,6 +47,7 @@
     "nprogress": "^0.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-easy-crop": "^5.5.6",
     "react-is": "^19.2.4",
     "react-markdown": "^10.1.0",
     "recharts": "^3.7.0",
@@ -59,6 +64,7 @@
     "unified": "^11.0.5"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.1.6",
     "@next/eslint-plugin-next": "^16.1.6",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/hast": "^3.0.4",

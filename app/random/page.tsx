@@ -3,7 +3,7 @@ import RandomPageClient from '@/components/random/RandomPageClient';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Random Visual Novel Picker — Discover Your Next VN',
+  title: 'Random Visual Novel Picker - Discover Your Next VN',
   description: 'Randomly discover visual novels with filters for tags, length, rating, language, and more. Roll for random picks from the VNDB database and find your next read.',
   path: '/random/',
 });

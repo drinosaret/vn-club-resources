@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
@@ -24,8 +24,22 @@ const { mobile: mobileNavigation, desktop: desktopNavigation } = getHeaderNaviga
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!openDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openDropdown]);
 
   const toggleSection = (sectionName: string) => {
     setExpandedSections(prev =>
@@ -75,15 +89,63 @@ export default function Header() {
           <div className="hidden lg:flex items-center space-x-6">
             {desktopNavigation.map((item) => {
               const normalizedPathname = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+
+              // Dropdown item
+              if ('items' in item && item.items) {
+                const isChildActive = item.items.some(sub =>
+                  normalizedPathname.startsWith(sub.href)
+                );
+                return (
+                  <div key={item.name} className="relative" ref={openDropdown === item.name ? dropdownRef : undefined}>
+                    <button
+                      onClick={() => setOpenDropdown(prev => prev === item.name ? null : item.name)}
+                      className={`inline-flex items-center gap-1 transition-colors font-medium ${
+                        isChildActive
+                          ? 'text-primary-600 dark:text-primary-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                      }`}
+                    >
+                      {item.name}
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === item.name ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openDropdown === item.name && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-44 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-50">
+                        {item.items.map(sub => {
+                          const isSubActive = normalizedPathname.startsWith(sub.href);
+                          return (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              onClick={(e) => {
+                                setOpenDropdown(null);
+                                handleNavClick(e, sub.href);
+                              }}
+                              className={`block px-4 py-2 text-sm transition-colors ${
+                                isSubActive
+                                  ? 'text-primary-600 dark:text-primary-400 bg-gray-50 dark:bg-gray-700/50'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400'
+                              }`}
+                            >
+                              {sub.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Simple link
               const isActive = item.href === '/'
                 ? normalizedPathname === ''
-                : normalizedPathname.startsWith(item.href);
+                : normalizedPathname.startsWith(item.href!);
 
               return (
                 <Link
                   key={item.name}
-                  href={item.href}
-                  onClick={(e) => handleNavClick(e, item.href)}
+                  href={item.href!}
+                  onClick={(e) => handleNavClick(e, item.href!)}
                   className={`transition-colors font-medium ${
                     isActive
                       ? 'text-primary-600 dark:text-primary-400'

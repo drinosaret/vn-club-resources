@@ -131,6 +131,15 @@ html.no-transitions *::after {
   animation: slide-down 150ms ease-out;
 }
 
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 200ms ease-out;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -285,6 +294,48 @@ body {
     transform: translateZ(0) !important;
     backface-visibility: hidden !important;
     will-change: transform !important;
+  }
+}
+
+/* ═══ Tier List DnD Animations ═══ */
+
+@keyframes tier-pickup {
+  from {
+    transform: scale(1) rotate(0deg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  to {
+    transform: scale(1.05) rotate(1.5deg);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  }
+}
+
+@keyframes tier-drop-settle {
+  0% { transform: scale(1.05); }
+  60% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+@keyframes tier-drop-flash {
+  0% { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.tier-drag-overlay {
+  animation: tier-pickup 150ms ease-out forwards;
+}
+
+.tier-just-dropped {
+  animation: tier-drop-settle 300ms cubic-bezier(0.25, 1, 0.5, 1),
+             tier-drop-flash 500ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-drag-overlay {
+    animation: none;
+  }
+  .tier-just-dropped {
+    animation: none;
   }
 }
 
@@ -458,6 +509,28 @@ main {
   content-visibility: auto;
   contain-intrinsic-size: auto 180px 300px;
   contain: layout style paint;
+}
+
+/* ═══ Tier List & Grid Maker Paint Optimization ═══
+   Tier rows below the fold skip layout/paint.
+   Pool items inside the scrollable pool are isolated. */
+.tier-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
+}
+.tier-row.tier-row-active {
+  content-visibility: visible;
+}
+.tier-pool-scroll > div {
+  contain: layout style paint;
+}
+
+/* ═══ Touch Device: Show Action Buttons ═══
+   group-hover doesn't trigger on touch — always show edit/remove buttons. */
+@media (pointer: coarse) {
+  .touch-action-btn {
+    opacity: 1 !important;
+  }
 }
 
 /* Custom styles for markdown content */
@@ -870,6 +943,15 @@ html.stt-restoring main {
 /* Force-unblur NSFW images when parent lightbox has revealed them */
 [data-nsfw-revealed="true"] .blur-lg {
   filter: none !important;
+}
+
+/* Reveal NSFW covers during tier list export — hide the overlay and
+   un-hide the real image so toPng() captures actual covers. */
+[data-exporting="true"] [data-nsfw-overlay] {
+  display: none !important;
+}
+[data-exporting="true"] [data-nsfw-revealed="false"] img {
+  visibility: visible !important;
 }
 
 /* ═══ VN Detail Page: Tab Panel Visibility ═══

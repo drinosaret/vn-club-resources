@@ -53,6 +53,20 @@ class SettingsCog(commands.Cog):
 
         await interaction.followup.send("\n".join(results), ephemeral=True)
 
+    @app_commands.command(name="backup", description="Run a database backup now")
+    @app_commands.default_permissions(administrator=True)
+    @is_admin()
+    async def backup(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        cog = self.bot.get_cog("DailyPostsCog")
+        if not cog:
+            await interaction.followup.send("Daily posts cog not loaded", ephemeral=True)
+            return
+
+        result = await cog._run_backup(force=True)
+        await interaction.followup.send(result, ephemeral=True)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(SettingsCog(bot))

@@ -20,6 +20,7 @@ from app.services.extlinks_service import build_extlink_url, build_wikidata_link
 from app.core.vndb_client import get_vndb_client
 from app.core.auth import require_admin
 from app.core.cache import get_cache
+from app.core.search_utils import relevance_rank
 
 logger = logging.getLogger(__name__)
 
@@ -665,10 +666,23 @@ async def search_vns(
             "title": VisualNovel.title,
         }
         sort_col = sort_columns.get(sort, VisualNovel.rating)
+
+        order_clauses = []
+
+        # When searching by text, prepend relevance as primary sort
+        if q:
+            relevance = relevance_rank(
+                q, [VisualNovel.title, VisualNovel.title_jp, VisualNovel.title_romaji]
+            )
+            order_clauses.append(relevance.asc())
+
         if sort_order == "asc":
-            query = query.order_by(sort_col.asc().nullslast(), VisualNovel.id.asc())
+            order_clauses.append(sort_col.asc().nullslast())
         else:
-            query = query.order_by(sort_col.desc().nullslast(), VisualNovel.id.asc())
+            order_clauses.append(sort_col.desc().nullslast())
+        order_clauses.append(VisualNovel.id.asc())
+
+        query = query.order_by(*order_clauses)
 
     # Pagination
     offset = (page - 1) * limit
@@ -1366,6 +1380,43 @@ async def search_all_filters(
             break
 
     return schemas.FilterSearchResponse(results=results[:limit])
+
+
+@router.post("/batch", response_model=list[schemas.BatchItemBrief])
+async def batch_vns(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get minimal VN info for a list of IDs. Used by shared layout loading."""
+    ids = body.get("ids", [])
+    if not isinstance(ids, list) or not ids or len(ids) > 100:
+        raise HTTPException(status_code=400, detail="ids must be a list of 1-100 VN IDs")
+
+    vn_ids = [i for i in ids if isinstance(i, str) and re.match(r"^v\d+$", i)]
+    if not vn_ids:
+        return []
+
+    result = await db.execute(
+        select(
+            VisualNovel.id,
+            VisualNovel.title,
+            VisualNovel.title_jp,
+            VisualNovel.title_romaji,
+            VisualNovel.image_url,
+            VisualNovel.image_sexual,
+        ).where(VisualNovel.id.in_(vn_ids))
+    )
+    return [
+        schemas.BatchItemBrief(
+            id=row.id,
+            title=row.title,
+            title_jp=row.title_jp,
+            title_romaji=row.title_romaji,
+            image_url=row.image_url,
+            image_sexual=row.image_sexual,
+        )
+        for row in result
+    ]
 
 
 @router.get("/top", response_model=list[schemas.TopVN])

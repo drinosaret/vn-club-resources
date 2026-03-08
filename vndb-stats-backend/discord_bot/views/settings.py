@@ -12,6 +12,7 @@ from discord_bot.views.base import BaseView
 
 # Bot config keys (shared with daily_posts cog)
 CONFIG_DAILY_CHANNEL = "daily_channel_id"
+CONFIG_BACKUP_CHANNEL = "backup_channel_id"
 
 
 class SettingsView(BaseView):
@@ -49,17 +50,43 @@ class SettingsView(BaseView):
             inline=False,
         )
 
+        # Backup channel
+        backup_id = self._settings.get(CONFIG_BACKUP_CHANNEL)
+        if backup_id:
+            backup_ch = self.bot.get_channel(int(backup_id))
+            backup_display = backup_ch.mention if backup_ch else f"Unknown ({backup_id})"
+        else:
+            backup_display = "Not set"
+        embed.add_field(
+            name="Backup Channel",
+            value=backup_display,
+            inline=False,
+        )
+
         embed.set_footer(text="Use the buttons below to change settings")
         return embed
 
     @ui.button(label="Set Daily Channel", style=discord.ButtonStyle.primary, emoji="\U0001f4e2")
     async def set_daily_channel(self, interaction: discord.Interaction, button: ui.Button):
         """Open a channel select to set the daily post channel."""
-        select_view = ChannelSelectView(self.user_id, parent=self)
+        select_view = ChannelSelectView(self.user_id, parent=self, config_key=CONFIG_DAILY_CHANNEL)
         await interaction.response.edit_message(
             embed=discord.Embed(
                 title="\U0001f4e2 Select Daily Post Channel",
                 description="Choose the channel where VOTD and news summaries will be posted.",
+                color=0x5865F2,
+            ),
+            view=select_view,
+        )
+
+    @ui.button(label="Set Backup Channel", style=discord.ButtonStyle.secondary, emoji="\U0001f4be")
+    async def set_backup_channel(self, interaction: discord.Interaction, button: ui.Button):
+        """Open a channel select to set the backup channel."""
+        select_view = ChannelSelectView(self.user_id, parent=self, config_key=CONFIG_BACKUP_CHANNEL)
+        await interaction.response.edit_message(
+            embed=discord.Embed(
+                title="\U0001f4be Select Backup Channel",
+                description="Choose the channel where daily database backups will be uploaded.",
                 color=0x5865F2,
             ),
             view=select_view,
@@ -80,22 +107,26 @@ class SettingsView(BaseView):
             await db.commit()
         self._settings[key] = value
 
-    async def _notify_daily_posts_cog(self, channel_id: int) -> None:
+    async def _notify_daily_posts_cog(self, config_key: str, channel_id: int) -> None:
         """Update the daily posts cog's cached channel ID."""
         from discord.ext import commands
         bot = self.bot
         if isinstance(bot, commands.Bot):
             cog = bot.get_cog("DailyPostsCog")
             if cog:
-                cog._channel_id = channel_id
+                if config_key == CONFIG_DAILY_CHANNEL:
+                    cog._channel_id = channel_id
+                elif config_key == CONFIG_BACKUP_CHANNEL:
+                    cog._backup_channel_id = channel_id
 
 
 class ChannelSelectView(BaseView):
     """Ephemeral view with a channel select menu."""
 
-    def __init__(self, user_id: int, parent: SettingsView):
+    def __init__(self, user_id: int, parent: SettingsView, config_key: str = CONFIG_DAILY_CHANNEL):
         super().__init__(user_id, timeout=60)
         self.parent = parent
+        self.config_key = config_key
 
     @ui.select(
         cls=ui.ChannelSelect,
@@ -105,8 +136,8 @@ class ChannelSelectView(BaseView):
     async def channel_select(self, interaction: discord.Interaction, select: ui.ChannelSelect):
         """Handle channel selection."""
         channel = select.values[0]
-        await self.parent._save_setting(CONFIG_DAILY_CHANNEL, str(channel.id))
-        await self.parent._notify_daily_posts_cog(channel.id)
+        await self.parent._save_setting(self.config_key, str(channel.id))
+        await self.parent._notify_daily_posts_cog(self.config_key, channel.id)
         await self.parent.load_settings()
 
         await interaction.response.edit_message(

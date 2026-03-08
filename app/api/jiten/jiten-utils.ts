@@ -1,4 +1,4 @@
-import { getBackendUrl } from '@/lib/config';
+import { getBackendUrlOptional } from '@/lib/config';
 
 export interface JitenMediaDeck {
   deckId: number;
@@ -29,7 +29,8 @@ const FETCH_COVERS_CONCURRENCY = 5;
 /** Batch-fetch cover URLs and sexual ratings from our local backend. */
 export async function fetchCovers(vnIds: string[]): Promise<Map<string, CoverInfo>> {
   if (vnIds.length === 0) return new Map();
-  const backendUrl = getBackendUrl();
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return new Map();
   const map = new Map<string, CoverInfo>();
 
   // Process in chunks to avoid overwhelming the backend

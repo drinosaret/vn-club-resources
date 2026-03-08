@@ -210,7 +210,8 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <input
             ref={inputRef}
-            type="text"
+            type="search"
+            autoComplete="off"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}

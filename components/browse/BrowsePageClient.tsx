@@ -1192,6 +1192,14 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
   };
 
+  const getPageHref = useCallback((page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (page > 1) params.set('page', String(page));
+    else params.delete('page');
+    const qs = params.toString();
+    return `/browse/${qs ? `?${qs}` : ''}`;
+  }, [searchParams]);
+
   // Prefetch a page on hover — triggers API fetch so data is cached when clicked
   const handlePrefetchPage = useCallback((page: number) => {
     if (page >= 1 && page <= pages) {
@@ -1497,7 +1505,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="text"
+                  type="search"
+                  autoComplete="off"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search by title..."
@@ -1615,6 +1624,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 totalPages={pages}
                 onPageChange={handlePageChange}
                 onPrefetchPage={handlePrefetchPage}
+                getPageHref={getPageHref}
               />
             )}
 
@@ -1642,6 +1652,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 }}
                 onPrefetchPage={handlePrefetchPage}
                 onVisible={handleBottomPaginationVisible}
+                getPageHref={getPageHref}
               />
             )}
 

@@ -624,6 +624,24 @@ export interface VNSearchResponse {
   count: number;
 }
 
+// ============ Character Search Types ============
+
+export interface CharacterSearchResult {
+  id: string;
+  name: string;
+  original?: string;
+  image_url?: string;
+  image_sexual?: number;
+  vn_id?: string;
+  vn_name?: string;
+  vn_title_jp?: string;
+  vn_title_romaji?: string;
+}
+
+export interface CharacterSearchResponse {
+  results: CharacterSearchResult[];
+}
+
 // ============ Browse Types (Enhanced Search) ============
 
 export interface BrowseFilters {
@@ -1495,9 +1513,21 @@ class VNDBStatsAPI {
    * Search for VNs.
    * ALL data comes from local database.
    */
-  async searchVNs(query: string, limit: number = 20, signal?: AbortSignal): Promise<VNSearchResponse> {
+  async searchVNs(query: string, limit: number = 20, signal?: AbortSignal, olang: string | null = 'ja'): Promise<VNSearchResponse> {
+    const olangParam = olang ? `&olang=${olang}` : '';
     return await this.fetch<VNSearchResponse>(
-      `/api/v1/vn/search/?q=${encodeURIComponent(query)}&limit=${limit}&nsfw=true&olang=ja`,
+      `/api/v1/vn/search/?q=${encodeURIComponent(query)}&limit=${limit}&nsfw=true&devstatus=-1${olangParam}`,
+      signal ? { signal } : undefined
+    );
+  }
+
+  /**
+   * Search for characters by name.
+   * ALL data comes from local database.
+   */
+  async searchCharacters(query: string, limit: number = 10, signal?: AbortSignal): Promise<CharacterSearchResponse> {
+    return await this.fetch<CharacterSearchResponse>(
+      `/api/v1/characters/search/?q=${encodeURIComponent(query)}&limit=${limit}`,
       signal ? { signal } : undefined
     );
   }

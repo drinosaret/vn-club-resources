@@ -92,12 +92,12 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
 
 
 // Shared overlay: pixelated micro-thumbnail + dark scrim + label
-function NSFWOverlay({ src }: { src: string }) {
+function NSFWOverlay({ src, overlaySrc }: { src: string; overlaySrc?: string }) {
   return (
-    <>
+    <div data-nsfw-overlay className="absolute inset-0">
       {/* 32px thumbnail + pixelated rendering = mosaic censor, zero GPU cost */}
       <img
-        src={getTinySrc(src)}
+        src={overlaySrc ?? getTinySrc(src)}
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
@@ -111,7 +111,7 @@ function NSFWOverlay({ src }: { src: string }) {
           <span className="hidden sm:inline">Click to reveal</span>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -122,10 +122,14 @@ interface NSFWImageProps {
   vnId?: string;
   className?: string;
   loading?: 'lazy' | 'eager';
+  fetchPriority?: 'high' | 'low' | 'auto';
   srcSet?: string;
   sizes?: string;
+  style?: React.CSSProperties;
   onLoad?: () => void;
   onError?: () => void;
+  /** Pre-built tiny image URL for the NSFW overlay (e.g. canvas-generated crop preview) */
+  overlaySrc?: string;
 }
 
 interface NSFWNextImageProps {
@@ -147,7 +151,7 @@ interface NSFWNextImageProps {
   hideOverlay?: boolean;
 }
 
-export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', srcSet, sizes, onLoad, onError }: NSFWImageProps) {
+export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', fetchPriority, srcSet, sizes, style, onLoad, onError, overlaySrc }: NSFWImageProps) {
   const { shouldBlur, handleReveal, handleKeyDown, wrapperRef } = useNSFWReveal(vnId, imageSexual);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -176,14 +180,16 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         src={src}
         alt={alt}
         className={`${className}${shouldBlur ? ' invisible' : ''}`}
+        style={style}
         loading={loading}
+        fetchPriority={fetchPriority}
         decoding="async"
         srcSet={srcSet}
         sizes={sizes}
         onLoad={onLoad}
         onError={onError}
       />
-      {shouldBlur && <NSFWOverlay src={src} />}
+      {shouldBlur && <NSFWOverlay src={src} overlaySrc={overlaySrc} />}
     </div>
   );
 }

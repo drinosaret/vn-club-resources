@@ -3,7 +3,7 @@ import StatsPageClient from './StatsPageClient';
 import { generatePageMetadata, safeJsonLdStringify, SITE_URL, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'VNDB Stats — Visual Novel Reading Statistics',
+  title: 'VNDB Stats - Visual Novel Reading Statistics',
   description:
     'Look up any VNDB user to see their visual novel reading statistics, score distributions, and reading history. Track your Japanese reading progress.',
   path: '/stats/',
