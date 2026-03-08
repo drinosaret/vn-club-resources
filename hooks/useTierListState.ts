@@ -256,6 +256,34 @@ export function useTierListState(shareId?: string) {
     });
   }, [updateState]);
 
+  const addVNToTier = useCallback((vn: TierVN, tierId: string) => {
+    updateState(prev => {
+      if (prev.vnMap[vn.id]) return prev; // duplicate
+      if (Object.keys(prev.vnMap).length >= MAX_TIER_LIST_VNS) return prev;
+      if (!prev.tiers[tierId]) return prev; // tier doesn't exist
+
+      const vnWithDefault = { ...vn, defaultImageUrl: vn.defaultImageUrl ?? vn.imageUrl };
+      return {
+        ...prev,
+        vnMap: { ...prev.vnMap, [vn.id]: vnWithDefault },
+        tiers: { ...prev.tiers, [tierId]: [...prev.tiers[tierId], vn.id] },
+      };
+    });
+  }, [updateState]);
+
+  const movePoolItemToTier = useCallback((vnId: string, tierId: string) => {
+    updateState(prev => {
+      if (!prev.pool.includes(vnId)) return prev;
+      if (!prev.tiers[tierId]) return prev;
+
+      return {
+        ...prev,
+        pool: prev.pool.filter(id => id !== vnId),
+        tiers: { ...prev.tiers, [tierId]: [...prev.tiers[tierId], vnId] },
+      };
+    });
+  }, [updateState]);
+
   const updateVN = useCallback((vnId: string, updates: Partial<Pick<TierVN, 'customTitle' | 'vote' | 'imageUrl' | 'imageSexual'>>) => {
     updateState(prev => {
       if (!prev.vnMap[vnId]) return prev;
@@ -664,6 +692,8 @@ export function useTierListState(shareId?: string) {
 
     // VN management
     addVN,
+    addVNToTier,
+    movePoolItemToTier,
     updateVN,
     removeVN,
     moveToPool,

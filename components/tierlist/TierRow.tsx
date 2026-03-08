@@ -3,11 +3,13 @@
 import { memo, useCallback, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext } from '@dnd-kit/sortable';
+import { Plus } from 'lucide-react';
 import { TierItem } from './TierItem';
 import { TierEditPopover } from './TierEditPopover';
 import { useVnMap } from './VnMapContext';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
+import { t } from '@/lib/i18n/types';
 import type { TierDef, TierColor, DisplayMode, SizeConfig, TierListMode } from '@/lib/tier-config';
 
 interface TierRowProps {
@@ -30,13 +32,14 @@ interface TierRowProps {
   onClearTier: (tierId: string) => void;
   onMoveTier: (tierId: string, direction: 'up' | 'down') => void;
   onInsertTier: (tierId: string, position: 'above' | 'below') => void;
+  onAddToTier: (tierId: string) => void;
   isFirst: boolean;
   isLast: boolean;
 }
 
 export const TierRow = memo(function TierRow({
   tier, vnIds, tierIndex, mode, displayMode, sizeConfig, showTitles, showScores, titleMaxH, canDelete, justDroppedId,
-  onRemoveVN, onEditVN, onRenameTier, onRecolorTier, onDeleteTier, onClearTier, onMoveTier, onInsertTier, isFirst, isLast,
+  onRemoveVN, onEditVN, onRenameTier, onRecolorTier, onDeleteTier, onClearTier, onMoveTier, onInsertTier, onAddToTier, isFirst, isLast,
 }: TierRowProps) {
   const vnMap = useVnMap();
   const locale = useLocale();
@@ -51,6 +54,7 @@ export const TierRow = memo(function TierRow({
   const handleMoveDown = useCallback(() => onMoveTier(tier.id, 'down'), [tier.id, onMoveTier]);
   const handleInsertAbove = useCallback(() => onInsertTier(tier.id, 'above'), [tier.id, onInsertTier]);
   const handleInsertBelow = useCallback(() => onInsertTier(tier.id, 'below'), [tier.id, onInsertTier]);
+  const handleAddToTier = useCallback(() => onAddToTier(tier.id), [tier.id, onAddToTier]);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   return (
@@ -84,8 +88,26 @@ export const TierRow = memo(function TierRow({
           {vnIds.map(id => (
             <TierItem key={id} id={id} vn={vnMap[id]} tierIndex={tierIndex} displayMode={displayMode} sizeConfig={sizeConfig} showTitles={showTitles} showScores={showScores} titleMaxH={titleMaxH} onRemove={onRemoveVN} onEdit={onEditVN} justDropped={justDroppedId === id} />
           ))}
+          {/* Add-to-tier button */}
+          {displayMode === 'covers' ? (
+            <button
+              onClick={handleAddToTier}
+              className={`${sizeConfig.coverClass} border-2 border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0`}
+              title={t(s, 'tier.addToTier', { tier: tier.label })}
+            >
+              <Plus className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
+            </button>
+          ) : (
+            <button
+              onClick={handleAddToTier}
+              className="h-6 px-2 border border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0"
+              title={t(s, 'tier.addToTier', { tier: tier.label })}
+            >
+              <Plus className="w-3 h-3 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
+            </button>
+          )}
           {vnIds.length === 0 && (
-            <div className={`flex items-center justify-center w-full -ml-6 sm:-ml-8 text-xs text-gray-400 dark:text-gray-500 select-none ${isOver ? 'animate-pulse' : ''}`}>
+            <div className={`flex items-center justify-center flex-1 -ml-6 sm:-ml-8 text-xs text-gray-400 dark:text-gray-500 select-none ${isOver ? 'animate-pulse' : ''}`}>
               {s[mode === 'characters' ? 'tier.dragHereChars' : 'tier.dragHere']}
             </div>
           )}

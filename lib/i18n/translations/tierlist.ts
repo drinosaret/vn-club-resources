@@ -63,6 +63,13 @@ const en = {
   // TierRow
   'tier.dragHere': 'Drag VNs here',
   'tier.dragHereChars': 'Drag characters here',
+  'tier.addToTier': 'Add to {tier}',
+
+  // TierRowFillModal
+  'tierFill.searchVNs': 'Add VN to {tier}...',
+  'tierFill.searchChars': 'Add character to {tier}...',
+  'tierFill.vnsPlaceholder': 'Type to search VNs...',
+  'tierFill.charsPlaceholder': 'Type to search characters...',
 
   // TierEditPopover
   'tierEdit.editTier': 'Edit tier',
@@ -93,6 +100,7 @@ const en = {
   'search.placeholder': 'Search VNs by title or VNDB ID (e.g. v17)...',
   'search.charsPlaceholder': 'Search characters by name...',
   'search.added': 'Added',
+  'search.noResults': 'No results found',
   'search.error': 'Search unavailable. Try again.',
 
   // Storage
@@ -190,6 +198,13 @@ const ja: Record<TierListKeys, string> = {
   // TierRow
   'tier.dragHere': 'エロゲ\u3092\u3053\u3053\u306b\u30c9\u30e9\u30c3\u30b0',
   'tier.dragHereChars': 'キャラをここにドラッグ',
+  'tier.addToTier': '{tier}に追加',
+
+  // TierRowFillModal
+  'tierFill.searchVNs': '{tier}にエロゲを追加...',
+  'tierFill.searchChars': '{tier}にキャラを追加...',
+  'tierFill.vnsPlaceholder': 'エロゲを検索...',
+  'tierFill.charsPlaceholder': 'キャラを検索...',
 
   // TierEditPopover
   'tierEdit.editTier': 'ティアを編集',
@@ -220,6 +235,7 @@ const ja: Record<TierListKeys, string> = {
   'search.placeholder': '\u30bf\u30a4\u30c8\u30eb\u307e\u305f\u306fVNDB ID\u3067\u691c\u7d22 (\u4f8b: v17)...',
   'search.charsPlaceholder': 'キャラ名で検索...',
   'search.added': '\u8ffd\u52a0\u6e08\u307f',
+  'search.noResults': '結果が見つかりませんでした',
   'search.error': '検索できません。もう一度お試しください。',
 
   // Storage
