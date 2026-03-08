@@ -413,9 +413,10 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     }
   };
 
-  // URL sync (skip for shared links)
+  // URL sync (skip for shared links; don't remove ?user= while import is pending)
   useEffect(() => {
     if (shareId) return;
+    if (!importedUser && urlParams?.user) return;
     const url = new URL(window.location.href);
     if (importedUser) {
       url.searchParams.set('user', importedUser);
@@ -425,7 +426,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     if (url.href !== window.location.href) {
       history.replaceState(null, '', url);
     }
-  }, [shareId, importedUser]);
+  }, [shareId, importedUser, urlParams]);
 
   // Mode switch with confirmation
   const handleModeSwitch = useCallback((newMode: typeof mode) => {
