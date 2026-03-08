@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2, Eraser, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import { TIER_COLORS } from '@/lib/tier-config';
 import type { TierDef, TierColor } from '@/lib/tier-config';
@@ -31,7 +32,10 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
   const setIsOpen = (open: boolean) => { _setIsOpen(open); onOpenChange?.(open); };
   const [editLabel, setEditLabel] = useState(tier.label);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
 
   // Sync editLabel when tier.label changes externally
   useEffect(() => {
@@ -42,7 +46,11 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -53,6 +61,15 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('keydown', onKey);
     };
+  }, [isOpen]);
+
+  // Compute fixed position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopoverPos({ top: rect.top, left: rect.right + 4 });
+    }
+    if (!isOpen) setPopoverPos(null);
   }, [isOpen]);
 
   // Focus input on open
@@ -70,9 +87,10 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
   };
 
   return (
-    <div ref={wrapperRef} className="relative shrink-0">
+    <div ref={wrapperRef} className="shrink-0">
       {/* Tier label button */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className={`w-12 sm:w-16 h-full flex items-center justify-center font-bold cursor-pointer hover:opacity-80 transition-opacity ${tier.color} ${tier.textColor} ${
           tier.label.length > 3 ? 'text-[10px] sm:text-xs leading-tight' : 'text-lg sm:text-xl'
@@ -82,9 +100,9 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
         {tier.label}
       </button>
 
-      {/* Popover */}
-      {isOpen && (
-        <div className="absolute left-full top-0 ml-1 z-50 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-3">
+      {/* Popover — fixed position via portal */}
+      {isOpen && popoverPos && createPortal(
+        <div ref={popoverRef} style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left }} className="z-50 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-3">
           {/* Rename */}
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{s['tierEdit.label']}</label>
@@ -169,7 +187,8 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
               {s['tierEdit.deleteTier']}
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
