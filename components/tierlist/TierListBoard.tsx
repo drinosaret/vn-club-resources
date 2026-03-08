@@ -79,7 +79,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     shareError,
     storageWarning,
     dismissStorageWarning,
-  } = useTierListState();
+  } = useTierListState(shareId);
 
   // Display mode
   const [displayMode, setDisplayMode] = useState<DisplayMode>('covers');

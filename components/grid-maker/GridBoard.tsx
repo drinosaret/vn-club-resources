@@ -89,7 +89,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     shareError,
     storageWarning,
     dismissStorageWarning,
-  } = useGridMakerState();
+  } = useGridMakerState(shareId);
 
   // i18n
   const locale = useLocale();

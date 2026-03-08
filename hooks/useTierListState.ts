@@ -108,7 +108,7 @@ export interface TierListSharedSettings {
 
 // === Hook ===
 
-export function useTierListState() {
+export function useTierListState(shareId?: string) {
   const [state, setState] = useState<TierListState>(buildEmptyState);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -116,13 +116,16 @@ export function useTierListState() {
   const hydratedRef = useRef(false);
 
   // Hydrate from localStorage after mount to avoid SSR mismatch
+  // Skip when loading a shared link to avoid flash of stale state
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
-    const saved = loadFromStorage();
-    if (saved) setState(saved);
+    if (!shareId) {
+      const saved = loadFromStorage();
+      if (saved) setState(saved);
+    }
     setHydrated(true);
-  }, []);
+  }, [shareId]);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

@@ -145,7 +145,7 @@ export interface GridSharedSettings {
 
 // === Hook ===
 
-export function useGridMakerState() {
+export function useGridMakerState(shareId?: string) {
   const [state, setState] = useState<GridMakerState>(buildEmptyState);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -155,10 +155,13 @@ export function useGridMakerState() {
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
-    const saved = loadFromStorage();
-    if (saved) setState(saved);
+    // Skip localStorage hydration when loading a shared link to avoid flash
+    if (!shareId) {
+      const saved = loadFromStorage();
+      if (saved) setState(saved);
+    }
     setHydrated(true);
-  }, []);
+  }, [shareId]);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
