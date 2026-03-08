@@ -270,11 +270,12 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     }
   };
 
-  // Keep URL in sync with current preset + user
+  // Keep URL in sync with current preset + user (skip for shared links)
   const currentPresetId = getCurrentPresetId(tierDefs);
-  const canSyncUrl = !!currentPresetId && !!importedUser;
+  const canSyncUrl = !shareId && !!currentPresetId && !!importedUser;
 
   useEffect(() => {
+    if (shareId) return;
     const url = new URL(window.location.href);
     if (canSyncUrl) {
       url.searchParams.set('preset', currentPresetId!);
@@ -286,7 +287,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     if (url.href !== window.location.href) {
       history.replaceState(null, '', url);
     }
-  }, [canSyncUrl, currentPresetId, importedUser]);
+  }, [shareId, canSyncUrl, currentPresetId, importedUser]);
 
   const handleAddVN = useCallback((vn: Parameters<typeof addVN>[0]) => {
     addVN(vn, directAdd);
