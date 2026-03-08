@@ -25,6 +25,7 @@ import { TierListControls } from './TierListControls';
 import { TierSearchAdd } from './TierSearchAdd';
 import dynamic from 'next/dynamic';
 const VNEditModal = dynamic(() => import('./VNEditModal').then(m => ({ default: m.VNEditModal })), { ssr: false });
+const TierRowFillModal = dynamic(() => import('./TierRowFillModal').then(m => ({ default: m.TierRowFillModal })), { ssr: false });
 import { VnMapProvider } from './VnMapContext';
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
@@ -57,6 +58,8 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     handleDragEnd,
     handleDragCancel,
     addVN,
+    addVNToTier,
+    movePoolItemToTier,
     updateVN,
     removeVN,
     moveToPool,
@@ -139,6 +142,9 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
 
   // Edit modal
   const [editingVnId, setEditingVnId] = useState<string | null>(null);
+
+  // Add-to-tier modal
+  const [addToTierId, setAddToTierId] = useState<string | null>(null);
 
   const handleEditSave = useCallback((data: { customTitle?: string; vote?: number; imageUrl?: string; imageSexual?: number }) => {
     if (editingVnId) updateVN(editingVnId, data);
@@ -292,6 +298,16 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
   const handleAddVN = useCallback((vn: Parameters<typeof addVN>[0]) => {
     addVN(vn, directAdd);
   }, [addVN, directAdd]);
+
+  const handleFillModalSelect = useCallback((vn: Parameters<typeof addVNToTier>[0]) => {
+    if (!addToTierId) return;
+    addVNToTier(vn, addToTierId);
+  }, [addVNToTier, addToTierId]);
+
+  const handleFillModalPoolSelect = useCallback((vnId: string) => {
+    if (!addToTierId) return;
+    movePoolItemToTier(vnId, addToTierId);
+  }, [movePoolItemToTier, addToTierId]);
 
   return (
     <div>
@@ -636,6 +652,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
                 onClearTier={clearTier}
                 onMoveTier={moveTier}
                 onInsertTier={insertTier}
+                onAddToTier={setAddToTierId}
                 justDroppedId={justDroppedId}
                 isFirst={index === 0}
                 isLast={index === tierDefs.length - 1}
@@ -718,6 +735,20 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
           </div>
         </div>
       </div>
+
+      {/* Add-to-tier modal */}
+      {addToTierId && tierDefs.find(t => t.id === addToTierId) && (
+        <TierRowFillModal
+          tier={tierDefs.find(t => t.id === addToTierId)!}
+          mode={mode}
+          pool={pool}
+          vnMap={vnMap}
+          isVNInList={isVNInList}
+          onSelect={handleFillModalSelect}
+          onSelectFromPool={handleFillModalPoolSelect}
+          onClose={() => setAddToTierId(null)}
+        />
+      )}
 
       {/* Edit modal */}
       {editingVnId && vnMap[editingVnId] && (
