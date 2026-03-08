@@ -12,6 +12,7 @@ from app.db.database import async_session_maker
 from app.db.models import (
     VisualNovel, Tag, VNTag, GlobalVote, Producer, Staff,
     Character, Release, Trait, SystemMetadata, ImportRun, AppLog,
+    SharedLayout,
 )
 from discord_bot.views.base import BaseView
 from discord_bot.utils.embeds import create_embed, Colors, format_relative_time
@@ -135,6 +136,7 @@ class DashboardView(BaseView):
             ("Characters", Character),
             ("Releases", Release),
             ("Traits", Trait),
+            ("Shared Links", SharedLayout),
         ]
 
         # Check cache first

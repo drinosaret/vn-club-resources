@@ -19,6 +19,7 @@ COG_EXTENSIONS = [
     "discord_bot.cogs.vn_of_the_day",  # /vnotd - VN of the Day management
     "discord_bot.cogs.settings",       # /settings - bot configuration
     "discord_bot.cogs.daily_posts",    # Automated daily VOTD + news posts
+    "discord_bot.cogs.shared_links",   # /links - shared 3x3/tierlist link management
 ]
 
 # Legacy cogs (kept for reference, can be removed once new cogs are verified)
