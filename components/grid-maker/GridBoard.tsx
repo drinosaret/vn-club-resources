@@ -372,10 +372,10 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     }
   }, [importFromVNDB, setImportedUser, importToPool]);
 
-  // Auto-import from URL params (skip if localStorage already has this user's data)
+  // Auto-import from URL params (skip if localStorage already has this user's data, or viewing shared link)
   const autoImportedRef = useRef(false);
   useEffect(() => {
-    if (!hydrated || !urlParams?.user || autoImportedRef.current) return;
+    if (shareId || !hydrated || !urlParams?.user || autoImportedRef.current) return;
     if (importedUser === urlParams.user) return;
     autoImportedRef.current = true;
     runImport(urlParams.user);
@@ -413,8 +413,9 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     }
   };
 
-  // URL sync
+  // URL sync (skip for shared links)
   useEffect(() => {
+    if (shareId) return;
     const url = new URL(window.location.href);
     if (importedUser) {
       url.searchParams.set('user', importedUser);
@@ -424,7 +425,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     if (url.href !== window.location.href) {
       history.replaceState(null, '', url);
     }
-  }, [importedUser]);
+  }, [shareId, importedUser]);
 
   // Mode switch with confirmation
   const handleModeSwitch = useCallback((newMode: typeof mode) => {
