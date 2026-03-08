@@ -229,9 +229,11 @@ class DeleteLinkModal(ui.Modal, title="Delete Shared Link"):
                 view=confirm_view,
                 ephemeral=True,
             )
+            confirm_msg = await interaction.original_response()
             await confirm_view.wait()
 
             if not confirm_view.value:
+                await confirm_msg.edit(content="Cancelled.", view=None)
                 return
 
             # Delete from DB
@@ -243,6 +245,12 @@ class DeleteLinkModal(ui.Modal, title="Delete Shared Link"):
             # Invalidate cache
             cache = get_cache()
             await cache.delete(f"{CACHE_PREFIX}{link_id}")
+
+            # Confirm deletion in the ephemeral message
+            await confirm_msg.edit(
+                content=f"\u2705 Deleted link `{link_id}` ({layout.type}).",
+                view=None,
+            )
 
             # Update the parent view
             await self.parent_view.fetch_page()
