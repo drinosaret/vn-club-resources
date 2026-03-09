@@ -21,7 +21,7 @@ const noMovementStrategy: SortingStrategy = () => null;
 import { Upload, Trash2, Loader2, Download, Users, Monitor, Rows3, Square, RectangleVertical, Settings } from 'lucide-react';
 import { useGridMakerState } from '@/hooks/useGridMakerState';
 import { useGridExport } from '@/hooks/useGridExport';
-import type { GridExportFormat } from '@/hooks/useGridExport';
+import type { GridExportFormat, GridExportScale } from '@/hooks/useGridExport';
 import { useImageShare } from '@/hooks/useImageShare';
 import { ShareMenu } from '@/components/shared/ShareMenu';
 import { ShareToast } from '@/components/shared/ShareToast';
@@ -37,20 +37,18 @@ const CropModal = dynamic(() => import('./CropModal').then(m => ({ default: m.Cr
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import type { GridItem, CropData } from '@/hooks/useGridMakerState';
-import { getLoadedShareId } from '@/lib/grid-share-id';
 import { createSharedLayout, copyAsyncText } from '@/lib/shared-layout-api';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { gridMakerStrings } from '@/lib/i18n/translations/grid-maker';
 import { t } from '@/lib/i18n/types';
 
 interface GridBoardProps {
-  urlParams?: { user: string } | null;
   shareId?: string;
 }
 
 const GRID_SIZES = [3, 4, 5] as const;
 
-export function GridBoard({ urlParams, shareId }: GridBoardProps) {
+export function GridBoard({ shareId }: GridBoardProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const cropPreviewMapRef = useRef<Record<string, string>>({});
 
@@ -89,14 +87,17 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     shareError,
     storageWarning,
     dismissStorageWarning,
+    isAtCapacity,
+    saveStatus,
   } = useGridMakerState(shareId);
 
   // i18n
   const locale = useLocale();
   const s = gridMakerStrings[locale];
 
-  // Drop target highlight
+  // Drop target highlight + cell size for drag overlay
   const [overId, setOverId] = useState<string | null>(null);
+  const [dragCellWidth, setDragCellWidth] = useState(100);
   const handleDragOver = useCallback((event: DragOverEvent) => {
     setOverId(event.over ? String(event.over.id) : null);
   }, []);
@@ -111,12 +112,11 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
   const [showScores, setShowScores] = useState(false);
   const [titleMaxH, setTitleMaxH] = useState(40);
 
-  // Direct-add setting
-  const [directAdd, setDirectAdd] = useState(false);
-  useEffect(() => {
-    const stored = localStorage.getItem('grid-direct-add');
-    if (stored === 'true') setDirectAdd(true);
-  }, []);
+  // Direct-add setting (lazy init from localStorage)
+  const [directAdd, setDirectAdd] = useState(() => {
+    try { return localStorage.getItem('grid-direct-add') === 'true'; }
+    catch { return false; }
+  });
 
   // Settings dropdown
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -143,7 +143,8 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [nsfwContext?.allRevealed, nsfwContext?.isRevealed]
   );
-  const { exporting, exportAsImage, generateBlob } = useGridExport(gridSize, cells, itemMap, importedUser ?? '', mode, cropSquare, showFrame, showTitles, showScores, gridTitle, titleMaxH, nsfwExportState);
+  const [exportScale, setExportScale] = useState<GridExportScale>(2);
+  const { exporting, exportAsImage, generateBlob } = useGridExport(gridSize, cells, itemMap, importedUser ?? '', mode, cropSquare, showFrame, showTitles, showScores, gridTitle, titleMaxH, exportScale, nsfwExportState);
 
   // Share — build payload with settings + overrides
   const buildShareData = useCallback(() => {
@@ -175,10 +176,20 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
 
   const shareText = t(s, 'export.shareText', { size: gridSize, mode: mode === 'characters' ? s['export.shareTextChar'] : '' });
   const shareHashtags = s['export.shareHashtags'];
+
+  // Cached share URL — reuses existing link if data hasn't changed
+  const lastShareRef = useRef<{ hash: string; url: string } | null>(null);
   const getShareUrl = useCallback(async () => {
-    const id = await createSharedLayout('grid', buildShareData());
-    return `${window.location.origin}/3x3-maker/s/${id}/`;
+    const data = buildShareData();
+    const dataHash = JSON.stringify(data);
+    if (lastShareRef.current?.hash === dataHash) return lastShareRef.current.url;
+    const id = await createSharedLayout('grid', data);
+    const url = `${window.location.origin}/3x3-maker/s/${id}/`;
+    lastShareRef.current = { hash: dataHash, url };
+    return url;
   }, [buildShareData]);
+  const [exportFormat, setExportFormat] = useState<GridExportFormat>('jpeg');
+
   const imageShare = useImageShare({
     generateBlob,
     shareText,
@@ -186,70 +197,47 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     filename: `${mode === 'characters' ? 'char' : 'vn'}-${gridSize}x${gridSize}.png`,
     getShareUrl,
     title: gridTitle || undefined,
+    exportFormat,
   });
 
-  const [exportFormat, setExportFormat] = useState<GridExportFormat>('jpeg');
-
-  // Share link — cache last share to avoid creating duplicate links
+  // Share link — "Copy Link" button handler
   const [creatingLink, setCreatingLink] = useState(false);
   const [linkToast, setLinkToast] = useState<string | null>(null);
-  const lastShareRef = useRef<{ hash: string; url: string } | null>(null);
+  const [linkToastIsError, setLinkToastIsError] = useState(false);
+  const showLinkToast = useCallback((msg: string, duration: number, isError = false) => {
+    setLinkToast(msg);
+    setLinkToastIsError(isError);
+    setTimeout(() => setLinkToast(null), duration);
+  }, []);
   const handleCreateLink = useCallback(async () => {
     if (itemCount === 0) return;
     setCreatingLink(true);
-    const data = buildShareData();
-    const dataHash = JSON.stringify(data);
 
-    // Reuse existing link if data hasn't changed
-    if (lastShareRef.current?.hash === dataHash) {
-      const url = lastShareRef.current.url;
-      const urlPromise = Promise.resolve(url);
-      const result = await copyAsyncText(urlPromise).catch(() => null);
-      if (result?.copied) {
-        setLinkToast('Link copied!');
-        setTimeout(() => setLinkToast(null), 3000);
-      } else {
-        setLinkToast(url);
-        setTimeout(() => setLinkToast(null), 8000);
-      }
-      setCreatingLink(false);
-      return;
-    }
-
-    // Build share data and start clipboard write SYNCHRONOUSLY in gesture context.
+    // Start clipboard write SYNCHRONOUSLY in gesture context.
     // copyAsyncText registers the ClipboardItem promise before any await, preserving
     // the user gesture so mobile browsers allow the clipboard write.
     let shareError: string | null = null;
-    const urlPromise = createSharedLayout('grid', data)
-      .then(id => {
-        const url = `${window.location.origin}/3x3-maker/s/${id}/`;
-        lastShareRef.current = { hash: dataHash, url };
-        return url;
-      })
-      .catch((err: Error) => {
-        shareError = err.message;
-        throw err;
-      });
+    const urlPromise = getShareUrl().catch((err: Error) => {
+      shareError = err.message;
+      throw err;
+    });
     const result = await copyAsyncText(urlPromise).catch(() => null);
     if (!result) {
       const msg = shareError === 'rate_limited'
-        ? 'Too many requests - please wait a minute'
-        : 'Failed to create link';
-      setLinkToast(msg);
-      setTimeout(() => setLinkToast(null), 4000);
+        ? s['share.rateLimited']
+        : s['share.createFailed'];
+      showLinkToast(msg, 4000, true);
       const { logReporter } = await import('@/lib/log-reporter');
       logReporter.error('Grid share creation failed', {
         component: 'GridBoard', gridSize, mode, itemCount, shareError,
       });
     } else if (result.copied) {
-      setLinkToast('Link copied!');
-      setTimeout(() => setLinkToast(null), 3000);
+      showLinkToast(s['share.linkCopied'], 3000);
     } else {
-      setLinkToast(result.text);
-      setTimeout(() => setLinkToast(null), 8000);
+      showLinkToast(result.text, 8000);
     }
     setCreatingLink(false);
-  }, [buildShareData, itemCount, gridSize, mode]);
+  }, [getShareUrl, itemCount, gridSize, mode, s, showLinkToast]);
 
   // VNDB import state
   const [showImport, setShowImport] = useState(false);
@@ -350,7 +338,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
         setImportProgress(t(s, 'import.fetchingPage', { page }));
         const res = await vndbStatsApi.getUserVNList(user.uid, page, 100);
         allItems.push(...res.items);
-        if (!res.has_more || allItems.length >= 2000) break;
+        if (!res.has_more || allItems.length >= 500) break;
         page++;
       }
 
@@ -372,23 +360,11 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     }
   }, [importFromVNDB, setImportedUser, importToPool]);
 
-  // Auto-import from URL params (skip if localStorage already has this user's data, or viewing shared link)
-  const autoImportedRef = useRef(false);
-  useEffect(() => {
-    if (shareId || !hydrated || !urlParams?.user || autoImportedRef.current) return;
-    if (importedUser === urlParams.user) return;
-    autoImportedRef.current = true;
-    runImport(urlParams.user);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated]);
-
-  // Auto-load from share link
+  // Auto-load from share link (always fetch from API — cached via Redis)
   const shareLoadedRef = useRef(false);
   useEffect(() => {
     if (!shareId || !hydrated || shareLoadedRef.current) return;
     shareLoadedRef.current = true;
-    // If we previously loaded this shareId, localStorage has the (possibly edited) state — skip re-fetch
-    if (getLoadedShareId() === shareId) return;
     loadFromShare(shareId).then(settings => {
       if (!settings) return;
       if (settings.showFrame != null) setShowFrame(settings.showFrame);
@@ -413,20 +389,6 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
     }
   };
 
-  // URL sync (skip for shared links; don't remove ?user= while import is pending)
-  useEffect(() => {
-    if (shareId) return;
-    if (!importedUser && urlParams?.user) return;
-    const url = new URL(window.location.href);
-    if (importedUser) {
-      url.searchParams.set('user', importedUser);
-    } else {
-      url.searchParams.delete('user');
-    }
-    if (url.href !== window.location.href) {
-      history.replaceState(null, '', url);
-    }
-  }, [shareId, importedUser, urlParams]);
 
   // Mode switch with confirmation
   const handleModeSwitch = useCallback((newMode: typeof mode) => {
@@ -464,14 +426,6 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
         </div>
       )}
 
-      {/* Auto-import loading banner */}
-      {importing && urlParams?.user && (
-        <div className="mb-3 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
-          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-          {t(s, 'import.loadingBanner', { user: urlParams.user })}
-          {importProgress && <span className="text-purple-500 dark:text-purple-400">({importProgress})</span>}
-        </div>
-      )}
 
       {/* Search */}
       <div className="mb-2">
@@ -479,6 +433,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
           mode={mode}
           onAdd={handleAddItem}
           isItemAdded={isItemAdded}
+          isAtCapacity={isAtCapacity}
           inputRef={searchInputRef}
         />
       </div>
@@ -647,11 +602,19 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
             className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{s['toolbar.import']}</span>
+            {s['toolbar.import']}
           </button>
         )}
         <button
-          onClick={() => { if (window.confirm(s['confirm.clearAll'])) clearAll(); }}
+          onClick={() => {
+            if (window.confirm(s['confirm.clearAll'])) {
+              clearAll();
+              const base = `/${locale === 'en' ? '' : locale + '/'}3x3-maker/`;
+              if (window.location.pathname !== base || window.location.search) {
+                history.replaceState(null, '', base);
+              }
+            }
+          }}
           disabled={itemCount === 0 && pool.length === 0}
           className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={s['toolbar.clear']}
@@ -681,17 +644,22 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{s['export.export']}</span>
           </button>
-          <select
-            value={exportFormat}
-            onChange={e => setExportFormat(e.target.value as GridExportFormat)}
+          <button
+            onClick={() => setExportScale(exportScale === 1 ? 1.5 : exportScale === 1.5 ? 2 : 1)}
             disabled={exporting || importing || itemCount === 0}
-            className="text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-purple-500 rounded-r-lg px-2 cursor-pointer transition-colors appearance-none text-center"
-            aria-label="Export format"
+            className="text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-purple-500 px-2 cursor-pointer transition-colors"
+            title={s['export.exportScale']}
           >
-            <option value="jpeg">JPG</option>
-            <option value="png">PNG</option>
-            <option value="webp">WebP</option>
-          </select>
+            {exportScale}x
+          </button>
+          <button
+            onClick={() => setExportFormat(exportFormat === 'jpeg' ? 'png' : exportFormat === 'png' ? 'webp' : 'jpeg')}
+            disabled={exporting || importing || itemCount === 0}
+            className="text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-purple-500 rounded-r-lg px-2 cursor-pointer transition-colors"
+            title="Export format"
+          >
+            {exportFormat === 'jpeg' ? 'JPG' : exportFormat === 'png' ? 'PNG' : 'WebP'}
+          </button>
         </div>
       </div>
 
@@ -751,7 +719,11 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
         id="grid-maker-dnd"
         sensors={sensors}
         collisionDetection={pointerWithin}
-        onDragStart={handleDragStart}
+        onDragStart={(e) => {
+          const rect = e.active.rect.current.initial;
+          if (rect) setDragCellWidth(rect.width);
+          handleDragStart(e);
+        }}
         onDragOver={handleDragOver}
         onDragEnd={(e) => { setOverId(null); handleDragEnd(e); }}
         onDragCancel={() => { setOverId(null); handleDragCancel(); }}
@@ -807,7 +779,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
         />
 
         <DragOverlay dropAnimation={null}>
-          {activeId ? <GridDragOverlay item={itemMap[activeId]} cropSquare={cropSquare} previewUrl={cropPreviewMapRef.current[activeId]} /> : null}
+          {activeId ? <GridDragOverlay item={itemMap[activeId]} cropSquare={cropSquare} previewUrl={cropPreviewMapRef.current[activeId]} cellWidth={dragCellWidth} /> : null}
         </DragOverlay>
       </DndContext>
 
@@ -818,6 +790,13 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 text-center">
         {mode === 'characters' ? s['grid.hintChars'] : s['grid.hintVNs']}
       </p>
+      {saveStatus && (
+        <p className="mt-1 text-center text-[10px] text-gray-300 dark:text-gray-600">
+          {saveStatus.type === 'saved'
+            ? `Last autosaved: ${new Date(saveStatus.time).toLocaleTimeString()}`
+            : 'Draft cleared'}
+        </p>
+      )}
 
       <div className="mt-6 flex justify-center">
         <Link
@@ -827,43 +806,6 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
           <Rows3 className="w-4 h-4" />
           {s['grid.tryTierList']}
         </Link>
-      </div>
-
-      {/* How it works */}
-      <div className="mt-10 max-w-3xl mx-auto space-y-6 text-sm text-gray-600 dark:text-gray-400">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{s['howItWorks.title']}</h2>
-
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.adding.title']}</h3>
-            <p>{s['howItWorks.adding.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.gridSize.title']}</h3>
-            <p>{s['howItWorks.gridSize.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.cropping.title']}</h3>
-            <p>{s['howItWorks.cropping.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.titles.title']}</h3>
-            <p>{s['howItWorks.titles.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.exporting.title']}</h3>
-            <p>{s['howItWorks.exporting.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.autoSave.title']}</h3>
-            <p>{s['howItWorks.autoSave.body']}</p>
-          </div>
-        </div>
       </div>
 
       {/* Cell fill modal */}
@@ -892,7 +834,7 @@ export function GridBoard({ urlParams, shareId }: GridBoardProps) {
 
 
       <ShareToast message={imageShare.toastMessage} isError={imageShare.toastIsError} onDismiss={imageShare.dismissToast} />
-      <ShareToast message={linkToast} isError={linkToast === 'Failed to create link' || linkToast === 'Too many requests - please wait a minute'} onDismiss={() => setLinkToast(null)} />
+      <ShareToast message={linkToast} isError={linkToastIsError} onDismiss={() => setLinkToast(null)} />
 
       {storageWarning && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 rounded-lg bg-amber-100 dark:bg-amber-900/80 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-sm shadow-lg flex items-center gap-2">

@@ -105,6 +105,37 @@ export const THUMBNAIL_SIZES: Record<ThumbnailSize, SizeConfig> = {
   },
 };
 
+const THUMBNAIL_SIZES_SQUARE: Record<ThumbnailSize, SizeConfig> = {
+  sm: {
+    ...THUMBNAIL_SIZES.sm,
+    coverClass: 'w-[48px] h-[48px] sm:w-[56px] sm:h-[56px]',
+    overlayClass: 'w-[48px] h-[48px] sm:w-[56px] sm:h-[56px]',
+    rowMinH: 'min-h-[56px] sm:min-h-[64px]',
+    editBtnTopClass: 'top-[18px]',
+    export: { ...THUMBNAIL_SIZES.sm.export, itemH: 88, minRowH: 100 },
+  },
+  md: {
+    ...THUMBNAIL_SIZES.md,
+    coverClass: 'w-[64px] h-[64px] sm:w-[76px] sm:h-[76px]',
+    overlayClass: 'w-[64px] h-[64px] sm:w-[76px] sm:h-[76px]',
+    rowMinH: 'min-h-[72px] sm:min-h-[84px]',
+    editBtnTopClass: 'top-[20px]',
+    export: { ...THUMBNAIL_SIZES.md.export, itemH: 118, minRowH: 130 },
+  },
+  lg: {
+    ...THUMBNAIL_SIZES.lg,
+    coverClass: 'w-[84px] h-[84px] sm:w-[100px] sm:h-[100px]',
+    overlayClass: 'w-[84px] h-[84px] sm:w-[100px] sm:h-[100px]',
+    rowMinH: 'min-h-[92px] sm:min-h-[108px]',
+    editBtnTopClass: 'top-[22px]',
+    export: { ...THUMBNAIL_SIZES.lg.export, itemH: 155, minRowH: 167 },
+  },
+};
+
+export function getSizeConfig(size: ThumbnailSize, cropSquare: boolean): SizeConfig {
+  return cropSquare ? THUMBNAIL_SIZES_SQUARE[size] : THUMBNAIL_SIZES[size];
+}
+
 // === Color presets ===
 
 export interface TierColor {

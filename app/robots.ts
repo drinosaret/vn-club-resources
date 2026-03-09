@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/3x3-maker/s/', '/tierlist/s/'],
       },
       // Explicitly allow crawlers to access all public content
       {
@@ -26,7 +26,7 @@ export default function robots(): MetadataRoute.Robots {
           'cohere-ai',
         ],
         allow: '/',
-        disallow: ['/api/'],
+        disallow: ['/api/', '/3x3-maker/s/', '/tierlist/s/'],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

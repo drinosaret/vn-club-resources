@@ -128,12 +128,12 @@ export default function BeginnerVNsContent({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+          <div className="flex flex-wrap justify-center gap-3 md:gap-4">
             {isLoading && !easyVNs
               ? Array.from({ length: 10 }).map((_, i) => (
                   <div
                     key={i}
-                    className="rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50"
+                    className="w-[calc(33.333%-8px)] md:w-[calc(25%-12px)] lg:w-[calc(20%-12.8px)] rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50"
                   >
                     <div className="aspect-3/4 image-placeholder" />
                     <div className="p-2">
@@ -142,15 +142,16 @@ export default function BeginnerVNsContent({
                   </div>
                 ))
               : easyVNs?.map((vn) => (
-                  <VNCard
-                    key={vn.vnId}
-                    id={vn.vnId}
-                    title={vn.title}
-                    titleJp={vn.titleJp}
-                    imageUrl={vn.coverUrl}
-                    imageSexual={vn.imageSexual}
-                    badge={<DifficultyBadge difficulty={vn.difficulty} />}
-                  />
+                  <div key={vn.vnId} className="w-[calc(33.333%-8px)] md:w-[calc(25%-12px)] lg:w-[calc(20%-12.8px)]">
+                    <VNCard
+                      id={vn.vnId}
+                      title={vn.title}
+                      titleJp={vn.titleJp}
+                      imageUrl={vn.coverUrl}
+                      imageSexual={vn.imageSexual}
+                      badge={<DifficultyBadge difficulty={vn.difficulty} />}
+                    />
+                  </div>
                 ))}
           </div>
 

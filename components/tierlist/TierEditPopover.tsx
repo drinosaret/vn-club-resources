@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Eraser, ChevronUp, ChevronDown, Plus } from 'lucide-react';
 import { TIER_COLORS } from '@/lib/tier-config';
@@ -22,16 +22,14 @@ interface TierEditPopoverProps {
   canDelete: boolean;
   isFirst: boolean;
   isLast: boolean;
-  onOpenChange?: (open: boolean) => void;
+  tierIndex: number;
 }
 
-export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete, onClear, onMoveUp, onMoveDown, onInsertAbove, onInsertBelow, canDelete, isFirst, isLast, onOpenChange }: TierEditPopoverProps) {
+export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete, onClear, onMoveUp, onMoveDown, onInsertAbove, onInsertBelow, canDelete, isFirst, isLast, tierIndex }: TierEditPopoverProps) {
   const locale = useLocale();
   const s = tierListStrings[locale];
-  const [isOpen, _setIsOpen] = useState(false);
-  const setIsOpen = (open: boolean) => { _setIsOpen(open); onOpenChange?.(open); };
+  const [isOpen, setIsOpen] = useState(false);
   const [editLabel, setEditLabel] = useState(tier.label);
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,24 +40,45 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
     setEditLabel(tier.label);
   }, [tier.label]);
 
-  // Close on click outside + Escape
+  // Compute popover position — recalculate whenever the popover is open
+  // useLayoutEffect prevents visible jump on reorder
+  const updatePos = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setPopoverPos(prev => {
+      if (prev && prev.top === rect.top && prev.left === rect.right + 4) return prev;
+      return { top: rect.top, left: rect.right + 4 };
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopoverPos(null);
+      return;
+    }
+    updatePos();
+  }, [isOpen, tierIndex, updatePos]);
+
+  // Close on click outside, Escape, or scroll
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        wrapperRef.current && !wrapperRef.current.contains(target) &&
-        popoverRef.current && !popoverRef.current.contains(target)
-      ) {
-        setIsOpen(false);
-      }
+      if (buttonRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setIsOpen(false);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsOpen(false); };
+    const onScroll = (e: Event) => {
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      setIsOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
     return () => {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions);
     };
   }, [isOpen]);
 
@@ -87,22 +106,22 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
   };
 
   return (
-    <div ref={wrapperRef} className="shrink-0">
+    <div className="shrink-0">
       {/* Tier label button */}
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-12 sm:w-16 h-full flex items-center justify-center font-bold cursor-pointer hover:opacity-80 transition-opacity ${tier.color} ${tier.textColor} ${
-          tier.label.length > 3 ? 'text-[10px] sm:text-xs leading-tight' : 'text-lg sm:text-xl'
+        className={`w-12 sm:w-16 h-full flex items-center justify-center font-bold cursor-pointer hover:opacity-80 transition-opacity text-center break-words px-0.5 overflow-hidden ${tier.color} ${tier.textColor} ${
+          tier.label.length > 6 ? 'text-[8px] sm:text-[10px] leading-tight' : tier.label.length > 3 ? 'text-[10px] sm:text-xs leading-tight' : 'text-lg sm:text-xl'
         }${isFirst ? ' rounded-tl-lg' : ''}${isLast ? ' rounded-bl-lg' : ''}`}
         title={s['tierEdit.editTier']}
       >
         {tier.label}
       </button>
 
-      {/* Popover — fixed position via portal */}
+      {/* Popover — portaled to body to avoid overflow clipping */}
       {isOpen && popoverPos && createPortal(
-        <div ref={popoverRef} style={{ position: 'fixed', top: popoverPos.top, left: popoverPos.left }} className="z-50 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-3">
+        <div ref={popoverRef} className="fixed z-50 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-3" style={{ top: popoverPos.top, left: popoverPos.left }}>
           {/* Rename */}
           <div>
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{s['tierEdit.label']}</label>
@@ -110,10 +129,10 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
               ref={inputRef}
               type="text"
               value={editLabel}
-              onChange={e => setEditLabel(e.target.value.slice(0, 10))}
+              onChange={e => setEditLabel(e.target.value.slice(0, 40))}
               onBlur={handleLabelSubmit}
               onKeyDown={e => { if (e.key === 'Enter') handleLabelSubmit(); }}
-              maxLength={10}
+              maxLength={40}
               className="w-full px-2 py-1 text-sm rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
             />
           </div>
@@ -188,7 +207,7 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
             </button>
           )}
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );

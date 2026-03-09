@@ -149,10 +149,12 @@ export const GridCell = memo(function GridCell({
   const tinyPreviewUrl = item?.cropPreviewTiny ?? fallbackTiny;
 
   // Keep cropPreviewMap in sync for DragOverlay
-  if (cropPreviewMap && item?.id) {
-    if (previewUrl) cropPreviewMap.current[item.id] = previewUrl;
-    else delete cropPreviewMap.current[item.id];
-  }
+  useEffect(() => {
+    if (cropPreviewMap && item?.id) {
+      if (previewUrl) cropPreviewMap.current[item.id] = previewUrl;
+      else delete cropPreviewMap.current[item.id];
+    }
+  }, [cropPreviewMap, item?.id, previewUrl]);
 
   const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
@@ -187,6 +189,15 @@ export const GridCell = memo(function GridCell({
   }
   const handleImageLoad = useCallback(() => setImageLoaded(true), []);
 
+  // Memoize title resolution (must be above early return for Rules of Hooks)
+  const displayTitle = useMemo(() => {
+    if (!item) return '';
+    return item.customTitle
+      || ((item.titleJp || item.titleRomaji)
+        ? getDisplayTitle({ title: item.title, title_jp: item.titleJp, title_romaji: item.titleRomaji }, preference)
+        : item.title);
+  }, [item, preference]);
+
   if (!item) {
     return (
       <div
@@ -200,12 +211,6 @@ export const GridCell = memo(function GridCell({
       </div>
     );
   }
-
-  // Resolve title: custom override > language preference > stored title
-  const displayTitle = item.customTitle
-    || ((item.titleJp || item.titleRomaji)
-      ? getDisplayTitle({ title: item.title, title_jp: item.titleJp, title_romaji: item.titleRomaji }, preference)
-      : item.title);
 
   return (
     <div

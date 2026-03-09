@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { getDisplayTitle, type TitlePreference } from '@/lib/title-preference';
 import { NSFW_THRESHOLD } from '@/lib/nsfw-reveal';
 import type { TierDef, TierVN, SizeConfig } from '@/lib/tier-config';
@@ -187,6 +187,7 @@ function drawPixelated(
 }
 
 export type ExportFormat = 'jpeg' | 'png' | 'webp';
+export type ExportScale = 1 | 1.5 | 2;
 
 export function useTierListExport(
   tierDefs: TierDef[],
@@ -199,14 +200,36 @@ export function useTierListExport(
   sizeConfig: SizeConfig,
   listTitle: string,
   titleMaxH: number,
+  exportScale: ExportScale = 2,
   nsfwState?: ExportNSFWState,
 ) {
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const showExportError = useCallback((msg: string) => {
+    clearTimeout(errorTimerRef.current);
+    setExportError(msg);
+    errorTimerRef.current = setTimeout(() => setExportError(null), 5000);
+  }, []);
+  const dismissExportError = useCallback(() => {
+    clearTimeout(errorTimerRef.current);
+    setExportError(null);
+  }, []);
+
+  // WebP has a hard 16383x16383 pixel limit in its bitstream spec.
+  const MAX_WEBP = 16383;
+  const checkWebPLimits = useCallback((canvas: HTMLCanvasElement, format: string): boolean => {
+    if (format === 'webp' && (canvas.width > MAX_WEBP || canvas.height > MAX_WEBP)) {
+      showExportError('Image too large for WebP (max 16383px per side). Use JPG or PNG instead.');
+      return false;
+    }
+    return true;
+  }, [showExportError]);
 
   const renderToCanvas = useCallback(async (): Promise<HTMLCanvasElement> => {
     const isDark = document.documentElement.classList.contains('dark');
     const bgColor = isDark ? '#111827' : '#ffffff';
-    const itemsAreaW = CANVAS_W - LABEL_W;
     const isCovers = displayMode === 'covers';
     const { itemW: ITEM_W, itemH: ITEM_H, minRowH: MIN_ROW_H, gap: GAP, pad: PAD, scoreFontSize, titleFontSize } = sizeConfig.export;
     // Cache title preference once for the entire export (avoids 200+ localStorage reads)
@@ -222,6 +245,17 @@ export function useTierListExport(
     const itemH = isCovers ? ITEM_H : TITLE_H;
     const BADGE_HPAD = 16; // horizontal padding inside each title badge
     const BADGE_RADIUS = 6;
+
+    // Use the full CANVAS_W to determine how many columns fit, then shrink
+    // the canvas to tightly fit the actual widest row (covers mode only).
+    const fullItemsAreaW = CANVAS_W - LABEL_W;
+    const cols = isCovers ? Math.max(1, Math.floor((fullItemsAreaW - PAD * 2 + GAP) / (itemW + GAP))) : 0;
+    let canvasW = CANVAS_W;
+    if (isCovers) {
+      const maxUsedCols = Math.max(1, ...tierDefs.map(t => Math.min(cols, (tiers[t.id] ?? []).length)));
+      canvasW = LABEL_W + PAD * 2 + maxUsedCols * itemW + (maxUsedCols - 1) * GAP;
+    }
+    const itemsAreaW = canvasW - LABEL_W;
 
     // For titles mode, pre-measure all badge widths so we can flow-wrap
     const measureCtx = document.createElement('canvas').getContext('2d')!;
@@ -260,7 +294,6 @@ export function useTierListExport(
     for (const tier of tierDefs) {
       const vnIds = tiers[tier.id] ?? [];
       if (isCovers) {
-        const cols = Math.max(1, Math.floor((itemsAreaW - PAD * 2 + GAP) / (itemW + GAP)));
         const rowCount = Math.max(1, Math.ceil(vnIds.length / cols));
         const contentH = rowCount * itemH + (rowCount - 1) * GAP + PAD * 2;
         rows.push({ tier, vnIds, height: Math.max(MIN_ROW_H, contentH) });
@@ -275,24 +308,27 @@ export function useTierListExport(
     const headerH = listTitle.trim() ? 72 : 0;
     const totalH = headerH + rows.reduce((sum, r) => sum + r.height, 0) + (rows.length - 1) * BORDER;
 
+    const scale = exportScale;
+
     const canvas = document.createElement('canvas');
-    canvas.width = CANVAS_W;
-    canvas.height = totalH;
+    canvas.width = Math.round(canvasW * scale);
+    canvas.height = Math.round(totalH * scale);
     const ctx = canvas.getContext('2d')!;
+    ctx.scale(scale, scale);
 
     // Background
     ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, CANVAS_W, totalH);
+    ctx.fillRect(0, 0, canvasW, totalH);
 
     // Title header
     if (listTitle.trim()) {
       ctx.fillStyle = isDark ? '#1f2937' : '#f3f4f6';
-      ctx.fillRect(0, 0, CANVAS_W, headerH);
+      ctx.fillRect(0, 0, canvasW, headerH);
       ctx.fillStyle = isDark ? '#f3f4f6' : '#111827';
       ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(listTitle.trim(), CANVAS_W / 2, headerH / 2, CANVAS_W - 40);
+      ctx.fillText(listTitle.trim(), canvasW / 2, headerH / 2, canvasW - 40);
     }
 
     // Collect all image URLs to load in parallel
@@ -322,13 +358,35 @@ export function useTierListExport(
       ctx.fillStyle = labelBg;
       ctx.fillRect(0, y, LABEL_W, height);
 
-      // Tier label text
+      // Tier label text — wrap if too wide
       const labelColor = resolveTextColor(tier.textColor, isDark);
       ctx.fillStyle = labelColor;
-      ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
+      const maxLabelW = LABEL_W - 8;
+      // Pick font size: shrink for longer labels
+      const labelFontSize = tier.label.length > 6 ? 14 : tier.label.length > 3 ? 20 : 28;
+      ctx.font = `bold ${labelFontSize}px system-ui, -apple-system, sans-serif`;
+      // Word-wrap the label into lines
+      const words = tier.label.split(/\s+/);
+      const labelLines: string[] = [];
+      let currentLine = '';
+      for (const word of words) {
+        const test = currentLine ? `${currentLine} ${word}` : word;
+        if (ctx.measureText(test).width <= maxLabelW || !currentLine) {
+          currentLine = test;
+        } else {
+          labelLines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) labelLines.push(currentLine);
+      const lineH = labelFontSize * 1.2;
+      const totalTextH = labelLines.length * lineH;
+      const startY = y + (height - totalTextH) / 2 + labelFontSize * 0.6;
       ctx.textBaseline = 'middle';
-      ctx.fillText(tier.label, LABEL_W / 2, y + height / 2, LABEL_W - 8);
+      for (let li = 0; li < labelLines.length; li++) {
+        ctx.fillText(labelLines[li], LABEL_W / 2, startY + li * lineH, maxLabelW);
+      }
 
       // Items area background (slightly different from main bg for contrast)
       ctx.fillStyle = isDark ? '#1f2937' : '#f9fafb';
@@ -336,7 +394,6 @@ export function useTierListExport(
 
       // Draw items
       if (isCovers) {
-      const cols = Math.max(1, Math.floor((itemsAreaW - PAD * 2 + GAP) / (itemW + GAP)));
 
       for (let i = 0; i < vnIds.length; i++) {
         const vn = vnMap[vnIds[i]];
@@ -480,7 +537,7 @@ export function useTierListExport(
       y += height;
       if (ri < rows.length - 1) {
         ctx.fillStyle = isDark ? '#374151' : '#e5e7eb';
-        ctx.fillRect(0, y, CANVAS_W, BORDER);
+        ctx.fillRect(0, y, canvasW, BORDER);
         y += BORDER;
         // Yield to main thread between rows for UI responsiveness
         await new Promise<void>(r => setTimeout(r, 0));
@@ -488,22 +545,26 @@ export function useTierListExport(
     }
 
     return canvas;
-  }, [tierDefs, tiers, vnMap, displayMode, showTitles, showScores, sizeConfig, listTitle, titleMaxH, nsfwState]);
+  }, [tierDefs, tiers, vnMap, displayMode, showTitles, showScores, sizeConfig, listTitle, titleMaxH, exportScale, nsfwState]);
 
-  const generateBlob = useCallback(async (): Promise<Blob> => {
+  const generateBlob = useCallback(async (format?: ExportFormat): Promise<Blob> => {
     const canvas = await renderToCanvas();
+    if (!checkWebPLimits(canvas, format ?? 'png')) throw new Error('WebP size limit exceeded');
+    const mimeType = format === 'webp' ? 'image/webp' : format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const quality = format && format !== 'png' ? 0.92 : undefined;
     return new Promise((resolve, reject) => {
       canvas.toBlob(blob => {
         if (blob) resolve(blob);
         else reject(new Error('Canvas toBlob failed'));
-      }, 'image/png');
+      }, mimeType, quality);
     });
-  }, [renderToCanvas]);
+  }, [renderToCanvas, checkWebPLimits]);
 
   const exportAsImage = useCallback(async (format: ExportFormat = 'jpeg') => {
     setExporting(true);
     try {
       const canvas = await renderToCanvas();
+      if (!checkWebPLimits(canvas, format)) return;
       const mimeType = format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg';
       const quality = format === 'png' ? undefined : 0.92;
       const blob = await new Promise<Blob>((resolve, reject) => {
@@ -528,7 +589,7 @@ export function useTierListExport(
     } finally {
       setExporting(false);
     }
-  }, [renderToCanvas, username]);
+  }, [renderToCanvas, checkWebPLimits, username]);
 
-  return { exporting, exportAsImage, generateBlob };
+  return { exporting, exportAsImage, generateBlob, exportError, dismissExportError };
 }

@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Grid3X3 } from 'lucide-react';
 import GridMakerContent from '@/app/3x3-maker/GridMakerContent';
+import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = {
@@ -29,12 +30,22 @@ const jsonLd = [
     inLanguage: 'ja',
     applicationCategory: 'EntertainmentApplication',
     operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript',
     offers: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'USD',
     },
-    featureList: 'VNDB\u30a4\u30f3\u30dd\u30fc\u30c8\u30013x3/4x4/5x5\u30b0\u30ea\u30c3\u30c9\u30b5\u30a4\u30ba\u3001\u753b\u50cf\u30af\u30ed\u30c3\u30d7\u3001\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u3068\u30b9\u30b3\u30a2\u3001PNG\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u3001SNS\u5171\u6709',
+    featureList: [
+      'VNDB\u30ea\u30b9\u30c8\u30a4\u30f3\u30dd\u30fc\u30c8',
+      '3x3\u30014x4\u30015x5\u30b0\u30ea\u30c3\u30c9\u30b5\u30a4\u30ba',
+      '\u753b\u50cf\u30af\u30ed\u30c3\u30d7\u30fb\u4f4d\u7f6e\u8abf\u6574',
+      '\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u30fb\u30b9\u30b3\u30a2',
+      'JPG\u3001PNG\u3001WebP\u30a8\u30af\u30b9\u30dd\u30fc\u30c8',
+      '\u5171\u6709\u30ea\u30f3\u30af',
+      '\u30c0\u30fc\u30af\u30fb\u30e9\u30a4\u30c8\u30c6\u30fc\u30de',
+      '\u30a8\u30ed\u30b2\u30fb\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u30e2\u30fc\u30c9',
+    ],
     author: {
       '@type': 'Organization',
       name: 'VN Club',
@@ -48,7 +59,7 @@ const jsonLd = [
   },
   generateBreadcrumbJsonLd([
     { name: '\u30db\u30fc\u30e0', path: '/' },
-    { name: 'エロゲ 3x3\u30e1\u30fc\u30ab\u30fc', path: '/ja/3x3-maker/' },
+    { name: '\u30a8\u30ed\u30b2 3x3\u30e1\u30fc\u30ab\u30fc', path: '/ja/3x3-maker/' },
   ]),
 ];
 
@@ -86,6 +97,31 @@ export default function Page() {
       <Suspense fallback={<LoadingFallback />}>
         <GridMakerContent />
       </Suspense>
+
+      <section className="max-w-2xl mx-auto px-4 py-12 text-sm text-gray-600 dark:text-gray-400">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">使い方</h2>
+
+        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">アイテムの追加</h3>
+        <p className="mb-3">検索バーでエロゲやキャラクターを名前やVNDB ID（例：「v17」や「17」）で検索できます。クリックするとプールに追加されます。歯車アイコンの「グリッドに直接追加」を有効にすると、次の空のセルに直接配置されます。空のセルを先にクリックして、モーダル内で検索して特定のスロットをターゲットすることも可能。エロゲ/キャラクターモードはトグルボタンで切り替え。VNDBのユーザー名またはIDを入力すると、評価の高い上位500作品が自動的にグリッドに配置されます。</p>
+
+        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">グリッドサイズとレイアウト</h3>
+        <p className="mb-3">3&times;3、4&times;4、5&times;5のグリッドから選択できます。正方形クロップとカバー（2:3）アスペクト比を切り替え可能。アイテムをドラッグ＆ドロップで並べ替えられ、ドラッグすると2つのセルの位置が入れ替わります。グリッドに収まらないアイテムは下のプールに保管され、いつでもドラッグでグリッドに戻せます。</p>
+
+        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">クロップと編集</h3>
+        <p className="mb-3">アイテムにマウスを合わせて鉛筆アイコンをクリックするとエディターが開きます。ズームスライダー（1x～3x）とドラッグでクロップ範囲を調整できます。カスタムタイトルの設定、スコア（10～100）の調整、別のカバー画像の選択も可能。プレビューはリアルタイムで更新されます。</p>
+
+        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">表示設定</h3>
+        <p className="mb-3">歯車アイコンを開くと、タイトルオーバーレイ、スコアバッジ、装飾フレーム、タイトル言語（EN/JP）を切り替えられます。タイトルは各セルの下部に、スコアは角にバッジとして表示されます。これらの設定は画面表示とエクスポート画像の両方に適用されます。</p>
+
+        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">エクスポートと共有</h3>
+        <p className="mb-3">JPG、PNG、WebPでエクスポート、クリップボードにコピー、またはTwitter、Reddit、デバイスの共有メニューで直接共有できます。共有リンクを生成すると、開いた人がコピーを編集できるので、友人にテンプレートとして送り、同じ作品プールから自分のピックを埋めてもらう使い方ができます。</p>
+
+        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">自動保存</h3>
+        <p className="mb-3">グリッドはアイテム、クロップ位置、カスタムタイトル、スコア、表示設定を含めてブラウザに自動保存されます。VNDBからインポートした場合、URLが更新されるのでブックマークや共有に便利です。</p>
+
+      </section>
+
+      <VNDBAttribution />
     </>
   );
 }

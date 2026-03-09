@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RotateCcw, Type, Star } from 'lucide-react';
+import { X, RotateCcw, Type, Star, ExternalLink } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
@@ -31,6 +31,18 @@ export function VNEditModal({ vn, onSave, onCancel }: VNEditModalProps) {
   const autoTitle = (vn.titleJp || vn.titleRomaji)
     ? getDisplayTitle({ title: vn.title, title_jp: vn.titleJp, title_romaji: vn.titleRomaji }, preference)
     : vn.title;
+
+  const isVN = vn.id.startsWith('v');
+  const numericId = vn.id.replace(/^[vc]/, '');
+  const pageUrl = isVN ? `/vn/${numericId}/` : `/character/${numericId}/`;
+  const vndbUrl = `https://vndb.org/${vn.id}`;
+
+  // Alternate title: show the other language
+  const altTitle = (vn.titleJp || vn.titleRomaji)
+    ? getDisplayTitle({ title: vn.title, title_jp: vn.titleJp, title_romaji: vn.titleRomaji }, preference === 'romaji' ? 'japanese' : 'romaji')
+    : null;
+  const displayTitle = vn.customTitle || autoTitle;
+  const showAltTitle = altTitle && altTitle !== displayTitle;
 
   const voteNum = voteInput.trim() ? parseInt(voteInput, 10) : null;
   const voteError = voteInput.trim() && (voteNum == null || isNaN(voteNum) || voteNum < 10 || voteNum > 100);
@@ -78,7 +90,7 @@ export function VNEditModal({ vn, onSave, onCancel }: VNEditModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <h3 id="vn-edit-modal-title" className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-2">
-            {t(s, 'editModal.header', { title: vn.customTitle || autoTitle })}
+            {t(s, 'editModal.header', { title: displayTitle })}
           </h3>
           <button
             onClick={onCancel}
@@ -99,6 +111,29 @@ export function VNEditModal({ vn, onSave, onCancel }: VNEditModalProps) {
               />
             </div>
           )}
+          <div className="flex flex-col items-center gap-1.5">
+            {showAltTitle && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-full">{altTitle}</span>}
+            <div className="flex items-center gap-2">
+              <a
+                href={pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-md transition-colors"
+              >
+                VN Club
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <a
+                href={vndbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+              >
+                VNDB
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
           <label className="flex items-center gap-2">
             <Type className="w-4 h-4 text-gray-400 shrink-0" />
             <input

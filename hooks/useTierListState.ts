@@ -1,6 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { arrayMove } from '@dnd-kit/sortable';
-import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { DEFAULT_TIER_DEFS, getAutoTierForDefs, generateTierId } from '@/lib/tier-config';
 import type { TierDef, TierVN, TierColor, TierPreset, TierListMode } from '@/lib/tier-config';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
@@ -103,6 +101,7 @@ export interface TierListSharedSettings {
   showTitles?: boolean;
   showScores?: boolean;
   titleMaxH?: number;
+  cropSquare?: boolean;
   titlePreference?: 'romaji' | 'japanese';
 }
 
@@ -110,7 +109,6 @@ export interface TierListSharedSettings {
 
 export function useTierListState(shareId?: string) {
   const [state, setState] = useState<TierListState>(buildEmptyState);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
   const hydratedRef = useRef(false);
@@ -128,18 +126,43 @@ export function useTierListState(shareId?: string) {
   }, [shareId]);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'saved'; time: number } | { type: 'cleared' } | null>(null);
+  const viewingShareRef = useRef(false);
 
   const debouncedSave = useCallback((newState: TierListState) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      if (!saveToStorage(newState)) setStorageWarning(true);
+      if (saveToStorage(newState)) setSaveStatus({ type: 'saved', time: Date.now() });
+      else setStorageWarning(true);
     }, 300);
   }, []);
+
+  const [needsUrlReset, setNeedsUrlReset] = useState(false);
+
+  useEffect(() => {
+    if (!needsUrlReset) return;
+    setNeedsUrlReset(false);
+    const base = window.location.pathname.replace(/\/s\/[^/]+\/?$/, '/');
+    const scrollY = window.scrollY;
+    const prev = history.scrollRestoration;
+    history.scrollRestoration = 'manual';
+    history.replaceState(null, '', base);
+    // Restore scroll position after Next.js processes the URL change
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollY);
+      history.scrollRestoration = prev;
+    });
+  }, [needsUrlReset]);
 
   // Save whenever state changes (except activeId)
   const updateState = useCallback((updater: (prev: TierListState) => TierListState) => {
     setState(prev => {
       const next = updater(prev);
+      // On first edit of a shared link, reset URL to base path so autosave kicks in
+      if (viewingShareRef.current) {
+        viewingShareRef.current = false;
+        setNeedsUrlReset(true);
+      }
       debouncedSave(next);
       return next;
     });
@@ -152,81 +175,48 @@ export function useTierListState(shareId?: string) {
     };
   }, []);
 
-  // === DnD handlers ===
+  // === DnD handler ===
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
-  }, []);
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
+  const handleDrop = useCallback((itemId: string, targetContainerId: string, insertIndex: number) => {
     updateState(prev => {
-      if (!over) return prev;
+      const sourceContainer = findContainer(prev, itemId);
+      if (!sourceContainer) return prev;
 
-      const draggedId = String(active.id);
-      const overId = String(over.id);
-
-      const activeContainer = findContainer(prev, draggedId);
-      if (!activeContainer) return prev;
-
-      // Resolve which container the over target belongs to
-      let overContainer: string | null = null;
-      if (overId === 'pool') overContainer = 'pool';
-      else if (prev.tiers[overId] !== undefined) overContainer = overId;
-      else overContainer = findContainer(prev, overId);
-      if (!overContainer) return prev;
-
-      if (activeContainer === overContainer) {
+      if (sourceContainer === targetContainerId) {
         // Same container: reorder
-        const items = getContainerItems(prev, activeContainer);
-        const fromIndex = items.indexOf(draggedId);
-        const ovIsContainer = overId === overContainer;
-        let toIndex = ovIsContainer ? undefined : items.indexOf(overId);
-        if (toIndex === -1) toIndex = undefined;
+        const items = [...getContainerItems(prev, sourceContainer)];
+        const fromIndex = items.indexOf(itemId);
         if (fromIndex === -1) return prev;
-        if (toIndex === undefined) toIndex = items.length - 1;
-        if (fromIndex === toIndex) return prev;
-
-        const reordered = arrayMove(items, fromIndex, toIndex);
-        if (activeContainer === 'pool') return { ...prev, pool: reordered };
-        return { ...prev, tiers: { ...prev.tiers, [activeContainer]: reordered } };
+        items.splice(fromIndex, 1);
+        const toIndex = Math.min(insertIndex > fromIndex ? insertIndex - 1 : insertIndex, items.length);
+        if (fromIndex === toIndex && items.length === getContainerItems(prev, sourceContainer).length) return prev;
+        items.splice(toIndex, 0, itemId);
+        if (sourceContainer === 'pool') return { ...prev, pool: items };
+        return { ...prev, tiers: { ...prev.tiers, [sourceContainer]: items } };
       }
 
-      // Different containers: move item
+      // Cross-container: move item
       const newTiers = { ...prev.tiers };
       let newPool = [...prev.pool];
 
-      // Remove from source
-      if (activeContainer === 'pool') {
-        newPool = newPool.filter(id => id !== draggedId);
+      if (sourceContainer === 'pool') {
+        newPool = newPool.filter(id => id !== itemId);
       } else {
-        newTiers[activeContainer] = prev.tiers[activeContainer].filter(id => id !== draggedId);
+        newTiers[sourceContainer] = prev.tiers[sourceContainer].filter(id => id !== itemId);
       }
 
-      // Insert into destination
-      const destItems = overContainer === 'pool' ? newPool : [...(newTiers[overContainer] ?? [])];
-      let insertIndex = destItems.length;
-      if (overId !== overContainer) {
-        const idx = destItems.indexOf(overId);
-        if (idx >= 0) insertIndex = idx;
-      }
-      destItems.splice(insertIndex, 0, draggedId);
+      const destItems = targetContainerId === 'pool' ? newPool : [...(newTiers[targetContainerId] ?? [])];
+      destItems.splice(Math.min(insertIndex, destItems.length), 0, itemId);
 
-      if (overContainer === 'pool') {
+      if (targetContainerId === 'pool') {
         newPool = destItems;
       } else {
-        newTiers[overContainer] = destItems;
+        newTiers[targetContainerId] = destItems;
       }
 
       return { ...prev, tiers: newTiers, pool: newPool };
     });
   }, [updateState]);
-
-  const handleDragCancel = useCallback(() => {
-    setActiveId(null);
-  }, []);
 
   // === VN management ===
 
@@ -620,7 +610,7 @@ export function useTierListState(shareId?: string) {
         finalTiers[def.id] = (tiers[def.id] ?? []).filter(id => newVnMap[id]);
       }
 
-      setState({
+      const loadedState: TierListState = {
         mode,
         tierDefs,
         tiers: finalTiers,
@@ -628,9 +618,11 @@ export function useTierListState(shareId?: string) {
         vnMap: newVnMap,
         importedUser: null,
         listTitle,
-      });
-      // Don't save shared layouts to localStorage
-
+      };
+      setState(loadedState);
+      // Save to localStorage so user edits persist across refresh
+      saveToStorage(loadedState);
+      viewingShareRef.current = true;
       return settings ?? null;
     } catch (err) {
       const msg = err instanceof Error && err.message === 'not_found'
@@ -650,6 +642,7 @@ export function useTierListState(shareId?: string) {
     fresh.mode = state.mode;
     setState(fresh);
     saveToStorage(fresh);
+    setSaveStatus({ type: 'cleared' });
   }, [state.mode]);
 
   const setImportedUser = useCallback((user: string | null) => {
@@ -674,7 +667,6 @@ export function useTierListState(shareId?: string) {
     tiers: state.tiers,
     pool: state.pool,
     vnMap: state.vnMap,
-    activeId,
     importedUser: state.importedUser,
     listTitle: state.listTitle,
     hydrated,
@@ -686,9 +678,7 @@ export function useTierListState(shareId?: string) {
     setMode,
 
     // DnD
-    handleDragStart,
-    handleDragEnd,
-    handleDragCancel,
+    handleDrop,
 
     // VN management
     addVN,
@@ -721,5 +711,6 @@ export function useTierListState(shareId?: string) {
     // Storage
     storageWarning,
     dismissStorageWarning: useCallback(() => setStorageWarning(false), []),
+    saveStatus,
   };
 }

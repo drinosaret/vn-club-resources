@@ -12,12 +12,13 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 interface UseImageShareOptions {
-  generateBlob: () => Promise<Blob>;
+  generateBlob: ((format?: string) => Promise<Blob>) | (() => Promise<Blob>);
   shareText: string;
   hashtags?: string;
   filename?: string;
   getShareUrl?: () => Promise<string>;
   title?: string;
+  exportFormat?: string;
 }
 
 export function useImageShare({
@@ -27,6 +28,7 @@ export function useImageShare({
   filename = 'vn-share.png',
   getShareUrl,
   title,
+  exportFormat,
 }: UseImageShareOptions) {
   const [sharing, setSharing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -102,6 +104,14 @@ export function useImageShare({
       // For clipboard-related actions, start the clipboard write SYNCHRONOUSLY
       // within the user gesture (before any await) so mobile browsers don't
       // reject it. ClipboardItem accepts a Promise<Blob> which resolves later.
+      if (platform === 'open-tab') {
+        const blob = exportFormat ? await generateBlob(exportFormat) : await getBlob();
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, '_blank');
+        if (!win) downloadBlob(blob, filename);
+        return;
+      }
+
       if (platform === 'clipboard') {
         const copied = await copyImageToClipboard(getBlob());
         if (copied) {
@@ -154,10 +164,18 @@ export function useImageShare({
       }
 
       if (platform === 'reddit') {
-        const [blob, fullText] = await Promise.all([getBlob(), buildFullText()]);
+        // Use Reddit's `url` param to create a link post pointing to the share URL.
+        // Image is copied to clipboard for the user to paste in a comment.
+        let shareUrl = '';
+        if (getShareUrl) {
+          try { shareUrl = await getShareUrl(); } catch { /* proceed without URL */ }
+        }
+        const blob = await getBlob();
         const copied = await copyImageToClipboard(blob);
         if (!copied) downloadBlob(blob, filename);
-        const params = new URLSearchParams({ title: fullText });
+        const redditTitle = title ? `${title} - ${shareText}` : shareText;
+        const params = new URLSearchParams({ title: redditTitle });
+        if (shareUrl) params.set('url', shareUrl);
         window.open(`https://www.reddit.com/submit?${params.toString()}`, '_blank', 'noopener');
         showToast(
           copied ? 'Image copied — paste it in your post!' : 'Image downloaded — upload it to your post!',
@@ -183,7 +201,7 @@ export function useImageShare({
     } finally {
       setSharing(false);
     }
-  }, [getBlob, copyImageToClipboard, canNativeShare, shareText, hashtags, filename, getShareUrl, title, showToast]);
+  }, [getBlob, generateBlob, exportFormat, copyImageToClipboard, canNativeShare, shareText, hashtags, filename, getShareUrl, title, showToast]);
 
   const dismissToast = useCallback(() => {
     clearTimeout(toastTimerRef.current);

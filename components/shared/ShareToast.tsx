@@ -25,7 +25,7 @@ export function ShareToast({ message, isError, onDismiss }: ShareToastProps) {
 
   if (isUrl) {
     return (
-      <div className="fixed bottom-6 left-4 right-4 z-[100] animate-slide-up flex justify-center">
+      <div role="status" className="fixed bottom-6 left-4 right-4 z-[100] animate-slide-up flex justify-center">
         <div className="flex flex-col gap-2 px-4 py-3 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xl text-sm font-medium max-w-md w-full">
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-green-400 dark:text-green-600 shrink-0" />
@@ -36,6 +36,7 @@ export function ShareToast({ message, isError, onDismiss }: ShareToastProps) {
           </div>
           <input
             readOnly
+            aria-label="Shareable link"
             value={message}
             onFocus={e => e.target.select()}
             onClick={e => (e.target as HTMLInputElement).select()}
@@ -47,7 +48,7 @@ export function ShareToast({ message, isError, onDismiss }: ShareToastProps) {
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-slide-up">
+    <div role={isError ? 'alert' : 'status'} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-slide-up">
       <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xl text-sm font-medium max-w-sm">
         {isError
           ? <AlertTriangle className="w-4 h-4 text-amber-400 dark:text-amber-600 shrink-0" />

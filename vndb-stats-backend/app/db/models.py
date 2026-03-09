@@ -1082,6 +1082,7 @@ class SharedLayout(Base):
     data = Column(JSONB, nullable=False)         # Minimal state payload (IDs + layout)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default="now()")
     view_count = Column(Integer, server_default="0")
+    last_viewed_at = Column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("idx_shared_layouts_type", "type"),

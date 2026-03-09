@@ -1,8 +1,6 @@
 'use client';
 
-import { memo, useCallback, useState } from 'react';
-import { useDroppable } from '@dnd-kit/core';
-import { SortableContext } from '@dnd-kit/sortable';
+import { memo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { TierItem } from './TierItem';
 import { TierEditPopover } from './TierEditPopover';
@@ -44,7 +42,6 @@ export const TierRow = memo(function TierRow({
   const vnMap = useVnMap();
   const locale = useLocale();
   const s = tierListStrings[locale];
-  const { setNodeRef, isOver } = useDroppable({ id: tier.id });
 
   const handleRename = useCallback((label: string) => onRenameTier(tier.id, label), [tier.id, onRenameTier]);
   const handleRecolor = useCallback((color: TierColor) => onRecolorTier(tier.id, color), [tier.id, onRecolorTier]);
@@ -55,13 +52,13 @@ export const TierRow = memo(function TierRow({
   const handleInsertAbove = useCallback(() => onInsertTier(tier.id, 'above'), [tier.id, onInsertTier]);
   const handleInsertBelow = useCallback(() => onInsertTier(tier.id, 'below'), [tier.id, onInsertTier]);
   const handleAddToTier = useCallback(() => onAddToTier(tier.id), [tier.id, onAddToTier]);
-  const [popoverOpen, setPopoverOpen] = useState(false);
 
   return (
-    <div className={`tier-row${isOver ? ' tier-row-active' : ''} flex border-b border-gray-200 dark:border-gray-700 last:border-b-0${popoverOpen ? ' relative z-40' : ''}`} style={{ contain: 'layout style' }}>
+    <div className="tier-row flex border-b border-gray-200 dark:border-gray-700 last:border-b-0" style={{ contain: 'layout style', contentVisibility: 'auto', containIntrinsicBlockSize: '80px' }}>
       {/* Tier label — click to edit */}
       <TierEditPopover
         tier={tier}
+        tierIndex={tierIndex}
         itemCount={vnIds.length}
         onRename={handleRename}
         onRecolor={handleRecolor}
@@ -74,45 +71,40 @@ export const TierRow = memo(function TierRow({
         canDelete={canDelete}
         isFirst={isFirst}
         isLast={isLast}
-        onOpenChange={setPopoverOpen}
       />
 
       {/* Drop zone */}
-      <SortableContext items={vnIds}>
-        <div
-          ref={setNodeRef}
-          className={`flex flex-wrap ${sizeConfig.rowGap} ${sizeConfig.rowPad} flex-1 ${sizeConfig.rowMinH} transition-all duration-200 ${
-            isOver ? 'bg-blue-50/60 dark:bg-blue-900/15 shadow-[inset_0_0_0_2px_rgba(59,130,246,0.15)]' : ''
-          }${isFirst ? ' rounded-tr-lg' : ''}${isLast ? ' rounded-br-lg' : ''}`}
-        >
-          {vnIds.map(id => (
-            <TierItem key={id} id={id} vn={vnMap[id]} tierIndex={tierIndex} displayMode={displayMode} sizeConfig={sizeConfig} showTitles={showTitles} showScores={showScores} titleMaxH={titleMaxH} onRemove={onRemoveVN} onEdit={onEditVN} justDropped={justDroppedId === id} />
-          ))}
-          {/* Add-to-tier button */}
-          {displayMode === 'covers' ? (
-            <button
-              onClick={handleAddToTier}
-              className={`${sizeConfig.coverClass} border-2 border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0`}
-              title={t(s, 'tier.addToTier', { tier: tier.label })}
-            >
-              <Plus className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
-            </button>
-          ) : (
-            <button
-              onClick={handleAddToTier}
-              className="h-6 px-2 border border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0"
-              title={t(s, 'tier.addToTier', { tier: tier.label })}
-            >
-              <Plus className="w-3 h-3 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
-            </button>
-          )}
-          {vnIds.length === 0 && (
-            <div className={`flex items-center justify-center flex-1 -ml-6 sm:-ml-8 text-xs text-gray-400 dark:text-gray-500 select-none ${isOver ? 'animate-pulse' : ''}`}>
-              {s[mode === 'characters' ? 'tier.dragHereChars' : 'tier.dragHere']}
-            </div>
-          )}
-        </div>
-      </SortableContext>
+      <div
+        data-tier-drop={tier.id}
+        className={`flex flex-wrap ${sizeConfig.rowGap} ${sizeConfig.rowPad} flex-1 min-w-0 ${sizeConfig.rowMinH} transition-colors duration-200${isFirst ? ' rounded-tr-lg' : ''}${isLast ? ' rounded-br-lg' : ''}`}
+      >
+        {vnIds.map(id => (
+          <TierItem key={id} id={id} vn={vnMap[id]} tierIndex={tierIndex} displayMode={displayMode} sizeConfig={sizeConfig} showTitles={showTitles} showScores={showScores} titleMaxH={titleMaxH} onRemove={onRemoveVN} onEdit={onEditVN} justDropped={justDroppedId === id} />
+        ))}
+        {/* Add-to-tier button */}
+        {displayMode === 'covers' ? (
+          <button
+            onClick={handleAddToTier}
+            className={`${sizeConfig.coverClass} border-2 border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0`}
+            title={t(s, 'tier.addToTier', { tier: tier.label })}
+          >
+            <Plus className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
+          </button>
+        ) : (
+          <button
+            onClick={handleAddToTier}
+            className="self-stretch w-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0"
+            title={t(s, 'tier.addToTier', { tier: tier.label })}
+          >
+            <Plus className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
+          </button>
+        )}
+        {vnIds.length === 0 && (
+          <div className="flex items-center justify-center flex-1 -ml-6 sm:-ml-8 text-xs text-gray-400 dark:text-gray-500 select-none pointer-events-none">
+            {s[mode === 'characters' ? 'tier.dragHereChars' : 'tier.dragHere']}
+          </div>
+        )}
+      </div>
     </div>
   );
 });

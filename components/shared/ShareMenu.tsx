@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Share2, Copy, Link2, Loader2, Smartphone } from 'lucide-react';
+import { Share2, Copy, Link2, Loader2, Smartphone, ExternalLink } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { sharedStrings } from '@/lib/i18n/translations/shared';
 
-export type SharePlatform = 'native' | 'twitter' | 'reddit' | 'clipboard';
+export type SharePlatform = 'native' | 'twitter' | 'reddit' | 'clipboard' | 'open-tab';
 
 interface ShareMenuProps {
   onShare: (platform: SharePlatform) => Promise<void>;
@@ -72,8 +72,8 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
     };
   }, [isOpen]);
 
-  // Position the menu
-  useEffect(() => {
+  // Position the menu (useLayoutEffect to avoid flash)
+  useLayoutEffect(() => {
     if (!isOpen || !buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
     const menuW = 224; // w-56
@@ -129,7 +129,12 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
             </button>
           )}
 
-          <button role="menuitem" onClick={() => handleAction('clipboard')} className={itemClass}>
+          <button role="menuitem" onClick={() => handleAction('open-tab')} className={itemClass}>
+            <ExternalLink className="w-4 h-4 text-gray-500" />
+            <span>{s['share.openInTab']}</span>
+          </button>
+
+          <button role="menuitem" onClick={() => handleAction('clipboard')} className={`${itemClass} hidden sm:flex`}>
             <Copy className="w-4 h-4 text-gray-500" />
             <span>{s['share.copyToClipboard']}</span>
           </button>

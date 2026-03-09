@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Grid3X3 } from 'lucide-react';
 import GridMakerContent from '../../GridMakerContent';
+import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { generatePageMetadata } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = {
@@ -37,8 +38,11 @@ function LoadingFallback() {
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <GridMakerContent shareId={id} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LoadingFallback />}>
+        <GridMakerContent shareId={id} />
+      </Suspense>
+      <VNDBAttribution />
+    </>
   );
 }

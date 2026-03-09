@@ -21,11 +21,13 @@ jobs:
           UMAMI_APP_SECRET: ${{ secrets.UMAMI_APP_SECRET }}
           NEXT_PUBLIC_UMAMI_URL: ${{ secrets.NEXT_PUBLIC_UMAMI_URL }}
           NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: deploy
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: DISCORD_BOT_TOKEN,DISCORD_ADMIN_USER_IDS,DISCORD_LOG_WEBHOOK_URL,TWITTER_AUTH_TOKEN,UMAMI_DB_PASSWORD,UMAMI_APP_SECRET,NEXT_PUBLIC_UMAMI_URL,NEXT_PUBLIC_UMAMI_WEBSITE_ID
+          envs: DISCORD_BOT_TOKEN,DISCORD_ADMIN_USER_IDS,DISCORD_LOG_WEBHOOK_URL,TWITTER_AUTH_TOKEN,UMAMI_DB_PASSWORD,UMAMI_APP_SECRET,NEXT_PUBLIC_UMAMI_URL,NEXT_PUBLIC_UMAMI_WEBSITE_ID,NEXT_PUBLIC_TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY
           script: |
             cd ~/vn-club-resources
             git pull --ff-only
@@ -49,6 +51,8 @@ jobs:
             update_env UMAMI_APP_SECRET "$UMAMI_APP_SECRET"
             update_env NEXT_PUBLIC_UMAMI_URL "$NEXT_PUBLIC_UMAMI_URL"
             update_env NEXT_PUBLIC_UMAMI_WEBSITE_ID "$NEXT_PUBLIC_UMAMI_WEBSITE_ID"
+            update_env NEXT_PUBLIC_TURNSTILE_SITE_KEY "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+            update_env TURNSTILE_SECRET_KEY "$TURNSTILE_SECRET_KEY"
 
             # Generate git dates for guide pages (Docker has no .git)
             node scripts/generate-git-dates.js

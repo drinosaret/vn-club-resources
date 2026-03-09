@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, ImageIcon, Loader2 } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { sharedStrings } from '@/lib/i18n/translations/shared';
@@ -28,17 +28,34 @@ export function CoverPicker({ vnId, currentImageUrl, originalImageUrl, originalI
   const [covers, setCovers] = useState<ReleaseCover[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Reset state when vnId changes
+  useEffect(() => {
+    setCovers(null);
+    setError(false);
+    setExpanded(false);
+  }, [vnId]);
+
+  // Abort in-flight fetch on unmount
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   const fetchCovers = useCallback(async () => {
     if (covers !== null || loading) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/vndb-releases?vnId=${encodeURIComponent(vnId)}`);
+      const res = await fetch(`/api/vndb-releases?vnId=${encodeURIComponent(vnId)}`, { signal: controller.signal });
       if (!res.ok) throw new Error();
       const data = await res.json();
       setCovers(data.covers ?? []);
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       setError(true);
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
@@ -8,6 +8,7 @@ import { fetchSharedLayout, fetchBatchVNs, fetchBatchCharacters } from '@/lib/sh
 
 const STORAGE_KEY = 'vn-grid-maker-current';
 const SHARE_ID_KEY = 'vn-grid-maker-share-id';
+const MAX_GRID_VNS = 500;
 
 // === Types ===
 
@@ -164,17 +165,42 @@ export function useGridMakerState(shareId?: string) {
   }, [shareId]);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'saved'; time: number } | { type: 'cleared' } | null>(null);
+  const viewingShareRef = useRef(false);
 
   const debouncedSave = useCallback((newState: GridMakerState) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      if (!saveToStorage(newState)) setStorageWarning(true);
+      if (saveToStorage(newState)) setSaveStatus({ type: 'saved', time: Date.now() });
+      else setStorageWarning(true);
     }, 300);
   }, []);
+
+  const [needsUrlReset, setNeedsUrlReset] = useState(false);
+
+  useEffect(() => {
+    if (!needsUrlReset) return;
+    setNeedsUrlReset(false);
+    const base = window.location.pathname.replace(/\/s\/[^/]+\/?$/, '/');
+    const scrollY = window.scrollY;
+    const prev = history.scrollRestoration;
+    history.scrollRestoration = 'manual';
+    history.replaceState(null, '', base);
+    // Restore scroll position after Next.js processes the URL change
+    requestAnimationFrame(() => {
+      window.scrollTo(0, scrollY);
+      history.scrollRestoration = prev;
+    });
+  }, [needsUrlReset]);
 
   const updateState = useCallback((updater: (prev: GridMakerState) => GridMakerState) => {
     setState(prev => {
       const next = updater(prev);
+      // On first edit of a shared link, reset URL to base path so autosave kicks in
+      if (viewingShareRef.current) {
+        viewingShareRef.current = false;
+        setNeedsUrlReset(true);
+      }
       debouncedSave(next);
       return next;
     });
@@ -239,6 +265,8 @@ export function useGridMakerState(shareId?: string) {
       // Reject duplicates
       if (prev.cells.includes(item.id)) return prev;
       if (index < 0 || index >= prev.cells.length) return prev;
+      // Reject if at capacity (unless replacing an existing cell)
+      if (!prev.cells[index] && Object.keys(prev.itemMap).length >= MAX_GRID_VNS) return prev;
 
       const newCells = [...prev.cells];
       const newItemMap = { ...prev.itemMap };
@@ -260,9 +288,17 @@ export function useGridMakerState(shareId?: string) {
   const updateItem = useCallback((itemId: string, updates: Partial<Pick<GridItem, 'cropData' | 'cropPreview' | 'cropPreviewTiny' | 'customTitle' | 'vote' | 'imageUrl' | 'imageSexual'>>) => {
     updateState(prev => {
       if (!prev.itemMap[itemId]) return prev;
+      const existing = prev.itemMap[itemId];
+      // Revoke old blob URLs when replacing with new ones to prevent memory leaks
+      if (updates.cropPreview && existing.cropPreview && updates.cropPreview !== existing.cropPreview) {
+        URL.revokeObjectURL(existing.cropPreview);
+      }
+      if (updates.cropPreviewTiny && existing.cropPreviewTiny && updates.cropPreviewTiny !== existing.cropPreviewTiny) {
+        URL.revokeObjectURL(existing.cropPreviewTiny);
+      }
       return {
         ...prev,
-        itemMap: { ...prev.itemMap, [itemId]: { ...prev.itemMap[itemId], ...updates } },
+        itemMap: { ...prev.itemMap, [itemId]: { ...existing, ...updates } },
       };
     });
   }, [updateState]);
@@ -288,9 +324,12 @@ export function useGridMakerState(shareId?: string) {
     return idx >= 0 ? idx : null;
   }, [state.cells]);
 
+  const poolSet = useMemo(() => new Set(state.pool), [state.pool]);
+  const cellsSet = useMemo(() => new Set(state.cells.filter(Boolean)), [state.cells]);
+
   const isItemAdded = useCallback((itemId: string) => {
-    return state.cells.includes(itemId) || state.pool.includes(itemId);
-  }, [state.cells, state.pool]);
+    return cellsSet.has(itemId) || poolSet.has(itemId);
+  }, [cellsSet, poolSet]);
 
   // === Pool management ===
 
@@ -298,6 +337,7 @@ export function useGridMakerState(shareId?: string) {
     updateState(prev => {
       // Reject duplicates (check both cells and pool)
       if (prev.cells.includes(item.id) || prev.pool.includes(item.id)) return prev;
+      if (Object.keys(prev.itemMap).length >= MAX_GRID_VNS) return prev;
       const withDefault = { ...item, defaultImageUrl: item.defaultImageUrl ?? item.imageUrl };
       return {
         ...prev,
@@ -433,7 +473,7 @@ export function useGridMakerState(shareId?: string) {
   const importFromVNDB = useCallback((items: VNDBListItem[], toPool = false) => {
     const pref = readTitlePreference();
     updateState(prev => {
-      const sorted = [...items].sort((a, b) => (b.vote ?? 0) - (a.vote ?? 0));
+      const sorted = [...items].sort((a, b) => (b.vote ?? 0) - (a.vote ?? 0)).slice(0, MAX_GRID_VNS);
       const newItemMap: Record<string, GridItem> = {};
 
       if (toPool) {
@@ -566,6 +606,7 @@ export function useGridMakerState(shareId?: string) {
       // Save to localStorage so user edits persist across refresh
       saveToStorage(loadedState);
       try { localStorage.setItem(SHARE_ID_KEY, shareId); } catch {}
+      viewingShareRef.current = true;
       return settings ?? null;
     } catch (err) {
       const msg = err instanceof Error && err.message === 'not_found'
@@ -586,9 +627,12 @@ export function useGridMakerState(shareId?: string) {
     fresh.cropSquare = state.cropSquare;
     setState(fresh);
     saveToStorage(fresh);
+    setSaveStatus({ type: 'cleared' });
   }, [state.gridSize, state.mode, state.cropSquare]);
 
   const itemCount = state.cells.filter(Boolean).length;
+  const vnCount = Object.keys(state.itemMap).length;
+  const isAtCapacity = vnCount >= MAX_GRID_VNS;
 
   return {
     mode: state.mode,
@@ -602,6 +646,7 @@ export function useGridMakerState(shareId?: string) {
     gridTitle: state.gridTitle,
     hydrated,
     itemCount,
+    isAtCapacity,
 
     // Mode
     setMode,
@@ -639,5 +684,6 @@ export function useGridMakerState(shareId?: string) {
     // Storage
     storageWarning,
     dismissStorageWarning: useCallback(() => setStorageWarning(false), []),
+    saveStatus,
   };
 }

@@ -183,7 +183,7 @@ export const GridPool = memo(function GridPool({
     const observer = new ResizeObserver(update);
     observer.observe(poolRef.current);
     return () => observer.disconnect();
-  }, [pinned, collapsed, pool.length]);
+  }, [pinned, collapsed]); // pool.length not needed — ResizeObserver fires when children resize the element
 
   const poolContent = (
     <div

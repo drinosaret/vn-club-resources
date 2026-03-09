@@ -140,6 +140,11 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 pt-8 text-center text-sm">
           <p>A free and open community resource.</p>
+          <p className="mt-2 text-gray-500">
+            <FooterLink href="/privacy/">Privacy</FooterLink>
+            <span className="mx-2">·</span>
+            <FooterLink href="/terms/">Terms</FooterLink>
+          </p>
         </div>
       </div>
     </footer>

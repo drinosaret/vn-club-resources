@@ -1,26 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
-import {
-  DndContext,
-  DragOverlay,
-  MouseSensor,
-  TouchSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import Link from 'next/link';
-import { Upload, Trash2, Loader2, Image as ImageIcon, AlignJustify, Grid3X3, Monitor, Users, Settings, ChevronDown } from 'lucide-react';
+import { Upload, Trash2, Loader2, Image as ImageIcon, AlignJustify, Grid3X3, Monitor, Users, Settings, ChevronDown, Square, RectangleVertical } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
 import { t } from '@/lib/i18n/types';
 import { useTierListState } from '@/hooks/useTierListState';
+import { useTierDrag } from '@/hooks/useTierDrag';
 import { TierRow } from './TierRow';
 import { TierPool } from './TierPool';
-import { TierDragOverlay } from './TierDragOverlay';
 import { TierListControls } from './TierListControls';
 import { TierSearchAdd } from './TierSearchAdd';
 import dynamic from 'next/dynamic';
@@ -31,15 +20,14 @@ import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
 import { useNSFWRevealContext } from '@/lib/nsfw-reveal';
-import { TIER_PRESETS, THUMBNAIL_SIZES, getPresetById, getCurrentPresetId } from '@/lib/tier-config';
+import { TIER_PRESETS, getPresetById, getCurrentPresetId, getSizeConfig } from '@/lib/tier-config';
 import type { DisplayMode, ThumbnailSize, TierListMode } from '@/lib/tier-config';
 
 interface TierListBoardProps {
-  urlParams?: { preset: string | null; user: string | null } | null;
   shareId?: string;
 }
 
-export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
+export function TierListBoard({ shareId }: TierListBoardProps) {
   const locale = useLocale();
   const s = tierListStrings[locale];
 
@@ -49,14 +37,11 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     tiers,
     pool,
     vnMap,
-    activeId,
     importedUser,
     hydrated,
     vnCount,
     setMode,
-    handleDragStart,
-    handleDragEnd,
-    handleDragCancel,
+    handleDrop,
     addVN,
     addVNToTier,
     movePoolItemToTier,
@@ -82,14 +67,15 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     shareError,
     storageWarning,
     dismissStorageWarning,
+    saveStatus,
   } = useTierListState(shareId);
 
-  // Display mode
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('covers');
-  useEffect(() => {
+  // Display mode (lazy init from localStorage — no effect needed)
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(() => {
+    if (typeof window === 'undefined') return 'covers';
     const stored = localStorage.getItem('tierlist-display-mode');
-    if (stored === 'covers' || stored === 'titles') setDisplayMode(stored);
-  }, []);
+    return stored === 'covers' || stored === 'titles' ? stored : 'covers';
+  });
   const toggleDisplayMode = useCallback(() => {
     setDisplayMode(prev => {
       const next = prev === 'covers' ? 'titles' : 'covers';
@@ -99,12 +85,18 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
   }, []);
 
   // Thumbnail size
-  const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>('md');
-  useEffect(() => {
+  const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>(() => {
+    if (typeof window === 'undefined') return 'md';
     const stored = localStorage.getItem('tierlist-thumbnail-size');
-    if (stored === 'sm' || stored === 'md' || stored === 'lg') setThumbnailSize(stored);
-  }, []);
-  const sizeConfig = THUMBNAIL_SIZES[thumbnailSize];
+    return stored === 'sm' || stored === 'md' || stored === 'lg' ? stored : 'md';
+  });
+
+  // Cover aspect ratio
+  const [cropSquare, setCropSquare] = useState(() => {
+    try { return localStorage.getItem('tierlist-crop-square') === 'true'; }
+    catch { return false; }
+  });
+  const sizeConfig = getSizeConfig(thumbnailSize, cropSquare);
 
   // Title / score overlays
   const [showTitles, setShowTitles] = useState(false);
@@ -112,11 +104,10 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
   const [titleMaxH, setTitleMaxH] = useState(40);
 
   // Direct-add: skip pool, add to last tier
-  const [directAdd, setDirectAdd] = useState(false);
-  useEffect(() => {
-    const stored = localStorage.getItem('tierlist-direct-add');
-    if (stored === 'true') setDirectAdd(true);
-  }, []);
+  const [directAdd, setDirectAdd] = useState(() => {
+    try { return localStorage.getItem('tierlist-direct-add') === 'true'; }
+    catch { return false; }
+  });
 
   // Settings dropdown
   const { preference, setPreference } = useTitlePreference();
@@ -161,16 +152,15 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
   const [justDroppedId, setJustDroppedId] = useState<string | null>(null);
   const dropTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Wrapped DnD handlers
-  const wrappedDragEnd = useCallback((event: DragEndEvent) => {
-    if (event.over) {
-      const droppedId = String(event.active.id);
-      setJustDroppedId(droppedId);
-      if (dropTimeoutRef.current) clearTimeout(dropTimeoutRef.current);
-      dropTimeoutRef.current = setTimeout(() => setJustDroppedId(null), 500);
-    }
-    handleDragEnd(event);
-  }, [handleDragEnd]);
+  // Custom zero-re-render drag system
+  const boardRef = useRef<HTMLDivElement>(null);
+  const onDrop = useCallback((itemId: string, containerId: string, insertIndex: number) => {
+    setJustDroppedId(itemId);
+    if (dropTimeoutRef.current) clearTimeout(dropTimeoutRef.current);
+    dropTimeoutRef.current = setTimeout(() => setJustDroppedId(null), 300);
+    handleDrop(itemId, containerId, insertIndex);
+  }, [handleDrop]);
+  useTierDrag(boardRef, { onDrop });
 
   // VNDB import state
   const [showImport, setShowImport] = useState(false);
@@ -179,12 +169,6 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
   const [importProgress, setImportProgress] = useState('');
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 10 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
 
   // Shared import logic
   const runImport = useCallback(async (username: string, toPool = false) => {
@@ -228,26 +212,6 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
     }
   }, [importFromVNDB, setImportedUser, s]);
 
-  // Auto-import from URL params (skip if localStorage already has this user's data)
-  const autoImportedRef = useRef(false);
-  useEffect(() => {
-    if (!hydrated || !urlParams || autoImportedRef.current) return;
-    if (urlParams.user && importedUser === urlParams.user) return;
-    autoImportedRef.current = true;
-
-    const { preset, user } = urlParams;
-
-    if (preset) {
-      const presetDef = getPresetById(preset);
-      if (presetDef) applyPreset(presetDef);
-    }
-
-    if (user) {
-      runImport(user);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated]);
-
   // Auto-load from share link
   const shareLoadedRef = useRef(false);
   useEffect(() => {
@@ -260,6 +224,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
       if (typeof settings.showTitles === 'boolean') setShowTitles(settings.showTitles);
       if (typeof settings.showScores === 'boolean') setShowScores(settings.showScores);
       if (typeof settings.titleMaxH === 'number') setTitleMaxH(settings.titleMaxH);
+      if (typeof settings.cropSquare === 'boolean') setCropSquare(settings.cropSquare);
       if (settings.titlePreference) setPreference(settings.titlePreference);
     });
   }, [shareId, loadFromShare]);
@@ -275,25 +240,6 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
       setImportInput('');
     }
   };
-
-  // Keep URL in sync with current preset + user (skip for shared links)
-  const currentPresetId = getCurrentPresetId(tierDefs);
-  const canSyncUrl = !shareId && !!currentPresetId && !!importedUser;
-
-  useEffect(() => {
-    if (shareId) return;
-    const url = new URL(window.location.href);
-    if (canSyncUrl) {
-      url.searchParams.set('preset', currentPresetId!);
-      url.searchParams.set('user', importedUser!);
-    } else {
-      url.searchParams.delete('preset');
-      url.searchParams.delete('user');
-    }
-    if (url.href !== window.location.href) {
-      history.replaceState(null, '', url);
-    }
-  }, [shareId, canSyncUrl, currentPresetId, importedUser]);
 
   const handleAddVN = useCallback((vn: Parameters<typeof addVN>[0]) => {
     addVN(vn, directAdd);
@@ -321,15 +267,6 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
       {shareError && (
         <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
           {shareError}
-        </div>
-      )}
-
-      {/* Auto-import loading banner */}
-      {importing && urlParams?.user && (
-        <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
-          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-          {t(s, 'import.loadingBanner', { user: urlParams.user })}
-          {importProgress && <span className="text-blue-500 dark:text-blue-400">({importProgress})</span>}
         </div>
       )}
 
@@ -409,7 +346,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
             <AlignJustify className="w-3.5 h-3.5" />
           </button>
         </div>
-        {displayMode === 'covers' && (
+        {displayMode === 'covers' && (<>
           <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             {(['sm', 'md', 'lg'] as const).map(size => (
               <button
@@ -429,7 +366,31 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
               </button>
             ))}
           </div>
-        )}
+          <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => { setCropSquare(false); localStorage.setItem('tierlist-crop-square', 'false'); }}
+              className={`px-2 py-1.5 text-xs font-medium transition-colors ${
+                !cropSquare
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+              title={s['toolbar.coverAspect']}
+            >
+              <RectangleVertical className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => { setCropSquare(true); localStorage.setItem('tierlist-crop-square', 'true'); }}
+              className={`px-2 py-1.5 text-xs font-medium transition-colors ${
+                cropSquare
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+              title={s['toolbar.squareCrop']}
+            >
+              <Square className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </>)}
         <div ref={settingsRef} className="relative">
           <button
             onClick={() => setSettingsOpen(!settingsOpen)}
@@ -444,7 +405,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
           </button>
           {settingsOpen && (
             <div
-              className="absolute right-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-2"
+              className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-2"
             >
               <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
                 <input type="checkbox" checked={showScores} onChange={e => setShowScores(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
@@ -526,7 +487,13 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
           </button>
         )}
         <button
-          onClick={clearAll}
+          onClick={() => {
+            clearAll();
+            const base = `/${locale === 'en' ? '' : locale + '/'}tierlist/`;
+            if (window.location.pathname !== base || window.location.search) {
+              history.replaceState(null, '', base);
+            }
+          }}
           disabled={vnCount === 0}
           className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={s['toolbar.clear']}
@@ -554,6 +521,7 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
           showScores={showScores}
           titleMaxH={titleMaxH}
           listTitle={listTitle}
+          cropSquare={cropSquare}
         />
       </div>
 
@@ -622,14 +590,8 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
       </div>
 
       {/* Tier list board */}
-      <DndContext
-        id="tier-list-dnd"
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={wrappedDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <VnMapProvider value={vnMap}>
+      <VnMapProvider value={vnMap}>
+        <div ref={boardRef}>
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
             {tierDefs.map((tier, index) => (
               <TierRow
@@ -668,17 +630,12 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
             showTitles={showTitles}
             showScores={showScores}
             titleMaxH={titleMaxH}
-            activeDrag={activeId !== null}
             onRemoveVN={removeVN}
             onEditVN={setEditingVnId}
             justDroppedId={justDroppedId}
           />
-
-          <DragOverlay dropAnimation={null}>
-            {activeId ? <TierDragOverlay vn={vnMap[activeId]} displayMode={displayMode} sizeConfig={sizeConfig} /> : null}
-          </DragOverlay>
-        </VnMapProvider>
-      </DndContext>
+        </div>
+      </VnMapProvider>
 
       <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
         {vnCount !== 1
@@ -688,6 +645,13 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 text-center">
         {s[mode === 'characters' ? 'hint.textChars' : 'hint.text']}
       </p>
+      {saveStatus && (
+        <p className="mt-1 text-center text-[10px] text-gray-300 dark:text-gray-600">
+          {saveStatus.type === 'saved'
+            ? `Last autosaved: ${new Date(saveStatus.time).toLocaleTimeString()}`
+            : 'Draft cleared'}
+        </p>
+      )}
 
       <div className="mt-6 flex justify-center">
         <Link
@@ -697,43 +661,6 @@ export function TierListBoard({ urlParams, shareId }: TierListBoardProps) {
           <Grid3X3 className="w-4 h-4" />
           {s['hint.try3x3']}
         </Link>
-      </div>
-
-      {/* How it works */}
-      <div className="mt-10 max-w-3xl mx-auto space-y-6 text-sm text-gray-600 dark:text-gray-400">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{s['howItWorks.title']}</h2>
-
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.adding.title']}</h3>
-            <p>{s['howItWorks.adding.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.organizing.title']}</h3>
-            <p>{s['howItWorks.organizing.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.editing.title']}</h3>
-            <p>{s['howItWorks.editing.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.display.title']}</h3>
-            <p>{s['howItWorks.display.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.exporting.title']}</h3>
-            <p>{s['howItWorks.exporting.body']}</p>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-1">{s['howItWorks.autoSave.title']}</h3>
-            <p>{s['howItWorks.autoSave.body']}</p>
-          </div>
-        </div>
       </div>
 
       {/* Add-to-tier modal */}

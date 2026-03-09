@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Cropper from 'react-easy-crop';
 import type { Area, Point } from 'react-easy-crop';
-import { X, RotateCcw, ZoomIn, Type, Star } from 'lucide-react';
+import { X, RotateCcw, ZoomIn, Type, Star, ExternalLink } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import type { GridItem, CropData } from '@/hooks/useGridMakerState';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -97,6 +97,17 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
     ? getDisplayTitle({ title: item.title, title_jp: item.titleJp, title_romaji: item.titleRomaji }, preference)
     : item.title;
 
+  const isVN = item.id.startsWith('v');
+  const numericId = item.id.replace(/^[vc]/, '');
+  const pageUrl = isVN ? `/vn/${numericId}/` : `/character/${numericId}/`;
+  const vndbUrl = `https://vndb.org/${item.id}`;
+  const displayTitle = item.customTitle || autoTitle;
+
+  const altTitle = (item.titleJp || item.titleRomaji)
+    ? getDisplayTitle({ title: item.title, title_jp: item.titleJp, title_romaji: item.titleRomaji }, preference === 'romaji' ? 'japanese' : 'romaji')
+    : null;
+  const showAltTitle = altTitle && altTitle !== displayTitle;
+
   const handleCropComplete = useCallback((_croppedArea: Area, _croppedAreaPixels: Area) => {
     setCroppedArea(_croppedArea);
   }, []);
@@ -180,7 +191,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <h3 id="crop-modal-title" className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-2">
-            {t(s, 'crop.editTitle', { title: item.customTitle || autoTitle })}
+            {t(s, 'crop.editTitle', { title: displayTitle })}
           </h3>
           <button
             onClick={onCancel}
@@ -192,6 +203,29 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
 
         {/* Title + Score inputs */}
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0 space-y-2">
+          <div className="flex flex-col items-center gap-1.5">
+            {showAltTitle && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-full">{altTitle}</span>}
+            <div className="flex items-center gap-2">
+              <a
+                href={pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-md transition-colors"
+              >
+                VN Club
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <a
+                href={vndbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+              >
+                VNDB
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
           <label className="flex items-center gap-2">
             <Type className="w-4 h-4 text-gray-400 shrink-0" />
             <input

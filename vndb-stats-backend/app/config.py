@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     vndb_dump_url_traits: str = "https://dl.vndb.org/dump/vndb-traits-latest.json.gz"
     dump_storage_path: str = "/app/data"  # Persistent volume for downloaded dumps (mounted from docker-compose)
 
+    # Cloudflare Turnstile (bot protection for shared link creation)
+    turnstile_secret_key: str | None = None  # If set, Turnstile tokens are verified on POST /shared
+
     # Admin authentication
     admin_api_key: str | None = None  # Required for admin/logs endpoints
 

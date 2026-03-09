@@ -1,24 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { Grid3X3, Globe } from 'lucide-react';
 import { GridBoard } from '@/components/grid-maker/GridBoard';
-import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { gridMakerStrings } from '@/lib/i18n/translations/grid-maker';
 
 export default function GridMakerContent({ shareId }: { shareId?: string } = {}) {
-  const searchParams = useSearchParams();
   const locale = useLocale();
   const s = gridMakerStrings[locale];
-
-  const urlParams = useMemo(() => {
-    const user = searchParams.get('user');
-    if (!user) return null;
-    return { user };
-  }, [searchParams]);
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center px-4 py-8 sm:py-12">
@@ -42,8 +32,7 @@ export default function GridMakerContent({ shareId }: { shareId?: string } = {})
           </Link>
         </div>
 
-        <GridBoard urlParams={urlParams} shareId={shareId} />
-        <VNDBAttribution />
+        <GridBoard shareId={shareId} />
       </div>
     </div>
   );

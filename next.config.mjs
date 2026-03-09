@@ -71,11 +71,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com${process.env.NEXT_PUBLIC_UMAMI_URL ? ' ' + process.env.NEXT_PUBLIC_UMAMI_URL : ''}`,
+              `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://challenges.cloudflare.com${process.env.NEXT_PUBLIC_UMAMI_URL ? ' ' + process.env.NEXT_PUBLIC_UMAMI_URL : ''}`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://t.vndb.org https://pbs.twimg.com https://video.twimg.com https://ton.twimg.com https://abs.twimg.com https://store.steampowered.com https://cdn.akamai.steamstatic.com https://icons.duckduckgo.com https://vnclub.org",
               "font-src 'self'",
               `connect-src ${connectSrc}`,
+              "frame-src https://challenges.cloudflare.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -7,12 +7,18 @@ interface GridDragOverlayProps {
   item: GridItem | undefined;
   cropSquare?: boolean;
   previewUrl?: string | null;
+  cellWidth?: number;
 }
 
-export function GridDragOverlay({ item, cropSquare, previewUrl }: GridDragOverlayProps) {
+export function GridDragOverlay({ item, cropSquare, previewUrl, cellWidth }: GridDragOverlayProps) {
   const src = previewUrl ?? item?.imageUrl;
+  const w = cellWidth ?? 100;
+  const h = cropSquare ? w : Math.round(w * 1.5);
   return (
-    <div className={`${cropSquare ? 'w-[100px] h-[100px]' : 'w-[100px] h-[150px]'} rounded-sm overflow-hidden shadow-xl ring-2 ring-purple-500 rotate-2 opacity-90`}>
+    <div
+      className="rounded-sm overflow-hidden shadow-xl ring-2 ring-purple-500 rotate-2 opacity-90"
+      style={{ width: w, height: h }}
+    >
       {src ? (
         <NSFWImage
           src={src}

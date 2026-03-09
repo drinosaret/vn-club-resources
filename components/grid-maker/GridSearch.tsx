@@ -17,6 +17,7 @@ interface GridSearchProps {
   mode: GridMode;
   onAdd: (item: GridItem) => void;
   isItemAdded: (itemId: string) => boolean;
+  isAtCapacity?: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -24,7 +25,7 @@ function isVNResult(result: SearchResult): result is VNSearchResult {
   return 'title' in result && !('vn_name' in result);
 }
 
-export function GridSearch({ mode, onAdd, isItemAdded, inputRef }: GridSearchProps) {
+export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }: GridSearchProps) {
   const locale = useLocale();
   const s = gridMakerStrings[locale];
   const displayTitle = useDisplayTitle();
@@ -187,9 +188,11 @@ export function GridSearch({ mode, onAdd, isItemAdded, inputRef }: GridSearchPro
     setIsOpen(false);
   }, [mode]);
 
-  const placeholder = mode === 'characters'
-    ? s['search.charsPlaceholder']
-    : s['search.vnsPlaceholder'];
+  const placeholder = isAtCapacity
+    ? (mode === 'characters' ? s['search.charsCapacityPlaceholder'] : s['search.capacityPlaceholder'])
+    : mode === 'characters'
+      ? s['search.charsPlaceholder']
+      : s['search.vnsPlaceholder'];
 
   return (
     <div className="relative">
@@ -202,6 +205,7 @@ export function GridSearch({ mode, onAdd, isItemAdded, inputRef }: GridSearchPro
           value={query}
           onChange={e => handleInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          disabled={isAtCapacity}
           onFocus={() => { if (results.length > 0) setIsOpen(true); }}
           placeholder={placeholder}
           role="combobox"

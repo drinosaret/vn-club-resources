@@ -11,10 +11,9 @@ function readTitlePreference(): TitlePreference {
   return 'romaji';
 }
 
-function resolveItemTitle(item: GridItem): string {
+function resolveItemTitle(item: GridItem, pref: TitlePreference): string {
   if (item.customTitle) return item.customTitle;
   if (item.titleJp || item.titleRomaji) {
-    const pref = readTitlePreference();
     return getDisplayTitle({ title: item.title, title_jp: item.titleJp, title_romaji: item.titleRomaji }, pref) || item.title;
   }
   return item.title;
@@ -147,10 +146,11 @@ function wrapText(
 }
 
 function getExportUrl(url: string): string {
-  return url.replace(/w=\d+/, 'w=512');
+  return url.replace(/w=\d+/, 'w=800');
 }
 
 export type GridExportFormat = 'jpeg' | 'png' | 'webp';
+export type GridExportScale = 1 | 1.5 | 2;
 
 export function useGridExport(
   gridSize: number,
@@ -164,11 +164,14 @@ export function useGridExport(
   showScores: boolean,
   gridTitle: string,
   titleMaxH: number,
+  exportScale: GridExportScale = 2,
   nsfwState?: ExportNSFWState,
 ) {
   const [exporting, setExporting] = useState(false);
 
   const renderToCanvas = useCallback(async (): Promise<HTMLCanvasElement> => {
+    // Cache title preference once for the entire export (avoids N localStorage reads)
+    const titlePref = readTitlePreference();
     const gap = showFrame ? 6 : 0;
     const cellW = CELL_SIZE;
     const cellH = cropSquare ? CELL_SIZE : Math.round(CELL_SIZE * 1.5);
@@ -177,10 +180,13 @@ export function useGridExport(
     const canvasW = gridSize * cellW + (gridSize - 1) * gap;
     const canvasH = titleBarH + gridSize * cellH + (gridSize - 1) * gap;
 
+    const scale = exportScale;
+
     const canvas = document.createElement('canvas');
-    canvas.width = canvasW;
-    canvas.height = canvasH;
+    canvas.width = Math.round(canvasW * scale);
+    canvas.height = Math.round(canvasH * scale);
     const ctx = canvas.getContext('2d')!;
+    ctx.scale(scale, scale);
 
     // Background
     const isDark = document.documentElement.classList.contains('dark');
@@ -231,7 +237,7 @@ export function useGridExport(
           ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          const title = resolveItemTitle(item);
+          const title = resolveItemTitle(item, titlePref);
           ctx.fillText(title, x + cellW / 2, y + cellH / 2, cellW - 16);
         }
         continue;
@@ -266,7 +272,7 @@ export function useGridExport(
 
       // Title overlay
       if (showTitles && item) {
-        const titleText = resolveItemTitle(item);
+        const titleText = resolveItemTitle(item, titlePref);
         if (titleText) {
           ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
           const lineH = Math.round(20 * 1.25);
@@ -289,15 +295,17 @@ export function useGridExport(
     }
 
     return canvas;
-  }, [gridSize, cells, itemMap, cropSquare, showFrame, showTitles, showScores, gridTitle, titleMaxH, nsfwState]);
+  }, [gridSize, cells, itemMap, cropSquare, showFrame, showTitles, showScores, gridTitle, titleMaxH, exportScale, nsfwState]);
 
-  const generateBlob = useCallback(async (): Promise<Blob> => {
+  const generateBlob = useCallback(async (format?: GridExportFormat): Promise<Blob> => {
     const canvas = await renderToCanvas();
+    const mimeType = format === 'webp' ? 'image/webp' : format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const quality = format && format !== 'png' ? 0.92 : undefined;
     return new Promise((resolve, reject) => {
       canvas.toBlob(blob => {
         if (blob) resolve(blob);
         else reject(new Error('Canvas toBlob failed'));
-      }, 'image/png');
+      }, mimeType, quality);
     });
   }, [renderToCanvas]);
 

@@ -3,6 +3,7 @@
  */
 
 import { getBackendUrlOptional } from './config';
+import { getTurnstileToken } from './turnstile';
 
 let _backendUrl: string | undefined;
 function getUrl(): string {
@@ -35,10 +36,14 @@ export async function createSharedLayout(
   type: 'grid' | 'tierlist',
   data: Record<string, unknown>,
 ): Promise<string> {
+  const token = await getTurnstileToken('share');
+  const body: Record<string, unknown> = { type, data };
+  if (token) body.turnstile_token = token;
+
   const res = await fetch(`${getUrl()}/api/v1/shared`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, data }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     if (res.status === 429) throw new Error('rate_limited');

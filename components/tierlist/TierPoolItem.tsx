@@ -1,7 +1,6 @@
 'use client';
 
 import { memo, useMemo } from 'react';
-import { useDraggable } from '@dnd-kit/core';
 import { X, Pencil } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { useLocale } from '@/lib/i18n/locale-context';
@@ -24,18 +23,13 @@ interface TierPoolItemProps {
   justDropped?: boolean;
 }
 
-// Lightweight pool-only version of TierItem: useDraggable instead of useSortable, plain <img> instead of NSFWImage
+const ITEM_STYLE: React.CSSProperties = { contain: 'style paint' };
+
+// Lightweight pool-only version of TierItem: plain <img> instead of NSFWImage, no dnd-kit hooks
 export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, sizeConfig, showTitles, showScores, titleMaxH, nsfwRevealed, onRemove, onEdit, justDropped }: TierPoolItemProps) {
   const { preference } = useTitlePreference();
   const locale = useLocale();
   const s = tierListStrings[locale];
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    isDragging,
-  } = useDraggable({ id });
 
   const title = useMemo(() => {
     const rawTitle = vn?.title ?? id;
@@ -50,11 +44,9 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
   if (displayMode === 'titles') {
     return (
       <div
-        ref={setNodeRef}
-        style={{ opacity: isDragging ? 0.4 : 1, contain: 'style paint', touchAction: 'manipulation' }}
-        {...attributes}
-        {...listeners}
-        className={`relative flex items-center gap-1 px-1.5 py-0.5 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing touch-manipulation select-none group/tier-item ${justDropped ? 'tier-just-dropped' : ''}`}
+        data-item-id={id}
+        style={ITEM_STYLE}
+        className={`relative flex items-center gap-1 px-1.5 py-0.5 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item ${justDropped ? 'tier-just-dropped' : ''}`}
         title={title}
       >
         <span className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -87,11 +79,9 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
 
   return (
     <div
-      ref={setNodeRef}
-      style={{ opacity: isDragging ? 0.4 : 1, contain: 'style paint' }}
-      {...attributes}
-      {...listeners}
-      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing touch-manipulation select-none group/tier-item bg-gray-200 dark:bg-gray-700 ${justDropped ? 'tier-just-dropped' : ''}`}
+      data-item-id={id}
+      style={ITEM_STYLE}
+      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700 ${justDropped ? 'tier-just-dropped' : ''}`}
       title={title}
     >
       {vn?.imageUrl ? (
@@ -101,16 +91,16 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
             alt={title}
             className="w-full h-full object-cover object-top"
             style={{ imageRendering: 'pixelated' }}
-            loading="lazy"
-            decoding="async"
+            loading={justDropped ? 'eager' : 'lazy'}
+            decoding={justDropped ? 'sync' : 'async'}
           />
         ) : (
           <img
             src={vn.imageUrl}
             alt={title}
             className="w-full h-full object-cover object-top"
-            loading="lazy"
-            decoding="async"
+            loading={justDropped ? 'eager' : 'lazy'}
+            decoding={justDropped ? 'sync' : 'async'}
           />
         )
       ) : (

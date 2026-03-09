@@ -5,7 +5,7 @@ import { Download, Loader2 } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
 import { useTierListExport } from '@/hooks/useTierListExport';
-import type { ExportFormat } from '@/hooks/useTierListExport';
+import type { ExportFormat, ExportScale } from '@/hooks/useTierListExport';
 import { useImageShare } from '@/hooks/useImageShare';
 import { ShareMenu } from '@/components/shared/ShareMenu';
 import { ShareToast } from '@/components/shared/ShareToast';
@@ -29,10 +29,11 @@ interface TierListControlsProps {
   showScores: boolean;
   titleMaxH: number;
   listTitle: string;
+  cropSquare: boolean;
 }
 
 export function TierListControls({
-  mode, tierDefs, tiers, pool, vnMap, username, displayMode, thumbnailSize, sizeConfig, vnCount, importing, showTitles, showScores, titleMaxH, listTitle,
+  mode, tierDefs, tiers, pool, vnMap, username, displayMode, thumbnailSize, sizeConfig, vnCount, importing, showTitles, showScores, titleMaxH, listTitle, cropSquare,
 }: TierListControlsProps) {
   const locale = useLocale();
   const s = tierListStrings[locale];
@@ -42,7 +43,8 @@ export function TierListControls({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [nsfwContext?.allRevealed, nsfwContext?.isRevealed]
   );
-  const { exporting, exportAsImage, generateBlob } = useTierListExport(tierDefs, tiers, vnMap, username, displayMode, showTitles, showScores, sizeConfig, listTitle, titleMaxH, nsfwExportState);
+  const [exportScale, setExportScale] = useState<ExportScale>(2);
+  const { exporting, exportAsImage, generateBlob, exportError, dismissExportError } = useTierListExport(tierDefs, tiers, vnMap, username, displayMode, showTitles, showScores, sizeConfig, listTitle, titleMaxH, exportScale, nsfwExportState);
 
   const buildShareData = useCallback(() => {
     let titlePreference: 'romaji' | 'japanese' = 'romaji';
@@ -51,7 +53,7 @@ export function TierListControls({
       if (stored === 'japanese' || stored === 'romaji') titlePreference = stored;
     } catch { /* ignore */ }
 
-    const settings = { displayMode, thumbnailSize, showTitles, showScores, titleMaxH, titlePreference };
+    const settings = { displayMode, thumbnailSize, showTitles, showScores, titleMaxH, cropSquare, titlePreference };
 
     const overrides: Record<string, Record<string, unknown>> = {};
     for (const [id, vn] of Object.entries(vnMap)) {
@@ -72,12 +74,21 @@ export function TierListControls({
       ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
     };
     return shareData;
-  }, [mode, tierDefs, tiers, pool, listTitle, displayMode, thumbnailSize, showTitles, showScores, titleMaxH, vnMap]);
+  }, [mode, tierDefs, tiers, pool, listTitle, displayMode, thumbnailSize, showTitles, showScores, titleMaxH, cropSquare, vnMap]);
 
+  // Cached share URL — reuses existing link if data hasn't changed
+  const lastShareRef = useRef<{ hash: string; url: string } | null>(null);
   const getShareUrl = useCallback(async () => {
-    const id = await createSharedLayout('tierlist', buildShareData());
-    return `${window.location.origin}/tierlist/s/${id}/`;
+    const data = buildShareData();
+    const dataHash = JSON.stringify(data);
+    if (lastShareRef.current?.hash === dataHash) return lastShareRef.current.url;
+    const id = await createSharedLayout('tierlist', data);
+    const url = `${window.location.origin}/tierlist/s/${id}/`;
+    lastShareRef.current = { hash: dataHash, url };
+    return url;
   }, [buildShareData]);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('jpeg');
+
   const imageShare = useImageShare({
     generateBlob,
     shareText: mode === 'characters' ? s['controls.charShareText'] : s['controls.shareText'],
@@ -85,66 +96,44 @@ export function TierListControls({
     filename: `${mode === 'characters' ? 'char' : 'vn'}-tierlist-${username || 'list'}.png`,
     getShareUrl,
     title: listTitle || undefined,
+    exportFormat,
   });
 
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('jpeg');
-
-  // Share link — cache last share to avoid creating duplicate links
+  // Share link — "Copy Link" button handler
   const [creatingLink, setCreatingLink] = useState(false);
   const [linkToast, setLinkToast] = useState<string | null>(null);
-  const lastShareRef = useRef<{ hash: string; url: string } | null>(null);
+  const [linkToastIsError, setLinkToastIsError] = useState(false);
+  const showLinkToast = useCallback((msg: string, duration: number, isError = false) => {
+    setLinkToast(msg);
+    setLinkToastIsError(isError);
+    setTimeout(() => setLinkToast(null), duration);
+  }, []);
   const handleCreateLink = useCallback(async () => {
     if (vnCount === 0) return;
     setCreatingLink(true);
-    const data = buildShareData();
-    const dataHash = JSON.stringify(data);
-
-    // Reuse existing link if data hasn't changed
-    if (lastShareRef.current?.hash === dataHash) {
-      const url = lastShareRef.current.url;
-      const result = await copyAsyncText(Promise.resolve(url)).catch(() => null);
-      if (result?.copied) {
-        setLinkToast('Link copied!');
-        setTimeout(() => setLinkToast(null), 3000);
-      } else {
-        setLinkToast(url);
-        setTimeout(() => setLinkToast(null), 8000);
-      }
-      setCreatingLink(false);
-      return;
-    }
 
     let shareError: string | null = null;
-    const urlPromise = createSharedLayout('tierlist', data)
-      .then(id => {
-        const url = `${window.location.origin}/tierlist/s/${id}/`;
-        lastShareRef.current = { hash: dataHash, url };
-        return url;
-      })
-      .catch((err: Error) => {
-        shareError = err.message;
-        throw err;
-      });
+    const urlPromise = getShareUrl().catch((err: Error) => {
+      shareError = err.message;
+      throw err;
+    });
     const result = await copyAsyncText(urlPromise).catch(() => null);
     if (!result) {
       const msg = shareError === 'rate_limited'
-        ? 'Too many requests - please wait a minute'
-        : 'Failed to create link';
-      setLinkToast(msg);
-      setTimeout(() => setLinkToast(null), 4000);
+        ? s['controls.rateLimited']
+        : s['controls.createFailed'];
+      showLinkToast(msg, 4000, true);
       const { logReporter } = await import('@/lib/log-reporter');
       logReporter.error('Tierlist share creation failed', {
         component: 'TierListControls', mode, vnCount, shareError,
       });
     } else if (result.copied) {
-      setLinkToast('Link copied!');
-      setTimeout(() => setLinkToast(null), 3000);
+      showLinkToast(s['controls.linkCopied'], 3000);
     } else {
-      setLinkToast(result.text);
-      setTimeout(() => setLinkToast(null), 8000);
+      showLinkToast(result.text, 8000);
     }
     setCreatingLink(false);
-  }, [buildShareData, vnCount, mode]);
+  }, [getShareUrl, vnCount, mode, s, showLinkToast]);
 
   const FORMAT_LABELS: Record<ExportFormat, string> = { jpeg: 'JPG', png: 'PNG', webp: 'WebP' };
   const exportDisabled = exporting || vnCount === 0 || !!importing;
@@ -169,21 +158,27 @@ export function TierListControls({
           {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
           <span className="hidden sm:inline">{s['controls.export']}</span>
         </button>
-        <select
-          value={exportFormat}
-          onChange={e => setExportFormat(e.target.value as ExportFormat)}
+        <button
+          onClick={() => setExportScale(exportScale === 1 ? 1.5 : exportScale === 1.5 ? 2 : 1)}
           disabled={exportDisabled}
-          className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-blue-500 rounded-r-lg px-2 cursor-pointer transition-colors appearance-none text-center"
-          aria-label="Export format"
+          className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-blue-500 px-2 cursor-pointer transition-colors"
+          title={s['controls.exportScale']}
         >
-          {(['jpeg', 'png', 'webp'] as const).map(f => (
-            <option key={f} value={f}>{FORMAT_LABELS[f]}</option>
-          ))}
-        </select>
+          {exportScale}x
+        </button>
+        <button
+          onClick={() => setExportFormat(exportFormat === 'jpeg' ? 'png' : exportFormat === 'png' ? 'webp' : 'jpeg')}
+          disabled={exportDisabled}
+          className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-blue-500 rounded-r-lg px-2 cursor-pointer transition-colors"
+          title="Export format"
+        >
+          {FORMAT_LABELS[exportFormat]}
+        </button>
       </div>
 
       <ShareToast message={imageShare.toastMessage} isError={imageShare.toastIsError} onDismiss={imageShare.dismissToast} />
-      <ShareToast message={linkToast} isError={linkToast === 'Failed to create link' || linkToast === 'Too many requests - please wait a minute'} onDismiss={() => setLinkToast(null)} />
+      <ShareToast message={linkToast} isError={linkToastIsError} onDismiss={() => setLinkToast(null)} />
+      <ShareToast message={exportError} isError onDismiss={dismissExportError} />
     </>
   );
 }

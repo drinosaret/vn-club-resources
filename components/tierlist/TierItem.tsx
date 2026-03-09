@@ -1,7 +1,6 @@
 'use client';
 
-import { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
+import { memo, useMemo, useState, useCallback, useRef } from 'react';
 import { X, Pencil } from 'lucide-react';
 import { NSFWImage } from '@/components/NSFWImage';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
@@ -23,21 +22,12 @@ interface TierItemProps {
   justDropped?: boolean;
 }
 
+const ITEM_STYLE: React.CSSProperties = { contain: 'style paint' };
+
 export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode, sizeConfig, showTitles, showScores, titleMaxH, onRemove, onEdit, justDropped }: TierItemProps) {
   const { preference } = useTitlePreference();
   const locale = useLocale();
   const s = tierListStrings[locale];
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    isDragging,
-  } = useSortable({ id });
-
-  const style: React.CSSProperties = {
-    opacity: isDragging ? 0.4 : 1,
-    contain: 'style paint' as const,
-  };
 
   const title = useMemo(() => {
     const rawTitle = vn?.title ?? id;
@@ -65,14 +55,12 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
   if (displayMode === 'titles') {
     return (
       <div
-        ref={setNodeRef}
-        style={{ ...style, touchAction: 'manipulation' }}
-        {...attributes}
-        {...listeners}
-        className={`relative flex items-center gap-1 px-1.5 py-0.5 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing touch-manipulation select-none group/tier-item ${justDropped ? 'tier-just-dropped' : ''}`}
+        data-item-id={id}
+        style={ITEM_STYLE}
+        className={`relative flex items-center gap-1 px-1.5 py-0.5 max-w-full rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item ${justDropped ? 'tier-just-dropped' : ''}`}
         title={title}
       >
-        <span className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
           {title}
           {showScores && vn?.vote && (
             <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium">{vn.vote}</span>
@@ -102,11 +90,9 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing touch-manipulation select-none group/tier-item bg-gray-200 dark:bg-gray-700 ${justDropped ? 'tier-just-dropped' : ''}`}
+      data-item-id={id}
+      style={ITEM_STYLE}
+      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700 ${justDropped ? 'tier-just-dropped' : ''}`}
       title={title}
     >
       {vn?.imageUrl ? (
@@ -123,7 +109,7 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
             fetchPriority={tierIndex === 0 ? 'high' : undefined}
             onLoad={handleImageLoad}
           />
-          {!imageLoaded && <div className="absolute inset-0 image-placeholder" />}
+          {!imageLoaded && <div className="absolute inset-0 image-placeholder pointer-events-none" />}
         </>
       ) : (
         <div className={`w-full h-full flex items-center justify-center ${sizeConfig.noImageFontClass} text-gray-500 dark:text-gray-400 text-center p-0.5 leading-tight`}>

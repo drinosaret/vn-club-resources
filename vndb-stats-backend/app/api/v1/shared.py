@@ -5,17 +5,20 @@ import re
 import secrets
 import logging
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, field_validator
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.db.database import get_db
+from app.db.database import get_db, async_session
 from app.db.models import SharedLayout
 from app.core.cache import get_cache
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +33,22 @@ SHARE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{6,12}$")
 MAX_PAYLOAD_ITEMS = 500
 MAX_PAYLOAD_BYTES = 50_000  # 50KB — generous for even max tier lists
 MAX_TITLE_LEN = 80
-MAX_TIER_LABEL_LEN = 30
+MAX_TIER_LABEL_LEN = 40
 MAX_TIER_COLOR_LEN = 80
 MAX_TIER_ID_LEN = 20
 MAX_CUSTOM_TITLE_LEN = 80
 MAX_OVERRIDE_IMAGE_URL_LEN = 500
 MAX_RETRIES = 3
+
+# Trusted image URL patterns for override imageUrl validation.
+# Relative paths from our own image proxy, plus VNDB's CDN.
+TRUSTED_IMAGE_PATTERNS = (
+    "/img/",             # Our image proxy: /img/cv/12/12345.webp
+    "/api/vndb-image/",  # API image route
+    "/api/proxy-image",  # General proxy route
+    "https://t.vndb.org/",
+    "http://t.vndb.org/",
+)
 
 
 def _generate_id() -> str:
@@ -48,7 +61,7 @@ def _validate_item_id(item_id: str) -> bool:
 
 ALLOWED_OVERRIDE_KEYS = {"customTitle", "imageUrl", "imageSexual", "cropData", "vote"}
 ALLOWED_GRID_SETTINGS_KEYS = {"cropSquare", "showFrame", "showTitles", "showScores", "titleMaxH", "titlePreference"}
-ALLOWED_TIERLIST_SETTINGS_KEYS = {"displayMode", "thumbnailSize", "showTitles", "showScores", "titleMaxH", "titlePreference"}
+ALLOWED_TIERLIST_SETTINGS_KEYS = {"displayMode", "thumbnailSize", "showTitles", "showScores", "titleMaxH", "cropSquare", "titlePreference"}
 ALLOWED_TIER_DEF_KEYS = {"id", "label", "color", "textColor", "noAutoSort"}
 
 
@@ -70,10 +83,14 @@ def _validate_overrides(overrides: dict, valid_item_ids: set[str]) -> None:
             if not isinstance(ov["customTitle"], str) or len(ov["customTitle"]) > MAX_CUSTOM_TITLE_LEN:
                 raise HTTPException(status_code=400, detail="customTitle too long")
         if "imageUrl" in ov:
-            if not isinstance(ov["imageUrl"], str) or len(ov["imageUrl"]) > MAX_OVERRIDE_IMAGE_URL_LEN:
+            url = ov["imageUrl"]
+            if not isinstance(url, str) or len(url) > MAX_OVERRIDE_IMAGE_URL_LEN:
                 raise HTTPException(status_code=400, detail="imageUrl too long")
-            if not ov["imageUrl"].startswith(("http://", "https://")):
-                raise HTTPException(status_code=400, detail="imageUrl must use http or https")
+            if not any(url.startswith(prefix) for prefix in TRUSTED_IMAGE_PATTERNS):
+                raise HTTPException(
+                    status_code=400,
+                    detail="imageUrl must be from a trusted source",
+                )
         if "imageSexual" in ov:
             if not isinstance(ov["imageSexual"], (int, float)):
                 raise HTTPException(status_code=400, detail="imageSexual must be a number")
@@ -224,9 +241,35 @@ def _validate_tierlist_data(data: dict) -> None:
             del td[k]
 
 
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
+async def _verify_turnstile(token: str, ip: str | None = None) -> bool:
+    """Verify a Turnstile token with Cloudflare. Returns True if valid."""
+    secret = get_settings().turnstile_secret_key
+    if not secret:
+        return True  # Turnstile not configured — allow all
+
+    payload: dict[str, str] = {"secret": secret, "response": token}
+    if ip:
+        payload["remoteip"] = ip
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(TURNSTILE_VERIFY_URL, data=payload)
+            result = resp.json()
+            if not result.get("success"):
+                logger.warning("Turnstile verification failed: %s", result.get("error-codes"))
+            return bool(result.get("success"))
+    except Exception as e:
+        logger.error("Turnstile verification error: %s", e)
+        return True  # Fail open — don't block real users if Cloudflare is down
+
+
 class SharedLayoutCreate(BaseModel):
     type: str
     data: dict
+    turnstile_token: str | None = None
 
     @field_validator("type")
     @classmethod
@@ -290,6 +333,15 @@ async def create_shared_layout(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a shareable link for a grid or tier list layout."""
+    # Turnstile bot protection
+    settings = get_settings()
+    if settings.turnstile_secret_key:
+        if not body.turnstile_token:
+            raise HTTPException(status_code=403, detail="Verification required")
+        client_ip = get_remote_address(request)
+        if not await _verify_turnstile(body.turnstile_token, client_ip):
+            raise HTTPException(status_code=403, detail="Verification failed")
+
     # Payload size cap
     payload_size = len(json.dumps(body.data).encode())
     if payload_size > MAX_PAYLOAD_BYTES:
@@ -310,7 +362,11 @@ async def create_shared_layout(
 
         layout = SharedLayout(id=share_id, type=body.type, data=body.data)
         db.add(layout)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            continue
 
         # Cache it immediately
         cache = get_cache()
@@ -343,6 +399,8 @@ async def get_shared_layout(
 
     cached = await cache.get(cache_key)
     if cached:
+        # Increment view count in a separate session so the cached response is unaffected
+        _increment_view_count_bg(share_id)
         return cached
 
     result = await db.execute(
@@ -360,15 +418,30 @@ async def get_shared_layout(
     }
     await cache.set(cache_key, response, ttl=CACHE_TTL)
 
-    # Increment view count (fire-and-forget)
-    try:
-        await db.execute(
-            update(SharedLayout)
-            .where(SharedLayout.id == share_id)
-            .values(view_count=SharedLayout.view_count + 1)
-        )
-        await db.commit()
-    except Exception:
-        pass
+    # Increment view count in a separate session to avoid tainting the read session
+    _increment_view_count_bg(share_id)
 
     return response
+
+
+def _increment_view_count_bg(share_id: str) -> None:
+    """Fire-and-forget view count increment using a separate DB session."""
+    import asyncio
+
+    async def _do_increment():
+        try:
+            async with async_session() as session:
+                await session.execute(
+                    update(SharedLayout)
+                    .where(SharedLayout.id == share_id)
+                    .values(view_count=SharedLayout.view_count + 1, last_viewed_at=func.now())
+                )
+                await session.commit()
+        except Exception as e:
+            logger.warning("view_count update failed for %s: %s", share_id, e)
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_do_increment())
+    except RuntimeError:
+        pass

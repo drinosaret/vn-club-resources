@@ -1,7 +1,7 @@
 const en = {
   // GridMakerContent
   'page.title': 'Visual Novel 3x3 Maker',
-  'page.subtitle': 'Create a collage of your top visual novels or characters. Import from your VNDB list or search manually, then export as a shareable image.',
+  'page.subtitle': 'Create and share a collage of your favorite visual novels or characters. Import from VNDB, drag to arrange, crop covers, and export as a high-res image.',
 
   // GridBoard — toolbar
   'toolbar.vnMode': 'Visual novels mode',
@@ -31,9 +31,15 @@ const en = {
   'export.displaySettings': 'Display settings',
   'export.copyImage': 'Copy',
   'export.export': 'Export',
+  'export.exportScale': 'Export resolution (1x or 2x)',
   'export.shareText': 'My {size}x{size} VN {mode}grid',
   'export.shareTextChar': 'character ',
   'export.shareHashtags': '#VNGrid #VNClub',
+
+  // Share link messages
+  'share.linkCopied': 'Link copied!',
+  'share.rateLimited': 'Too many requests - please wait a minute',
+  'share.createFailed': 'Failed to create link',
 
   // GridBoard — settings dropdown
   'settings.frame': 'Frame',
@@ -61,6 +67,8 @@ const en = {
   'search.charsPlaceholder': 'Search characters to add...',
   'search.vnsPlaceholder': 'Search VNs by title or VNDB ID (e.g. v17)...',
   'search.added': 'Added',
+  'search.capacityPlaceholder': 'Grid is at capacity (500 VNs)',
+  'search.charsCapacityPlaceholder': 'Grid is at capacity (500 characters)',
   'search.error': 'Search unavailable. Try again.',
   'search.noResults': 'No results found',
 
@@ -69,6 +77,9 @@ const en = {
 
   // CropModal
   'crop.editTitle': 'Edit \u2014 {title}',
+  'crop.editTitlePrefix': 'Edit \u2014 ',
+  'crop.viewOnSite': 'View on VN Club',
+  'crop.viewOnVndb': 'View on VNDB',
   'crop.resetAutoTitle': 'Reset to auto title',
   'crop.scorePlaceholder': 'Score (10\u2013100)',
   'crop.clearScore': 'Clear score',
@@ -94,17 +105,17 @@ const en = {
   // How it works
   'howItWorks.title': 'How it works',
   'howItWorks.adding.title': 'Adding items',
-  'howItWorks.adding.body': 'Use the search bar to find visual novels or characters by name or VNDB ID (e.g. \u201cv17\u201d or \u201c17\u201d). Click a result to add it to the next empty cell, or click a specific empty cell first to target that slot. Switch between VN and character mode with the toggle buttons. You can also import your top-rated VNs from VNDB by entering your username or user ID, and the grid fills automatically with your highest-scored titles.',
+  'howItWorks.adding.body': 'Search for visual novels or characters by name or VNDB ID (e.g. \u201cv17\u201d or \u201c17\u201d). Click a result to add it to the pool, or enable \u201cAdd directly to grid\u201d in the cogwheel to place items into the next empty cell. You can also click an empty cell first, then search within the modal to target that specific slot. Switch between VN and character mode with the toggle buttons. To bulk-import, enter your VNDB username or user ID and your top 500 highest-scored titles fill the grid automatically. The grid holds up to 500 items total (grid cells + pool).',
   'howItWorks.gridSize.title': 'Grid size and layout',
-  'howItWorks.gridSize.body': 'Choose between 3\u00d73, 4\u00d74, or 5\u00d75 grids. Switch between square crop and cover (2:3) aspect ratios. Drag and drop items to rearrange them. Dragging swaps the positions of two cells. If you shrink the grid size, items outside the new bounds are removed.',
-  'howItWorks.cropping.title': 'Cropping images',
-  'howItWorks.cropping.body': 'Hover over any item and click the pencil icon to open the crop editor. Use the zoom slider to zoom in (1x\u20133x), then drag the image to position the crop area exactly where you want it. Hit reset to return to the default center position. The crop preview updates in real time so you can see exactly how it\u2019ll look in the grid.',
-  'howItWorks.titles.title': 'Custom titles and scores',
-  'howItWorks.titles.body': 'The crop editor also lets you set a custom title to override the default name, and adjust the vote score (10\u2013100). Use the controls to toggle title overlays and score badges on or off. Titles appear as a bar at the bottom of each cell, and scores show as a badge in the top-left corner. The EN/JP toggle switches between English/romaji and Japanese titles across the entire grid.',
+  'howItWorks.gridSize.body': 'Choose between 3\u00d73, 4\u00d74, or 5\u00d75 grids. Switch between square crop and cover (2:3) aspect ratios. Drag and drop items to rearrange them; dragging swaps the positions of two cells. Items that don\u2019t fit on the grid stay in the pool below, ready to be dragged in whenever you want.',
+  'howItWorks.cropping.title': 'Cropping and editing',
+  'howItWorks.cropping.body': 'Hover over any item and click the pencil icon to open the editor. Use the zoom slider (1x\u20133x) and drag to reposition the crop area. You can also set a custom title, adjust the vote score (10\u2013100), or pick a different cover image. The preview updates in real time.',
+  'howItWorks.titles.title': 'Display settings',
+  'howItWorks.titles.body': 'Open the cogwheel to toggle title overlays, score badges, the decorative frame, and title language (EN/JP). Titles appear at the bottom of each cell and scores show as a badge in the corner. These settings apply to both the on-screen view and the exported image.',
   'howItWorks.exporting.title': 'Exporting and sharing',
-  'howItWorks.exporting.body': 'Export your finished grid as a high-resolution PNG image, copy it to your clipboard, or share it directly via Twitter, Reddit, or your device\u2019s native share menu. You can set a title for your grid using the text field in the controls bar, and it will appear as a header in the exported image. Toggle the frame option to add spacing between cells in the exported image. Use the NSFW checkbox to reveal blurred covers for the export. The export respects your current display settings, so titles, scores, crop positions, language preference, and dark/light theme are all captured.',
+  'howItWorks.exporting.body': 'Export your grid as JPG, PNG, or WebP, copy it to your clipboard, or share it directly via Twitter, Reddit, or your device\u2019s native share menu. You can also generate a shareable link. Anyone who opens it gets a copy they can edit, making it a great way to send friends a template to fill out with their own picks from the same pool of VNs. Set a title using the text field above the grid and it appears as a header in the export. NSFW covers are blurred by default. To include them uncensored in the export, either click individual covers to reveal them or enable \u201cReveal NSFW\u201d from the cogwheel (this is the same setting as the site-wide \u201cShow NSFW uncensored\u201d toggle). The export captures your current display settings: titles, scores, crops, language, and dark/light theme.',
   'howItWorks.autoSave.title': 'Auto-save',
-  'howItWorks.autoSave.body': 'Your grid is saved to your browser automatically as you work, including items, crop positions, custom titles, scores, and your imported username. If you imported from VNDB, the URL updates so you can share the link directly and others will see the same import.',
+  'howItWorks.autoSave.body': 'Your grid is saved to your browser automatically, including items, crop positions, custom titles, scores, and display settings. If you imported from VNDB, the URL updates so you can bookmark or share it directly.',
 } as const;
 
 type GridMakerKeys = keyof typeof en;
@@ -112,7 +123,7 @@ type GridMakerKeys = keyof typeof en;
 const ja: Record<GridMakerKeys, string> = {
   // GridMakerContent
   'page.title': '\u30a8\u30ed\u30b2 3x3\u30e1\u30fc\u30ab\u30fc',
-  'page.subtitle': '\u304a\u6c17\u306b\u5165\u308a\u306e\u30a8\u30ed\u30b2\u3084\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u306e\u30b3\u30e9\u30fc\u30b8\u30e5\u3092\u4f5c\u6210\u3002VNDB\u30ea\u30b9\u30c8\u304b\u3089\u30a4\u30f3\u30dd\u30fc\u30c8\u3059\u308b\u304b\u3001\u624b\u52d5\u3067\u691c\u7d22\u3057\u3066\u3001\u5171\u6709\u53ef\u80fd\u306a\u753b\u50cf\u3068\u3057\u3066\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u3002',
+  'page.subtitle': 'お気に入りのエロゲやキャラクターのコラージュを作成・共有。VNDBからインポート、ドラッグで並べ替え、カバーをクロップして高解像度画像としてエクスポート。',
 
   // GridBoard — toolbar
   'toolbar.vnMode': '\u30a8\u30ed\u30b2\u30e2\u30fc\u30c9',
@@ -138,13 +149,19 @@ const ja: Record<GridMakerKeys, string> = {
   // GridBoard — export controls
   'export.titlePlaceholder': '\u30bf\u30a4\u30c8\u30eb\uff08\u4efb\u610f\uff09',
   'export.countVNs': '{count} / {total} 作品',
-  'export.countChars': '{count} / {total} \u30ad\u30e3\u30e9\u30af\u30bf\u30fc',
+  'export.countChars': '{count} / {total} \u30ad\u30e3\u30e9',
   'export.displaySettings': '\u8868\u793a\u8a2d\u5b9a',
   'export.copyImage': '\u30b3\u30d4\u30fc',
   'export.export': '\u30a8\u30af\u30b9\u30dd\u30fc\u30c8',
-  'export.shareText': '私の{size}x{size} エロゲ {mode}グリッド',
-  'export.shareTextChar': 'キャラクター',
-  'export.shareHashtags': '#エロゲグリッド #VNClub',
+  'export.exportScale': 'エクスポート解像度 (1xまたは2x)',
+  'export.shareText': '私の{size}x{size}{mode}グリッド',
+  'export.shareTextChar': 'キャラ',
+  'export.shareHashtags': '#VNGrid #VNClub',
+
+  // Share link messages
+  'share.linkCopied': 'リンクをコピーしました！',
+  'share.rateLimited': 'リクエストが多すぎます。少々お待ちください',
+  'share.createFailed': 'リンクの作成に失敗しました',
 
   // GridBoard — settings dropdown
   'settings.frame': '\u30d5\u30ec\u30fc\u30e0',
@@ -172,7 +189,9 @@ const ja: Record<GridMakerKeys, string> = {
   'search.charsPlaceholder': '\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3092\u691c\u7d22...',
   'search.vnsPlaceholder': '\u30bf\u30a4\u30c8\u30eb\u307e\u305f\u306fVNDB ID\u3067\u691c\u7d22 (\u4f8b: v17)...',
   'search.added': '\u8ffd\u52a0\u6e08\u307f',
-  'search.error': '検索できません。もう一度お試しください。',
+  'search.capacityPlaceholder': '\u30b0\u30ea\u30c3\u30c9\u304c\u5b9a\u54e1\u306b\u9054\u3057\u307e\u3057\u305f\uff08500 \u4f5c\u54c1\uff09',
+  'search.charsCapacityPlaceholder': '\u30b0\u30ea\u30c3\u30c9\u304c\u5b9a\u54e1\u306b\u9054\u3057\u307e\u3057\u305f\uff08500 \u30ad\u30e3\u30e9\uff09',
+  'search.error': '検索に失敗しました。もう一度お試しください。',
   'search.noResults': '結果が見つかりませんでした',
 
   // Storage
@@ -180,6 +199,9 @@ const ja: Record<GridMakerKeys, string> = {
 
   // CropModal
   'crop.editTitle': '\u7de8\u96c6 \u2014 {title}',
+  'crop.editTitlePrefix': '\u7de8\u96c6 \u2014 ',
+  'crop.viewOnSite': 'VN Club\u3067\u898b\u308b',
+  'crop.viewOnVndb': 'VNDB\u3067\u898b\u308b',
   'crop.resetAutoTitle': '\u81ea\u52d5\u30bf\u30a4\u30c8\u30eb\u306b\u623b\u3059',
   'crop.scorePlaceholder': '\u30b9\u30b3\u30a2 (10\u2013100)',
   'crop.clearScore': '\u30b9\u30b3\u30a2\u3092\u30af\u30ea\u30a2',
@@ -192,7 +214,7 @@ const ja: Record<GridMakerKeys, string> = {
   'cell.remove': '\u524a\u9664',
 
   // Pool
-  'pool.label': '未ランク',
+  'pool.label': '未分類',
   'pool.pin': 'プールを固定',
   'pool.unpin': 'プールの固定を解除',
   'pool.emptyHint': 'エロゲを検索して追加',
@@ -205,17 +227,17 @@ const ja: Record<GridMakerKeys, string> = {
   // How it works
   'howItWorks.title': '\u4f7f\u3044\u65b9',
   'howItWorks.adding.title': '\u30a2\u30a4\u30c6\u30e0\u306e\u8ffd\u52a0',
-  'howItWorks.adding.body': '\u691c\u7d22\u30d0\u30fc\u3092\u4f7f\u3063\u3066\u30a8\u30ed\u30b2\u3084\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3092\u540d\u524d\u3084VNDB ID\uff08\u4f8b\uff1a\u300cv17\u300d\u3084\u300c17\u300d\uff09\u3067\u691c\u7d22\u3067\u304d\u307e\u3059\u3002\u691c\u7d22\u7d50\u679c\u3092\u30af\u30ea\u30c3\u30af\u3059\u308b\u3068\u6b21\u306e\u7a7a\u306e\u30bb\u30eb\u306b\u8ffd\u52a0\u3055\u308c\u307e\u3059\u3002\u7279\u5b9a\u306e\u7a7a\u306e\u30bb\u30eb\u3092\u5148\u306b\u30af\u30ea\u30c3\u30af\u3059\u308b\u3068\u3001\u305d\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30bf\u30fc\u30b2\u30c3\u30c8\u3067\u304d\u307e\u3059\u3002エロゲ\u30e2\u30fc\u30c9\u3068\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u30e2\u30fc\u30c9\u306f\u30c8\u30b0\u30eb\u30dc\u30bf\u30f3\u3067\u5207\u308a\u66ff\u3048\u53ef\u80fd\u3002VNDB\u306e\u30e6\u30fc\u30b6\u30fc\u540d\u307e\u305f\u306fID\u3092\u5165\u529b\u3059\u308b\u3068\u3001\u8a55\u4fa1\u306e\u9ad8\u3044エロゲ\u304c\u81ea\u52d5\u7684\u306b\u30b0\u30ea\u30c3\u30c9\u306b\u8ffd\u52a0\u3055\u308c\u307e\u3059\u3002',
+  'howItWorks.adding.body': '\u691c\u7d22\u30d0\u30fc\u3067\u30a8\u30ed\u30b2\u3084\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3092\u540d\u524d\u3084VNDB ID\uff08\u4f8b\uff1a\u300cv17\u300d\u3084\u300c17\u300d\uff09\u3067\u691c\u7d22\u3067\u304d\u307e\u3059\u3002\u30af\u30ea\u30c3\u30af\u3059\u308b\u3068\u30d7\u30fc\u30eb\u306b\u8ffd\u52a0\u3055\u308c\u307e\u3059\u3002\u6b6f\u8eca\u30a2\u30a4\u30b3\u30f3\u306e\u300c\u30b0\u30ea\u30c3\u30c9\u306b\u76f4\u63a5\u8ffd\u52a0\u300d\u3092\u6709\u52b9\u306b\u3059\u308b\u3068\u3001\u6b21\u306e\u7a7a\u306e\u30bb\u30eb\u306b\u76f4\u63a5\u914d\u7f6e\u3055\u308c\u307e\u3059\u3002\u7a7a\u306e\u30bb\u30eb\u3092\u5148\u306b\u30af\u30ea\u30c3\u30af\u3057\u3066\u3001\u30e2\u30fc\u30c0\u30eb\u5185\u3067\u691c\u7d22\u3057\u3066\u7279\u5b9a\u306e\u30b9\u30ed\u30c3\u30c8\u3092\u30bf\u30fc\u30b2\u30c3\u30c8\u3059\u308b\u3053\u3068\u3082\u53ef\u80fd\u3002\u30a8\u30ed\u30b2/\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u30e2\u30fc\u30c9\u306f\u30c8\u30b0\u30eb\u30dc\u30bf\u30f3\u3067\u5207\u308a\u66ff\u3048\u3002VNDB\u306e\u30e6\u30fc\u30b6\u30fc\u540d\u307e\u305f\u306fID\u3092\u5165\u529b\u3059\u308b\u3068\u3001\u8a55\u4fa1\u306e\u9ad8\u3044\u4e0a\u4f4d500\u4f5c\u54c1\u304c\u81ea\u52d5\u7684\u306b\u30b0\u30ea\u30c3\u30c9\u306b\u914d\u7f6e\u3055\u308c\u307e\u3059\u3002\u30b0\u30ea\u30c3\u30c9\u306b\u306f\u5408\u8a08500\u30a2\u30a4\u30c6\u30e0\uff08\u30bb\u30eb\uff0b\u30d7\u30fc\u30eb\uff09\u307e\u3067\u4fdd\u6301\u3067\u304d\u307e\u3059\u3002',
   'howItWorks.gridSize.title': '\u30b0\u30ea\u30c3\u30c9\u30b5\u30a4\u30ba\u3068\u30ec\u30a4\u30a2\u30a6\u30c8',
-  'howItWorks.gridSize.body': '3\u00d73\u30014\u00d74\u30015\u00d75\u306e\u30b0\u30ea\u30c3\u30c9\u304b\u3089\u9078\u629e\u3067\u304d\u307e\u3059\u3002\u6b63\u65b9\u5f62\u30af\u30ed\u30c3\u30d7\u3068\u30ab\u30d0\u30fc\uff082:3\uff09\u30a2\u30b9\u30da\u30af\u30c8\u6bd4\u3092\u5207\u308a\u66ff\u3048\u53ef\u80fd\u3002\u30a2\u30a4\u30c6\u30e0\u3092\u30c9\u30e9\u30c3\u30b0\uff06\u30c9\u30ed\u30c3\u30d7\u3067\u4e26\u3079\u66ff\u3048\u3089\u308c\u307e\u3059\u3002\u30c9\u30e9\u30c3\u30b0\u3059\u308b\u30682\u3064\u306e\u30bb\u30eb\u306e\u4f4d\u7f6e\u304c\u5165\u308c\u66ff\u308f\u308a\u307e\u3059\u3002\u30b0\u30ea\u30c3\u30c9\u3092\u7e2e\u5c0f\u3059\u308b\u3068\u3001\u7bc4\u56f2\u5916\u306e\u30a2\u30a4\u30c6\u30e0\u306f\u524a\u9664\u3055\u308c\u307e\u3059\u3002',
-  'howItWorks.cropping.title': '\u753b\u50cf\u306e\u30af\u30ed\u30c3\u30d7',
-  'howItWorks.cropping.body': '\u30a2\u30a4\u30c6\u30e0\u306b\u30de\u30a6\u30b9\u3092\u5408\u308f\u305b\u3066\u925b\u7b46\u30a2\u30a4\u30b3\u30f3\u3092\u30af\u30ea\u30c3\u30af\u3059\u308b\u3068\u3001\u30af\u30ed\u30c3\u30d7\u30a8\u30c7\u30a3\u30bf\u30fc\u304c\u958b\u304d\u307e\u3059\u3002\u30ba\u30fc\u30e0\u30b9\u30e9\u30a4\u30c0\u30fc\u3067\u62e1\u5927\uff081x\uff5e3x\uff09\u3057\u3001\u753b\u50cf\u3092\u30c9\u30e9\u30c3\u30b0\u3057\u3066\u30af\u30ed\u30c3\u30d7\u7bc4\u56f2\u3092\u8abf\u6574\u3067\u304d\u307e\u3059\u3002\u30ea\u30bb\u30c3\u30c8\u3092\u62bc\u3059\u3068\u30c7\u30d5\u30a9\u30eb\u30c8\u306e\u4e2d\u592e\u4f4d\u7f6e\u306b\u623b\u308a\u307e\u3059\u3002\u30d7\u30ec\u30d3\u30e5\u30fc\u306f\u30ea\u30a2\u30eb\u30bf\u30a4\u30e0\u3067\u66f4\u65b0\u3055\u308c\u307e\u3059\u3002',
-  'howItWorks.titles.title': '\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u3068\u30b9\u30b3\u30a2',
-  'howItWorks.titles.body': '\u30af\u30ed\u30c3\u30d7\u30a8\u30c7\u30a3\u30bf\u30fc\u3067\u306f\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u306e\u8a2d\u5b9a\u3084\u30b9\u30b3\u30a2\uff0810\uff5e100\uff09\u306e\u8abf\u6574\u3082\u53ef\u80fd\u3067\u3059\u3002\u30b3\u30f3\u30c8\u30ed\u30fc\u30eb\u3067\u30bf\u30a4\u30c8\u30eb\u30aa\u30fc\u30d0\u30fc\u30ec\u30a4\u3084\u30b9\u30b3\u30a2\u30d0\u30c3\u30b8\u306e\u8868\u793a\u30fb\u975e\u8868\u793a\u3092\u5207\u308a\u66ff\u3048\u3089\u308c\u307e\u3059\u3002\u30bf\u30a4\u30c8\u30eb\u306f\u5404\u30bb\u30eb\u306e\u4e0b\u90e8\u306b\u3001\u30b9\u30b3\u30a2\u306f\u5de6\u4e0a\u306b\u30d0\u30c3\u30b8\u3068\u3057\u3066\u8868\u793a\u3055\u308c\u307e\u3059\u3002EN/JP\u30c8\u30b0\u30eb\u3067\u82f1\u8a9e/\u30ed\u30fc\u30de\u5b57\u3068\u65e5\u672c\u8a9e\u30bf\u30a4\u30c8\u30eb\u3092\u5207\u308a\u66ff\u3048\u3089\u308c\u307e\u3059\u3002',
+  'howItWorks.gridSize.body': '3\u00d73\u30014\u00d74\u30015\u00d75\u306e\u30b0\u30ea\u30c3\u30c9\u304b\u3089\u9078\u629e\u3067\u304d\u307e\u3059\u3002\u6b63\u65b9\u5f62\u30af\u30ed\u30c3\u30d7\u3068\u30ab\u30d0\u30fc\uff082:3\uff09\u30a2\u30b9\u30da\u30af\u30c8\u6bd4\u3092\u5207\u308a\u66ff\u3048\u53ef\u80fd\u3002\u30a2\u30a4\u30c6\u30e0\u3092\u30c9\u30e9\u30c3\u30b0\uff06\u30c9\u30ed\u30c3\u30d7\u3067\u4e26\u3079\u66ff\u3048\u3089\u308c\u3001\u30c9\u30e9\u30c3\u30b0\u3059\u308b\u30682\u3064\u306e\u30bb\u30eb\u306e\u4f4d\u7f6e\u304c\u5165\u308c\u66ff\u308f\u308a\u307e\u3059\u3002\u30b0\u30ea\u30c3\u30c9\u306b\u53ce\u307e\u3089\u306a\u3044\u30a2\u30a4\u30c6\u30e0\u306f\u4e0b\u306e\u30d7\u30fc\u30eb\u306b\u4fdd\u7ba1\u3055\u308c\u3001\u3044\u3064\u3067\u3082\u30c9\u30e9\u30c3\u30b0\u3067\u30b0\u30ea\u30c3\u30c9\u306b\u623b\u305b\u307e\u3059\u3002',
+  'howItWorks.cropping.title': '\u30af\u30ed\u30c3\u30d7\u3068\u7de8\u96c6',
+  'howItWorks.cropping.body': '\u30a2\u30a4\u30c6\u30e0\u306b\u30de\u30a6\u30b9\u3092\u5408\u308f\u305b\u3066\u925b\u7b46\u30a2\u30a4\u30b3\u30f3\u3092\u30af\u30ea\u30c3\u30af\u3059\u308b\u3068\u30a8\u30c7\u30a3\u30bf\u30fc\u304c\u958b\u304d\u307e\u3059\u3002\u30ba\u30fc\u30e0\u30b9\u30e9\u30a4\u30c0\u30fc\uff081x\uff5e3x\uff09\u3068\u30c9\u30e9\u30c3\u30b0\u3067\u30af\u30ed\u30c3\u30d7\u7bc4\u56f2\u3092\u8abf\u6574\u3067\u304d\u307e\u3059\u3002\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u306e\u8a2d\u5b9a\u3001\u30b9\u30b3\u30a2\uff0810\uff5e100\uff09\u306e\u8abf\u6574\u3001\u5225\u306e\u30ab\u30d0\u30fc\u753b\u50cf\u306e\u9078\u629e\u3082\u53ef\u80fd\u3002\u30d7\u30ec\u30d3\u30e5\u30fc\u306f\u30ea\u30a2\u30eb\u30bf\u30a4\u30e0\u3067\u66f4\u65b0\u3055\u308c\u307e\u3059\u3002',
+  'howItWorks.titles.title': '\u8868\u793a\u8a2d\u5b9a',
+  'howItWorks.titles.body': '\u6b6f\u8eca\u30a2\u30a4\u30b3\u30f3\u3092\u958b\u304f\u3068\u3001\u30bf\u30a4\u30c8\u30eb\u30aa\u30fc\u30d0\u30fc\u30ec\u30a4\u3001\u30b9\u30b3\u30a2\u30d0\u30c3\u30b8\u3001\u88c5\u98fe\u30d5\u30ec\u30fc\u30e0\u3001\u30bf\u30a4\u30c8\u30eb\u8a00\u8a9e\uff08EN/JP\uff09\u3092\u5207\u308a\u66ff\u3048\u3089\u308c\u307e\u3059\u3002\u30bf\u30a4\u30c8\u30eb\u306f\u5404\u30bb\u30eb\u306e\u4e0b\u90e8\u306b\u3001\u30b9\u30b3\u30a2\u306f\u89d2\u306b\u30d0\u30c3\u30b8\u3068\u3057\u3066\u8868\u793a\u3055\u308c\u307e\u3059\u3002\u3053\u308c\u3089\u306e\u8a2d\u5b9a\u306f\u753b\u9762\u8868\u793a\u3068\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u753b\u50cf\u306e\u4e21\u65b9\u306b\u9069\u7528\u3055\u308c\u307e\u3059\u3002',
   'howItWorks.exporting.title': '\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u3068\u5171\u6709',
-  'howItWorks.exporting.body': '\u5b8c\u6210\u3057\u305f\u30b0\u30ea\u30c3\u30c9\u3092\u9ad8\u89e3\u50cf\u5ea6PNG\u753b\u50cf\u3068\u3057\u3066\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u3001\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3001\u307e\u305f\u306fTwitter\u3001Reddit\u3001\u30c7\u30d0\u30a4\u30b9\u306e\u5171\u6709\u30e1\u30cb\u30e5\u30fc\u3067\u76f4\u63a5\u5171\u6709\u3067\u304d\u307e\u3059\u3002\u30b3\u30f3\u30c8\u30ed\u30fc\u30eb\u30d0\u30fc\u306e\u30c6\u30ad\u30b9\u30c8\u30d5\u30a3\u30fc\u30eb\u30c9\u3067\u30bf\u30a4\u30c8\u30eb\u3092\u8a2d\u5b9a\u3059\u308b\u3068\u3001\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u753b\u50cf\u306e\u30d8\u30c3\u30c0\u30fc\u306b\u8868\u793a\u3055\u308c\u307e\u3059\u3002\u30d5\u30ec\u30fc\u30e0\u30aa\u30d7\u30b7\u30e7\u30f3\u3067\u30bb\u30eb\u9593\u306b\u30b9\u30da\u30fc\u30b9\u3092\u8ffd\u52a0\u3067\u304d\u307e\u3059\u3002NSFW\u30c1\u30a7\u30c3\u30af\u30dc\u30c3\u30af\u30b9\u3067\u30d6\u30e9\u30fc\u3055\u308c\u305f\u30ab\u30d0\u30fc\u3092\u8868\u793a\u3067\u304d\u307e\u3059\u3002\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u306f\u73fe\u5728\u306e\u8868\u793a\u8a2d\u5b9a\uff08\u30bf\u30a4\u30c8\u30eb\u3001\u30b9\u30b3\u30a2\u3001\u30af\u30ed\u30c3\u30d7\u3001\u8a00\u8a9e\u3001\u30c6\u30fc\u30de\uff09\u3092\u53cd\u6620\u3057\u307e\u3059\u3002',
+  'howItWorks.exporting.body': 'JPG\u3001PNG\u3001WebP\u3067\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u3001\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3001\u307e\u305f\u306fTwitter\u3001Reddit\u3001\u30c7\u30d0\u30a4\u30b9\u306e\u5171\u6709\u30e1\u30cb\u30e5\u30fc\u3067\u76f4\u63a5\u5171\u6709\u3067\u304d\u307e\u3059\u3002\u5171\u6709\u30ea\u30f3\u30af\u3092\u751f\u6210\u3059\u308b\u3068\u3001\u958b\u3044\u305f\u4eba\u304c\u30b3\u30d4\u30fc\u3092\u7de8\u96c6\u3067\u304d\u308b\u306e\u3067\u3001\u53cb\u4eba\u306b\u30c6\u30f3\u30d7\u30ec\u30fc\u30c8\u3068\u3057\u3066\u9001\u308a\u3001\u540c\u3058\u4f5c\u54c1\u30d7\u30fc\u30eb\u304b\u3089\u81ea\u5206\u306e\u30d4\u30c3\u30af\u3092\u57cb\u3081\u3066\u3082\u3089\u3046\u4f7f\u3044\u65b9\u304c\u3067\u304d\u307e\u3059\u3002\u30b0\u30ea\u30c3\u30c9\u4e0a\u306e\u30c6\u30ad\u30b9\u30c8\u30d5\u30a3\u30fc\u30eb\u30c9\u3067\u30bf\u30a4\u30c8\u30eb\u3092\u8a2d\u5b9a\u3059\u308b\u3068\u3001\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u753b\u50cf\u306e\u30d8\u30c3\u30c0\u30fc\u306b\u8868\u793a\u3055\u308c\u307e\u3059\u3002NSFW\u30ab\u30d0\u30fc\u306f\u30c7\u30d5\u30a9\u30eb\u30c8\u3067\u30d6\u30e9\u30fc\u3055\u308c\u307e\u3059\u3002\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u3067\u7121\u4fee\u6b63\u306b\u3059\u308b\u306b\u306f\u3001\u500b\u5225\u306e\u30ab\u30d0\u30fc\u3092\u30af\u30ea\u30c3\u30af\u3057\u3066\u8868\u793a\u3059\u308b\u304b\u3001\u6b6f\u8eca\u30a2\u30a4\u30b3\u30f3\u304b\u3089\u300cNSFW\u3092\u8868\u793a\u300d\u3092\u6709\u52b9\u306b\u3057\u3066\u304f\u3060\u3055\u3044\uff08\u30b5\u30a4\u30c8\u5168\u4f53\u306e\u300cNSFW\u3092\u7121\u4fee\u6b63\u3067\u8868\u793a\u300d\u3068\u540c\u3058\u8a2d\u5b9a\u3067\u3059\uff09\u3002\u30a8\u30af\u30b9\u30dd\u30fc\u30c8\u306f\u73fe\u5728\u306e\u8868\u793a\u8a2d\u5b9a\uff08\u30bf\u30a4\u30c8\u30eb\u3001\u30b9\u30b3\u30a2\u3001\u30af\u30ed\u30c3\u30d7\u3001\u8a00\u8a9e\u3001\u30c6\u30fc\u30de\uff09\u3092\u53cd\u6620\u3057\u307e\u3059\u3002',
   'howItWorks.autoSave.title': '\u81ea\u52d5\u4fdd\u5b58',
-  'howItWorks.autoSave.body': '\u30b0\u30ea\u30c3\u30c9\u306f\u30d6\u30e9\u30a6\u30b6\u306b\u81ea\u52d5\u7684\u306b\u4fdd\u5b58\u3055\u308c\u307e\u3059\u3002\u30a2\u30a4\u30c6\u30e0\u3001\u30af\u30ed\u30c3\u30d7\u4f4d\u7f6e\u3001\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u3001\u30b9\u30b3\u30a2\u3001\u30a4\u30f3\u30dd\u30fc\u30c8\u3057\u305f\u30e6\u30fc\u30b6\u30fc\u540d\u304c\u4fdd\u6301\u3055\u308c\u307e\u3059\u3002VNDB\u304b\u3089\u30a4\u30f3\u30dd\u30fc\u30c8\u3057\u305f\u5834\u5408\u3001URL\u304c\u66f4\u65b0\u3055\u308c\u308b\u306e\u3067\u30ea\u30f3\u30af\u3092\u76f4\u63a5\u5171\u6709\u3067\u304d\u307e\u3059\u3002',
+  'howItWorks.autoSave.body': '\u30b0\u30ea\u30c3\u30c9\u306f\u30a2\u30a4\u30c6\u30e0\u3001\u30af\u30ed\u30c3\u30d7\u4f4d\u7f6e\u3001\u30ab\u30b9\u30bf\u30e0\u30bf\u30a4\u30c8\u30eb\u3001\u30b9\u30b3\u30a2\u3001\u8868\u793a\u8a2d\u5b9a\u3092\u542b\u3081\u3066\u30d6\u30e9\u30a6\u30b6\u306b\u81ea\u52d5\u4fdd\u5b58\u3055\u308c\u307e\u3059\u3002VNDB\u304b\u3089\u30a4\u30f3\u30dd\u30fc\u30c8\u3057\u305f\u5834\u5408\u3001URL\u304c\u66f4\u65b0\u3055\u308c\u308b\u306e\u3067\u30d6\u30c3\u30af\u30de\u30fc\u30af\u3084\u5171\u6709\u306b\u4fbf\u5229\u3067\u3059\u3002',
 };
 
 export const gridMakerStrings = { en, ja };

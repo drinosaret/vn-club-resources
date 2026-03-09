@@ -1,25 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Rows3, Globe } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
 import { TierListBoard } from '@/components/tierlist/TierListBoard';
-import { VNDBAttribution } from '@/components/VNDBAttribution';
 
 export default function TierListContent({ shareId }: { shareId?: string } = {}) {
-  const searchParams = useSearchParams();
   const locale = useLocale();
   const s = tierListStrings[locale];
-
-  const urlParams = useMemo(() => {
-    const preset = searchParams.get('preset');
-    const user = searchParams.get('user');
-    if (!preset && !user) return null;
-    return { preset, user };
-  }, [searchParams]);
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center px-4 py-8 sm:py-12">
@@ -43,8 +32,7 @@ export default function TierListContent({ shareId }: { shareId?: string } = {}) 
           </Link>
         </div>
 
-        <TierListBoard urlParams={urlParams} shareId={shareId} />
-        <VNDBAttribution />
+        <TierListBoard shareId={shareId} />
       </div>
     </div>
   );
