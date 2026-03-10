@@ -22,6 +22,8 @@ export function NavigationProgress() {
 
   // Start progress on link clicks
   useEffect(() => {
+    let safetyTimer: ReturnType<typeof setTimeout>;
+
     const handleClick = (e: MouseEvent) => {
       // Skip if this click was an NSFW image reveal (no actual navigation)
       if ((e as any)._nsfwReveal) return;
@@ -29,8 +31,8 @@ export function NavigationProgress() {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
 
-      // Skip if no anchor, has special attributes, or event was already handled
-      if (!anchor?.href || anchor.target || anchor.download || e.defaultPrevented) return;
+      // Skip if no anchor or has special attributes
+      if (!anchor?.href || anchor.target || anchor.download) return;
 
       try {
         const url = new URL(anchor.href);
@@ -40,11 +42,14 @@ export function NavigationProgress() {
           return;
         }
 
-        // Only handle same-origin navigation to different pages
-        if (url.origin === window.location.origin) {
-          if (url.pathname !== window.location.pathname || url.search !== window.location.search) {
-            NProgress.start();
-          }
+        // Only start progress for navigations to a different pathname.
+        // Skip same-pathname changes (e.g. ?page=2 pagination) since those are
+        // handled by pushState and won't trigger a Next.js route change.
+        if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+          NProgress.start();
+          // Safety timeout: auto-complete if route change takes too long
+          clearTimeout(safetyTimer);
+          safetyTimer = setTimeout(() => NProgress.done(), 10000);
         }
       } catch {
         // Invalid URL, ignore
@@ -52,7 +57,10 @@ export function NavigationProgress() {
     };
 
     document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   return null;

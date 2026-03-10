@@ -379,7 +379,7 @@ class DailyPostsCog(commands.Cog):
             db_url = db_url.replace("+asyncpg", "")
 
             result = subprocess.run(
-                ["pg_dump", db_url, "-t", "shared_layouts", "--data-only", "--inserts"],
+                ["pg_dump", f"--dbname={db_url}", "-t", "shared_layouts", "--data-only", "--inserts"],
                 capture_output=True, timeout=60,
             )
             if result.returncode != 0:
