@@ -373,20 +373,20 @@ class DailyPostsCog(commands.Cog):
             # Parse DATABASE_URL into individual pg_dump flags to avoid
             # URI-parsing issues when the password contains special chars.
             import os
-            from urllib.parse import urlparse
+            from sqlalchemy.engine import make_url
             db_url = os.environ.get("DATABASE_URL", "")
             if not db_url:
                 return "DATABASE_URL not set"
-            parsed = urlparse(db_url.replace("+asyncpg", ""))
+            parsed = make_url(db_url)
             env = {**os.environ, "PGPASSWORD": parsed.password or ""}
 
             result = subprocess.run(
                 [
                     "pg_dump",
-                    "-h", parsed.hostname or "db",
+                    "-h", parsed.host or "db",
                     "-p", str(parsed.port or 5432),
                     "-U", parsed.username or "vndb",
-                    "-d", parsed.path.lstrip("/") or "vndb_stats",
+                    "-d", parsed.database or "vndb_stats",
                     "-t", "shared_layouts",
                     "--data-only", "--inserts",
                 ],
