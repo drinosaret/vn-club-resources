@@ -421,7 +421,7 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
           </button>
           {settingsOpen && (
             <div
-              className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-2"
+              className="absolute right-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-2"
             >
               <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
                 <input type="checkbox" checked={showScores} onChange={e => setShowScores(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
