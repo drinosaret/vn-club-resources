@@ -370,17 +370,27 @@ class DailyPostsCog(commands.Cog):
             return "Backup channel not found"
 
         try:
-            # Build pg_dump connection string from DATABASE_URL env
+            # Parse DATABASE_URL into individual pg_dump flags to avoid
+            # URI-parsing issues when the password contains special chars.
             import os
+            from urllib.parse import urlparse
             db_url = os.environ.get("DATABASE_URL", "")
             if not db_url:
                 return "DATABASE_URL not set"
-            # pg_dump needs sync URL (not asyncpg)
-            db_url = db_url.replace("+asyncpg", "")
+            parsed = urlparse(db_url.replace("+asyncpg", ""))
+            env = {**os.environ, "PGPASSWORD": parsed.password or ""}
 
             result = subprocess.run(
-                ["pg_dump", f"--dbname={db_url}", "-t", "shared_layouts", "--data-only", "--inserts"],
-                capture_output=True, timeout=60,
+                [
+                    "pg_dump",
+                    "-h", parsed.hostname or "db",
+                    "-p", str(parsed.port or 5432),
+                    "-U", parsed.username or "vndb",
+                    "-d", parsed.path.lstrip("/") or "vndb_stats",
+                    "-t", "shared_layouts",
+                    "--data-only", "--inserts",
+                ],
+                capture_output=True, timeout=60, env=env,
             )
             if result.returncode != 0:
                 err = result.stderr.decode()
