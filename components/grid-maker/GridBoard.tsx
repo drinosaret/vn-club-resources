@@ -780,7 +780,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
         />
 
         <DragOverlay dropAnimation={null}>
-          {activeId ? <GridDragOverlay item={itemMap[activeId]} cropSquare={cropSquare} previewUrl={cropPreviewMapRef.current[activeId]} cellWidth={dragCellWidth} nsfwRevealed={nsfwContext?.allRevealed ?? false} /> : null}
+          {activeId ? <GridDragOverlay item={itemMap[activeId]} cropSquare={cropSquare} previewUrl={cropPreviewMapRef.current[activeId]} cellWidth={dragCellWidth} nsfwRevealed={(nsfwContext?.allRevealed ?? false) || (nsfwContext?.isRevealed(activeId!) ?? false)} /> : null}
         </DragOverlay>
       </DndContext>
 
