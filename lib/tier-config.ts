@@ -1,3 +1,6 @@
+// Stable empty array to avoid new-reference re-renders in memoized components
+export const EMPTY_STRING_ARRAY: readonly string[] = [];
+
 // === Types ===
 
 export type TierListMode = 'vns' | 'characters';

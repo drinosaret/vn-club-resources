@@ -1,6 +1,7 @@
 'use client';
 
-import { NSFWImage } from '@/components/NSFWImage';
+import { getTinySrc } from '@/lib/vndb-image-cache';
+import { NSFW_THRESHOLD } from '@/lib/nsfw-reveal';
 import type { GridItem } from '@/hooks/useGridMakerState';
 
 interface GridDragOverlayProps {
@@ -8,10 +9,12 @@ interface GridDragOverlayProps {
   cropSquare?: boolean;
   previewUrl?: string | null;
   cellWidth?: number;
+  nsfwRevealed?: boolean;
 }
 
-export function GridDragOverlay({ item, cropSquare, previewUrl, cellWidth }: GridDragOverlayProps) {
+export function GridDragOverlay({ item, cropSquare, previewUrl, cellWidth, nsfwRevealed }: GridDragOverlayProps) {
   const src = previewUrl ?? item?.imageUrl;
+  const isNsfw = !nsfwRevealed && (item?.imageSexual ?? 0) >= NSFW_THRESHOLD;
   const w = cellWidth ?? 100;
   const h = cropSquare ? w : Math.round(w * 1.5);
   return (
@@ -20,13 +23,22 @@ export function GridDragOverlay({ item, cropSquare, previewUrl, cellWidth }: Gri
       style={{ width: w, height: h }}
     >
       {src ? (
-        <NSFWImage
-          src={src}
-          alt=""
-          vnId={item?.id ?? ''}
-          imageSexual={item?.imageSexual ?? null}
-          className="w-full h-full object-cover"
-        />
+        isNsfw ? (
+          <img
+            src={getTinySrc(src)}
+            alt=""
+            className="w-full h-full object-cover"
+            style={{ imageRendering: 'pixelated' }}
+            decoding="async"
+          />
+        ) : (
+          <img
+            src={src}
+            alt=""
+            className="w-full h-full object-cover"
+            decoding="async"
+          />
+        )
       ) : (
         <div className="w-full h-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[9px] text-gray-600 dark:text-gray-300 p-1 text-center">
           {item?.title}

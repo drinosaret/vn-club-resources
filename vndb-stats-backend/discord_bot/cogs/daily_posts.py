@@ -66,6 +66,8 @@ class DailyPostsCog(commands.Cog):
         self.votd_post_loop.start()
         self.news_post_loop.start()
         self.backup_loop.start()
+        # Run a backup immediately on startup (the loop only fires at fixed times)
+        self.bot.loop.create_task(self._run_startup_backup())
 
     async def cog_unload(self) -> None:
         self.votd_post_loop.cancel()
@@ -332,9 +334,22 @@ class DailyPostsCog(commands.Cog):
 
     # ── Database Backup ─────────────────────────────────────────
 
-    @tasks.loop(time=time(hour=5, minute=30, tzinfo=timezone.utc))
+    @tasks.loop(time=[
+        time(hour=0, minute=0, tzinfo=timezone.utc),
+        time(hour=6, minute=0, tzinfo=timezone.utc),
+        time(hour=12, minute=0, tzinfo=timezone.utc),
+        time(hour=18, minute=0, tzinfo=timezone.utc),
+    ])
     async def backup_loop(self):
         await self._run_backup()
+
+    async def _run_startup_backup(self):
+        """Run a one-time backup after the bot is ready."""
+        await self.bot.wait_until_ready()
+        try:
+            await self._run_backup()
+        except Exception as e:
+            logger.error(f"Startup backup error: {e}", exc_info=True)
 
     @backup_loop.before_loop
     async def before_backup_loop(self):

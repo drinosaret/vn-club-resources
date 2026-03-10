@@ -315,9 +315,11 @@ body {
   box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
-/* Prevent native drag ghost flash on images inside tier items */
+/* Prevent native drag ghost flash on images inside tier items.
+   color: transparent hides alt text that Firefox briefly shows while decoding images. */
 [data-item-id] img {
   -webkit-user-drag: none;
+  color: transparent;
 }
 
 /* Prevent native long-press context menu (Save image / Open image) on mobile */
@@ -328,6 +330,27 @@ body {
 /* Source item dimmed during drag (applied by useTierDrag via DOM) */
 .tier-dragging-source {
   opacity: 0.4 !important;
+}
+
+/* ─── Drag isolation ───
+   Applied to the board container during active drag. Suppresses all
+   hover effects, transitions, and pointer-events on items so the browser
+   skips hit-testing and style recalc on every item the overlay passes over.
+   This is the single biggest win for drag smoothness with 200+ items. */
+.tier-dragging [data-item-id] {
+  pointer-events: none !important;
+}
+.tier-dragging [data-item-id] button {
+  pointer-events: none !important;
+}
+/* Kill transitions on drop zones and items during drag to prevent
+   background-color / box-shadow animations from triggering repaints */
+.tier-dragging [data-tier-drop] {
+  transition: none !important;
+}
+.tier-dragging .transition-colors,
+.tier-dragging .transition-opacity {
+  transition: none !important;
 }
 
 .tier-just-dropped {
@@ -524,6 +547,14 @@ main {
 }
 .tier-pool-scroll > div {
   contain: layout style paint;
+}
+
+/* Firefox: promote scroll containers and grid areas to GPU layers for smoother
+   drag/scroll interactions. Chrome does this automatically; Firefox needs hints. */
+@supports (-moz-appearance: none) {
+  .tier-pool-scroll {
+    transform: translateZ(0);
+  }
 }
 
 /* ═══ Touch Device: Show Action Buttons ═══

@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
+// Progressive rendering removed — the 3x3 pool renders all items directly and has no Firefox flash bug
 import { Pin, PinOff, ChevronUp, ChevronDown, LayoutGrid } from 'lucide-react';
 import { TierPoolItem } from './TierPoolItem';
 import { useVnMap } from './VnMapContext';
@@ -21,12 +22,11 @@ interface TierPoolProps {
   titleMaxH: number;
   onRemoveVN: (vnId: string) => void;
   onEditVN: (vnId: string) => void;
-  justDroppedId: string | null;
 }
 
 export const TierPool = memo(function TierPool({
   pool, mode, displayMode, sizeConfig, showTitles, showScores, titleMaxH,
-  onRemoveVN, onEditVN, justDroppedId,
+  onRemoveVN, onEditVN,
 }: TierPoolProps) {
   const vnMap = useVnMap();
   const locale = useLocale();
@@ -37,27 +37,6 @@ export const TierPool = memo(function TierPool({
   const [pinned, setPinned] = useState(false);
   const placeholderRef = useRef<HTMLDivElement>(null);
   const poolRef = useRef<HTMLDivElement>(null);
-
-  // Progressive rendering: show first batch immediately, add more per frame
-  const INITIAL_BATCH = 30;
-  const BATCH_SIZE = 50;
-  const [renderedCount, setRenderedCount] = useState(
-    pool.length <= INITIAL_BATCH ? pool.length : INITIAL_BATCH
-  );
-  const prevPoolLenRef = useRef(pool.length);
-  useEffect(() => {
-    if (pool.length !== prevPoolLenRef.current) {
-      prevPoolLenRef.current = pool.length;
-      setRenderedCount(pool.length <= INITIAL_BATCH ? pool.length : INITIAL_BATCH);
-    }
-  }, [pool.length]);
-  useEffect(() => {
-    if (renderedCount >= pool.length) return;
-    const id = requestAnimationFrame(() => {
-      setRenderedCount(prev => Math.min(prev + BATCH_SIZE, pool.length));
-    });
-    return () => cancelAnimationFrame(id);
-  }, [renderedCount, pool.length]);
 
   // Load pinned state from localStorage + auto-collapse on touch devices
   useEffect(() => {
@@ -95,7 +74,7 @@ export const TierPool = memo(function TierPool({
   const poolContent = (
     <div
       ref={poolRef}
-      className={`border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900 ${
+      className={`relative isolate border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900 ${
         pinned ? 'shadow-[0_-4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]' : ''
       }`}
     >
@@ -142,10 +121,10 @@ export const TierPool = memo(function TierPool({
       {!collapsed && (
         <div
           data-tier-drop="pool"
-          className={`tier-pool-scroll flex flex-wrap justify-center ${sizeConfig.rowGap} ${sizeConfig.rowPad} min-h-[3rem] max-h-[30vh] sm:max-h-[240px] overflow-y-auto transition-colors duration-200`}
+          className={`tier-pool-scroll flex flex-wrap justify-center ${sizeConfig.rowGap} ${sizeConfig.rowPad} min-h-[3rem] max-h-[30vh] sm:max-h-[240px] overflow-x-hidden overflow-y-auto`}
           style={{ scrollbarGutter: 'stable' }}
         >
-          {pool.slice(0, renderedCount).map(id => (
+          {pool.map(id => (
             <TierPoolItem
               key={id}
               id={id}
@@ -158,14 +137,8 @@ export const TierPool = memo(function TierPool({
               nsfwRevealed={nsfwRevealed}
               onRemove={onRemoveVN}
               onEdit={onEditVN}
-              justDropped={justDroppedId === id}
             />
           ))}
-          {renderedCount < pool.length && (
-            <div className="flex items-center justify-center w-full py-2">
-              <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
-            </div>
-          )}
           {pool.length === 0 && (
             <div className="flex items-center justify-center w-full text-xs text-gray-400 dark:text-gray-500 select-none border border-dashed border-gray-300 dark:border-gray-600 rounded py-3">
               {s[mode === 'characters' ? 'pool.emptyHintChars' : 'pool.emptyHint']}

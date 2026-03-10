@@ -1,11 +1,12 @@
 'use client';
 
 import { memo, useMemo, useState, useCallback, useRef } from 'react';
-import { X, Pencil } from 'lucide-react';
-import { NSFWImage } from '@/components/NSFWImage';
+import { X, Pencil, Eye } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
+import { getTinySrc } from '@/lib/vndb-image-cache';
+import { NSFW_THRESHOLD, useNSFWRevealContext } from '@/lib/nsfw-reveal';
 import type { TierVN, DisplayMode, SizeConfig } from '@/lib/tier-config';
 
 interface TierItemProps {
@@ -17,17 +18,18 @@ interface TierItemProps {
   showTitles: boolean;
   showScores: boolean;
   titleMaxH: number;
+  nsfwRevealed: boolean;
   onRemove: (vnId: string) => void;
   onEdit: (vnId: string) => void;
-  justDropped?: boolean;
 }
 
 const ITEM_STYLE: React.CSSProperties = { contain: 'style paint' };
 
-export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode, sizeConfig, showTitles, showScores, titleMaxH, onRemove, onEdit, justDropped }: TierItemProps) {
+export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode, sizeConfig, showTitles, showScores, titleMaxH, nsfwRevealed, onRemove, onEdit }: TierItemProps) {
   const { preference } = useTitlePreference();
   const locale = useLocale();
   const s = tierListStrings[locale];
+  const nsfwContext = useNSFWRevealContext();
 
   const title = useMemo(() => {
     const rawTitle = vn?.title ?? id;
@@ -37,11 +39,14 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
         : rawTitle);
   }, [id, vn, preference]);
 
+  const isRevealed = nsfwContext?.isRevealed(id) ?? false;
+  const isNsfw = !nsfwRevealed && !isRevealed && (vn?.imageSexual ?? 0) >= NSFW_THRESHOLD;
+
   const srcSet = useMemo(() => {
-    if (!vn?.imageUrl) return undefined;
+    if (!vn?.imageUrl || isNsfw) return undefined;
     const sep = vn.imageUrl.includes('?') ? '&' : '?';
     return [128, 256].map(w => `${vn.imageUrl}${sep}w=${w} ${w}w`).join(', ');
-  }, [vn?.imageUrl]);
+  }, [vn?.imageUrl, isNsfw]);
 
   // Image loading state for shimmer placeholder
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -57,7 +62,7 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
       <div
         data-item-id={id}
         style={ITEM_STYLE}
-        className={`relative flex items-center gap-1 px-1.5 py-0.5 max-w-full rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item ${justDropped ? 'tier-just-dropped' : ''}`}
+        className={`relative flex items-center gap-1 px-1.5 py-0.5 max-w-full rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item`}
         title={title}
       >
         <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
@@ -92,24 +97,43 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
     <div
       data-item-id={id}
       style={ITEM_STYLE}
-      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700 ${justDropped ? 'tier-just-dropped' : ''}`}
+      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700`}
       title={title}
     >
       {vn?.imageUrl ? (
         <>
-          <NSFWImage
-            src={vn.imageUrl}
-            srcSet={srcSet}
-            sizes={sizeConfig.coverSizes}
-            alt={title}
-            vnId={id}
-            imageSexual={vn.imageSexual}
-            className={`w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            loading={tierIndex === 0 ? 'eager' : 'lazy'}
-            fetchPriority={tierIndex === 0 ? 'high' : undefined}
-            onLoad={handleImageLoad}
-          />
-          {!imageLoaded && <div className="absolute inset-0 image-placeholder pointer-events-none" />}
+          {isNsfw ? (
+            <div className="w-full h-full cursor-pointer group/nsfw" onClick={e => { e.stopPropagation(); nsfwContext?.revealVN(id); }}>
+              <img
+                src={getTinySrc(vn.imageUrl)}
+                alt={title}
+                className="w-full h-full object-cover object-top"
+                style={{ imageRendering: 'pixelated' }}
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
+                <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+                  <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
+                  <span className="sm:hidden">Tap to reveal</span>
+                  <span className="hidden sm:inline">Click to reveal</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={vn.imageUrl}
+              srcSet={srcSet}
+              sizes={sizeConfig.coverSizes}
+              alt={title}
+              className={`w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              loading={tierIndex === 0 ? 'eager' : 'lazy'}
+              fetchPriority={tierIndex === 0 ? 'high' : undefined}
+              decoding="async"
+              onLoad={handleImageLoad}
+            />
+          )}
+          {!isNsfw && !imageLoaded && <div className="absolute inset-0 image-placeholder pointer-events-none" />}
         </>
       ) : (
         <div className={`w-full h-full flex items-center justify-center ${sizeConfig.noImageFontClass} text-gray-500 dark:text-gray-400 text-center p-0.5 leading-tight`}>

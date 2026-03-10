@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { DEFAULT_TIER_DEFS, getAutoTierForDefs, generateTierId } from '@/lib/tier-config';
 import type { TierDef, TierVN, TierColor, TierPreset, TierListMode } from '@/lib/tier-config';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
@@ -64,6 +64,16 @@ function findTierForItem(tiers: Record<string, string[]>, itemId: string): strin
   return null;
 }
 
+/** Build a Map from itemId → containerId for O(1) lookups */
+function buildLocationMap(state: TierListState): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const id of state.pool) map.set(id, 'pool');
+  for (const [tierId, items] of Object.entries(state.tiers)) {
+    for (const id of items) map.set(id, tierId);
+  }
+  return map;
+}
+
 /** Find which container an item lives in: a tier ID, 'pool', or null */
 function findContainer(state: TierListState, itemId: string): string | null {
   if (state.pool.includes(itemId)) return 'pool';
@@ -112,6 +122,11 @@ export function useTierListState(shareId?: string) {
   const [hydrated, setHydrated] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
   const hydratedRef = useRef(false);
+
+  // O(1) item→container lookup, rebuilt only when tiers/pool change
+  const locationMap = useMemo(() => buildLocationMap(state), [state.tiers, state.pool]);
+  const locationMapRef = useRef(locationMap);
+  locationMapRef.current = locationMap;
 
   // Hydrate from localStorage after mount to avoid SSR mismatch
   // Skip when loading a shared link to avoid flash of stale state
@@ -179,7 +194,7 @@ export function useTierListState(shareId?: string) {
 
   const handleDrop = useCallback((itemId: string, targetContainerId: string, insertIndex: number) => {
     updateState(prev => {
-      const sourceContainer = findContainer(prev, itemId);
+      const sourceContainer = locationMapRef.current.get(itemId) ?? null;
       if (!sourceContainer) return prev;
 
       if (sourceContainer === targetContainerId) {
@@ -657,7 +672,7 @@ export function useTierListState(shareId?: string) {
     return !!state.vnMap[vnId];
   }, [state.vnMap]);
 
-  const vnCount = Object.keys(state.vnMap).length;
+  const vnCount = useMemo(() => Object.keys(state.vnMap).length, [state.vnMap]);
   const isAtCapacity = vnCount >= MAX_TIER_LIST_VNS;
   const isAtTierLimit = state.tierDefs.length >= MAX_TIERS;
 

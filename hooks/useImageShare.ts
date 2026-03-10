@@ -105,7 +105,8 @@ export function useImageShare({
       // within the user gesture (before any await) so mobile browsers don't
       // reject it. ClipboardItem accepts a Promise<Blob> which resolves later.
       if (platform === 'open-tab') {
-        const blob = exportFormat ? await generateBlob(exportFormat) : await getBlob();
+        // Always use PNG for open-in-tab — JPEG/WebP blobs can fail to display
+        const blob = await generateBlob('png');
         const url = URL.createObjectURL(blob);
         const win = window.open(url, '_blank');
         if (!win) downloadBlob(blob, filename);

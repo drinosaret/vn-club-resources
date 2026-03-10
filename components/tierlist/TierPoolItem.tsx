@@ -20,13 +20,12 @@ interface TierPoolItemProps {
   nsfwRevealed: boolean;
   onRemove: (vnId: string) => void;
   onEdit: (vnId: string) => void;
-  justDropped?: boolean;
 }
 
 const ITEM_STYLE: React.CSSProperties = { contain: 'style paint' };
 
 // Lightweight pool-only version of TierItem: plain <img> instead of NSFWImage, no dnd-kit hooks
-export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, sizeConfig, showTitles, showScores, titleMaxH, nsfwRevealed, onRemove, onEdit, justDropped }: TierPoolItemProps) {
+export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, sizeConfig, showTitles, showScores, titleMaxH, nsfwRevealed, onRemove, onEdit }: TierPoolItemProps) {
   const { preference } = useTitlePreference();
   const locale = useLocale();
   const s = tierListStrings[locale];
@@ -41,12 +40,18 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
 
   const isNsfw = !nsfwRevealed && (vn?.imageSexual ?? 0) >= NSFW_THRESHOLD;
 
+  const srcSet = useMemo(() => {
+    if (!vn?.imageUrl || isNsfw) return undefined;
+    const sep = vn.imageUrl.includes('?') ? '&' : '?';
+    return [128, 256].map(w => `${vn.imageUrl}${sep}w=${w} ${w}w`).join(', ');
+  }, [vn?.imageUrl, isNsfw]);
+
   if (displayMode === 'titles') {
     return (
       <div
         data-item-id={id}
         style={ITEM_STYLE}
-        className={`relative flex items-center gap-1 px-1.5 py-0.5 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item ${justDropped ? 'tier-just-dropped' : ''}`}
+        className={`relative flex items-center gap-1 px-1.5 py-0.5 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item`}
         title={title}
       >
         <span className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
@@ -81,7 +86,7 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
     <div
       data-item-id={id}
       style={ITEM_STYLE}
-      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700 ${justDropped ? 'tier-just-dropped' : ''}`}
+      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700`}
       title={title}
     >
       {vn?.imageUrl ? (
@@ -91,16 +96,18 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
             alt={title}
             className="w-full h-full object-cover object-top"
             style={{ imageRendering: 'pixelated' }}
-            loading={justDropped ? 'eager' : 'lazy'}
-            decoding={justDropped ? 'sync' : 'async'}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <img
             src={vn.imageUrl}
+            srcSet={srcSet}
+            sizes={sizeConfig.coverSizes}
             alt={title}
             className="w-full h-full object-cover object-top"
-            loading={justDropped ? 'eager' : 'lazy'}
-            decoding={justDropped ? 'sync' : 'async'}
+            loading="lazy"
+            decoding="async"
           />
         )
       ) : (

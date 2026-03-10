@@ -10,10 +10,8 @@ interface TierDragOptions {
 }
 
 /** Compute insert position from DOM element rects at drop time. */
-function computeInsertIndex(containerId: string, cx: number, cy: number, draggedId: string): number {
-  const container = document.querySelector(`[data-tier-drop="${CSS.escape(containerId)}"]`);
-  if (!container) return 0;
-  const items = container.querySelectorAll<HTMLElement>('[data-item-id]');
+function computeInsertIndex(containerEl: HTMLElement, cx: number, cy: number, draggedId: string): number {
+  const items = containerEl.querySelectorAll<HTMLElement>('[data-item-id]');
   if (items.length === 0) return 0;
 
   let bestIndex = items.length;
@@ -81,6 +79,41 @@ export function useTierDrag(
     let lastClientX = 0;
     let lastClientY = 0;
     let autoScrollRaf = 0;
+
+    // Cached drop zone elements + rects — refreshed on activate and scroll.
+    // Caching elements avoids querySelector calls in the pointermove hot path.
+    let dropZoneCache: { id: string; el: HTMLElement; rect: DOMRect }[] = [];
+    let scrollOffset = 0; // window.scrollY at cache time
+
+    function refreshDropZoneCache() {
+      scrollOffset = window.scrollY;
+      const zones = document.querySelectorAll<HTMLElement>('[data-tier-drop]');
+      dropZoneCache = [];
+      for (let i = zones.length - 1; i >= 0; i--) {
+        dropZoneCache.push({ id: zones[i].dataset.tierDrop!, el: zones[i], rect: zones[i].getBoundingClientRect() });
+      }
+    }
+
+    function hitTestDropZone(cx: number, cy: number): string | null {
+      // Adjust rects if page has scrolled since last cache
+      const scrollDelta = window.scrollY - scrollOffset;
+      for (const { id, rect } of dropZoneCache) {
+        const top = rect.top - scrollDelta;
+        const bottom = rect.bottom - scrollDelta;
+        if (cx >= rect.left && cx <= rect.right && cy >= top && cy <= bottom) {
+          return id;
+        }
+      }
+      return null;
+    }
+
+    /** Look up a cached drop zone element by id (O(n) over small array). */
+    function getDropZoneEl(id: string): HTMLElement | undefined {
+      for (const zone of dropZoneCache) {
+        if (zone.id === id) return zone.el;
+      }
+      return undefined;
+    }
 
     // --- Helpers ---
 
@@ -157,9 +190,17 @@ export function useTierDrag(
       document.documentElement.style.userSelect = 'none';
       document.documentElement.style.cursor = 'grabbing';
 
+      // Suppress hover effects and pointer-events on tier items during drag.
+      // This prevents the browser from doing hit-test/style recalc on every
+      // item the overlay passes over, which is the main source of drag jank.
+      container?.classList.add('tier-dragging');
+
       // Hide pool scroll during drag
       const poolScroll = document.querySelector('.tier-pool-scroll') as HTMLElement | null;
       if (poolScroll) poolScroll.style.overflowY = 'hidden';
+
+      // Cache drop zone rects for fast hit-testing
+      refreshDropZoneCache();
 
       // Start auto-scroll loop
       startAutoScroll();
@@ -187,6 +228,9 @@ export function useTierDrag(
 
         if (scrollDelta !== 0) {
           window.scrollBy(0, scrollDelta);
+          // Only refresh the scroll offset — element positions relative to
+          // the document haven't changed, just the viewport shifted.
+          scrollOffset = window.scrollY;
         }
 
         autoScrollRaf = requestAnimationFrame(tick);
@@ -265,31 +309,16 @@ export function useTierDrag(
       const y = e.clientY - grabOffsetY;
       overlay.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.04)`;
 
-      // Hit-test drop containers
-      const cx = e.clientX;
-      const cy = e.clientY;
-      let hitContainer: string | null = null;
-
-      // Iterate in reverse DOM order so the pool (last in DOM, visually on top
-      // when pinned/fixed) wins hit-testing over tier rows that scroll behind it.
-      const dropZones = document.querySelectorAll<HTMLElement>('[data-tier-drop]');
-      for (let i = dropZones.length - 1; i >= 0; i--) {
-        const zone = dropZones[i];
-        const rect = zone.getBoundingClientRect();
-        if (cx >= rect.left && cx <= rect.right && cy >= rect.top && cy <= rect.bottom) {
-          hitContainer = zone.dataset.tierDrop!;
-          break;
-        }
-      }
+      // Hit-test drop containers using cached rects
+      const hitContainer = hitTestDropZone(e.clientX, e.clientY);
 
       if (hitContainer !== currentOverContainer) {
+        // Use cached elements instead of querySelector in the hot path
         if (currentOverContainer) {
-          const prev = document.querySelector(`[data-tier-drop="${CSS.escape(currentOverContainer)}"]`);
-          prev?.classList.remove('tier-drop-highlight');
+          getDropZoneEl(currentOverContainer)?.classList.remove('tier-drop-highlight');
         }
         if (hitContainer) {
-          const next = document.querySelector(`[data-tier-drop="${CSS.escape(hitContainer)}"]`);
-          next?.classList.add('tier-drop-highlight');
+          getDropZoneEl(hitContainer)?.classList.add('tier-drop-highlight');
         }
         currentOverContainer = hitContainer;
       }
@@ -299,7 +328,11 @@ export function useTierDrag(
       if (e.pointerId !== ptrId) return;
 
       if (phase === 'active' && currentOverContainer) {
-        const insertIndex = computeInsertIndex(currentOverContainer, e.clientX, e.clientY, draggedId);
+        // Use cached element for insert index computation
+        const containerEl = getDropZoneEl(currentOverContainer);
+        const insertIndex = containerEl
+          ? computeInsertIndex(containerEl, e.clientX, e.clientY, draggedId)
+          : 0;
         const id = draggedId;
         const target = currentOverContainer;
         cleanup();
@@ -382,9 +415,11 @@ export function useTierDrag(
         sourceEl.classList.remove('tier-dragging-source');
       }
       if (currentOverContainer) {
-        const el = document.querySelector(`[data-tier-drop="${CSS.escape(currentOverContainer)}"]`);
-        el?.classList.remove('tier-drop-highlight');
+        getDropZoneEl(currentOverContainer)?.classList.remove('tier-drop-highlight');
       }
+
+      // Remove drag isolation class
+      container?.classList.remove('tier-dragging');
 
       document.documentElement.style.touchAction = '';
       document.documentElement.style.userSelect = '';
@@ -404,6 +439,7 @@ export function useTierDrag(
       sourceEl = null;
       draggedId = '';
       currentOverContainer = null;
+      dropZoneCache = [];
     }
 
     // Prevent native drag on images/text within the container (capture phase = earliest possible)

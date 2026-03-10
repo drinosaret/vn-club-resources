@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { Rows3, Globe } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
+import { useTitlePreference } from '@/lib/title-preference';
 import { TierListBoard } from '@/components/tierlist/TierListBoard';
 
 export default function TierListContent({ shareId }: { shareId?: string } = {}) {
   const locale = useLocale();
   const s = tierListStrings[locale];
+  const { setPreference } = useTitlePreference();
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center px-4 py-8 sm:py-12">
@@ -26,6 +28,7 @@ export default function TierListContent({ shareId }: { shareId?: string } = {}) 
           <Link
             href={locale === 'en' ? '/ja/tierlist/' : '/tierlist/'}
             className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            onClick={() => setPreference(locale === 'en' ? 'japanese' : 'romaji')}
           >
             <Globe className="w-3.5 h-3.5" />
             {locale === 'en' ? '日本語' : 'English'}

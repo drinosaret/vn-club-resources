@@ -758,6 +758,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
                   titleMaxH={titleMaxH}
                   isDropTarget={activeId != null && overId === `cell-${index}`}
                   isTargeted={fillCellIndex === index}
+                  nsfwRevealed={nsfwContext?.allRevealed ?? false}
                   onCellClick={() => setFillCellIndex(index)}
                   onRemove={() => moveToPool(index)}
                   onCropEdit={() => handleCropEdit(index)}
@@ -779,7 +780,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
         />
 
         <DragOverlay dropAnimation={null}>
-          {activeId ? <GridDragOverlay item={itemMap[activeId]} cropSquare={cropSquare} previewUrl={cropPreviewMapRef.current[activeId]} cellWidth={dragCellWidth} /> : null}
+          {activeId ? <GridDragOverlay item={itemMap[activeId]} cropSquare={cropSquare} previewUrl={cropPreviewMapRef.current[activeId]} cellWidth={dragCellWidth} nsfwRevealed={nsfwContext?.allRevealed ?? false} /> : null}
         </DragOverlay>
       </DndContext>
 

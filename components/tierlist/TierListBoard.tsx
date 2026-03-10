@@ -16,6 +16,7 @@ import dynamic from 'next/dynamic';
 const VNEditModal = dynamic(() => import('./VNEditModal').then(m => ({ default: m.VNEditModal })), { ssr: false });
 const TierRowFillModal = dynamic(() => import('./TierRowFillModal').then(m => ({ default: m.TierRowFillModal })), { ssr: false });
 import { VnMapProvider } from './VnMapContext';
+import { EMPTY_STRING_ARRAY } from '@/lib/tier-config';
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
@@ -148,19 +149,34 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
     setMode(newMode);
   }, [mode, vnCount, setMode, s]);
 
-  // Drop settle micro-interaction
-  const [justDroppedId, setJustDroppedId] = useState<string | null>(null);
+  // Drop settle micro-interaction — applied via DOM to avoid re-rendering all rows
   const dropTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const applyDropFlash = useCallback((itemId: string) => {
+    if (dropTimeoutRef.current) clearTimeout(dropTimeoutRef.current);
+    // Wait one frame for React to commit the DOM update, then find and animate
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-item-id="${CSS.escape(itemId)}"]`);
+      if (el) {
+        el.classList.add('tier-just-dropped');
+        dropTimeoutRef.current = setTimeout(() => el.classList.remove('tier-just-dropped'), 300);
+      }
+    });
+  }, []);
 
   // Custom zero-re-render drag system
   const boardRef = useRef<HTMLDivElement>(null);
   const onDrop = useCallback((itemId: string, containerId: string, insertIndex: number) => {
-    setJustDroppedId(itemId);
-    if (dropTimeoutRef.current) clearTimeout(dropTimeoutRef.current);
-    dropTimeoutRef.current = setTimeout(() => setJustDroppedId(null), 300);
     handleDrop(itemId, containerId, insertIndex);
-  }, [handleDrop]);
+    applyDropFlash(itemId);
+  }, [handleDrop, applyDropFlash]);
   useTierDrag(boardRef, { onDrop });
+
+  // Wrap moveToPool to apply drop flash for the pool item
+  const handleMoveToPool = useCallback((vnId: string) => {
+    moveToPool(vnId);
+    applyDropFlash(vnId);
+  }, [moveToPool, applyDropFlash]);
 
   // VNDB import state
   const [showImport, setShowImport] = useState(false);
@@ -597,7 +613,7 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
               <TierRow
                 key={tier.id}
                 tier={tier}
-                vnIds={tiers[tier.id] ?? []}
+                vnIds={tiers[tier.id] ?? EMPTY_STRING_ARRAY}
                 tierIndex={index}
                 mode={mode}
                 displayMode={displayMode}
@@ -606,7 +622,8 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
                 showScores={showScores}
                 titleMaxH={titleMaxH}
                 canDelete={tierDefs.length > 1}
-                onRemoveVN={moveToPool}
+                nsfwRevealed={nsfwContext?.allRevealed ?? false}
+                onRemoveVN={handleMoveToPool}
                 onEditVN={setEditingVnId}
                 onRenameTier={renameTier}
                 onRecolorTier={recolorTier}
@@ -615,7 +632,6 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
                 onMoveTier={moveTier}
                 onInsertTier={insertTier}
                 onAddToTier={setAddToTierId}
-                justDroppedId={justDroppedId}
                 isFirst={index === 0}
                 isLast={index === tierDefs.length - 1}
               />
@@ -632,7 +648,6 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
             titleMaxH={titleMaxH}
             onRemoveVN={removeVN}
             onEditVN={setEditingVnId}
-            justDroppedId={justDroppedId}
           />
         </div>
       </VnMapProvider>

@@ -21,7 +21,6 @@ interface TierRowProps {
   showScores: boolean;
   titleMaxH: number;
   canDelete: boolean;
-  justDroppedId: string | null;
   onRemoveVN: (vnId: string) => void;
   onEditVN: (vnId: string) => void;
   onRenameTier: (tierId: string, label: string) => void;
@@ -30,13 +29,14 @@ interface TierRowProps {
   onClearTier: (tierId: string) => void;
   onMoveTier: (tierId: string, direction: 'up' | 'down') => void;
   onInsertTier: (tierId: string, position: 'above' | 'below') => void;
+  nsfwRevealed: boolean;
   onAddToTier: (tierId: string) => void;
   isFirst: boolean;
   isLast: boolean;
 }
 
 export const TierRow = memo(function TierRow({
-  tier, vnIds, tierIndex, mode, displayMode, sizeConfig, showTitles, showScores, titleMaxH, canDelete, justDroppedId,
+  tier, vnIds, tierIndex, mode, displayMode, sizeConfig, showTitles, showScores, titleMaxH, canDelete, nsfwRevealed,
   onRemoveVN, onEditVN, onRenameTier, onRecolorTier, onDeleteTier, onClearTier, onMoveTier, onInsertTier, onAddToTier, isFirst, isLast,
 }: TierRowProps) {
   const vnMap = useVnMap();
@@ -54,7 +54,7 @@ export const TierRow = memo(function TierRow({
   const handleAddToTier = useCallback(() => onAddToTier(tier.id), [tier.id, onAddToTier]);
 
   return (
-    <div className="tier-row flex border-b border-gray-200 dark:border-gray-700 last:border-b-0" style={{ contain: 'layout style', contentVisibility: 'auto', containIntrinsicBlockSize: '80px' }}>
+    <div className="tier-row flex border-b border-gray-200 dark:border-gray-700 last:border-b-0" style={{ contain: 'style' }}>
       {/* Tier label — click to edit */}
       <TierEditPopover
         tier={tier}
@@ -79,7 +79,7 @@ export const TierRow = memo(function TierRow({
         className={`flex flex-wrap ${sizeConfig.rowGap} ${sizeConfig.rowPad} flex-1 min-w-0 ${sizeConfig.rowMinH} transition-colors duration-200${isFirst ? ' rounded-tr-lg' : ''}${isLast ? ' rounded-br-lg' : ''}`}
       >
         {vnIds.map(id => (
-          <TierItem key={id} id={id} vn={vnMap[id]} tierIndex={tierIndex} displayMode={displayMode} sizeConfig={sizeConfig} showTitles={showTitles} showScores={showScores} titleMaxH={titleMaxH} onRemove={onRemoveVN} onEdit={onEditVN} justDropped={justDroppedId === id} />
+          <TierItem key={id} id={id} vn={vnMap[id]} tierIndex={tierIndex} displayMode={displayMode} sizeConfig={sizeConfig} showTitles={showTitles} showScores={showScores} titleMaxH={titleMaxH} nsfwRevealed={nsfwRevealed} onRemove={onRemoveVN} onEdit={onEditVN} />
         ))}
         {/* Add-to-tier button */}
         {displayMode === 'covers' ? (

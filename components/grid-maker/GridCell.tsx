@@ -3,9 +3,10 @@
 import { memo, useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { X, Plus, Pencil } from 'lucide-react';
-import { NSFWImage } from '@/components/NSFWImage';
+import { X, Plus, Pencil, Eye } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
+import { getTinySrc } from '@/lib/vndb-image-cache';
+import { NSFW_THRESHOLD, useNSFWRevealContext } from '@/lib/nsfw-reveal';
 import type { GridItem } from '@/hooks/useGridMakerState';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { gridMakerStrings } from '@/lib/i18n/translations/grid-maker';
@@ -21,6 +22,7 @@ interface GridCellProps {
   isDropTarget?: boolean;
   isTargeted?: boolean;
   onCellClick: () => void;
+  nsfwRevealed: boolean;
   onRemove: () => void;
   onCropEdit: () => void;
   cropPreviewMap?: React.MutableRefObject<Record<string, string>>;
@@ -83,11 +85,12 @@ function generateCropPreview(
 }
 
 export const GridCell = memo(function GridCell({
-  id, index, item, cropSquare, showTitles, showScores, titleMaxH, isDropTarget, isTargeted, onCellClick, onRemove, onCropEdit, cropPreviewMap,
+  id, index, item, cropSquare, showTitles, showScores, titleMaxH, isDropTarget, isTargeted, nsfwRevealed, onCellClick, onRemove, onCropEdit, cropPreviewMap,
 }: GridCellProps) {
   const { preference } = useTitlePreference();
   const locale = useLocale();
   const s = gridMakerStrings[locale];
+  const nsfwContext = useNSFWRevealContext();
   const {
     attributes,
     listeners,
@@ -177,6 +180,8 @@ export const GridCell = memo(function GridCell({
     return { objectPosition: `${centerX}% ${centerY}%` };
   }, [hasPendingCrop, item?.cropData]);
   const displaySrc = previewUrl ?? item?.imageUrl ?? null;
+  const isRevealed = nsfwContext?.isRevealed(item?.id ?? '') ?? false;
+  const isNsfw = !nsfwRevealed && !isRevealed && (item?.imageSexual ?? 0) >= NSFW_THRESHOLD;
   const [imageLoaded, setImageLoaded] = useState(false);
   const prevDisplaySrc = useRef(displaySrc);
   if (displaySrc !== prevDisplaySrc.current) {
@@ -223,18 +228,36 @@ export const GridCell = memo(function GridCell({
     >
       {displaySrc ? (
         <>
-          <NSFWImage
-            src={displaySrc}
-            alt={displayTitle}
-            vnId={item.id}
-            imageSexual={item.imageSexual}
-            className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            style={cssCropImgStyle}
-            loading={index < 9 ? 'eager' : 'lazy'}
-            overlaySrc={!hasPendingCrop ? tinyPreviewUrl ?? undefined : undefined}
-            onLoad={handleImageLoad}
-          />
-          {!imageLoaded && <div className="absolute inset-0 image-placeholder" />}
+          {isNsfw ? (
+            <div className="w-full h-full cursor-pointer group/nsfw" onClick={e => { e.stopPropagation(); if (item?.id) nsfwContext?.revealVN(item.id); }}>
+              <img
+                src={tinyPreviewUrl ?? getTinySrc(displaySrc)}
+                alt={displayTitle}
+                className="w-full h-full object-cover"
+                style={{ imageRendering: 'pixelated' }}
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
+                <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+                  <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
+                  <span className="sm:hidden">Tap to reveal</span>
+                  <span className="hidden sm:inline">Click to reveal</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={displaySrc}
+              alt={displayTitle}
+              className={`w-full h-full object-cover ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              style={cssCropImgStyle}
+              loading={index < 9 ? 'eager' : 'lazy'}
+              decoding="async"
+              onLoad={handleImageLoad}
+            />
+          )}
+          {!isNsfw && !imageLoaded && <div className="absolute inset-0 image-placeholder" />}
         </>
       ) : (
         <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500 dark:text-gray-400 text-center p-1 leading-tight">

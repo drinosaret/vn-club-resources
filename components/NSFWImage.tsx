@@ -39,6 +39,8 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
   // the same root listener). A native capture handler on the wrapper fires before
   // the bubble phase, stopping the event before it reaches the Link.
   useEffect(() => {
+    // When all NSFW is globally revealed, no blur is possible — skip listener setup
+    if (stateRef.current.context?.allRevealed) return;
     const el = wrapperRef.current;
     if (!el) return;
 
@@ -102,6 +104,7 @@ function NSFWOverlay({ src, overlaySrc }: { src: string; overlaySrc?: string }) 
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
         style={{ imageRendering: 'pixelated' }}
+        loading="lazy"
         decoding="async"
       />
       <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
@@ -168,8 +171,8 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
     <div
       ref={wrapperRef}
       className={`relative w-full h-full overflow-hidden ${shouldBlur ? 'cursor-pointer group/nsfw' : ''}`}
-      onClick={handleReveal}
-      onKeyDown={handleKeyDown}
+      onClick={shouldBlur ? handleReveal : undefined}
+      onKeyDown={shouldBlur ? handleKeyDown : undefined}
       tabIndex={shouldBlur ? 0 : -1}
       role={shouldBlur ? 'button' : undefined}
       aria-label={shouldBlur ? `Click to reveal: ${alt}` : undefined}
@@ -204,8 +207,8 @@ export function NSFWNextImage({ src, alt, imageSexual, vnId, className = '', fil
     <div
       ref={wrapperRef}
       className={`relative overflow-hidden ${shouldBlur ? 'cursor-pointer group/nsfw' : ''} ${fill ? 'w-full h-full' : ''}`}
-      onClick={handleReveal}
-      onKeyDown={handleKeyDown}
+      onClick={shouldBlur ? handleReveal : undefined}
+      onKeyDown={shouldBlur ? handleKeyDown : undefined}
       tabIndex={shouldBlur ? 0 : -1}
       role={shouldBlur ? 'button' : undefined}
       aria-label={shouldBlur ? `Click to reveal: ${alt}` : undefined}

@@ -29,6 +29,11 @@ export function TitlePreferenceProvider({ children }: { children: ReactNode }) {
       } else if (stored === 'english') {
         // Migrate old 'english' preference to 'romaji'
         localStorage.setItem(STORAGE_KEY, 'romaji');
+      } else {
+        // First visit - derive initial preference from page locale
+        const pref = window.location.pathname.startsWith('/ja/') ? 'japanese' : 'romaji';
+        setPreferenceState(pref);
+        localStorage.setItem(STORAGE_KEY, pref);
       }
     } catch {
       // localStorage not available (private browsing, etc.)
