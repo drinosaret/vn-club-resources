@@ -123,7 +123,7 @@ export default function Page() {
         <p className="mb-3">Export your tier list as JPG, PNG, or WebP, copy it to your clipboard, or share directly via Twitter, Reddit, or your device&apos;s native share menu. You can also generate a shareable link - anyone who opens it gets a copy they can rearrange, making it perfect for sending friends a template to rank the same set of VNs. Set a title using the text field above the tiers and it appears as a header in the export.</p>
 
         <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">Auto-save</h3>
-        <p className="mb-3">Everything is saved to your browser automatically: tier layouts, item assignments, custom titles, scores, and display settings. If you imported from VNDB, the URL updates so you can bookmark or share it directly.</p>
+        <p className="mb-3">Your tier list is saved to your browser automatically, including tier layouts, item assignments, custom titles, scores, and display settings. Come back anytime and your tier list will be right where you left it.</p>
 
       </section>
 

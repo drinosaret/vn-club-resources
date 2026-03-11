@@ -65,7 +65,7 @@ export function TierSearchAdd({ mode, onAdd, isItemInList, isAtCapacity }: TierS
         // If query looks like a VNDB ID (e.g. "v123" or "123"), also try direct lookup
         const idMatch = q.trim().match(/^v?(\d+)$/i);
         const [searchRes, idRes] = await Promise.all([
-          vndbStatsApi.searchVNs(q, 10, controller.signal, null),
+          vndbStatsApi.searchVNs(q, 10, controller.signal, null, true),
           idMatch ? vndbStatsApi.getVN(`v${idMatch[1]}`) : null,
         ]);
         searchResults = searchRes.results;
@@ -102,7 +102,7 @@ export function TierSearchAdd({ mode, onAdd, isItemInList, isAtCapacity }: TierS
   const handleInputChange = useCallback((value: string) => {
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(value), 200);
+    debounceRef.current = setTimeout(() => search(value), 350);
   }, [search]);
 
   const handleSelect = useCallback((result: SearchResult) => {

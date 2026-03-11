@@ -74,7 +74,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
       try {
         const [guideSettled, vnSettled] = await Promise.allSettled([
           searchContent(query),
-          vndbStatsApi.searchVNs(query, VN_RESULT_LIMIT, controller.signal),
+          vndbStatsApi.searchVNs(query, VN_RESULT_LIMIT, controller.signal, 'ja', true),
         ]);
 
         // Don't update state if this request was aborted

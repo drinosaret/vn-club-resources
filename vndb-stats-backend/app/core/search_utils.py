@@ -11,8 +11,12 @@ def escape_like(value: str) -> str:
 
 
 def _strip(col):
-    """Strip non-alphanumeric characters from a column for normalized matching."""
-    return func.regexp_replace(col, '[^a-zA-Z0-9]', '', 'g')
+    """Strip non-alphanumeric characters and lowercase for normalized matching.
+
+    Returns lower(regexp_replace(col, ...)) to match the expression GIN indexes
+    defined in migration 032.
+    """
+    return func.lower(func.regexp_replace(col, '[^a-zA-Z0-9]', '', 'g'))
 
 
 def relevance_rank(q: str, name_columns: list) -> case:
@@ -44,12 +48,13 @@ def relevance_rank(q: str, name_columns: list) -> case:
     prefix_conditions = [col.ilike(starts_with) for col in name_columns]
 
     # Normalized exact: "muvluv" matches "Muv-Luv", "steinsgate" matches "Steins;Gate"
+    # _strip() already applies lower(), so use == and like (not ilike)
     norm_exact_conditions = []
     norm_prefix_conditions = []
     if len(normalized_q) >= 2:
         for col in name_columns:
-            norm_exact_conditions.append(func.lower(_strip(col)) == normalized_q)
-            norm_prefix_conditions.append(_strip(col).ilike(f"{escape_like(normalized_q)}%"))
+            norm_exact_conditions.append(_strip(col) == normalized_q)
+            norm_prefix_conditions.append(_strip(col).like(f"{escape_like(normalized_q)}%"))
 
     # Word-boundary: query appears as a complete space-delimited word
     word_conditions = []

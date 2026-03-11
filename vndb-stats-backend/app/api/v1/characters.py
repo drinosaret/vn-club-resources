@@ -1,5 +1,6 @@
 """Character endpoints."""
 
+import hashlib
 import re
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -28,11 +29,18 @@ async def search_characters(
 ):
     """Search characters by name. Returns matching characters with their primary VN for context."""
 
-    # Search name, original (Japanese name), and aliases
-    # aliases is a text[] column — convert to string for ILIKE/relevance
+    # Redis cache: 120s TTL for character search (data only changes daily)
+    cache = get_cache()
+    cache_key = f"char_search:{hashlib.sha256(f'{q}:{limit}'.encode()).hexdigest()}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return schemas.CharacterSearchResponse(**cached)
+
+    # Search name and original (Japanese name)
+    # Note: Character.aliases is never populated by the importer, so we skip it.
+    # GIN trigram indexes on name/original (migration 032) enable fast ILIKE.
     search_pattern = f"%{q}%"
-    aliases_str = func.array_to_string(Character.aliases, ' ')
-    relevance = relevance_rank(q, [Character.name, Character.original, aliases_str])
+    relevance = relevance_rank(q, [Character.name, Character.original])
 
     # Popularity tiebreaker: characters appearing in more VNs rank higher
     vn_count_sq = (
@@ -48,7 +56,6 @@ async def search_characters(
             or_(
                 Character.name.ilike(search_pattern),
                 Character.original.ilike(search_pattern),
-                aliases_str.ilike(search_pattern),
             )
         )
         .order_by(relevance.asc(), vn_count_sq.desc(), Character.name.asc())
@@ -108,7 +115,9 @@ async def search_characters(
             )
         )
 
-    return schemas.CharacterSearchResponse(results=results)
+    response = schemas.CharacterSearchResponse(results=results)
+    await cache.set(cache_key, response.model_dump(), ttl=120)
+    return response
 
 
 @router.get("/sitemap-ids", include_in_schema=False)

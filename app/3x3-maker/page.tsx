@@ -116,7 +116,7 @@ export default function Page() {
         <p className="mb-3">Export your grid as JPG, PNG, or WebP, copy it to your clipboard, or share it directly via Twitter, Reddit, or your device&apos;s native share menu. You can also generate a shareable link - anyone who opens it gets a copy they can edit, making it a great way to send friends a template to fill out with their own picks.</p>
 
         <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">Auto-save</h3>
-        <p className="mb-3">Your grid is saved to your browser automatically, including items, crop positions, custom titles, scores, and display settings. If you imported from VNDB, the URL updates so you can bookmark or share it directly.</p>
+        <p className="mb-3">Your grid is saved to your browser automatically, including items, crop positions, custom titles, scores, and display settings. Come back anytime and your grid will be right where you left it.</p>
 
 
       </section>

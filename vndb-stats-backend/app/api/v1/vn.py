@@ -190,6 +190,9 @@ async def search_vns(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=24, ge=1, le=100),
 
+    # Performance options
+    skip_count: bool = Query(default=False, description="Skip total count query (faster for autocomplete dropdowns)"),
+
     response: Response = None,
     db: AsyncSession = Depends(get_db),
 ):
@@ -242,25 +245,36 @@ async def search_vns(
     count_query = select(func.count(VisualNovel.id))
 
     # Text search
+    # Expression indexes exist for these patterns (migration 032) - expressions must match exactly.
     if q:
         eq = _escape_like(q)
-        # Direct substring match
+        # Aliases expression matching the index: array_to_string(COALESCE(aliases, '{}'), ' ')
+        _aliases_expr = func.array_to_string(func.coalesce(VisualNovel.aliases, text("'{}'::text[]")), ' ')
+        # Direct substring match (uses GIN trigram indexes)
         search_filter = or_(
             VisualNovel.title.ilike(f"%{eq}%"),
             VisualNovel.title_jp.ilike(f"%{eq}%"),
             VisualNovel.title_romaji.ilike(f"%{eq}%"),
-            func.array_to_string(VisualNovel.aliases, ' ').ilike(f"%{eq}%"),
+            _aliases_expr.ilike(f"%{eq}%"),
         )
         # Normalized match: strip punctuation/spaces so "muvluv" matches "Muv-Luv",
         # "steinsgate" matches "Steins;Gate", "fatestaynight" matches "Fate/stay night", etc.
-        normalized_q = re.sub(r'[^a-zA-Z0-9]', '', q)
+        # Uses expression GIN indexes - expressions must match index definitions exactly.
+        normalized_q = re.sub(r'[^a-zA-Z0-9]', '', q).lower()
         if len(normalized_q) >= 2:
-            _strip = lambda col: func.regexp_replace(col, '[^a-zA-Z0-9]', '', 'g')
+            escaped_nq = _escape_like(normalized_q)
+            # These expressions match the index definitions in migration 032:
+            #   lower(regexp_replace(title, '[^a-zA-Z0-9]', '', 'g'))
+            #   lower(regexp_replace(COALESCE(title_romaji, ''), '[^a-zA-Z0-9]', '', 'g'))
+            #   lower(regexp_replace(array_to_string(COALESCE(aliases, '{}'), ' '), '[^a-zA-Z0-9]', '', 'g'))
+            _norm_title = func.lower(func.regexp_replace(VisualNovel.title, '[^a-zA-Z0-9]', '', 'g'))
+            _norm_romaji = func.lower(func.regexp_replace(func.coalesce(VisualNovel.title_romaji, ''), '[^a-zA-Z0-9]', '', 'g'))
+            _norm_aliases = func.lower(func.regexp_replace(_aliases_expr, '[^a-zA-Z0-9]', '', 'g'))
             search_filter = or_(
                 search_filter,
-                _strip(VisualNovel.title).ilike(f"%{normalized_q}%"),
-                _strip(VisualNovel.title_romaji).ilike(f"%{normalized_q}%"),
-                _strip(func.array_to_string(VisualNovel.aliases, ' ')).ilike(f"%{normalized_q}%"),
+                _norm_title.like(f"%{escaped_nq}%"),
+                _norm_romaji.like(f"%{escaped_nq}%"),
+                _norm_aliases.like(f"%{escaped_nq}%"),
             )
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
@@ -691,21 +705,27 @@ async def search_vns(
     # Execute main query and count query in parallel using separate sessions.
     # asyncpg doesn't support concurrent queries on the same connection, so
     # the count query runs on a separate session from the pool.
-    async def _run_count(q):
-        async with async_session_maker() as s:
-            r = await s.execute(q)
-            return r.scalar_one_or_none() or 0
+    if skip_count:
+        # Fast path for autocomplete dropdowns - skip the expensive count query
+        result = await db.execute(query)
+        vns = result.all()
+        total = 0
+    else:
+        async def _run_count(q):
+            async with async_session_maker() as s:
+                r = await s.execute(q)
+                return r.scalar_one_or_none() or 0
 
-    result, total = await asyncio.gather(
-        db.execute(query),
-        _run_count(count_query),
-    )
-    vns = result.all()
+        result, total = await asyncio.gather(
+            db.execute(query),
+            _run_count(count_query),
+        )
+        vns = result.all()
 
     # Calculate total_with_spoilers when filtering by tags/traits with spoiler_level < 2
     total_with_spoilers = None
     has_tag_or_trait_filter = bool(tags) or bool(traits)
-    if has_tag_or_trait_filter and spoiler_level < 2:
+    if not skip_count and has_tag_or_trait_filter and spoiler_level < 2:
         # Build a count query with spoiler_level=2 to get the count including all spoilers
         spoiler_count_query = select(func.count(VisualNovel.id))
 

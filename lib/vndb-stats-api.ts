@@ -1513,10 +1513,11 @@ class VNDBStatsAPI {
    * Search for VNs.
    * ALL data comes from local database.
    */
-  async searchVNs(query: string, limit: number = 20, signal?: AbortSignal, olang: string | null = 'ja'): Promise<VNSearchResponse> {
+  async searchVNs(query: string, limit: number = 20, signal?: AbortSignal, olang: string | null = 'ja', skipCount: boolean = false): Promise<VNSearchResponse> {
     const olangParam = olang ? `&olang=${olang}` : '';
+    const skipCountParam = skipCount ? '&skip_count=true' : '';
     return await this.fetch<VNSearchResponse>(
-      `/api/v1/vn/search/?q=${encodeURIComponent(query)}&limit=${limit}&nsfw=true&devstatus=-1${olangParam}`,
+      `/api/v1/vn/search/?q=${encodeURIComponent(query)}&limit=${limit}&nsfw=true&devstatus=-1${olangParam}${skipCountParam}`,
       signal ? { signal } : undefined
     );
   }
