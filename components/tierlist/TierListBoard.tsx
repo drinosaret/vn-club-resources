@@ -410,14 +410,15 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
         <div ref={settingsRef} className="relative">
           <button
             onClick={() => setSettingsOpen(!settingsOpen)}
-            className={`p-1.5 rounded-lg transition-colors ${
+            className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
               settingsOpen
                 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300'
+                : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
             title={s['controls.displaySettings']}
           >
             <Settings className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{s['controls.displaySettings']}</span>
           </button>
           {settingsOpen && (
             <div

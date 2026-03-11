@@ -162,6 +162,7 @@ export const GridCell = memo(function GridCell({
   const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     opacity: isDragging ? 0 : 1,
+    transition: isDragging ? undefined : 'opacity 150ms ease',
     contain: 'style paint' as const,
   }), [transform, isDragging]);
 
