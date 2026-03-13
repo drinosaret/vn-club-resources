@@ -369,9 +369,9 @@ function parseRelatedPages(content: string): RelatedCategory[] {
       continue;
     }
 
-    // Check for link items: - [Text](url) - Description or - [Text](url) – Description
-    if (trimmedLine.startsWith('-') && currentCategory) {
-      const linkContent = trimmedLine.replace(/^-\s*/, '');
+    // Check for link items: - [Text](url) - Description or * [Text](url) – Description
+    if (/^[-*]\s/.test(trimmedLine) && currentCategory) {
+      const linkContent = trimmedLine.replace(/^[-*]\s*/, '');
 
       // Pattern: [Text](url) - Description or [Text](url) – Description
       const linkMatch = linkContent.match(/^\[([^\]]+)\]\(([^)]+)\)\s*[—–-]\s*(.+)$/);
