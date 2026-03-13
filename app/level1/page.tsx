@@ -60,10 +60,10 @@ export default function Level1Page() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Word</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reading</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Meaning</th>
+                  <th className="text-left py-3 px-2 sm:px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8 sm:w-10">#</th>
+                  <th className="text-left py-3 px-2 sm:px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Word</th>
+                  <th className="text-left py-3 px-2 sm:px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Reading</th>
+                  <th className="text-left py-3 px-2 sm:px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Meaning</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,10 +72,10 @@ export default function Level1Page() {
                     key={idx}
                     className="border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
                   >
-                    <td className="py-3 px-4 text-sm text-gray-400 dark:text-gray-500 tabular-nums">{idx + 1}</td>
-                    <td className="py-3 px-4 text-lg font-medium text-gray-900 dark:text-white">{word.kanji}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{word.reading}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300">{word.english}</td>
+                    <td className="py-3 px-2 sm:px-4 text-sm text-gray-400 dark:text-gray-500 tabular-nums">{idx + 1}</td>
+                    <td className="py-3 px-2 sm:px-4 text-base sm:text-lg font-medium text-gray-900 dark:text-white whitespace-nowrap">{word.kanji}</td>
+                    <td className="py-3 px-2 sm:px-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{word.reading}</td>
+                    <td className="py-3 px-2 sm:px-4 text-sm text-gray-600 dark:text-gray-300">{word.english}</td>
                   </tr>
                 ))}
               </tbody>
