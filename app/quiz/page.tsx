@@ -73,6 +73,13 @@ export default function QuizPage() {
             </li>
           </ul>
         </div>
+
+        {/* Level 1 link */}
+        <div className="mt-4 p-5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Looking to join the Discord server? Study the <a href="/level1/" className="text-primary-600 dark:text-primary-400 font-medium hover:underline">100 most common Japanese words</a> for the VNCR Level 1 quiz.
+          </p>
+        </div>
       </div>
     </div>
     </>

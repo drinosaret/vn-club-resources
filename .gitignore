@@ -1,5 +1,6 @@
 .cl*/
 .int*/
+.vi*/
 
 # Ignore root markdown files by default, whitelist specific ones
 /*.md

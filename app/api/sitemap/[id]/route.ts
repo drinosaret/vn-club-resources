@@ -120,6 +120,7 @@ function generateStaticEntries(): UrlEntry[] {
     { loc: `${SITE_URL}/ja/tierlist/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/beginner-vns/`, changefreq: 'monthly', priority: 0.8 },
     { loc: `${SITE_URL}/quiz/`, changefreq: 'monthly', priority: 0.6 },
+    { loc: `${SITE_URL}/level1/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/tools/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/sources/`, changefreq: 'weekly', priority: 0.8 },
     { loc: `${SITE_URL}/find/`, changefreq: 'weekly', priority: 0.8 },
