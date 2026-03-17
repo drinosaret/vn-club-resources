@@ -93,6 +93,9 @@ export default function Footer() {
               <li>
                 <FooterLink href="/3x3-maker">3x3 Maker</FooterLink>
               </li>
+              <li>
+                <FooterLink href="/roulette/">Roulette</FooterLink>
+              </li>
             </ul>
           </div>
 

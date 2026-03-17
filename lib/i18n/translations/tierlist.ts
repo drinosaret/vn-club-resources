@@ -65,6 +65,7 @@ const en = {
   'hint.text': 'Click tier labels to edit. Drag VN covers between tiers. Auto-saved.',
   'hint.textChars': 'Click tier labels to edit. Drag character images between tiers. Auto-saved.',
   'hint.try3x3': 'Try the 3x3 Maker',
+  'hint.tryRoulette': 'Try the Roulette',
 
   // TierRow
   'tier.dragHere': 'Drag VNs here',
@@ -209,6 +210,7 @@ const ja: Record<TierListKeys, string> = {
   'hint.text': '\u30c6\u30a3\u30a2\u30e9\u30d9\u30eb\u3092\u30af\u30ea\u30c3\u30af\u3057\u3066\u7de8\u96c6\u3002エロゲ\u30ab\u30d0\u30fc\u3092\u30c6\u30a3\u30a2\u9593\u3067\u30c9\u30e9\u30c3\u30b0\u3002\u81ea\u52d5\u4fdd\u5b58\u3002',
   'hint.textChars': 'ティアラベルをクリックして編集。キャラ画像をティア間でドラッグ。自動保存。',
   'hint.try3x3': '3x3\u30e1\u30fc\u30ab\u30fc\u3092\u8a66\u3059',
+  'hint.tryRoulette': '\u30eb\u30fc\u30ec\u30c3\u30c8\u3092\u8a66\u3059',
 
   // TierRow
   'tier.dragHere': 'エロゲ\u3092\u3053\u3053\u306b\u30c9\u30e9\u30c3\u30b0',

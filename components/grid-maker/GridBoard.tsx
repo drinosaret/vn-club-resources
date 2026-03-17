@@ -18,7 +18,7 @@ import type { SortingStrategy } from '@dnd-kit/sortable';
 
 // No-op strategy: items stay in place during drag. Swap happens only on drop.
 const noMovementStrategy: SortingStrategy = () => null;
-import { Upload, Trash2, Loader2, Download, Users, Monitor, Rows3, Square, RectangleVertical, Settings } from 'lucide-react';
+import { Upload, Trash2, Loader2, Download, Users, Monitor, Rows3, Dices, Square, RectangleVertical, Settings } from 'lucide-react';
 import { useGridMakerState } from '@/hooks/useGridMakerState';
 import { useGridExport } from '@/hooks/useGridExport';
 import type { GridExportFormat, GridExportScale } from '@/hooks/useGridExport';
@@ -800,13 +800,20 @@ export function GridBoard({ shareId }: GridBoardProps) {
         </p>
       )}
 
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex justify-center gap-4">
         <Link
-          href={locale === 'ja' ? '/ja/tierlist' : '/tierlist'}
+          href={locale === 'ja' ? '/ja/tierlist/' : '/tierlist/'}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
         >
           <Rows3 className="w-4 h-4" />
           {s['grid.tryTierList']}
+        </Link>
+        <Link
+          href={locale === 'ja' ? '/ja/roulette/' : '/roulette/'}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+        >
+          <Dices className="w-4 h-4" />
+          {s['grid.tryRoulette']}
         </Link>
       </div>
 

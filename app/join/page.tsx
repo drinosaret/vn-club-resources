@@ -40,10 +40,10 @@ function DiscordIcon({ className }: { className?: string }) {
 
 const features = [
   'Discuss untranslated VNs and Japanese games',
-  'Get help with text hookers, dictionaries, and setup',
-  'Monthly group reading events',
-  'Share and track your reading progress',
-  'Custom Discord bot with community tools',
+  'Get setup help in minutes, not hours of googling',
+  'Join monthly group reads',
+  'Share progress and celebrate milestones together',
+  'Custom immersion tracking bot, leaderboards, and monthly events',
 ];
 
 const partners = [
@@ -87,8 +87,12 @@ export default function JoinPage() {
             VN Club Resurrection
           </p>
 
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-gray-600 dark:text-gray-400 mb-2">
             A community for reading visual novels in Japanese.
+          </p>
+
+          <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
+            1,000+ members reading together
           </p>
 
           <a

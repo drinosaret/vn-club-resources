@@ -110,6 +110,7 @@ function generateStaticEntries(): UrlEntry[] {
     { loc: `${SITE_URL}/recommendations/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/tierlist/`, changefreq: 'monthly', priority: 0.7 },
     { loc: `${SITE_URL}/3x3-maker/`, changefreq: 'monthly', priority: 0.7 },
+    { loc: `${SITE_URL}/roulette/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/news/`, changefreq: 'daily', priority: 0.6 },
     ...['all', 'recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
       loc: `${SITE_URL}/news/${slug}/`,
@@ -118,6 +119,7 @@ function generateStaticEntries(): UrlEntry[] {
     })),
     { loc: `${SITE_URL}/ja/3x3-maker/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/ja/tierlist/`, changefreq: 'monthly', priority: 0.6 },
+    { loc: `${SITE_URL}/ja/roulette/`, changefreq: 'monthly', priority: 0.5 },
     { loc: `${SITE_URL}/beginner-vns/`, changefreq: 'monthly', priority: 0.8 },
     { loc: `${SITE_URL}/quiz/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/level1/`, changefreq: 'monthly', priority: 0.6 },

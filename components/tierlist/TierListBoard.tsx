@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
 import Link from 'next/link';
-import { Upload, Trash2, Loader2, Image as ImageIcon, AlignJustify, Grid3X3, Monitor, Users, Settings, ChevronDown, Square, RectangleVertical } from 'lucide-react';
+import { Upload, Trash2, Loader2, Image as ImageIcon, AlignJustify, Grid3X3, Dices, Monitor, Users, Settings, ChevronDown, Square, RectangleVertical } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
 import { t } from '@/lib/i18n/types';
@@ -669,13 +669,20 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
         </p>
       )}
 
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6 flex justify-center gap-4">
         <Link
           href={locale === 'en' ? '/3x3-maker/' : '/ja/3x3-maker/'}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
         >
           <Grid3X3 className="w-4 h-4" />
           {s['hint.try3x3']}
+        </Link>
+        <Link
+          href={locale === 'en' ? '/roulette/' : '/ja/roulette/'}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+        >
+          <Dices className="w-4 h-4" />
+          {s['hint.tryRoulette']}
         </Link>
       </div>
 

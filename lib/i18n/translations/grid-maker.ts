@@ -54,6 +54,7 @@ const en = {
   'grid.hintVNs': 'Click empty cells to add VNs. Drag covers to reorder. Auto-saved.',
   'grid.hintChars': 'Click empty cells to add characters. Drag covers to reorder. Auto-saved.',
   'grid.tryTierList': 'Try the Tier List',
+  'grid.tryRoulette': 'Try the Roulette',
 
   // GridBoard — confirm dialogs
   'confirm.modeSwitch': 'Switching modes will clear your current grid. Continue?',
@@ -176,6 +177,7 @@ const ja: Record<GridMakerKeys, string> = {
   'grid.hintVNs': '空のセルをクリックしてエロゲを追加。カバーをドラッグして並べ替え。自動保存。',
   'grid.hintChars': '\u7a7a\u306e\u30bb\u30eb\u3092\u30af\u30ea\u30c3\u30af\u3057\u3066\u30ad\u30e3\u30e9\u30af\u30bf\u30fc\u3092\u8ffd\u52a0\u3002\u30ab\u30d0\u30fc\u3092\u30c9\u30e9\u30c3\u30b0\u3057\u3066\u4e26\u3079\u66ff\u3048\u3002\u81ea\u52d5\u4fdd\u5b58\u3002',
   'grid.tryTierList': '\u30c6\u30a3\u30a2\u30ea\u30b9\u30c8\u3092\u8a66\u3059',
+  'grid.tryRoulette': '\u30eb\u30fc\u30ec\u30c3\u30c8\u3092\u8a66\u3059',
 
   // GridBoard — confirm dialogs
   'confirm.modeSwitch': '\u30e2\u30fc\u30c9\u3092\u5207\u308a\u66ff\u3048\u308b\u3068\u73fe\u5728\u306e\u30b0\u30ea\u30c3\u30c9\u304c\u30af\u30ea\u30a2\u3055\u308c\u307e\u3059\u3002\u7d9a\u884c\u3057\u307e\u3059\u304b\uff1f',
