@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Rows3 } from 'lucide-react';
 import TierListContent from './TierListContent';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
+import { DiscordCTA } from '@/components/shared/DiscordCTA';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = {
@@ -126,6 +127,12 @@ export default function Page() {
         <p className="mb-3">Your tier list is saved to your browser automatically, including tier layouts, item assignments, custom titles, scores, and display settings. Come back anytime and your tier list will be right where you left it.</p>
 
       </section>
+
+      <DiscordCTA
+        title="Join our Discord"
+        description="Share your rankings and compare with other readers."
+        className="mt-6"
+      />
 
       <VNDBAttribution />
     </>

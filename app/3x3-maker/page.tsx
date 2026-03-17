@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Grid3X3 } from 'lucide-react';
 import GridMakerContent from './GridMakerContent';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
+import { DiscordCTA } from '@/components/shared/DiscordCTA';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = {
@@ -120,6 +121,12 @@ export default function Page() {
 
 
       </section>
+
+      <DiscordCTA
+        title="Join our Discord"
+        description="Share your collage and discover what others are reading."
+        className="mt-6"
+      />
 
       <VNDBAttribution />
     </>

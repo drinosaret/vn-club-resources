@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { BookOpen, RefreshCw, ExternalLink } from 'lucide-react';
+import { DiscordCTA } from '@/components/shared/DiscordCTA';
 import type { FeaturedVNData } from '@/lib/featured-vns';
 import { FEATURED_VN_IDS } from '@/lib/featured-vns';
 import { VNCard } from '@/components/vn/VNCard';
@@ -161,6 +162,12 @@ export default function BeginnerVNsContent({
             </p>
           )}
         </section>
+
+        <DiscordCTA
+          title="Join our Discord"
+          description="Get personalized recommendations from our community."
+          className="mt-10 mb-2"
+        />
       </div>
     </div>
   );

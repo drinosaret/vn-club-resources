@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Dices } from 'lucide-react';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
+import { DiscordCTA } from '@/components/shared/DiscordCTA';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 import RoulettePageClient from '@/components/roulette/RoulettePageClient';
 
@@ -101,6 +102,12 @@ export default function Page() {
         <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">Group mode</h3>
         <p className="mb-3">Switch to Group mode for reading challenges and VN club picks. Add player names to the queue, then spin. Each round randomly selects a player and assigns them a VN from the wheel. Players are removed from the queue after assignment while VNs stay on the wheel, so everyone gets a pick. The assignment history table tracks all results.</p>
       </section>
+
+      <DiscordCTA
+        title="Join our Discord"
+        description="Pick your next VN with friends."
+        className="mt-6"
+      />
 
       <VNDBAttribution />
     </>
