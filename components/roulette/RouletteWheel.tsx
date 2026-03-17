@@ -253,7 +253,7 @@ export function RouletteWheel({
   }, [spinState, winnerIndex, entries.length, getCanvasSize, drawWheel]);
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-[520px]">
+    <div ref={containerRef} className="relative w-full max-w-[520px] aspect-square">
       {/* Pointer */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-0.5 z-10">
         <div

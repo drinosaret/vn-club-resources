@@ -60,8 +60,7 @@ type Action =
   | { type: 'RESET_ASSIGNMENTS' }
   | { type: 'CLEAR_ENTRIES' }
   | { type: 'TOGGLE_REMOVE_ON_PICK' }
-  | { type: 'TOGGLE_PLAYER_ORDER' }
-  | { type: 'HYDRATE'; state: Partial<RouletteState> };
+  | { type: 'TOGGLE_PLAYER_ORDER' };
 
 const MAX_ENTRIES = 15;
 const MAX_PLAYERS = 15;
@@ -181,9 +180,6 @@ function reducer(state: RouletteState, action: Action): RouletteState {
     case 'TOGGLE_PLAYER_ORDER': {
       return { ...state, playerOrder: state.playerOrder === 'random' ? 'sequential' : 'random' };
     }
-    case 'HYDRATE': {
-      return { ...state, ...action.state };
-    }
     default:
       return state;
   }
@@ -206,39 +202,39 @@ const initialState: RouletteState = {
 
 // ── Component ──
 
+function getInitialState(): RouletteState {
+  if (typeof window === 'undefined') return initialState;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...initialState,
+        mode: parsed.mode || 'solo',
+        entries: parsed.entries || [],
+        players: parsed.players || [],
+        remainingPlayers: parsed.remainingPlayers || parsed.players || [],
+        assignments: parsed.assignments || [],
+        round: parsed.round || 0,
+        removeOnPick: parsed.removeOnPick || false,
+        playerOrder: parsed.playerOrder || 'random',
+      };
+    }
+  } catch { /* ignore */ }
+  return initialState;
+}
+
 export default function RoulettePageClient() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState, getInitialState);
   const { preference, setPreference } = useTitlePreference();
   const locale = useLocale();
   const s = rouletteStrings[locale];
   const [isHydrated, setIsHydrated] = useState(false);
   const playerInputRef = useRef<HTMLInputElement>(null);
 
-  // Hydrate from localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        dispatch({
-          type: 'HYDRATE',
-          state: {
-            mode: parsed.mode || 'solo',
-            entries: parsed.entries || [],
-            players: parsed.players || [],
-            remainingPlayers: parsed.remainingPlayers || parsed.players || [],
-            assignments: parsed.assignments || [],
-            round: parsed.round || 0,
-            removeOnPick: parsed.removeOnPick || false,
-            playerOrder: parsed.playerOrder || 'random',
-          },
-        });
-      }
-    } catch { /* ignore */ }
-    setIsHydrated(true);
-  }, []);
+  useEffect(() => { setIsHydrated(true); }, []);
 
-  // Persist to localStorage (skips first render because isHydrated is batched with HYDRATE)
+  // Persist to localStorage
   useEffect(() => {
     if (!isHydrated) return;
     try {

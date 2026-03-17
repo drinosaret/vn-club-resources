@@ -1,6 +1,4 @@
-import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { Dices } from 'lucide-react';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 import RoulettePageClient from '@/components/roulette/RoulettePageClient';
@@ -60,25 +58,6 @@ const jsonLd = [
   ]),
 ];
 
-function LoadingFallback() {
-  return (
-    <div className="min-h-[80vh] flex flex-col items-center px-4 py-12">
-      <div className="max-w-5xl w-full">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-violet-100 dark:bg-violet-900/30 mb-4">
-            <Dices className="w-10 h-10 text-violet-600 dark:text-violet-400" />
-          </div>
-          <div className="h-10 w-56 mx-auto mb-3 rounded image-placeholder" />
-          <div className="h-6 w-80 mx-auto rounded image-placeholder" />
-        </div>
-        <div className="flex justify-center">
-          <div className="w-80 h-80 rounded-full image-placeholder" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Page() {
   return (
     <>
@@ -86,9 +65,7 @@ export default function Page() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
-      <Suspense fallback={<LoadingFallback />}>
-        <RoulettePageClient />
-      </Suspense>
+      <RoulettePageClient />
 
       <section className="max-w-2xl mx-auto px-4 py-12 text-sm text-gray-600 dark:text-gray-400">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">使い方</h2>
