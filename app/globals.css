@@ -524,15 +524,22 @@ main {
 }
 
 /* ═══ Browse Grid Paint Optimization ═══
-   content-visibility: auto defers paint for off-screen VN cards.
-   With 42 items per page (small grid), only ~12 are above the fold —
-   the remaining ~30 skip layout/paint until scrolled into view.
    contain: layout style paint isolates each card so internal changes
-   (image load, hover) don't invalidate sibling paint. */
+   (image load, hover) don't invalidate sibling paint.
+   content-visibility: auto was removed — it caused severe scroll jitter
+   on Kiwi Browser (older Chromium) due to feedback loops between
+   contain-intrinsic-size mismatches and scroll anchoring. */
 .browse-vn-grid-content > a {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 180px 300px;
   contain: layout style paint;
+}
+
+/* Disable hover transform on touch-only devices.
+   Some mobile browsers (Kiwi, Samsung Internet) fire :hover during scroll,
+   triggering the card lift transform mid-scroll and causing jank. */
+@media (hover: none) {
+  .group:hover .browse-vn-card {
+    transform: none !important;
+  }
 }
 
 /* ═══ Tier List & Grid Maker Paint Optimization ═══
