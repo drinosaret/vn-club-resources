@@ -99,7 +99,7 @@ export function VNSearchAdd({ onAdd, isItemInList, isAtCapacity, disabled, place
       title_romaji: result.title_romaji,
       imageUrl,
       imageSexual: result.image_sexual ?? null,
-      rating: result.rating ? result.rating / 10 : null,
+      rating: result.rating ?? null,
     });
     setQuery('');
     setResults([]);
@@ -216,7 +216,7 @@ export function VNSearchAdd({ onAdd, isItemInList, isAtCapacity, disabled, place
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {result.released?.slice(0, 4) ?? 'TBA'}
-                    {result.rating ? ` \u00b7 ${(result.rating / 10).toFixed(2)}` : ''}
+                    {result.rating ? ` \u00b7 ${result.rating.toFixed(2)}` : ''}
                   </div>
                 </div>
                 {alreadyAdded ? (

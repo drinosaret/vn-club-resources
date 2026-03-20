@@ -186,7 +186,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
         ref={modalRef}
         tabIndex={-1}
         className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden outline-hidden flex flex-col"
-        style={{ maxHeight: 'min(85vh, 640px)' }}
+        style={{ maxHeight: 'min(90vh, 750px)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
@@ -202,7 +202,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
         </div>
 
         {/* Title + Score inputs */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0 space-y-2">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 space-y-2 overflow-y-auto max-h-[45%]">
           <div className="flex flex-col items-center gap-1.5">
             {showAltTitle && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-full">{altTitle}</span>}
             <div className="flex items-center gap-2">
@@ -284,7 +284,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
 
         {/* Cropper area */}
         {imageUrl && (
-          <div className="relative flex-1 min-h-[300px] bg-gray-950">
+          <div className="relative flex-1 min-h-[200px] bg-gray-950">
             <Cropper
               image={imageUrl}
               crop={crop}

@@ -264,7 +264,7 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         {result.released?.slice(0, 4) ?? 'TBA'}
-                        {result.rating ? ` · ${(result.rating / 10).toFixed(2)}` : ''}
+                        {result.rating ? ` · ${result.rating.toFixed(2)}` : ''}
                       </div>
                     </>
                   ) : (

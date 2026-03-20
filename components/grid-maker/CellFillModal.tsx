@@ -314,7 +314,7 @@ export function CellFillModal({
                       {mode !== 'characters' && (item.released || item.rating) && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {item.released?.slice(0, 4) ?? 'TBA'}
-                          {item.rating ? ` · ${(item.rating / 10).toFixed(2)}` : ''}
+                          {item.rating ? ` · ${item.rating.toFixed(2)}` : ''}
                         </div>
                       )}
                     </div>
@@ -372,7 +372,7 @@ export function CellFillModal({
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {result.released?.slice(0, 4) ?? 'TBA'}
-                            {result.rating ? ` · ${(result.rating / 10).toFixed(2)}` : ''}
+                            {result.rating ? ` · ${result.rating.toFixed(2)}` : ''}
                           </div>
                         </>
                       ) : (
