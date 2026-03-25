@@ -107,7 +107,7 @@ function isValidUrl(url: string): boolean {
       return false;
     }
     // Only allow relative paths starting with / or # or ?
-    return url.startsWith('/') || url.startsWith('#') || url.startsWith('?');
+    return (url.startsWith('/') && !url.startsWith('//')) || url.startsWith('#') || url.startsWith('?');
   }
 }
 

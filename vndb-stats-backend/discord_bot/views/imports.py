@@ -1,5 +1,6 @@
 """Import management view with status and history."""
 
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -110,11 +111,23 @@ class ImportsView(BaseView):
 
         return embed
 
+    _import_last_started: float = 0  # Class-level cooldown tracker
+
     @ui.button(label="Start Import", style=discord.ButtonStyle.success, emoji="\u25b6\ufe0f", row=0)
     async def start_button(
         self, interaction: discord.Interaction, button: ui.Button
     ) -> None:
         """Start a new import."""
+        # Cooldown: 5 minutes between import starts
+        now = time.monotonic()
+        cls = type(self)
+        if now - cls._import_last_started < 300:
+            remaining = int(300 - (now - cls._import_last_started))
+            await interaction.response.send_message(
+                f"Please wait {remaining}s before starting another import.", ephemeral=True
+            )
+            return
+
         # Confirm first
         confirm_view = ConfirmView(
             user_id=interaction.user.id,
@@ -130,6 +143,7 @@ class ImportsView(BaseView):
         await confirm_view.wait()
 
         if confirm_view.value:
+            cls._import_last_started = time.monotonic()
             async with async_session_maker() as db:
                 run = ImportRun(
                     status="pending",
@@ -177,6 +191,16 @@ class ImportsView(BaseView):
         self, interaction: discord.Interaction, button: ui.Button
     ) -> None:
         """Start import with force re-download."""
+        # Cooldown: shared with regular import (5 minutes)
+        now = time.monotonic()
+        cls = type(self)
+        if now - cls._import_last_started < 300:
+            remaining = int(300 - (now - cls._import_last_started))
+            await interaction.response.send_message(
+                f"Please wait {remaining}s before starting another import.", ephemeral=True
+            )
+            return
+
         if self.current_run:
             await interaction.response.send_message(
                 "An import is already in progress.", ephemeral=True
@@ -198,6 +222,7 @@ class ImportsView(BaseView):
         await confirm_view.wait()
 
         if confirm_view.value:
+            cls._import_last_started = time.monotonic()
             async with async_session_maker() as db:
                 run = ImportRun(
                     status="pending",

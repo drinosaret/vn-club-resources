@@ -379,6 +379,23 @@ STAGING_TABLES = [
     'extlinks_master', 'vn_extlinks', 'wikidata_entries',
 ]
 
+import re as _re
+
+_TABLE_NAME_RE = _re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+
+def _validate_table_name(name: str) -> str:
+    """Validate a table name is a safe SQL identifier (defense-in-depth)."""
+    if not _TABLE_NAME_RE.match(name):
+        raise ValueError(f"Unsafe table name: {name!r}")
+    return name
+
+
+# Validate all hardcoded table names at import time
+for _t in IMPORT_TABLES + STAGING_TABLES:
+    _validate_table_name(_t)
+
+
 # Columns to import from the wikidata dump file (subset of all available columns)
 WIKIDATA_COLUMNS = [
     "id", "enwiki", "jawiki", "website", "vndb",
@@ -422,6 +439,7 @@ async def prepare_staging(table_name: str):
     Safe even if staging table is already empty.
     Table name comes from hardcoded STAGING_TABLES constant.
     """
+    _validate_table_name(table_name)
     staging = f"{table_name}_staging"
     async with async_session() as db:
         await db.execute(text(f"TRUNCATE TABLE {staging}"))
@@ -449,6 +467,9 @@ async def swap_staging_to_live(table_names: str | list[str]) -> bool:
     """
     if isinstance(table_names, str):
         table_names = [table_names]
+
+    for table in table_names:
+        _validate_table_name(table)
 
     async with async_session() as db:
         # 1. Guard: refuse to swap empty staging tables

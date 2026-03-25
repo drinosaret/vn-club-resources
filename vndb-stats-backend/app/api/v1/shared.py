@@ -263,7 +263,10 @@ async def _verify_turnstile(token: str, ip: str | None = None) -> bool:
             return bool(result.get("success"))
     except Exception as e:
         logger.error("Turnstile verification error: %s", e)
-        return True  # Fail open — don't block real users if Cloudflare is down
+        fail_open = get_settings().turnstile_fail_open
+        if not fail_open:
+            logger.warning("Turnstile fail-closed: blocking request (set TURNSTILE_FAIL_OPEN=true to allow)")
+        return fail_open
 
 
 class SharedLayoutCreate(BaseModel):

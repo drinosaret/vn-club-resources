@@ -5,10 +5,10 @@ This module constructs a PyTorch Geometric HeteroData graph from the database,
 connecting users, VNs, tags, staff, producers, characters, and traits.
 """
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
-import pickle
 
 import numpy as np
 import torch
@@ -461,11 +461,28 @@ async def save_graph(data: HeteroData, path: Path = None):
     torch.save(data, path)
     logger.info(f"Graph saved to {path}")
 
-    # Save mappings separately for easy access
-    mappings_path = path.parent / "mappings.pkl"
-    with open(mappings_path, 'wb') as f:
-        pickle.dump(data.mappings, f)
+    # Save mappings separately for easy access (JSON instead of pickle for safety)
+    # Note: JSON converts all dict keys to strings. Integer keys (vn, tag, etc.)
+    # are restored on load via _restore_mapping_key_types().
+    mappings_path = path.parent / "mappings.json"
+    with open(mappings_path, 'w') as f:
+        json.dump(data.mappings, f)
     logger.info(f"Mappings saved to {mappings_path}")
+
+
+# 'user' keys are strings (hashes); all other node types use integer DB IDs.
+_STRING_KEY_NODE_TYPES = frozenset({'user'})
+
+
+def _restore_mapping_key_types(mappings: dict) -> dict:
+    """Restore integer keys after JSON round-trip (JSON stringifies all keys)."""
+    restored = {}
+    for node_type, id_map in mappings.items():
+        if node_type in _STRING_KEY_NODE_TYPES:
+            restored[node_type] = id_map
+        else:
+            restored[node_type] = {int(k): v for k, v in id_map.items()}
+    return restored
 
 
 def load_graph(path: Path = None) -> HeteroData:
@@ -473,14 +490,26 @@ def load_graph(path: Path = None) -> HeteroData:
     if path is None:
         path = GRAPH_DIR / "vn_knowledge_graph.pt"
 
-    # Handle PyTorch 2.6+ weights_only default change
+    # Required here because HeteroData contains custom objects that need full
+    # unpickling. These .pt files are generated internally by our build pipeline
+    # and stored in a Docker volume - never from external/user uploads.
     data = torch.load(path, weights_only=False)
 
     # Load mappings if not in graph
     if not hasattr(data, 'mappings'):
-        mappings_path = path.parent / "mappings.pkl"
-        with open(mappings_path, 'rb') as f:
-            data.mappings = pickle.load(f)
+        # Try JSON first (new format), fall back to legacy pickle
+        mappings_json = path.parent / "mappings.json"
+        mappings_pkl = path.parent / "mappings.pkl"
+        if mappings_json.exists():
+            with open(mappings_json, 'r') as f:
+                data.mappings = _restore_mapping_key_types(json.load(f))
+        elif mappings_pkl.exists():
+            import pickle
+            logger.warning("Loading legacy mappings.pkl - re-run graph build to migrate to JSON")
+            with open(mappings_pkl, 'rb') as f:
+                data.mappings = pickle.load(f)
+        else:
+            raise FileNotFoundError(f"No mappings file found at {mappings_json} or {mappings_pkl}")
 
     return data
 

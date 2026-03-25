@@ -77,6 +77,7 @@ class Settings(BaseSettings):
 
     # Cloudflare Turnstile (bot protection for shared link creation)
     turnstile_secret_key: str | None = None  # If set, Turnstile tokens are verified on POST /shared
+    turnstile_fail_open: bool = False  # If True, allow requests when Turnstile verification errors out
 
     # Admin authentication
     admin_api_key: str | None = None  # Required for admin/logs endpoints

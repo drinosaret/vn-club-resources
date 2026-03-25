@@ -1,5 +1,6 @@
 """Blacklist management view with entries and rules."""
 
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -162,11 +163,24 @@ class BlacklistView(BaseView):
         embed = await entries_view.format_page()
         await interaction.response.edit_message(embed=embed, view=entries_view)
 
+    _auto_blacklist_last_run: float = 0  # Class-level cooldown tracker
+
     @ui.button(label="Run Auto", style=discord.ButtonStyle.secondary, emoji="\u2699\ufe0f", row=0)
     async def run_auto_button(
         self, interaction: discord.Interaction, button: ui.Button
     ) -> None:
         """Run auto-blacklist evaluation."""
+        # Cooldown: 60 seconds between runs
+        now = time.monotonic()
+        cls = type(self)
+        if now - cls._auto_blacklist_last_run < 60:
+            remaining = int(60 - (now - cls._auto_blacklist_last_run))
+            await interaction.response.send_message(
+                f"Please wait {remaining}s before running again.", ephemeral=True
+            )
+            return
+        cls._auto_blacklist_last_run = now
+
         await interaction.response.defer()
 
         from app.services.blacklist_service import evaluate_auto_blacklist

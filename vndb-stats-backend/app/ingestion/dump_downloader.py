@@ -170,6 +170,11 @@ def decompress_zstd_tar(input_path: str, output_dir: str) -> list[str]:
                             if os.path.isabs(member.name) or ".." in member.name:
                                 logger.warning(f"Skipping suspicious tar member: {member.name}")
                                 continue
+                            # Validate resolved path stays within output_dir
+                            dest = os.path.realpath(os.path.join(output_dir, member.name))
+                            if not dest.startswith(os.path.realpath(output_dir) + os.sep):
+                                logger.warning(f"Skipping path traversal attempt: {member.name}")
+                                continue
                             tar.extract(member, output_dir)
                             extracted_files.append(
                                 os.path.join(output_dir, member.name)

@@ -8,7 +8,7 @@
 !LICENSE
 
 # Next.js build output
-/.next/
+.next/
 /out/
 /node_modules/
 *.tsbuildinfo
@@ -55,6 +55,7 @@ Thumbs.db
 temp
 drafts/
 docs/plans/
+docs/superpowers/
 
 # Miscellaneous
 *.log

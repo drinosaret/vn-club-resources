@@ -38,7 +38,8 @@ apscheduler>=3.10.0
 
 # News aggregation
 feedparser>=6.0.0
-tweety-ns>=1.1.0
+defusedxml>=0.7.0 
+tweety-ns @ git+https://github.com/mahrtayyab/tweety.git@1dec1de
 beautifulsoup4>=4.12.0
 lxml>=5.3.0
 python-dateutil>=2.9.0

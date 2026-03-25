@@ -1,9 +1,21 @@
 """Announcement creation/editing modal."""
 
 from typing import Any
+from urllib.parse import urlparse
 
 import discord
 from discord import ui
+
+
+def _is_valid_http_url(url: str | None) -> bool:
+    """Validate that a URL uses http or https protocol."""
+    if not url:
+        return True  # Optional fields are fine when empty
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+    except Exception:
+        return False
 
 
 class AnnouncementModal(ui.Modal):
@@ -62,10 +74,25 @@ class AnnouncementModal(ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         """Store the result and defer response."""
+        url = self.url_input.value or None
+        image_url = self.image_input.value or None
+
+        # Validate URLs use http/https protocol
+        if url and not _is_valid_http_url(url):
+            await interaction.response.send_message(
+                "Invalid URL: must start with http:// or https://", ephemeral=True
+            )
+            return
+        if image_url and not _is_valid_http_url(image_url):
+            await interaction.response.send_message(
+                "Invalid image URL: must start with http:// or https://", ephemeral=True
+            )
+            return
+
         self.result = {
             "title": self.title_input.value,
             "content": self.content_input.value or None,
-            "url": self.url_input.value or None,
-            "image_url": self.image_input.value or None,
+            "url": url,
+            "image_url": image_url,
         }
         await interaction.response.defer()
