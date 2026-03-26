@@ -270,7 +270,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
               <ChevronDown className="w-4 h-4" />
             </button>
             {filterDropdownOpen && (
-              <div className="absolute right-0 mt-1 py-1 w-40 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-10">
+              <div className="absolute right-0 mt-1 py-1 w-40 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-20">
                 {(Object.keys(filterLabels) as StatusFilter[]).map((status) => (
                   <button
                     key={status}
@@ -303,7 +303,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
               <ChevronDown className="w-4 h-4" />
             </button>
             {sortDropdownOpen && (
-              <div className="absolute right-0 mt-1 py-1 w-40 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-10">
+              <div className="absolute right-0 mt-1 py-1 w-40 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-20">
                 {(Object.keys(sortLabels) as SortOption[]).map((option) => (
                   <button
                     key={option}
@@ -504,6 +504,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
             loading="lazy"
             onLoad={handleImageLoad}
             onError={handleImageError}
+            compact
           />
         ) : !imageError ? (
           <div className="absolute inset-0 flex items-center justify-center text-gray-400">

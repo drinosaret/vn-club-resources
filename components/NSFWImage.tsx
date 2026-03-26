@@ -94,7 +94,7 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
 
 
 // Shared overlay: pixelated micro-thumbnail + dark scrim + label
-function NSFWOverlay({ src, overlaySrc }: { src: string; overlaySrc?: string }) {
+function NSFWOverlay({ src, overlaySrc, compact }: { src: string; overlaySrc?: string; compact?: boolean }) {
   return (
     <div data-nsfw-overlay className="absolute inset-0">
       {/* 32px thumbnail + pixelated rendering = mosaic censor, zero GPU cost */}
@@ -108,11 +108,15 @@ function NSFWOverlay({ src, overlaySrc }: { src: string; overlaySrc?: string }) 
         decoding="async"
       />
       <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
-        <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
-          <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
-          <span className="sm:hidden">Tap to reveal</span>
-          <span className="hidden sm:inline">Click to reveal</span>
-        </div>
+        {compact ? (
+          <Eye className="w-3.5 h-3.5 text-white drop-shadow-lg" />
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+            <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
+            <span className="sm:hidden">Tap to reveal</span>
+            <span className="hidden sm:inline">Click to reveal</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -133,6 +137,8 @@ interface NSFWImageProps {
   onError?: () => void;
   /** Pre-built tiny image URL for the NSFW overlay (e.g. canvas-generated crop preview) */
   overlaySrc?: string;
+  /** Show only the eye icon without text (for small thumbnails) */
+  compact?: boolean;
 }
 
 interface NSFWNextImageProps {
@@ -154,7 +160,7 @@ interface NSFWNextImageProps {
   hideOverlay?: boolean;
 }
 
-export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', fetchPriority, srcSet, sizes, style, onLoad, onError, overlaySrc }: NSFWImageProps) {
+export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', fetchPriority, srcSet, sizes, style, onLoad, onError, overlaySrc, compact }: NSFWImageProps) {
   const { shouldBlur, handleReveal, handleKeyDown, wrapperRef } = useNSFWReveal(vnId, imageSexual);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -192,7 +198,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         onLoad={onLoad}
         onError={onError}
       />
-      {shouldBlur && <NSFWOverlay src={src} overlaySrc={overlaySrc} />}
+      {shouldBlur && <NSFWOverlay src={src} overlaySrc={overlaySrc} compact={compact} />}
     </div>
   );
 }

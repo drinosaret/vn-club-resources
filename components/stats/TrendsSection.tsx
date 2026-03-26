@@ -152,84 +152,78 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
       )}
 
       {/* VNs Read Over Time */}
-      <div className="relative">
-        <div className="absolute right-5 top-5 z-10">
+      <TrendLineChart
+        data={cumulativeData}
+        dataKey={vnsChartMode === 'cumulative' ? 'cumulativeVns' : 'completed'}
+        xAxisKey="month"
+        title="Visual Novels Read Over Time"
+        subtitle="Only includes VNs with a finish date or vote timestamp"
+        color="#8b5cf6"
+        areaFill={true}
+        formatValue={(v) => `${v}`}
+        formatXAxis={formatMonth}
+        headerRight={
           <select
             value={vnsChartMode}
             onChange={(e) => setVnsChartMode(e.target.value as ChartMode)}
-            className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
+            className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 shrink-0"
           >
             <option value="cumulative">Cumulative</option>
             <option value="monthly">Monthly</option>
           </select>
-        </div>
-        <TrendLineChart
-          data={cumulativeData}
-          dataKey={vnsChartMode === 'cumulative' ? 'cumulativeVns' : 'completed'}
-          xAxisKey="month"
-          title="Visual Novels Read Over Time"
-          subtitle="Only includes VNs with a finish date or vote timestamp"
-          color="#8b5cf6"
-          areaFill={true}
-          formatValue={(v) => `${v}`}
-          formatXAxis={formatMonth}
-        />
-      </div>
+        }
+      />
 
       {/* Hours Over Time */}
-      <div className="relative">
-        <div className="absolute right-5 top-5 z-10">
+      <TrendLineChart
+        data={cumulativeData}
+        dataKey={hoursChartMode === 'cumulative' ? 'cumulativeHours' : 'hours'}
+        xAxisKey="month"
+        title="Estimated Reading Hours Over Time"
+        subtitle="Only includes VNs with a finish date or vote timestamp"
+        color="#06b6d4"
+        areaFill={true}
+        yAxisLabel="hours"
+        formatValue={(v) => `${v.toLocaleString()}`}
+        formatXAxis={formatMonth}
+        headerRight={
           <select
             value={hoursChartMode}
             onChange={(e) => setHoursChartMode(e.target.value as ChartMode)}
-            className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
+            className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 shrink-0"
           >
             <option value="cumulative">Cumulative</option>
             <option value="monthly">Monthly</option>
           </select>
-        </div>
-        <TrendLineChart
-          data={cumulativeData}
-          dataKey={hoursChartMode === 'cumulative' ? 'cumulativeHours' : 'hours'}
-          xAxisKey="month"
-          title="Estimated Reading Hours Over Time"
-          subtitle="Only includes VNs with a finish date or vote timestamp"
-          color="#06b6d4"
-          areaFill={true}
-          yAxisLabel="hours"
-          formatValue={(v) => `${v.toLocaleString()}`}
-          formatXAxis={formatMonth}
-        />
-      </div>
+        }
+      />
 
       {/* Average Score Over Time */}
       {monthlyActivity.some(m => m.avg_score !== null) && (
-        <div className="relative">
-          <div className="absolute right-5 top-5 z-10">
+        <TrendLineChart
+          data={cumulativeData.filter(m => scoreChartMode === 'cumulative' ? m.cumulativeAvgScore !== null : m.avg_score !== null).map(m => ({
+            ...m,
+            score: scoreChartMode === 'cumulative' ? m.cumulativeAvgScore! : m.avg_score!,
+          }))}
+          dataKey="score"
+          xAxisKey="month"
+          title="Average Score Over Time"
+          subtitle="Only includes VNs with a finish date or vote timestamp"
+          color="#f59e0b"
+          areaFill={false}
+          formatValue={(v) => v.toFixed(2)}
+          formatXAxis={formatMonth}
+          headerRight={
             <select
               value={scoreChartMode}
               onChange={(e) => setScoreChartMode(e.target.value as ChartMode)}
-              className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
+              className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 shrink-0"
             >
               <option value="monthly">Monthly</option>
               <option value="cumulative">Cumulative</option>
             </select>
-          </div>
-          <TrendLineChart
-            data={cumulativeData.filter(m => scoreChartMode === 'cumulative' ? m.cumulativeAvgScore !== null : m.avg_score !== null).map(m => ({
-              ...m,
-              score: scoreChartMode === 'cumulative' ? m.cumulativeAvgScore! : m.avg_score!,
-            }))}
-            dataKey="score"
-            xAxisKey="month"
-            title="Average Score Over Time"
-            subtitle="Only includes VNs with a finish date or vote timestamp"
-            color="#f59e0b"
-            areaFill={false}
-            formatValue={(v) => v.toFixed(2)}
-            formatXAxis={formatMonth}
-          />
-        </div>
+          }
+        />
       )}
 
       {/* Timeline */}
