@@ -3,6 +3,15 @@ description: Learn Japanese with visual novels using JL - a popup dictionary wit
 sitemap:
   priority: 0.8
   changefreq: monthly
+faq:
+  - q: "What is JL and how does it help with reading visual novels?"
+    a: "JL is a free popup dictionary for Windows that displays definitions, readings, pitch accents, and word frequencies when you hover over Japanese text. It connects to Textractor via WebSocket or clipboard to receive text from visual novels, and integrates with Anki for one-click vocabulary mining."
+  - q: "How do I connect JL to Textractor?"
+    a: "In JL's preferences under 'Main Window', enable 'Enable WebSocket text capture'. The default address ws://127.0.0.1:6677 works with the Textractor WebSocket extension. Alternatively, JL can receive text via clipboard capture, which works automatically if Textractor copies text to your clipboard."
+  - q: "What dictionaries should I use with JL?"
+    a: "JL comes with JMdict, Kanjidic, and JMnedict built in. For additional dictionaries, download from Marv's Yomitan Dictionaries collection on GitHub. JL supports both Yomitan and Nazeka format dictionaries including monolingual Japanese dictionaries like 大辞林."
+  - q: "Can JL work with OCR for games that can't be text hooked?"
+    a: "Yes. Using Tsukikage, a companion app for JL, you can connect JL to OwOCR for games that don't support text hooking. Tsukikage reads JSON output from OwOCR and sends text to JL only when you hover over the designated screen region."
 ---
 
 

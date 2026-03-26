@@ -3,6 +3,15 @@ description: How to use Textractor to read Japanese visual novels. Beginner-frie
 sitemap:
   priority: 0.9
   changefreq: monthly
+faq:
+  - q: "How do I extract text from a Japanese visual novel?"
+    a: "Use Textractor, a free open-source text hooking tool. Attach it to your VN's process, advance a few lines of dialogue, then cycle through the hooks in the dropdown to find the one that captures text correctly. Textractor works with most visual novels and sends text to dictionary tools like JL or Yomitan for instant lookups."
+  - q: "Should I use Textractor x86 or x64?"
+    a: "Use x86 for most visual novels. Only switch to x64 if the game doesn't hook correctly with x86. Keep both versions ready since the correct one depends on the game."
+  - q: "What do I do if Textractor can't find a working hook?"
+    a: "Try running Textractor as Administrator. If automatic hooking fails, use 'Search for hooks' for a manual search. You can also check the discussion tab on the game's VNDB page where other users often share working hook codes."
+  - q: "Can I use Textractor on my phone or tablet?"
+    a: "Textractor runs on your PC, but you can view the hooked text on a mobile device. Host the texthooker UI locally and use Tailscale to access it from any device on your network. This lets you read fullscreen on PC while looking up words on your phone."
 ---
 
 # Textractor Setup Guide

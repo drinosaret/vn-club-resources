@@ -391,6 +391,19 @@ def _validate_table_name(name: str) -> str:
     return name
 
 
+def _canonical_index_name(idx_name: str) -> str:
+    """Strip all accumulated _new suffixes from an index name.
+
+    The swap_staging_to_live function appends _new when creating staging indexes
+    and strips it after swap. If post-swap cleanup ever fails, the suffix persists
+    and compounds on the next run. This strips ALL of them to prevent progressive
+    index name bloat that eventually exceeds PostgreSQL's 63-char identifier limit.
+    """
+    while idx_name.endswith("_new"):
+        idx_name = idx_name[:-4]
+    return idx_name
+
+
 # Validate all hardcoded table names at import time
 for _t in IMPORT_TABLES + STAGING_TABLES:
     _validate_table_name(_t)
@@ -492,7 +505,8 @@ async def swap_staging_to_live(table_names: str | list[str]) -> bool:
             live_indexes = await get_table_indexes(table)
 
             for idx_name, idx_def in live_indexes:
-                new_idx_name = f"{idx_name}_new"
+                canonical = _canonical_index_name(idx_name)
+                new_idx_name = f"{canonical}_new"
                 # Drop stale _new index if it exists from a previous failed run
                 await db.execute(text(f"DROP INDEX IF EXISTS {new_idx_name}"))
                 # Rewrite CREATE INDEX to target staging table with _new suffix
@@ -554,7 +568,7 @@ async def swap_staging_to_live(table_names: str | list[str]) -> bool:
                 live_indexes = await get_table_indexes(table, db=db)
                 for idx_name, _ in live_indexes:
                     if idx_name.endswith("_new"):
-                        canonical_name = idx_name[:-4]  # strip "_new" suffix
+                        canonical_name = _canonical_index_name(idx_name)
                         try:
                             await db.execute(text(
                                 f"ALTER INDEX {idx_name} RENAME TO {canonical_name}"
