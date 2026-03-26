@@ -1,9 +1,7 @@
 """VNDB Stats API - FastAPI Application."""
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import timezone
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -27,8 +25,6 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, func
@@ -47,36 +43,13 @@ settings = get_settings()
 # Heavy endpoints like recommendations have stricter limits applied via decorators
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
-scheduler = AsyncIOScheduler(
-    timezone=timezone.utc,
-    job_defaults={
-        # If the host sleeps / containers restart near trigger time, run the job
-        # when we come back instead of skipping it.
-        "misfire_grace_time": 60 * 60,  # 1 hour
-        # If multiple runs were missed, do a single catch-up run.
-        "coalesce": True,
-        # Avoid overlapping runs if a job takes longer than its interval.
-        "max_instances": 1,
-    },
-)
 task_manager = TaskManager.get_instance()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup/shutdown."""
-    # Import news aggregator jobs
-    from app.ingestion.news_aggregator import (
-        run_vndb_news_check,
-        run_vndb_releases_check,
-        run_rss_check,
-        run_twitter_check,
-        run_news_cleanup,
-        run_news_catch_up,
-    )
-    from app.services.vn_of_the_day_service import run_vn_of_the_day_selection
     from app.logging import AsyncDBLogHandler, DiscordWebhookLogHandler
-    from app.logging.cleanup import cleanup_old_logs
 
     # Startup
     await init_db()
@@ -107,96 +80,9 @@ async def lifespan(app: FastAPI):
         logging.getLogger().addHandler(discord_log_handler)
         logger.info("Discord webhook logging enabled for API")
 
-    # Note: Daily VNDB imports are handled by the worker container
-    # to avoid blocking API queries during database-intensive operations.
-    # See scripts/worker.py for the scheduled import job.
-    # Do NOT run check_and_update_if_stale() here — it triggers heavy
-    # computation (model training, similarity matrices) that starves API requests.
-
-    # News aggregation jobs (matching Discord bot schedule)
-    # VNDB New VNs - 10:00 UTC daily
-    scheduler.add_job(
-        run_vndb_news_check,
-        CronTrigger(hour=10, minute=0),
-        id="vndb_news_check",
-        replace_existing=True,
-    )
-
-    # VNDB Releases - 16:00 UTC daily
-    scheduler.add_job(
-        run_vndb_releases_check,
-        CronTrigger(hour=16, minute=0),
-        id="vndb_releases_check",
-        replace_existing=True,
-    )
-
-    # RSS Feeds - 06:00, 18:00 UTC
-    scheduler.add_job(
-        run_rss_check,
-        CronTrigger(hour="6,18", minute=0),
-        id="rss_check",
-        replace_existing=True,
-    )
-
-    # Twitter - 01:00, 07:00, 13:00, 19:00 UTC
-    scheduler.add_job(
-        run_twitter_check,
-        CronTrigger(hour="1,7,13,19", minute=0),
-        id="twitter_check",
-        replace_existing=True,
-    )
-
-    # News cleanup - 00:00 UTC daily
-    scheduler.add_job(
-        run_news_cleanup,
-        CronTrigger(hour=0, minute=0),
-        id="news_cleanup",
-        replace_existing=True,
-    )
-
-    # App logs cleanup - 03:00 UTC daily (30 day retention)
-    scheduler.add_job(
-        cleanup_old_logs,
-        CronTrigger(hour=3, minute=0),
-        id="app_logs_cleanup",
-        replace_existing=True,
-    )
-
-    # VN of the Day - 00:05 UTC daily (after cleanup, before news)
-    scheduler.add_job(
-        run_vn_of_the_day_selection,
-        CronTrigger(hour=0, minute=5),
-        id="vn_of_the_day",
-        replace_existing=True,
-    )
-
-    # News catch-up - every 2 hours from 10:30 to 22:30 UTC
-    # Checks if today's news was fetched, catches up if missing
-    scheduler.add_job(
-        run_news_catch_up,
-        CronTrigger(hour="10,12,14,16,18,20,22", minute=30),
-        id="news_catch_up",
-        replace_existing=True,
-    )
-
-    scheduler.start()
-    logger.info("Scheduler started - daily updates at 4:00 AM UTC")
-    logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), RSS (06:00, 18:00), Twitter (01:00, 07:00, 13:00, 19:00)")
-    logger.info("VN of the Day scheduled: 00:05 UTC daily")
-    logger.info("News catch-up job scheduled: every 2 hours from 10:30 to 22:30 UTC")
-    logger.info("App logs cleanup scheduled: 03:00 UTC daily (30 day retention)")
-
-    # Run catch-up on startup (with delay to let DB warm up)
-    async def delayed_catch_up():
-        await asyncio.sleep(30)  # Wait 30 seconds after startup
-        await run_news_catch_up()
-
-    async def delayed_votd_check():
-        await asyncio.sleep(35)  # After news catch-up
-        await run_vn_of_the_day_selection()
-
-    task_manager.create_task(delayed_catch_up(), name="startup_news_catch_up")
-    task_manager.create_task(delayed_votd_check(), name="startup_votd_check")
+    # Note: All scheduled jobs (daily imports, news aggregation, VN of the Day,
+    # log cleanup) are handled by the worker container (scripts/worker.py).
+    # The API only handles HTTP requests.
 
     yield
 
@@ -206,7 +92,6 @@ async def lifespan(app: FastAPI):
     if discord_log_handler:
         discord_log_handler.stop()
     db_log_handler.stop()
-    scheduler.shutdown()
     logger.info("Shutdown complete")
 
 
@@ -287,9 +172,13 @@ async def db_status(db: AsyncSession = Depends(get_db)):
         metadata = result.scalar_one_or_none()
         last_import = metadata.value if metadata else None
 
-        # Get next scheduled update
-        job = scheduler.get_job("daily_vndb_update")
-        next_update = job.next_run_time.isoformat() if job and job.next_run_time else None
+        # Next update is always 4:00 AM UTC (scheduled in worker container)
+        from datetime import datetime, timezone, timedelta
+        now_utc = datetime.now(timezone.utc)
+        next_4am = now_utc.replace(hour=4, minute=0, second=0, microsecond=0)
+        if next_4am <= now_utc:
+            next_4am += timedelta(days=1)
+        next_update = next_4am.isoformat()
 
         return {
             "status": "healthy",

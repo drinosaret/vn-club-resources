@@ -464,23 +464,112 @@ async def main():
         logger.error(f"Startup check/update failed: {e}")
         logger.error("Worker will continue running — the daily scheduled job will retry.")
 
-    # Set up scheduler for daily updates at 4 AM UTC
-    scheduler = AsyncIOScheduler()
+    # Set up scheduler for all periodic jobs
+    from datetime import timezone
+    from app.ingestion.news_aggregator import (
+        run_vndb_news_check,
+        run_vndb_releases_check,
+        run_rss_check,
+        run_twitter_check,
+        run_news_cleanup,
+        run_news_catch_up,
+    )
+    from app.services.vn_of_the_day_service import run_vn_of_the_day_selection
+    from app.logging.cleanup import cleanup_old_logs
+
+    scheduler = AsyncIOScheduler(
+        timezone=timezone.utc,
+        job_defaults={
+            "misfire_grace_time": 3600,
+            "coalesce": True,
+            "max_instances": 1,
+        },
+    )
 
     if not settings.dev_mode:
+        # Daily VNDB data import - 04:00 UTC
         scheduler.add_job(
             run_daily_update,
             CronTrigger(hour=4, minute=0),
             id="daily_vndb_update",
             replace_existing=True,
-            misfire_grace_time=3600,  # Allow job to run up to 1 hour late
-            coalesce=True,  # If multiple runs missed, only run once
         )
-        logger.info("Scheduler started - daily update scheduled for 4:00 AM UTC")
+
+        # News aggregation jobs
+        scheduler.add_job(
+            run_vndb_news_check,
+            CronTrigger(hour=10, minute=0),
+            id="vndb_news_check",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_vndb_releases_check,
+            CronTrigger(hour=16, minute=0),
+            id="vndb_releases_check",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_rss_check,
+            CronTrigger(hour="6,18", minute=0),
+            id="rss_check",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_twitter_check,
+            CronTrigger(hour="1,7,13,19", minute=0),
+            id="twitter_check",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_news_cleanup,
+            CronTrigger(hour=0, minute=0),
+            id="news_cleanup",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_news_catch_up,
+            CronTrigger(hour="10,12,14,16,18,20,22", minute=30),
+            id="news_catch_up",
+            replace_existing=True,
+        )
+
+        # VN of the Day - 00:05 UTC daily
+        scheduler.add_job(
+            run_vn_of_the_day_selection,
+            CronTrigger(hour=0, minute=5),
+            id="vn_of_the_day",
+            replace_existing=True,
+        )
+
+        # App logs cleanup - 03:00 UTC daily (30 day retention)
+        scheduler.add_job(
+            cleanup_old_logs,
+            CronTrigger(hour=3, minute=0),
+            id="app_logs_cleanup",
+            replace_existing=True,
+        )
+
+        logger.info("Scheduler started - daily update at 4:00 AM UTC")
+        logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), RSS (06:00, 18:00), Twitter (01:00, 07:00, 13:00, 19:00)")
+        logger.info("VN of the Day scheduled: 00:05 UTC daily")
+        logger.info("News catch-up job scheduled: every 2 hours from 10:30 to 22:30 UTC")
+        logger.info("App logs cleanup scheduled: 03:00 UTC daily (30 day retention)")
     else:
         logger.info("Scheduler not started (DEV_MODE=true)")
 
     scheduler.start()
+
+    # Run catch-up tasks on startup (with delay to let DB warm up)
+    if not settings.dev_mode:
+        await asyncio.sleep(30)
+        try:
+            await run_news_catch_up()
+        except Exception as e:
+            logger.warning(f"Startup news catch-up failed: {e}")
+        try:
+            await run_vn_of_the_day_selection()
+        except Exception as e:
+            logger.warning(f"Startup VN of the Day check failed: {e}")
 
     # Keep running forever
     try:
