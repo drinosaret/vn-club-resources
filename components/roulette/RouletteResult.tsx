@@ -44,7 +44,7 @@ export function RouletteResult({
         {/* VN cover */}
         {result.imageUrl && (
           <div className="w-24 h-32 mx-auto mb-3 rounded-lg overflow-hidden shadow-md">
-            <NSFWImage src={result.imageUrl} alt={title} imageSexual={result.imageSexual ?? undefined} vnId={result.id} className="w-full h-full object-cover" />
+            <NSFWImage src={result.imageUrl} alt={title} imageSexual={result.imageSexual ?? undefined} vnId={result.id} className="w-full h-full object-cover" compact />
           </div>
         )}
 

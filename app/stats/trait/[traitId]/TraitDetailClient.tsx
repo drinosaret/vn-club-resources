@@ -905,6 +905,7 @@ function CharacterCard({ character }: { character: TraitCharacter }) {
             className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={onLoad}
             onError={onError}
+            compact
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
@@ -974,6 +975,7 @@ function VNCard({ vn }: { vn: TagVN }) {
             className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={onLoad}
             onError={onError}
+            compact
           />
         ) : (
           <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">

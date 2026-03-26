@@ -90,6 +90,7 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
               loading="lazy"
               onLoad={onLoad}
               onError={onLoad}
+              compact
             />
           </>
         ) : (
