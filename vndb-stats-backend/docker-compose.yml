@@ -59,7 +59,6 @@ services:
   db:
     image: postgres:15-alpine
     shm_size: 256m
-    mem_limit: 4g
     environment:
       - POSTGRES_USER=vndb
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-vndb_dev_password}
@@ -80,7 +79,6 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
-    mem_limit: 1g
     volumes:
       - redisdata:/data
     # Port NOT exposed to host — access via docker network only
