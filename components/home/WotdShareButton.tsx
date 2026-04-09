@@ -92,6 +92,7 @@ export function WotdShareButton({ data }: WotdShareButtonProps) {
         canNativeShare={canNativeShare}
         hidePlatforms={['open-tab']}
         clipboardLabel="Copy to clipboard"
+        platformSubtitle="Copies link + opens post"
       />
       <ShareToast message={toastMessage} isError={toastIsError} onDismiss={dismissToast} />
     </>

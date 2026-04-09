@@ -18,6 +18,7 @@ interface ShareMenuProps {
   onOpen?: () => void;
   hidePlatforms?: SharePlatform[];
   clipboardLabel?: string;
+  platformSubtitle?: string;
 }
 
 function XIcon({ className }: { className?: string }) {
@@ -36,7 +37,7 @@ function RedditIcon({ className }: { className?: string }) {
   );
 }
 
-export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, onCreateLink, creatingLink = false, onOpen, hidePlatforms = [], clipboardLabel }: ShareMenuProps) {
+export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, onCreateLink, creatingLink = false, onOpen, hidePlatforms = [], clipboardLabel, platformSubtitle }: ShareMenuProps) {
   const locale = useLocale();
   const s = sharedStrings[locale];
   const [isOpen, setIsOpen] = useState(false);
@@ -153,7 +154,7 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
             <XIcon className="w-4 h-4 text-gray-500" />
             <div>
               <div>{s['share.toX']}</div>
-              <div className="text-xs text-gray-400">{s['share.copiesAndOpens']}</div>
+              <div className="text-xs text-gray-400">{platformSubtitle || s['share.copiesAndOpens']}</div>
             </div>
           </button>
 
@@ -161,7 +162,7 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
             <RedditIcon className="w-4 h-4 text-gray-500" />
             <div>
               <div>{s['share.toReddit']}</div>
-              <div className="text-xs text-gray-400">{s['share.copiesAndOpens']}</div>
+              <div className="text-xs text-gray-400">{platformSubtitle || s['share.copiesAndOpens']}</div>
             </div>
           </button>
 
