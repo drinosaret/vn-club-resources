@@ -32,6 +32,70 @@ _twitter_init_failed = False
 _TWITTER_AUTH_FAILURE_COOLDOWN_SECONDS = 60 * 60  # 1 hour
 
 
+def _patch_tweety_transaction():
+    """Patch tweety's TransactionGenerator to handle Twitter's newer JS bundle format.
+
+    Twitter periodically changes the ondemand.s chunk mapping in their client JS.
+    The upstream regex only handles the direct hash pattern. This adds a fallback
+    that resolves the chunk via a numeric ID lookup.
+    """
+    try:
+        import re
+        from tweety import transaction
+
+        if hasattr(transaction, '_vnclub_patched'):
+            return
+
+        ON_DEMAND_CHUNK_ID_REGEX = re.compile(
+            r"""(\d+):"ondemand\.s\"""", flags=(re.VERBOSE | re.MULTILINE))
+
+        original_get_indices = transaction.TransactionGenerator.get_indices
+
+        def _patched_get_indices(self, home_page_html=None):
+            """get_indices with fallback for new chunk ID mapping format."""
+            try:
+                return original_get_indices(self, home_page_html)
+            except Exception:
+                pass
+
+            # Fallback: try numeric chunk ID approach
+            import httpx
+            response = self.validate_response(home_page_html) or self.home_page_html
+            html_text = str(response)
+
+            chunk_id_match = ON_DEMAND_CHUNK_ID_REGEX.search(html_text)
+            if not chunk_id_match:
+                raise Exception("Couldn't get animation key indices")
+
+            chunk_id = chunk_id_match.group(1)
+            if not chunk_id.isdigit():
+                raise Exception("Couldn't get animation key indices")
+            hash_matches = re.findall(rf'{re.escape(chunk_id)}:"([a-f0-9]+)"', html_text)
+            if not hash_matches:
+                raise Exception("Couldn't get animation key indices")
+
+            on_demand_url = f"https://abs.twimg.com/responsive-web/client-web/ondemand.s.{hash_matches[0]}a.js"
+            on_demand_response = httpx.get(on_demand_url)
+
+            key_byte_indices = []
+            for item in transaction.INDICES_REGEX.finditer(on_demand_response.text):
+                key_byte_indices.append(item.group(2))
+
+            if not key_byte_indices:
+                raise Exception("Couldn't get animation key indices")
+
+            key_byte_indices = list(map(int, key_byte_indices))
+            return key_byte_indices[0], key_byte_indices[1:]
+
+        transaction.TransactionGenerator.get_indices = _patched_get_indices
+        transaction._vnclub_patched = True
+        logger.info("Patched tweety TransactionGenerator for new JS bundle format")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning(f"Failed to patch tweety transaction module: {e}")
+
+
 def _get_twitter_client():
     """Get or create Twitter client."""
     global _twitter_client, _twitter_authenticated, _twitter_init_failed
@@ -42,6 +106,7 @@ def _get_twitter_client():
     if _twitter_client is None:
         try:
             from tweety import Twitter
+            _patch_tweety_transaction()
             _twitter_client = Twitter("VNNewsBot")
             logger.info("Twitter client initialized")
         except ImportError:
