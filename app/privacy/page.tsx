@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-          Last updated: March 9, 2026
+          Last updated: April 9, 2026
         </p>
 
         <div className="prose dark:prose-invert max-w-none prose-headings:text-xl prose-headings:font-semibold prose-headings:mt-8 prose-headings:mb-3 prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-li:text-gray-600 dark:prose-li:text-gray-300">
@@ -83,8 +83,19 @@ export default function PrivacyPage() {
               anything with them.
             </li>
             <li>
-              <strong>Jiten.moe</strong> - Language difficulty and reading statistics come from
-              Jiten.moe. We don&apos;t share user data with them.
+              <strong>Jiten.moe</strong> - Language difficulty data, reading statistics, vocabulary
+              data, and example sentences come from Jiten.moe. We don&apos;t share user data with them.
+            </li>
+            <li>
+              <strong>KanjiAPI</strong> - Kanji details, readings, and compound words come from
+              kanjiapi.dev. No user data is shared.
+            </li>
+            <li>
+              <strong>Jisho.org</strong> - JLPT levels and additional dictionary data. No user data
+              is shared.
+            </li>
+            <li>
+              <strong>Tatoeba</strong> - Bilingual example sentences. No user data is shared.
             </li>
             <li>
               <strong>Cloudflare</strong> - CDN, security, and Turnstile (bot verification on some

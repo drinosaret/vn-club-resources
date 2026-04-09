@@ -27,7 +27,7 @@ export default function TermsPage() {
           Terms of Use
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-          Last updated: March 9, 2026
+          Last updated: April 9, 2026
         </p>
 
         <div className="prose dark:prose-invert max-w-none prose-headings:text-xl prose-headings:font-semibold prose-headings:mt-8 prose-headings:mb-3 prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-li:text-gray-600 dark:prose-li:text-gray-300">
@@ -38,11 +38,26 @@ export default function TermsPage() {
 
           <h2>Content on the site</h2>
           <p>
-            Visual novel data (titles, descriptions, tags, cover images, character info) comes from
-            VNDB and belongs to its respective creators and rights holders. Language difficulty and
-            reading statistics come from{' '}
+            Visual novel data (titles, descriptions, tags, cover images, character info) comes from{' '}
+            <a href="https://vndb.org" target="_blank" rel="noopener noreferrer">
+              VNDB
+            </a>
+            {' '}and belongs to its respective creators and rights holders. Language difficulty
+            data, reading statistics, vocabulary data, and example sentences come from{' '}
             <a href="https://jiten.moe" target="_blank" rel="noopener noreferrer">
               Jiten.moe
+            </a>
+            . Kanji details and compound words come from{' '}
+            <a href="https://kanjiapi.dev" target="_blank" rel="noopener noreferrer">
+              KanjiAPI
+            </a>
+            . Dictionary data comes from{' '}
+            <a href="https://jisho.org" target="_blank" rel="noopener noreferrer">
+              Jisho.org
+            </a>
+            {' '}and bilingual sentences from{' '}
+            <a href="https://tatoeba.org" target="_blank" rel="noopener noreferrer">
+              Tatoeba
             </a>
             . We display third-party data under their respective usage terms and don&apos;t claim
             ownership of any of it.
@@ -83,9 +98,9 @@ export default function TermsPage() {
 
           <h2>Shared layouts</h2>
           <p>
-            When you share a tier list or 3x3, you grant VN Club a worldwide, royalty-free,
-            non-exclusive license to store, display, and make that layout available via its public
-            link. You keep ownership of whatever is yours in it.
+            When you share a tier list or 3x3, we store it and make it available at its
+            public link so others can view it. That&apos;s all we do with it. You keep
+            ownership of whatever is yours in it.
           </p>
           <p>
             We can remove shared layouts at any time, for any reason, and they may be deleted during
