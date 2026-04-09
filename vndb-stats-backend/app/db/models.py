@@ -37,7 +37,8 @@ Data flow: VNDB Dumps → importer.py → THIS DATABASE → API endpoints → Fr
 from datetime import datetime, date
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, Text, Date, DateTime,
-    ForeignKey, ARRAY, JSON, Index, BigInteger, SmallInteger, CheckConstraint
+    ForeignKey, ARRAY, JSON, Index, BigInteger, SmallInteger, CheckConstraint,
+    text, func
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -788,6 +789,26 @@ class VNOfTheDay(Base):
     __table_args__ = (
         Index("idx_votd_date", date.desc()),
         Index("idx_votd_vn_id", "vn_id"),
+    )
+
+
+class WordOfTheDay(Base):
+    """Daily word spotlight: one vocabulary word per day from jiten.moe."""
+
+    __tablename__ = "word_of_the_day"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    word_id = Column(Integer, nullable=False)  # jiten.moe vocabulary ID
+    reading_index = Column(Integer, nullable=False, default=0)
+    date = Column(Date, nullable=False, unique=True)
+    cached_data = Column(JSONB, nullable=False)  # full word info from jiten.moe
+    is_override = Column(Boolean, server_default=text("false"))
+    override_by = Column(String(100))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_wotd_date", date.desc()),
+        Index("idx_wotd_word_id", "word_id"),
     )
 
 

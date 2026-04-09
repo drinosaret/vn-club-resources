@@ -12,6 +12,7 @@ import type { VNOfTheDayData } from '@/lib/vn-of-the-day';
 
 interface VNOfTheDayProps {
   data: VNOfTheDayData | null;
+  compact?: boolean;
 }
 
 /** Extract numeric ID from VN ID string (e.g., "v17" -> "17") */
@@ -20,7 +21,7 @@ function getNumericId(vnId: string): string {
 }
 
 
-export function VNOfTheDay({ data }: VNOfTheDayProps) {
+export function VNOfTheDay({ data, compact }: VNOfTheDayProps) {
   const { preference } = useTitlePreference();
   const { loaded, onLoad, shimmerClass, fadeClass } = useImageFade();
   const [isReady, setIsReady] = useState(false);
@@ -51,13 +52,9 @@ export function VNOfTheDay({ data }: VNOfTheDayProps) {
     ? stripBBCode(data.description).replace(/\n+/g, ' ').trim()
     : null;
 
-  return (
-    <section
-      className={`pt-4 pb-10 md:pb-14 bg-gray-50 dark:bg-gray-900/50 transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}
-    >
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 md:p-6">
-          <div className="flex flex-col sm:flex-row gap-5 md:gap-6">
+  const card = (
+        <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 md:p-6 h-full transition-opacity duration-500 ${isReady ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex flex-col sm:flex-row gap-5 md:gap-6 h-full">
             {/* Cover Image */}
             <Link href={vnUrl} className="shrink-0 self-center sm:self-start">
               <div className="relative w-[140px] sm:w-[160px] md:w-[180px] aspect-[3/4] rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
@@ -148,7 +145,14 @@ export function VNOfTheDay({ data }: VNOfTheDayProps) {
             </div>
           </div>
         </div>
+  );
 
+  if (compact) return card;
+
+  return (
+    <section className="pt-4 pb-10 md:pb-14 bg-gray-50 dark:bg-gray-900/50">
+      <div className="container mx-auto px-4 max-w-6xl">
+        {card}
       </div>
     </section>
   );

@@ -475,6 +475,7 @@ async def main():
         run_news_catch_up,
     )
     from app.services.vn_of_the_day_service import run_vn_of_the_day_selection
+    from app.services.word_of_the_day_service import run_word_of_the_day_selection
     from app.logging.cleanup import cleanup_old_logs
 
     scheduler = AsyncIOScheduler(
@@ -541,6 +542,14 @@ async def main():
             replace_existing=True,
         )
 
+        # Word of the Day - 00:10 UTC daily
+        scheduler.add_job(
+            run_word_of_the_day_selection,
+            CronTrigger(hour=0, minute=10),
+            id="word_of_the_day",
+            replace_existing=True,
+        )
+
         # App logs cleanup - 03:00 UTC daily (30 day retention)
         scheduler.add_job(
             cleanup_old_logs,
@@ -552,6 +561,7 @@ async def main():
         logger.info("Scheduler started - daily update at 4:00 AM UTC")
         logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), RSS (06:00, 18:00), Twitter (01:00, 07:00, 13:00, 19:00)")
         logger.info("VN of the Day scheduled: 00:05 UTC daily")
+        logger.info("Word of the Day scheduled: 00:10 UTC daily")
         logger.info("News catch-up job scheduled: every 2 hours from 10:30 to 22:30 UTC")
         logger.info("App logs cleanup scheduled: 03:00 UTC daily (30 day retention)")
     else:
@@ -570,6 +580,10 @@ async def main():
             await run_vn_of_the_day_selection()
         except Exception as e:
             logger.warning(f"Startup VN of the Day check failed: {e}")
+        try:
+            await run_word_of_the_day_selection()
+        except Exception as e:
+            logger.warning(f"Startup Word of the Day check failed: {e}")
 
     # Keep running forever
     try:

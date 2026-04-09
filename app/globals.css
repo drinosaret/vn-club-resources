@@ -498,6 +498,48 @@ body {
   }
 }
 
+/* ═══ Word of the Day Hero Layout ═══
+   Explicit CSS to avoid Chrome <ruby> + flex sizing conflict.
+   Chrome inflates <ruby> intrinsic size in flex items, and Tailwind v4's
+   cascade order can let w-full override md:w-[220px]. These rules use a
+   real media query with explicit min/max/width + flex shorthand so no
+   Tailwind utility can compete. */
+.wotd-hero-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.wotd-word-display {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .wotd-hero-layout {
+    flex-direction: row;
+    gap: 2rem;
+    align-items: flex-start;
+  }
+
+  .wotd-word-display {
+    width: 220px;
+    min-width: 220px;
+    flex: 0 0 auto;
+  }
+
+  .wotd-info-panel {
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+  }
+
+  .wotd-definitions {
+    flex: 1 1 0%;
+    min-width: 0;
+  }
+}
+
 /* Smooth scroll only for in-page anchor navigation (not page changes) */
 /* Applied via scroll-smooth class on specific elements or via JS */
 

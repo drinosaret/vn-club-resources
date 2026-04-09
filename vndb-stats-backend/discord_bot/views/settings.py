@@ -12,6 +12,7 @@ from discord_bot.views.base import BaseView
 
 # Bot config keys (shared with daily_posts cog)
 CONFIG_DAILY_CHANNEL = "daily_channel_id"
+CONFIG_WOTD_CHANNEL = "wotd_channel_id"
 CONFIG_BACKUP_CHANNEL = "backup_channel_id"
 
 
@@ -50,6 +51,19 @@ class SettingsView(BaseView):
             inline=False,
         )
 
+        # WotD channel
+        wotd_id = self._settings.get(CONFIG_WOTD_CHANNEL)
+        if wotd_id:
+            wotd_ch = self.bot.get_channel(int(wotd_id))
+            wotd_display = wotd_ch.mention if wotd_ch else f"Unknown ({wotd_id})"
+        else:
+            wotd_display = "Not set (uses Daily channel)"
+        embed.add_field(
+            name="Word of the Day Channel",
+            value=wotd_display,
+            inline=False,
+        )
+
         # Backup channel
         backup_id = self._settings.get(CONFIG_BACKUP_CHANNEL)
         if backup_id:
@@ -74,6 +88,19 @@ class SettingsView(BaseView):
             embed=discord.Embed(
                 title="\U0001f4e2 Select Daily Post Channel",
                 description="Choose the channel where VOTD and news summaries will be posted.",
+                color=0x5865F2,
+            ),
+            view=select_view,
+        )
+
+    @ui.button(label="Set WotD Channel", style=discord.ButtonStyle.primary, emoji="\U0001f4d6")
+    async def set_wotd_channel(self, interaction: discord.Interaction, button: ui.Button):
+        """Open a channel select to set the Word of the Day channel."""
+        select_view = ChannelSelectView(self.user_id, parent=self, config_key=CONFIG_WOTD_CHANNEL)
+        await interaction.response.edit_message(
+            embed=discord.Embed(
+                title="\U0001f4d6 Select Word of the Day Channel",
+                description="Choose the channel where the daily Word of the Day will be posted. Leave unset to use the Daily Post channel.",
                 color=0x5865F2,
             ),
             view=select_view,
@@ -116,6 +143,8 @@ class SettingsView(BaseView):
             if cog:
                 if config_key == CONFIG_DAILY_CHANNEL:
                     cog._channel_id = channel_id
+                elif config_key == CONFIG_WOTD_CHANNEL:
+                    cog._wotd_channel_id = channel_id
                 elif config_key == CONFIG_BACKUP_CHANNEL:
                     cog._backup_channel_id = channel_id
 

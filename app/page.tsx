@@ -3,10 +3,12 @@ import { Users } from 'lucide-react';
 import { HeroSection } from '@/components/home/HeroSection';
 import { FeaturedVNs } from '@/components/home/FeaturedVNs';
 import { VNOfTheDay } from '@/components/home/VNOfTheDay';
+import { WordOfTheDay } from '@/components/home/WordOfTheDay';
 import { ExploreSection } from '@/components/home/ExploreSection';
 import { getGuidesWithImages } from '@/lib/navigation-server';
 import { getFeaturedVNsData } from '@/lib/featured-vns';
 import { getVNOfTheDay } from '@/lib/vn-of-the-day';
+import { getWordOfTheDay } from '@/lib/word-of-the-day';
 import type { Metadata } from 'next';
 import { safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
@@ -75,9 +77,10 @@ export default async function Home() {
   // Get guides with images for the visual showcase
   const guides = getGuidesWithImages();
   // Fetch featured VNs and VN of the Day server-side with ISR caching
-  const [featuredVNs, vnOfTheDay] = await Promise.all([
+  const [featuredVNs, vnOfTheDay, wordOfTheDay] = await Promise.all([
     getFeaturedVNsData(),
     getVNOfTheDay(),
+    getWordOfTheDay(),
   ]);
 
   return (
@@ -99,10 +102,17 @@ export default async function Home() {
         {/* 3. Explore Section - Site Directory */}
         <ExploreSection guides={guides} />
 
-        {/* 4. VN of the Day */}
-        <VNOfTheDay data={vnOfTheDay} />
+        {/* 4. Daily Picks (VN + Word of the Day) */}
+        <section className="pt-4 pb-10 md:pb-14 bg-gray-50 dark:bg-gray-900/50">
+          <div className="container mx-auto px-4 max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <VNOfTheDay data={vnOfTheDay} compact />
+              <WordOfTheDay data={wordOfTheDay} compact />
+            </div>
+          </div>
+        </section>
 
-        {/* 5. Community CTA */}
+        {/* 6. Community CTA */}
         <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">
           <div className="container mx-auto px-4 max-w-4xl text-center">
             <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">

@@ -14,23 +14,30 @@ from sqlalchemy import select, func, and_, cast, Date, text
 
 from app.core.cache import get_cache
 from app.db.database import async_session_maker
-from app.db.models import BotConfig, NewsItem
+from app.db.models import BotConfig, NewsItem, WordOfTheDay
 from app.services.vn_of_the_day_service import (
     get_current,
     get_vn_tags,
     get_vn_developers,
     MAX_IMAGE_SEXUAL,
 )
+from app.services.word_of_the_day_service import (
+    get_current as wotd_get_current,
+    build_wotd_response,
+)
+from app.services.jiten_client import strip_furigana, to_hiragana
 from discord_bot.config import get_bot_settings
 
 logger = logging.getLogger(__name__)
 
 # Bot config keys
 CONFIG_DAILY_CHANNEL = "daily_channel_id"
+CONFIG_WOTD_CHANNEL = "wotd_channel_id"
 CONFIG_BACKUP_CHANNEL = "backup_channel_id"
 
 # Redis key patterns for duplicate prevention (48-hour TTL)
 REDIS_KEY_VOTD = "daily_post:votd:{date}"
+REDIS_KEY_WOTD = "daily_post:wotd:{date}"
 REDIS_KEY_NEWS = "daily_post:news:{date}"
 REDIS_TTL = 48 * 3600
 
@@ -59,18 +66,20 @@ class DailyPostsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._channel_id: int = 0  # Loaded from DB on startup
+        self._wotd_channel_id: int = 0
         self._backup_channel_id: int = 0
 
     async def cog_load(self) -> None:
         await self._load_channel_ids()
         self.votd_post_loop.start()
+        self.wotd_post_loop.start()
         self.news_post_loop.start()
         self.backup_loop.start()
-        # Run a backup immediately on startup (the loop only fires at fixed times)
         self.bot.loop.create_task(self._run_startup_backup())
 
     async def cog_unload(self) -> None:
         self.votd_post_loop.cancel()
+        self.wotd_post_loop.cancel()
         self.news_post_loop.cancel()
         self.backup_loop.cancel()
 
@@ -80,17 +89,20 @@ class DailyPostsCog(commands.Cog):
             async with async_session_maker() as db:
                 result = await db.execute(
                     select(BotConfig).where(
-                        BotConfig.key.in_([CONFIG_DAILY_CHANNEL, CONFIG_BACKUP_CHANNEL])
+                        BotConfig.key.in_([CONFIG_DAILY_CHANNEL, CONFIG_WOTD_CHANNEL, CONFIG_BACKUP_CHANNEL])
                     )
                 )
                 for row in result.scalars():
                     if row.key == CONFIG_DAILY_CHANNEL:
                         self._channel_id = int(row.value) if row.value else 0
+                    elif row.key == CONFIG_WOTD_CHANNEL:
+                        self._wotd_channel_id = int(row.value) if row.value else 0
                     elif row.key == CONFIG_BACKUP_CHANNEL:
                         self._backup_channel_id = int(row.value) if row.value else 0
         except Exception as e:
             logger.warning(f"Failed to load channel config: {e}")
             self._channel_id = 0
+            self._wotd_channel_id = 0
             self._backup_channel_id = 0
 
     def _get_channel(self) -> discord.TextChannel | None:
@@ -228,6 +240,162 @@ class DailyPostsCog(commands.Cog):
         view.add_item(discord.ui.Button(
             label="View on VNDB",
             url=vndb_url,
+            style=discord.ButtonStyle.link,
+        ))
+
+        return embed, view
+
+    # ── Word of the Day ─────────────────────────────────────────
+
+    def _get_wotd_channel(self) -> discord.TextChannel | None:
+        """Get WotD channel, falling back to daily channel."""
+        channel_id = self._wotd_channel_id or self._channel_id
+        if not channel_id:
+            return None
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            logger.warning(f"WotD channel {channel_id} not found")
+        return channel
+
+    @tasks.loop(time=time(hour=9, minute=5, tzinfo=timezone.utc))
+    async def wotd_post_loop(self):
+        await self._check_and_post_wotd()
+
+    @wotd_post_loop.before_loop
+    async def before_wotd_loop(self):
+        await self.bot.wait_until_ready()
+        now = datetime.now(timezone.utc)
+        if now.hour >= 9:
+            await self._check_and_post_wotd()
+
+    @wotd_post_loop.error
+    async def wotd_post_error(self, error: Exception):
+        logger.error(f"WotD daily post error: {error}", exc_info=True)
+
+    async def _check_and_post_wotd(self, force: bool = False) -> str:
+        """Post WotD embed. Returns status message."""
+        today = date.today()
+        redis_key = REDIS_KEY_WOTD.format(date=today.isoformat())
+
+        cache = get_cache()
+        if not force and await cache.exists(redis_key):
+            logger.debug(f"WotD already posted for {today}, skipping")
+            return "WotD already posted today (skipped)"
+
+        channel = self._get_wotd_channel()
+        if channel is None:
+            return "No WotD channel configured"
+
+        async with async_session_maker() as db:
+            pick = await wotd_get_current(db)
+            if not pick:
+                logger.info(f"No WotD pick for {today}, skipping post")
+                return "No WotD pick for today"
+
+        embed, view = self._build_wotd_embed(pick, is_daily=True)
+
+        try:
+            await channel.send(embed=embed, view=view)
+            if not force:
+                await cache.set(redis_key, True, ttl=REDIS_TTL)
+            word_info = (pick.cached_data or {}).get("word_info", {})
+            mr = word_info.get("mainReading", {})
+            text = strip_furigana(mr.get("text", "?"))
+            logger.info(f"Posted WotD: {text}")
+            return f"Posted WotD: {text}"
+        except discord.Forbidden:
+            logger.error(f"Missing permissions to send to channel {channel.id}")
+            return "Missing permissions to send to channel"
+        except Exception as e:
+            logger.error(f"Failed to post WotD: {e}", exc_info=True)
+            return f"Failed: {e}"
+
+    def _build_wotd_embed(
+        self, pick: WordOfTheDay, is_daily: bool = False,
+    ) -> tuple[discord.Embed, discord.ui.View]:
+        data = pick.cached_data or {}
+        word_info = data.get("word_info", {})
+        main_reading = word_info.get("mainReading", {})
+        text = strip_furigana(main_reading.get("text", "?"))
+        hiragana = to_hiragana(main_reading.get("text", ""))
+
+        definitions = word_info.get("definitions", [])
+        meanings = definitions[0].get("meanings", [])[:3] if definitions else []
+        pos = word_info.get("partsOfSpeech", [])
+        freq = main_reading.get("frequencyRank")
+
+        settings = get_bot_settings()
+        wotd_url = f"{settings.frontend_url}/word-of-the-day?date={pick.date.isoformat()}"
+        date_str = pick.date.strftime("%b %d, %Y")
+
+        embed = discord.Embed(
+            title=f"\U0001f4d6 Word of the Day | {date_str}",
+            url=wotd_url,
+            color=0x10B981,
+        )
+
+        # Description: word + reading + POS + meaning all together
+        desc_lines = []
+        reading_line = f"## {text}"
+        if hiragana and hiragana != text:
+            reading_line += f"\u3000*{hiragana}*"
+        desc_lines.append(reading_line)
+
+        if pos:
+            desc_lines.append(f"`{'` `'.join(pos[:4])}`")
+
+        if meanings:
+            desc_lines.append(f"\n{'; '.join(meanings)}")
+
+        embed.description = "\n".join(desc_lines)
+
+        # Example sentence
+        sentences = data.get("example_sentences", [])
+        if sentences:
+            s = sentences[0]
+            deck = s.get("sourceDeck", {})
+            sentence_text = s.get("text", "")
+            if sentence_text and len(sentence_text) <= 200:
+                source = deck.get("_parent_title") or deck.get("originalTitle") or deck.get("englishTitle") or ""
+                # Bold the target word in the sentence
+                wpos = s.get("wordPosition")
+                wlen = s.get("wordLength")
+                if wpos is not None and wlen is not None and 0 <= wpos and wpos + wlen <= len(sentence_text):
+                    sentence_text = sentence_text[:wpos] + "**" + sentence_text[wpos:wpos + wlen] + "**" + sentence_text[wpos + wlen:]
+                val = f"> {sentence_text}"
+                if source:
+                    val += f"\n> *from {source}*"
+                embed.add_field(name="Example", value=val, inline=False)
+
+        # Stats row
+        stats_parts = []
+        if freq:
+            stats_parts.append(f"Rank **#{freq:,}**")
+        vns_count = data.get("media_frequency", {}).get("7")
+        if vns_count:
+            stats_parts.append(f"in **{vns_count}** VNs")
+        top_vn = data.get("top_vn")
+        if top_vn and isinstance(top_vn, dict):
+            vn_title = top_vn.get("title", "")
+            occ = top_vn.get("occurrences")
+            if vn_title:
+                stats_parts.append(f"most in **{vn_title}**" + (f" ({occ}x)" if occ else ""))
+        if stats_parts:
+            embed.add_field(name="Stats", value=" \u2022 ".join(stats_parts), inline=False)
+
+        embed.set_footer(text="VN Club \u2022 Daily Vocabulary" if is_daily else "VN Club")
+
+        # Button links
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(
+            label="View on VN Club",
+            url=wotd_url,
+            style=discord.ButtonStyle.link,
+        ))
+        jiten_url = f"https://jiten.moe/vocabulary/{pick.word_id}/{pick.reading_index}"
+        view.add_item(discord.ui.Button(
+            label="View on Jiten",
+            url=jiten_url,
             style=discord.ButtonStyle.link,
         ))
 
@@ -425,7 +593,7 @@ class DailyPostsCog(commands.Cog):
 
     # ── User Commands ─────────────────────────────────────────
 
-    @app_commands.command(name="getvotd", description="See today's VN of the Day")
+    @app_commands.command(name="getvnotd", description="See today's VN of the Day")
     async def getvotd_command(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
@@ -440,6 +608,21 @@ class DailyPostsCog(commands.Cog):
             devs = await get_vn_developers(db, pick.visual_novel.id)
 
         embed, view = self._build_votd_embed(pick, tags, devs)
+        await interaction.followup.send(embed=embed, view=view)
+
+    @app_commands.command(name="getwotd", description="See today's Word of the Day")
+    async def getwotd_command(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        async with async_session_maker() as db:
+            pick = await wotd_get_current(db)
+            if not pick:
+                await interaction.followup.send(
+                    "No Word of the Day has been selected yet today."
+                )
+                return
+
+        embed, view = self._build_wotd_embed(pick)
         await interaction.followup.send(embed=embed, view=view)
 
     @app_commands.command(name="getnews", description="See today's news summary")

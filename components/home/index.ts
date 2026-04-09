@@ -16,3 +16,4 @@ export { FeatureStrip } from './FeatureStrip';
 export { FeatureStripCard } from './FeatureStripCard';
 export { GuidesCarousel } from './GuidesCarousel';
 export { FeatureShowcase } from './FeatureShowcase';
+export { WordOfTheDay } from './WordOfTheDay';

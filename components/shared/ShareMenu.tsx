@@ -16,6 +16,8 @@ interface ShareMenuProps {
   onCreateLink?: () => Promise<void>;
   creatingLink?: boolean;
   onOpen?: () => void;
+  hidePlatforms?: SharePlatform[];
+  clipboardLabel?: string;
 }
 
 function XIcon({ className }: { className?: string }) {
@@ -34,7 +36,7 @@ function RedditIcon({ className }: { className?: string }) {
   );
 }
 
-export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, onCreateLink, creatingLink = false, onOpen }: ShareMenuProps) {
+export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, onCreateLink, creatingLink = false, onOpen, hidePlatforms = [], clipboardLabel }: ShareMenuProps) {
   const locale = useLocale();
   const s = sharedStrings[locale];
   const [isOpen, setIsOpen] = useState(false);
@@ -129,17 +131,23 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
             </button>
           )}
 
-          <button role="menuitem" onClick={() => handleAction('open-tab')} className={itemClass}>
-            <ExternalLink className="w-4 h-4 text-gray-500" />
-            <span>{s['share.openInTab']}</span>
-          </button>
+          {!hidePlatforms.includes('open-tab') && (
+            <button role="menuitem" onClick={() => handleAction('open-tab')} className={itemClass}>
+              <ExternalLink className="w-4 h-4 text-gray-500" />
+              <span>{s['share.openInTab']}</span>
+            </button>
+          )}
 
-          <button role="menuitem" onClick={() => handleAction('clipboard')} className={`${itemClass} hidden sm:flex`}>
-            <Copy className="w-4 h-4 text-gray-500" />
-            <span>{s['share.copyToClipboard']}</span>
-          </button>
+          {!hidePlatforms.includes('clipboard') && (
+            <button role="menuitem" onClick={() => handleAction('clipboard')} className={`${itemClass} hidden sm:flex`}>
+              <Copy className="w-4 h-4 text-gray-500" />
+              <span>{clipboardLabel || s['share.copyToClipboard']}</span>
+            </button>
+          )}
 
-          <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+          {(onCreateLink || !hidePlatforms.includes('open-tab') || !hidePlatforms.includes('clipboard')) && (
+            <div className={`border-t border-gray-100 dark:border-gray-700 my-1 ${!onCreateLink && hidePlatforms.includes('open-tab') ? 'hidden sm:block' : ''}`} />
+          )}
 
           <button role="menuitem" onClick={() => handleAction('twitter')} className={itemClass}>
             <XIcon className="w-4 h-4 text-gray-500" />
