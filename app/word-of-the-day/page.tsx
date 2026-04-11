@@ -402,7 +402,8 @@ export default async function WordOfTheDayPage({
   ]);
 
   const plainText = wordData ? stripFurigana(wordData.main_reading.text) : '';
-  const currentDate = wordData?.date || params.date || new Date().toISOString().split('T')[0];
+  const serverToday = new Date().toISOString().split('T')[0];
+  const currentDate = wordData?.date || params.date || serverToday;
 
   const breadcrumb = generateBreadcrumbJsonLd([
     { name: 'Home', path: '/' },
@@ -431,7 +432,7 @@ export default async function WordOfTheDayPage({
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="container mx-auto px-4 max-w-4xl py-8 md:py-12">
           {/* Date Navigation */}
-          <WotdDateNav currentDate={currentDate} />
+          <WotdDateNav currentDate={currentDate} latestDate={serverToday} />
 
           {wordData ? (
             <div className="space-y-6 mt-6">

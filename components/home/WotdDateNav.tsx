@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 function addDays(dateStr: string, n: number): string {
@@ -27,10 +28,12 @@ function getDaysInMonth(year: number, month: number): number {
 
 function WotdCalendar({
   currentDate,
+  maxDate,
   onSelectDate,
   onClose,
 }: {
   currentDate: string;
+  maxDate: string;
   onSelectDate: (date: string) => void;
   onClose: () => void;
 }) {
@@ -39,8 +42,8 @@ function WotdCalendar({
   const [viewYear, setViewYear] = useState(year);
   const [viewMonth, setViewMonth] = useState(month - 1);
 
-  const today = new Date();
-  const todayString = formatDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+  const [maxYear, maxMonthRaw] = maxDate.split('-').map(Number);
+  const maxMonth0 = maxMonthRaw - 1; // 0-indexed
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -60,7 +63,7 @@ function WotdCalendar({
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth);
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
-  const isNextDisabled = viewYear === today.getFullYear() && viewMonth >= today.getMonth();
+  const isNextDisabled = viewYear === maxYear && viewMonth >= maxMonth0;
 
   const goToPrevMonth = () => {
     if (viewMonth === 0) { setViewYear(viewYear - 1); setViewMonth(11); }
@@ -104,21 +107,21 @@ function WotdCalendar({
           const day = i + 1;
           const dateStr = formatDateStr(viewYear, viewMonth, day);
           const isSelected = dateStr === currentDate;
-          const isToday = dateStr === todayString;
-          const isFuture = dateStr > todayString;
+          const isTodayCal = dateStr === maxDate;
+          const isFutureCal = dateStr > maxDate;
 
           return (
             <button
               key={day}
-              onClick={() => { if (!isFuture) { onSelectDate(dateStr); onClose(); } }}
-              disabled={isFuture}
+              onClick={() => { if (!isFutureCal) { onSelectDate(dateStr); onClose(); } }}
+              disabled={isFutureCal}
               className={`
                 flex items-center justify-center w-full aspect-square rounded-lg text-sm transition-all
                 ${isSelected
                   ? 'bg-emerald-500 text-white font-semibold'
-                  : isToday
+                  : isTodayCal
                     ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
-                    : isFuture
+                    : isFutureCal
                       ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }
@@ -133,12 +136,17 @@ function WotdCalendar({
   );
 }
 
-export function WotdDateNav({ currentDate }: { currentDate: string }) {
+function dateHref(date: string): string {
+  return `/word-of-the-day?date=${date}`;
+}
+
+export function WotdDateNav({ currentDate, latestDate }: { currentDate: string; latestDate?: string }) {
   const router = useRouter();
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const today = todayStr();
-  const isToday = currentDate === today;
-  const isFuture = currentDate >= today;
+  const maxDate = latestDate || currentDate;
+  const isLatest = currentDate >= maxDate;
+  const prevDate = addDays(currentDate, -1);
+  const nextDate = addDays(currentDate, 1);
 
   const formattedDate = new Date(currentDate + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'short',
@@ -148,24 +156,20 @@ export function WotdDateNav({ currentDate }: { currentDate: string }) {
   });
 
   function goTo(date: string) {
-    if (date === today) {
-      router.push('/word-of-the-day');
-    } else {
-      router.push(`/word-of-the-day?date=${date}`);
-    }
+    router.push(`/word-of-the-day?date=${date}`);
   }
 
   return (
     <>
     <div className="relative flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
       {/* Prev day */}
-      <button
-        onClick={() => goTo(addDays(currentDate, -1))}
+      <Link
+        href={dateHref(prevDate)}
         className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
         aria-label="Previous day"
       >
         <ChevronLeft className="w-5 h-5" />
-      </button>
+      </Link>
 
       {/* Date display + calendar toggle */}
       <button
@@ -179,32 +183,41 @@ export function WotdDateNav({ currentDate }: { currentDate: string }) {
       </button>
 
       {/* Next day */}
-      <button
-        onClick={() => goTo(addDays(currentDate, 1))}
-        disabled={isFuture}
-        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-        aria-label="Next day"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+      {isLatest ? (
+        <span
+          className="p-1.5 rounded-lg opacity-30 cursor-not-allowed text-gray-500 dark:text-gray-400"
+          aria-label="Next day"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </span>
+      ) : (
+        <Link
+          href={dateHref(nextDate)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          aria-label="Next day"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </Link>
+      )}
 
       {/* Calendar dropdown */}
       {calendarOpen && (
         <WotdCalendar
           currentDate={currentDate}
+          maxDate={maxDate}
           onSelectDate={goTo}
           onClose={() => setCalendarOpen(false)}
         />
       )}
     </div>
-    {!isToday && (
+    {!isLatest && (
       <div className="text-center mt-2">
-        <button
-          onClick={() => goTo(today)}
+        <Link
+          href="/word-of-the-day"
           className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline transition-colors"
         >
           Jump to today&rsquo;s word
-        </button>
+        </Link>
       </div>
     )}
     </>
