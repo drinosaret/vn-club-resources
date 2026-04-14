@@ -13,10 +13,14 @@ interface DateStripProps {
   tab: string;
 }
 
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 
 /** Get the Monday of the week containing the given date */
@@ -25,7 +29,7 @@ function getWeekStart(dateStr: string): string {
   const day = d.getDay(); // 0 = Sun, 1 = Mon, ...
   const diff = day === 0 ? -6 : 1 - day; // Shift to Monday
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 }
 
 function formatDayLabel(dateStr: string): { weekday: string; day: string; month: string } {
