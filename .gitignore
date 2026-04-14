@@ -127,6 +127,7 @@ coverage/
 
 # Local development scripts (not needed in repo)
 scripts/local/
+scripts/backup-to-r2.sh
 vndb-stats-backend/scripts/local/
 
 # Backend cached/temp data files

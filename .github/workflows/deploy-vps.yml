@@ -23,11 +23,15 @@ jobs:
           NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: deploy
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: DISCORD_BOT_TOKEN,DISCORD_ADMIN_USER_IDS,DISCORD_LOG_WEBHOOK_URL,TWITTER_AUTH_TOKEN,UMAMI_DB_PASSWORD,UMAMI_APP_SECRET,NEXT_PUBLIC_UMAMI_URL,NEXT_PUBLIC_UMAMI_WEBSITE_ID,NEXT_PUBLIC_TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY
+          envs: DISCORD_BOT_TOKEN,DISCORD_ADMIN_USER_IDS,DISCORD_LOG_WEBHOOK_URL,TWITTER_AUTH_TOKEN,UMAMI_DB_PASSWORD,UMAMI_APP_SECRET,NEXT_PUBLIC_UMAMI_URL,NEXT_PUBLIC_UMAMI_WEBSITE_ID,NEXT_PUBLIC_TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY,BACKUP_ENCRYPTION_KEY,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,R2_ENDPOINT
           script: |
             cd ~/vn-club-resources
             git pull --ff-only
@@ -53,6 +57,26 @@ jobs:
             update_env NEXT_PUBLIC_UMAMI_WEBSITE_ID "$NEXT_PUBLIC_UMAMI_WEBSITE_ID"
             update_env NEXT_PUBLIC_TURNSTILE_SITE_KEY "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
             update_env TURNSTILE_SECRET_KEY "$TURNSTILE_SECRET_KEY"
+
+            # Sync backup env file (sourced by cron, not inline)
+            if [ -n "$BACKUP_ENCRYPTION_KEY" ]; then
+              echo "export BACKUP_ENCRYPTION_KEY=\"$BACKUP_ENCRYPTION_KEY\"" > ~/.backup-env
+              chmod 600 ~/.backup-env
+
+              # Install/update backup cron job
+              BACKUP_CRON='15 6 * * * . /home/deploy/.backup-env && /home/deploy/backup-to-r2.sh >> /home/deploy/backup.log 2>&1'
+              (crontab -l 2>/dev/null | grep -v 'backup-to-r2'; echo "$BACKUP_CRON") | crontab -
+            fi
+
+            # Configure rclone R2 remote if credentials are set
+            if [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_ENDPOINT" ]; then
+              rclone config create r2 s3 \
+                provider=Cloudflare \
+                access_key_id="$R2_ACCESS_KEY_ID" \
+                secret_access_key="$R2_SECRET_ACCESS_KEY" \
+                endpoint="$R2_ENDPOINT" \
+                acl=private --quiet 2>/dev/null || true
+            fi
 
             # Generate git dates for guide pages (Docker has no .git)
             node scripts/generate-git-dates.js
