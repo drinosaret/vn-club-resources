@@ -16,6 +16,7 @@ export interface NavSection {
 
 // Helper to convert navigation to header format
 export function getHeaderNavigation() {
+  const startHere = navigation.find(s => s.title === 'Start Here');
   const resources = navigation.find(s => s.title === 'Resources');
   const guides = navigation.find(s => s.title === 'Guides');
   const features = navigation.find(s => s.title === 'Features');
@@ -23,7 +24,10 @@ export function getHeaderNavigation() {
   return {
     mobile: [
       { name: 'Home', href: '/' },
-      { name: 'Start Here', href: '/guide' },
+      {
+        name: 'Start Here',
+        items: startHere?.items.map(item => ({ name: item.title, href: `/${item.slug}` })) ?? [],
+      },
       {
         name: 'Resources',
         items: resources?.items.map(item => ({ name: item.title, href: `/${item.slug}` })) ?? [],
@@ -98,7 +102,10 @@ export const navigation: NavSection[] = [
   },
   {
     title: 'Start Here',
-    items: [{ title: 'The Guide', slug: 'guide' }],
+    items: [
+      { title: 'The Guide', slug: 'guide' },
+      { title: 'FAQ', slug: 'faq', description: 'Frequently asked questions' },
+    ],
   },
   {
     title: 'Resources',

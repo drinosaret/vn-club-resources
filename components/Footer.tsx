@@ -57,6 +57,9 @@ export default function Footer() {
                 <FooterLink href="/guide">Getting Started</FooterLink>
               </li>
               <li>
+                <FooterLink href="/faq">FAQ</FooterLink>
+              </li>
+              <li>
                 <FooterLink href="/find">Find VNs</FooterLink>
               </li>
               <li>

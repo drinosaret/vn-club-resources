@@ -30,6 +30,7 @@ import { getSiteDirectorySections, NavItem } from '@/lib/navigation';
 // Icon mappings by slug - presentational only
 const iconMap: Record<string, LucideIcon> = {
   'guide': BookOpen,
+  'faq': BookOpen,
   'find': Search,
   'sources': ShoppingBag,
   'tools': Package,

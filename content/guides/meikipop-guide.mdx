@@ -7,7 +7,7 @@ sitemap:
 
 # Meikipop Setup Guide
 
-[Meikipop](https://github.com/rtr46/meikipop) is an incredibly fast OCR popup dictionary that lets you look up Japanese text anywhere on your screen. Just point your mouse at any Japanese text, press a hotkey, and you get instant dictionary definitions. Magic.
+[Meikipop](https://github.com/rtr46/meikipop) is an incredibly fast OCR popup dictionary that lets you look up Japanese text that appears on your screen. Just hover your mouse over any text and you will get instant dictionary definitions.
 
 Unlike browser extensions, Meikipop works with any on-screen text.
 
@@ -21,25 +21,31 @@ Unlike browser extensions, Meikipop works with any on-screen text.
 2. Extract the archive to a folder of your choice
 3. Run the executable
 
-The prebuilt binaries come with the dictionary included, so no extra setup is needed.
+The prebuilt binaries come with the dictionary included, so no extra setup is needed. Binaries are available for Windows, Linux, and macOS.
+
+### pip Install
+
+If you have Python installed, you can also install Meikipop via pip:
+
+```bash
+pip install --upgrade meikipop
+meikipop
+```
+
+The dictionary will download automatically on first run.
 
 ### From Source
 
 Requires **Python 3.10+**.
 
 1. Clone or download the repository
-2. Install dependencies:
+2. Install in editable mode:
    ```bash
-   pip install -r requirements.txt
-   pip install lxml
+   pip install -e .
    ```
-3. Build the dictionary:
+3. Run:
    ```bash
-   python -m scripts.build_dictionary
-   ```
-4. Run:
-   ```bash
-   python -m src.main
+   meikipop
    ```
 
 ### macOS Permissions
@@ -55,16 +61,23 @@ macOS users will need to grant these permissions in System Preferences:
 
 1. **Launch the application** - A system tray icon will appear
 2. **Select scan region** - On first launch, you'll be asked to select a screen region to scan
-3. **Position your mouse** over the Japanese text you want to look up
-4. **Press and hold the hotkey** (Shift by default)
-5. **View the popup** - Dictionary results show up instantly
-6. **Release the hotkey** to dismiss the popup
+3. **Hover your mouse** - Position over the Japanese text you want to look up
+4. **View the popup** - Dictionary results show up automatically
 
-Right-click the system tray icon to access settings and options.
+By default, Meikipop uses auto-scanning on mouse movement, so no hotkey is needed. You can reconfigure it to require a hotkey press if you prefer.
+
+Right-click the system tray icon to access settings and options. Click it to quickly toggle scanning on/off.
 
 ## Configuration
 
-You can access settings through the system tray icon's right-click menu. Your configuration gets saved to `config.ini` in the application folder.
+You can access settings through the system tray icon's right-click menu. Configuration and dictionaries are stored in platform-specific locations:
+
+- **Windows:** `%LOCALAPPDATA%\meikipop\`
+- **Linux:** `~/.config/meikipop/`
+- **macOS:** `~/Library/Application Support/meikipop/`
+
+!!! note
+    If you're upgrading from a pre-2.0 version, your old config won't carry over automatically. You'll need to manually copy your old configuration files to the new location above.
 
 <img src="assets/meikipop-settings.webp" alt="Meikipop settings dialog" style="max-height: 400px; width: auto;" />
 
@@ -72,8 +85,10 @@ You can access settings through the system tray icon's right-click menu. Your co
 - **Hotkeys** - Change the trigger key
 - **Themes and colors** - Customize the popup appearance
 - **Scan region** - Switch between region-specific or fullscreen scanning
-- **Auto scan mode** - Enable continuous scanning without holding the hotkey
-- **OCR provider** - Choose between Google Lens, meikiocr (local), or [OwOCR](/owocr-guide) (WebSocket)
+- **Auto scan mode** - Continuous scanning on mouse movement (enabled by default)
+- **Scan interval** - Configure how frequently the screen is scanned
+- **Popup content** - Fine-grained control over what shows in the popup
+- **OCR provider** - Choose between meikiocr (local, default), Google Lens, Chrome Screen AI, or [OwOCR](/owocr-guide)
 
 ## Anki Mining Forks
 
@@ -109,10 +124,12 @@ The original Meikipop focuses specifically on dictionary lookups. It doesn't sup
 
 ## Tips
 
-- **Auto scan mode** works well for games where text changes frequently and you want continuous lookups
+- **Auto scan mode** (on by default) works well for games where text changes frequently and you want continuous lookups
 - Especially handy for JRPGs with complex menus where text shows up all over the screen, compared to VNs where text is usually in a predictable spot
 - For games that can be text hooked, consider using [Textractor](/textractor-guide) + [JL](/jl-guide) instead
 - Click the system tray icon to quickly toggle Meikipop on/off
+- Meikipop includes a kanji dictionary with meanings, readings, and example words
+- Compatible with [Magpie](/magpie-guide) for upscaled games
 
 ## Related Pages
 
