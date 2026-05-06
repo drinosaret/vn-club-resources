@@ -166,6 +166,10 @@ services:
       dockerfile: Dockerfile
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/run_bot.py"]
+    # The Dockerfile-baked healthcheck curls localhost:8000, which the bot doesn't serve.
+    # Disable it so the container doesn't show as "unhealthy" when it's actually fine.
+    healthcheck:
+      disable: true
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
       - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
@@ -265,6 +269,9 @@ services:
       dockerfile: Dockerfile
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/worker.py"]
+    # Same as discord-bot: no HTTP server here, so curl-based healthcheck is bogus.
+    healthcheck:
+      disable: true
     deploy:
       resources:
         limits:

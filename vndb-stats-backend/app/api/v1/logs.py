@@ -299,8 +299,15 @@ async def submit_frontend_log(
     - Error deduplication via hash
     - Input validation
     """
-    # Get client IP
-    client_ip = request.client.host if request.client else "unknown"
+    # Get client IP — prefer nginx-forwarded headers since request.client.host
+    # otherwise resolves to the nginx container IP (one shared bucket for everyone).
+    forwarded_for = request.headers.get("x-forwarded-for")
+    client_ip = (
+        request.headers.get("cf-connecting-ip")
+        or request.headers.get("x-real-ip")
+        or (forwarded_for.split(",")[0].strip() if forwarded_for else None)
+        or (request.client.host if request.client else "unknown")
+    )
 
     # Check rate limit
     if not check_rate_limit(client_ip):
