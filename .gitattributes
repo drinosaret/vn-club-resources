@@ -1,0 +1,5 @@
+* text=auto
+
+# Always check out shell scripts with LF endings — Linux refuses to exec
+# scripts with CRLF (the #! line ends in \r and there is no /bin/bash\r).
+*.sh   text eol=lf

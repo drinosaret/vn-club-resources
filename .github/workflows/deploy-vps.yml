@@ -6,13 +6,35 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f # v1.2.2
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up SSH
         env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # TOFU host key fetch. To pin instead, replace this with the
+          # output of `ssh-keyscan -H <host>` from a trusted location.
+          ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Push secrets and run remote deploy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_ADMIN_USER_IDS: ${{ secrets.DISCORD_ADMIN_USER_IDS }}
           DISCORD_LOG_WEBHOOK_URL: ${{ secrets.DISCORD_LOG_WEBHOOK_URL }}
@@ -27,63 +49,47 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: deploy
-          key: ${{ secrets.VPS_SSH_KEY }}
-          envs: DISCORD_BOT_TOKEN,DISCORD_ADMIN_USER_IDS,DISCORD_LOG_WEBHOOK_URL,TWITTER_AUTH_TOKEN,UMAMI_DB_PASSWORD,UMAMI_APP_SECRET,NEXT_PUBLIC_UMAMI_URL,NEXT_PUBLIC_UMAMI_WEBSITE_ID,NEXT_PUBLIC_TURNSTILE_SITE_KEY,TURNSTILE_SECRET_KEY,BACKUP_ENCRYPTION_KEY,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,R2_ENDPOINT
-          script: |
-            cd ~/vn-club-resources
-            git pull --ff-only
+        run: |
+          # Build a temp env file under a 077 umask. %q produces a shell-quoted
+          # form so the remote bash can safely source the file even if a value
+          # contains shell metacharacters ($, |, &, ', ", \, spaces, etc.).
+          umask 077
+          ENV_FILE=$(mktemp)
+          {
+            printf 'DISCORD_BOT_TOKEN=%q\n'              "$DISCORD_BOT_TOKEN"
+            printf 'DISCORD_ADMIN_USER_IDS=%q\n'         "$DISCORD_ADMIN_USER_IDS"
+            printf 'DISCORD_LOG_WEBHOOK_URL=%q\n'        "$DISCORD_LOG_WEBHOOK_URL"
+            printf 'TWITTER_AUTH_TOKEN=%q\n'             "$TWITTER_AUTH_TOKEN"
+            printf 'UMAMI_DB_PASSWORD=%q\n'              "$UMAMI_DB_PASSWORD"
+            printf 'UMAMI_APP_SECRET=%q\n'               "$UMAMI_APP_SECRET"
+            printf 'NEXT_PUBLIC_UMAMI_URL=%q\n'          "$NEXT_PUBLIC_UMAMI_URL"
+            printf 'NEXT_PUBLIC_UMAMI_WEBSITE_ID=%q\n'   "$NEXT_PUBLIC_UMAMI_WEBSITE_ID"
+            printf 'NEXT_PUBLIC_TURNSTILE_SITE_KEY=%q\n' "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+            printf 'TURNSTILE_SECRET_KEY=%q\n'           "$TURNSTILE_SECRET_KEY"
+            printf 'BACKUP_ENCRYPTION_KEY=%q\n'          "$BACKUP_ENCRYPTION_KEY"
+            printf 'R2_ACCESS_KEY_ID=%q\n'               "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%q\n'           "$R2_SECRET_ACCESS_KEY"
+            printf 'R2_ENDPOINT=%q\n'                    "$R2_ENDPOINT"
+          } > "$ENV_FILE"
 
-            # Sync GitHub secrets into .env.prod (add or update each key)
-            ENV_FILE=deploy/.env.prod
-            update_env() {
-              local key="$1" val="$2"
-              [ -z "$val" ] && return
-              if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
-                sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
-              else
-                echo "${key}=${val}" >> "$ENV_FILE"
-              fi
-            }
-            update_env DISCORD_BOT_TOKEN "$DISCORD_BOT_TOKEN"
-            update_env DISCORD_ADMIN_USER_IDS "$DISCORD_ADMIN_USER_IDS"
-            update_env DISCORD_LOG_WEBHOOK_URL "$DISCORD_LOG_WEBHOOK_URL"
-            update_env TWITTER_AUTH_TOKEN "$TWITTER_AUTH_TOKEN"
-            update_env UMAMI_DB_PASSWORD "$UMAMI_DB_PASSWORD"
-            update_env UMAMI_APP_SECRET "$UMAMI_APP_SECRET"
-            update_env NEXT_PUBLIC_UMAMI_URL "$NEXT_PUBLIC_UMAMI_URL"
-            update_env NEXT_PUBLIC_UMAMI_WEBSITE_ID "$NEXT_PUBLIC_UMAMI_WEBSITE_ID"
-            update_env NEXT_PUBLIC_TURNSTILE_SITE_KEY "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
-            update_env TURNSTILE_SECRET_KEY "$TURNSTILE_SECRET_KEY"
+          # scp transfers the file with mode 600 (preserved from local umask).
+          # Using -p preserves the mode explicitly.
+          scp -p -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              "$ENV_FILE" "deploy@${VPS_HOST}:/home/deploy/.deploy-secrets.env"
 
-            # Sync backup env file (sourced by cron, not inline)
-            if [ -n "$BACKUP_ENCRYPTION_KEY" ]; then
-              echo "export BACKUP_ENCRYPTION_KEY=\"$BACKUP_ENCRYPTION_KEY\"" > ~/.backup-env
-              chmod 600 ~/.backup-env
+          # Run remote deploy script via stdin so neither the script body
+          # nor any secret value lands in the remote process command line.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              "deploy@${VPS_HOST}" 'bash -s' < scripts/deploy-remote.sh
 
-              # Install/update backup cron job
-              BACKUP_CRON='15 6 * * * . /home/deploy/.backup-env && /home/deploy/backup-to-r2.sh >> /home/deploy/backup.log 2>&1'
-              (crontab -l 2>/dev/null | grep -v 'backup-to-r2'; echo "$BACKUP_CRON") | crontab -
-            fi
+          rm -f "$ENV_FILE"
 
-            # Configure rclone R2 remote if credentials are set
-            if [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_ENDPOINT" ]; then
-              rclone config create r2 s3 \
-                provider=Cloudflare \
-                access_key_id="$R2_ACCESS_KEY_ID" \
-                secret_access_key="$R2_SECRET_ACCESS_KEY" \
-                endpoint="$R2_ENDPOINT" \
-                acl=private --quiet 2>/dev/null || true
-            fi
-
-            # Generate git dates for guide pages (Docker has no .git)
-            node scripts/generate-git-dates.js
-
-            docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
-            # Recreate nginx — git pull creates new file inodes, but Docker bind mounts
-            # track the old inode. `nginx -s reload` reads the stale mount. Recreating
-            # the container rebinds to the current inode. --no-deps prevents cascading.
-            docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --force-recreate --no-deps nginx
-            docker image prune -f
+      - name: Always remove remote secrets file
+        if: always()
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          # Belt-and-suspenders: deploy-remote.sh deletes this immediately
+          # after sourcing, but if it crashed first the file would linger.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              "deploy@${VPS_HOST}" 'rm -f /home/deploy/.deploy-secrets.env' || true
