@@ -736,7 +736,8 @@ class NominatePickSelect(discord.ui.Select):
         view: NominatePickView = self.view
         film = view.results[int(self.values[0])]
         async with async_session_maker() as db:
-            _, status = await mn.add_nomination(db, view.cycle_id, film, interaction.user.id)
+            nom, status = await mn.add_nomination(db, view.cycle_id, film, interaction.user.id)
+            locked_title = nom.title if status == "locked" and nom else None
 
         if status == "cap":
             await interaction.response.edit_message(
@@ -751,6 +752,12 @@ class NominatePickSelect(discord.ui.Select):
         if status == "same":
             await interaction.response.edit_message(
                 content=f"You've already nominated **{film['title']}**.", view=None
+            )
+            return
+        if status == "locked":
+            await interaction.response.edit_message(
+                content=f"Your current pick **{locked_title}** already has votes, so it can't be swapped.",
+                view=None,
             )
             return
 

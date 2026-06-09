@@ -171,7 +171,8 @@ async def add_nomination(
     """Add a film to the pool, one nomination per user (mirrors hikaru). Returns
     (nomination, status):
       'ok'        - added a new nomination
-      'swapped'   - replaced the user's previous nomination (and any votes it carried)
+      'swapped'   - replaced the user's previous nomination (no others had voted for it)
+      'locked'    - the user's nomination already has votes from others; left unchanged
       'same'      - the user already holds exactly this film; nothing changed
       'duplicate' - another member already nominated this film
       'cap'       - the pool is full (only reachable when the user holds none yet)
@@ -206,6 +207,20 @@ async def add_nomination(
         return mine[0], "same"
 
     if mine:
+        # Don't let a member swap away a nomination once OTHER people have voted for it:
+        # that would silently wipe their votes and invites abuse (gather votes, then swap
+        # the film out). Their own vote doesn't count. Admins can still change it via
+        # Manage pool.
+        others = (
+            await db.execute(
+                select(func.count(MovieVote.user_id)).where(
+                    MovieVote.nomination_id.in_([n.id for n in mine]),
+                    MovieVote.user_id != user_id,
+                )
+            )
+        ).scalar_one()
+        if others:
+            return mine[0], "locked"
         # Swap: drop the user's old film(s) and any votes for them, then add the new
         # one. If an old film was this week's pick, clear the pick + its /events row,
         # same as an admin removal.
