@@ -377,10 +377,11 @@ export default function EventsCalendar({
               </div>
 
               {/* event bars: span days via grid columns, stack via grid rows (lanes).
-                  Rows grow (minmax) so wrapped mobile titles aren't clipped; on
-                  desktop the single-line bars keep the row at its 1.25rem minimum. */}
+                  Phone single-day bars are icon-only; phone multi-day bars show one
+                  clamped title line; at >=sm titles wrap. Rows grow (minmax) so wrapped
+                  desktop titles aren't clipped, else stay at 1.25rem. */}
               <div
-                className="relative grid grid-cols-7 gap-y-0.5 pb-1 pt-1"
+                className="relative grid grid-cols-7 gap-y-1 pb-1 pt-1 sm:gap-y-0.5"
                 style={{ gridAutoRows: 'minmax(1.25rem, auto)' }}
               >
                 {bars.map((b) => {
@@ -389,14 +390,18 @@ export default function EventsCalendar({
                   if (showLabel) labeledIds.add(b.e.id);
                   const t = dtitle(b.e);
                   const rounding = `${b.clipLeft ? 'rounded-l-none' : ''} ${b.clipRight ? 'rounded-r-none' : ''}`;
-                  // A single-day cell is too narrow (~38px on a phone) for an inline
-                  // icon beside the title, so on mobile the icon sits above a
-                  // full-width wrapping title; multi-day bars have room to keep it
-                  // inline. Titles wrap to 2 lines on every size (no cut-off).
-                  const layout =
-                    b.span === 1
-                      ? 'flex-col items-center justify-center gap-0.5 text-center sm:flex-row sm:justify-start sm:gap-1 sm:text-left'
-                      : 'flex-row items-center gap-1 text-left';
+                  const singleDay = b.span === 1;
+                  // A single-day cell is ~45-50px on a phone, too narrow for a title
+                  // without chopping a word, so on mobile it shows the icon alone,
+                  // centered. Multi-day bars are wide enough to keep an inline title.
+                  // At >=sm both restore the desktop layout: icon + wrapping title.
+                  const layout = singleDay
+                    ? 'flex-row items-center justify-center gap-0 sm:justify-start sm:gap-1 sm:text-left'
+                    : 'flex-row items-center gap-1 text-left';
+                  // Single-day phone chips hide the title (icon-only); multi-day keeps
+                  // one clamped line on mobile. One display utility per breakpoint
+                  // (hidden / sm:block) keeps the desktop wrapping box collision-proof.
+                  const labelVis = singleDay ? 'hidden sm:block' : 'line-clamp-1 sm:line-clamp-none';
                   const cell = {
                     gridColumn: `${b.startCol + 1} / span ${b.span}`,
                     gridRow: b.lane + 1,
@@ -416,17 +421,16 @@ export default function EventsCalendar({
                         onClick={() => setSelected(b.e)}
                         title={t}
                         aria-label={t}
-                        className={`flex min-h-5 overflow-hidden rounded px-1 py-0.5 text-[10px] font-medium ${meta.chip} ${rounding} ${layout} hover:brightness-95 sm:px-1.5`}
+                        className={`flex min-h-5 overflow-hidden rounded px-1 py-0.5 text-[9px] font-medium ${meta.chip} ${rounding} ${layout} hover:brightness-95 sm:px-1.5 sm:text-[10px]`}
                         style={cell}
                       >
                         {/* Only the first week of a multi-week bar is labeled;
                             later weeks are unlabeled colored continuations. */}
                         {showLabel && <meta.Icon className="h-3 w-3 shrink-0" />}
-                        {/* Title wraps to as many lines as it needs (no line cap) so even
-                            long single-day titles like "Labor Thanksgiving Day" are never
-                            cut off. Time is omitted from the bar; it's in the day overview
-                            + detail modal. */}
-                        <span className="block w-full min-w-0 break-words leading-tight">
+                        {/* Single-day phone chips are icon-only (full name in the tooltip
+                            + day overview); multi-day shows one clamped line on mobile. At
+                            >=sm both wrap. Time is in the day overview + detail modal. */}
+                        <span className={`w-full min-w-0 break-words leading-tight ${labelVis}`}>
                           {showLabel ? t : ''}
                         </span>
                       </button>
