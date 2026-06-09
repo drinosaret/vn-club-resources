@@ -83,7 +83,9 @@ jobs:
 
           # Run remote deploy script via stdin so neither the script body
           # nor any secret value lands in the remote process command line.
+          # Keepalive so a quiet stretch of the long build doesn't drop the SSH session.
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes \
               "deploy@${VPS_HOST}" 'bash -s' < scripts/deploy-remote.sh
 
           rm -f "$ENV_FILE"
