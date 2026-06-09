@@ -18,7 +18,7 @@ class SettingsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="settings", description="Manage bot settings")
+    @app_commands.command(name="manage_settings", description="[ADMIN] Manage bot settings")
     @app_commands.default_permissions(administrator=True)
     @is_admin()
     async def settings(self, interaction):
@@ -28,7 +28,7 @@ class SettingsCog(commands.Cog):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
-    @app_commands.command(name="testdaily", description="Force-send daily posts (bypasses dedup)")
+    @app_commands.command(name="manage_test_daily", description="[ADMIN] Force-send daily posts (bypasses dedup)")
     @app_commands.describe(post="Which post to test")
     @app_commands.choices(post=[
         app_commands.Choice(name="Both", value="both"),
@@ -53,7 +53,7 @@ class SettingsCog(commands.Cog):
 
         await interaction.followup.send("\n".join(results), ephemeral=True)
 
-    @app_commands.command(name="backup", description="Run a database backup now")
+    @app_commands.command(name="manage_backup", description="[ADMIN] Run a database backup now")
     @app_commands.default_permissions(administrator=True)
     @is_admin()
     async def backup(self, interaction: discord.Interaction):

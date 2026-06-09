@@ -17,16 +17,44 @@ from app.db.database import async_session_maker
 from app.db.models import BotConfig, NewsItem, WordOfTheDay
 from app.services.vn_of_the_day_service import (
     get_current,
+    get_or_select,
     get_vn_tags,
     get_vn_developers,
     MAX_IMAGE_SEXUAL,
 )
 from app.services.word_of_the_day_service import (
     get_current as wotd_get_current,
+    get_or_select as wotd_get_or_select,
     build_wotd_response,
 )
 from app.services.jiten_client import strip_furigana, to_hiragana
 from discord_bot.config import get_bot_settings
+
+
+def clean_vndb_description(text: str, limit: int = 300) -> str:
+    """Convert VNDB BBCode to Discord markdown/plain text for an embed.
+
+    VNDB descriptions use BBCode ([url=...], [spoiler], [b], ...) which Discord
+    renders raw. Convert the common tags, drop the rest (without touching literal
+    brackets like "[From ...]"), then truncate on a word boundary.
+    """
+    text = text.replace("\\n", "\n")
+    text = re.sub(r"\[url=[^\]]+\](.*?)\[/url\]", r"\1", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"\[url\](.*?)\[/url\]", r"\1", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"\[spoiler\](.*?)\[/spoiler\]", r"||\1||", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"\[b\](.*?)\[/b\]", r"**\1**", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"\[i\](.*?)\[/i\]", r"*\1*", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"\[u\](.*?)\[/u\]", r"__\1__", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"\[s\](.*?)\[/s\]", r"~~\1~~", text, flags=re.DOTALL | re.IGNORECASE)
+    # Drop any leftover (unmatched/nested) known tags; leaves literal brackets alone.
+    text = re.sub(r"\[/?(?:url(?:=[^\]]*)?|spoiler|b|i|u|s|quote|code|raw)\]", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\n{2,}", "\n\n", text).strip()
+    if len(text) > limit:
+        text = text[:limit].rsplit(" ", 1)[0].rstrip()
+        if text.count("||") % 2:  # don't leak a half-open spoiler
+            text = text[: text.rfind("||")].rstrip()
+        text += "..."
+    return text
 
 logger = logging.getLogger(__name__)
 
@@ -187,13 +215,9 @@ class DailyPostsCog(commands.Cog):
             color=0x7C3AED,
         )
 
-        # Description — clean VNDB formatting
+        # Description: convert VNDB BBCode to markdown (no raw [url=...]/[spoiler]).
         if vn.description:
-            desc = vn.description.replace("\\n", "\n")
-            desc = re.sub(r"\n{2,}", "\n\n", desc).strip()
-            if len(desc) > 300:
-                desc = desc[:300].rsplit(" ", 1)[0] + "..."
-            embed.description = desc
+            embed.description = clean_vndb_description(vn.description)
 
         if vn.rating and vn.votecount:
             embed.add_field(
@@ -593,15 +617,17 @@ class DailyPostsCog(commands.Cog):
 
     # ── User Commands ─────────────────────────────────────────
 
-    @app_commands.command(name="getvnotd", description="See today's VN of the Day")
+    @app_commands.command(name="vnotd", description="See today's VN of the Day")
     async def getvotd_command(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
         async with async_session_maker() as db:
-            pick = await get_current(db)
+            # Select today's pick on demand (like the website) so this works any
+            # time of day, not just after the scheduled daily post.
+            pick = await get_or_select(db)
             if not pick or not pick.visual_novel:
                 await interaction.followup.send(
-                    "No VN of the Day has been selected yet today."
+                    "No VN of the Day is available right now."
                 )
                 return
             tags = await get_vn_tags(db, pick.visual_novel.id, limit=5)
@@ -610,22 +636,24 @@ class DailyPostsCog(commands.Cog):
         embed, view = self._build_votd_embed(pick, tags, devs)
         await interaction.followup.send(embed=embed, view=view)
 
-    @app_commands.command(name="getwotd", description="See today's Word of the Day")
+    @app_commands.command(name="wotd", description="See today's Word of the Day")
     async def getwotd_command(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
         async with async_session_maker() as db:
-            pick = await wotd_get_current(db)
+            # Select today's word on demand (like the website) so this works any
+            # time of day, not just after the scheduled daily post.
+            pick = await wotd_get_or_select(db)
             if not pick:
                 await interaction.followup.send(
-                    "No Word of the Day has been selected yet today."
+                    "No Word of the Day is available right now."
                 )
                 return
 
         embed, view = self._build_wotd_embed(pick)
         await interaction.followup.send(embed=embed, view=view)
 
-    @app_commands.command(name="getnews", description="See today's news summary")
+    @app_commands.command(name="news", description="See today's news summary")
     async def getnews_command(self, interaction: discord.Interaction):
         await interaction.response.defer()
 

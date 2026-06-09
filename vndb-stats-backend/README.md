@@ -9,6 +9,7 @@ Python/FastAPI backend for VNDB user statistics and recommendations.
 - Daily ingestion of VNDB data dumps
 - Rate-limited VNDB API integration
 - Redis caching layer
+- Discord bot: daily VN/Word of the Day posts plus community features (events calendar, movie nights)
 
 ## Quick Start
 
@@ -64,6 +65,10 @@ uvicorn app.main:app --reload
 - `GET /api/v1/vn/{vn_id}` - VN details
 - `GET /api/v1/vn/search/` - Search VNs
 
+### Events
+- `GET /api/v1/events?year=&month=` - Calendar events for a month
+- `GET /api/v1/events/upcoming` - Upcoming events
+
 ## Data Ingestion
 
 The scheduler automatically downloads and imports VNDB dumps daily at 09:00 UTC.
@@ -81,3 +86,6 @@ Key variables:
 - `DATABASE_URL` - PostgreSQL connection string
 - `REDIS_URL` - Redis connection string
 - `VNDB_API_TOKEN` - Optional VNDB API token for private lists
+- `DISCORD_BOT_TOKEN` - Discord bot token (required to run the bot)
+- `DISCORD_GUILD_ID` - Sync slash commands to this guild for instant updates (also the default hikaru import source); leave empty for a global sync
+- `TMDB_API_KEY` - Required for Movie Night film search

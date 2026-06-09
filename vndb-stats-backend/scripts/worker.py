@@ -478,6 +478,7 @@ async def main():
     )
     from app.services.vn_of_the_day_service import run_vn_of_the_day_selection
     from app.services.word_of_the_day_service import run_word_of_the_day_selection
+    from app.services.hikaru_import import run_import as run_hikaru_import, is_enabled as hikaru_import_enabled
     from app.logging.cleanup import cleanup_old_logs
 
     scheduler = AsyncIOScheduler(
@@ -569,6 +570,22 @@ async def main():
     else:
         logger.info("Scheduler not started (DEV_MODE=true)")
 
+    # Hikaru -> calendar import. Not gated by DEV_MODE (we want it in dev too);
+    # only active when HIKARU_DB_PATH + VNCR_GUILD_ID are configured.
+    if hikaru_import_enabled():
+        scheduler.add_job(
+            run_hikaru_import,
+            CronTrigger(minute=15),
+            id="hikaru_calendar_import",
+            replace_existing=True,
+        )
+        logger.info("Hikaru calendar import scheduled: hourly at :15 UTC")
+    else:
+        logger.info(
+            "Hikaru calendar import disabled (mount hikaru data via HIKARU_DATA_DIR; "
+            "source guild from DISCORD_GUILD_ID or VNCR_GUILD_ID override)"
+        )
+
     scheduler.start()
 
     # Run catch-up tasks on startup (with delay to let DB warm up)
@@ -586,6 +603,13 @@ async def main():
             await run_word_of_the_day_selection()
         except Exception as e:
             logger.warning(f"Startup Word of the Day check failed: {e}")
+
+    # Startup hikaru import (runs in dev + prod when configured)
+    if hikaru_import_enabled():
+        try:
+            await run_hikaru_import()
+        except Exception as e:
+            logger.warning(f"Startup hikaru import failed: {e}")
 
     # Keep running forever
     try:

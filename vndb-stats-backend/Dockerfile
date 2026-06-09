@@ -23,12 +23,14 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install only runtime dependencies (no build-essential)
+# Install only runtime dependencies (no build-essential).
+# fonts-noto-cjk: lets the Movie Night banner render Japanese film titles.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libgomp1 \
     curl \
     postgresql-client \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user BEFORE copying code

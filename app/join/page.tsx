@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
+import { CalendarDays } from 'lucide-react';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
@@ -92,7 +94,7 @@ export default function JoinPage() {
           </p>
 
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
-            1,000+ members reading together
+            1,500+ members reading together
           </p>
 
           <a
@@ -104,6 +106,16 @@ export default function JoinPage() {
             <DiscordIcon className="w-5 h-5" />
             Join Server
           </a>
+
+          <div className="mt-4">
+            <Link
+              href="/events"
+              className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+            >
+              <CalendarDays className="w-4 h-4" />
+              See upcoming events &amp; group reads
+            </Link>
+          </div>
 
           <ul className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
             {features.map((feature) => (

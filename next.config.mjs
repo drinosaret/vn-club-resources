@@ -31,8 +31,16 @@ const connectSrc = [
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// Extra origins the dev server serves /_next assets and HMR to, beyond localhost.
+// Comma-separated in ALLOWED_DEV_ORIGINS; dev-only, ignored in production.
+const allowedDevOrigins = (process.env.ALLOWED_DEV_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 const nextConfig = {
   ...getOutputConfig(),
+  ...(allowedDevOrigins.length ? { allowedDevOrigins } : {}),
   trailingSlash: true,
   poweredByHeader: false,
   compress: false, // nginx handles gzip — no need for Node.js to double-compress
@@ -73,7 +81,7 @@ const nextConfig = {
               "default-src 'self'",
               `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://challenges.cloudflare.com${process.env.NEXT_PUBLIC_UMAMI_URL ? ' ' + process.env.NEXT_PUBLIC_UMAMI_URL : ''}`,
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://t.vndb.org https://pbs.twimg.com https://video.twimg.com https://ton.twimg.com https://abs.twimg.com https://store.steampowered.com https://cdn.akamai.steamstatic.com https://icons.duckduckgo.com https://vnclub.org",
+              "img-src 'self' data: blob: https://t.vndb.org https://image.tmdb.org https://pbs.twimg.com https://video.twimg.com https://ton.twimg.com https://abs.twimg.com https://store.steampowered.com https://cdn.akamai.steamstatic.com https://icons.duckduckgo.com https://vnclub.org",
               "font-src 'self'",
               `connect-src ${connectSrc}`,
               "frame-src https://challenges.cloudflare.com",

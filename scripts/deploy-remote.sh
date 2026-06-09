@@ -46,8 +46,10 @@ update_env() {
 }
 
 update_env DISCORD_BOT_TOKEN              "${DISCORD_BOT_TOKEN-}"
+update_env DISCORD_GUILD_ID               "${DISCORD_GUILD_ID-}"
 update_env DISCORD_ADMIN_USER_IDS         "${DISCORD_ADMIN_USER_IDS-}"
 update_env DISCORD_LOG_WEBHOOK_URL        "${DISCORD_LOG_WEBHOOK_URL-}"
+update_env TMDB_API_KEY                   "${TMDB_API_KEY-}"
 update_env TWITTER_AUTH_TOKEN             "${TWITTER_AUTH_TOKEN-}"
 update_env UMAMI_DB_PASSWORD              "${UMAMI_DB_PASSWORD-}"
 update_env UMAMI_APP_SECRET               "${UMAMI_APP_SECRET-}"

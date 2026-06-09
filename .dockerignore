@@ -36,6 +36,10 @@ Thumbs.db
 # Legacy MkDocs site
 legacy/
 
+# Read-only reference snapshots + scratch/temp dirs (not needed in the image)
+reference/
+temp/
+
 # Git
 .git
 .gitignore

@@ -176,6 +176,7 @@ services:
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
       - DISCORD_ADMIN_USER_IDS=${DISCORD_ADMIN_USER_IDS:-}
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
       - FRONTEND_URL=https://vnclub.org
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
       - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
@@ -187,6 +188,8 @@ services:
         condition: service_started
     volumes:
       - dumps:/app/data
+      # Flat log file
+      - ./vndb-stats-backend/logs:/app/logs
     deploy:
       resources:
         limits:
@@ -286,6 +289,10 @@ services:
       - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
       - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
       - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
+      # hikaru -> calendar import source guild (VNCR). Defaults to DISCORD_GUILD_ID;
+      # VNCR_GUILD_ID overrides only if the source guild differs.
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
+      - VNCR_GUILD_ID=${VNCR_GUILD_ID:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
@@ -294,6 +301,10 @@ services:
         condition: service_started
     volumes:
       - dumps:/app/data
+      # Read-only mount of hikaru's data dir so the calendar import reads its winners
+      # directly. HIKARU_DATA_DIR (deploy/.env.prod) is the host path; unset falls back
+      # to ./hikaru-data, which leaves the import disabled.
+      - ${HIKARU_DATA_DIR:-./hikaru-data}:/hikaru-data:ro
     restart: unless-stopped
     networks:
       - vnclub

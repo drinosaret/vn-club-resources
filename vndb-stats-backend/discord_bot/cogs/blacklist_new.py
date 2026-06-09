@@ -19,8 +19,8 @@ class BlacklistNewCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="blacklist",
-        description="Manage cover blacklist - add entries, browse, configure rules",
+        name="manage_blacklist",
+        description="[ADMIN] Manage cover blacklist - add entries, browse, configure rules",
     )
     @app_commands.default_permissions(administrator=True)
     @is_admin()

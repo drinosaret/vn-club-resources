@@ -22,8 +22,8 @@ class AnnouncementsCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="announcements",
-        description="Manage site announcements - create, edit, toggle, delete",
+        name="manage_announcements",
+        description="[ADMIN] Manage site announcements - create, edit, toggle, delete",
     )
     @app_commands.default_permissions(administrator=True)
     @is_admin()

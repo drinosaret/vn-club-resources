@@ -22,8 +22,8 @@ class NewsNewCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="news",
-        description="Manage news feed - refresh, hide/unhide items, filter by source",
+        name="manage_news",
+        description="[ADMIN] Manage news feed - refresh, hide/unhide items, filter by source",
     )
     @app_commands.default_permissions(administrator=True)
     @is_admin()

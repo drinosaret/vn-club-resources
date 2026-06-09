@@ -110,6 +110,8 @@ services:
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
+      # Flat log file the muramasa web console reads (read-only on its side).
+      - ./logs:/app/logs
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/run_bot.py"]
     restart: unless-stopped
@@ -176,6 +178,13 @@ services:
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
+      # Read-only mount of hikaru's data dir so the calendar import can read its
+      # winners directly (no HTTP / API key). Set HIKARU_DATA_DIR in .env to the
+      # host path of hikaru's data dir to enable the import. Unset/empty falls back
+      # to a harmless auto-created ./hikaru-data so `docker compose up` never fails
+      # on an empty mount spec; the SQLite path then won't exist and the import
+      # stays disabled.
+      - ${HIKARU_DATA_DIR:-./hikaru-data}:/hikaru-data:ro
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/worker.py"]
     restart: unless-stopped

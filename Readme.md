@@ -12,10 +12,12 @@ Visit: [vnclub.org](https://vnclub.org/)
 - **Browse** - Search and filter the full VNDB catalog with detail pages for VNs, characters, staff, and producers
 - **Recommendations** - Personalized VN recommendations based on your VNDB list
 - **Stats** - VNDB user stats lookup with reading history and analytics
+- **VN of the Day** - A daily featured visual novel with score, developer, tags, and cover
 - **Word of the Day** - Daily Japanese vocabulary with definitions, pitch accent, conjugations, example sentences from VNs, kanji breakdown with readings and compounds, related VNDB tags, and bilingual example sentences
+- **Events** - A community calendar, VN of the Month and Season, and key dates
 - **News** - Aggregated VN news feed
 - **Quiz** - Kana quiz for beginners
-- **Discord bot** - Daily Word of the Day and VN of the Day posts
+- **Discord bot** - Daily VN of the Day and Word of the Day posts, plus community features like an events calendar and movie nights
 - **Just for Fun** - Tier list maker, 3x3 collage creator, and VN roulette
 - **Full-text search** across all content
 - **Dark mode** support

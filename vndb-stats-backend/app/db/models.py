@@ -38,7 +38,7 @@ from datetime import datetime, date
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, Text, Date, DateTime,
     ForeignKey, ARRAY, JSON, Index, BigInteger, SmallInteger, CheckConstraint,
-    text, func
+    UniqueConstraint, text, func
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
@@ -810,6 +810,95 @@ class WordOfTheDay(Base):
         Index("idx_wotd_date", date.desc()),
         Index("idx_wotd_word_id", "word_id"),
     )
+
+
+class Event(Base):
+    """Unified club calendar event (VN of the month/season, movie night, custom).
+
+    external_key is a stable identity for bot-pushed rows (e.g.
+    "hikaru:monthly:<guild>:<period>" or "movie_night:<cycle_id>") so repeated
+    pushes upsert in place instead of duplicating. For VN-linked events the row
+    stores vndb_id in extra_data and the API composes the /vn/<id> link itself.
+    """
+
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_type = Column(String(30), nullable=False)  # vn_of_month/vn_of_season/movie_night/custom
+    title = Column(String(500), nullable=False)
+    description = Column(Text)
+    start_at = Column(DateTime(timezone=True), nullable=False)
+    end_at = Column(DateTime(timezone=True))  # null for single point/all-day-single
+    all_day = Column(Boolean, server_default=text("false"), nullable=False)
+    image_url = Column(String(500))
+    url = Column(String(500))  # internal relative path or external link
+    location = Column(String(200))  # e.g. movie-night voice channel
+    is_active = Column(Boolean, server_default=text("true"), nullable=False)
+    external_key = Column(String(200))  # idempotent upsert key (unique via index)
+    created_by = Column(String(100))
+    extra_data = Column(JSONB)  # vndb_id / tmdb_id / vote snapshot
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_events_start", "start_at"),
+        Index("idx_events_type_start", "event_type", "start_at"),
+        Index("idx_events_active", "is_active"),
+        Index("idx_events_external_key", "external_key", unique=True),
+    )
+
+
+class MovieNightCycle(Base):
+    """One long-lived Movie Night: an always-open pool + vote with one film flagged as
+    the pick (winner_nomination_id). Pausing is the only thing that stops voting."""
+
+    __tablename__ = "movie_night_cycles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phase = Column(String(20), nullable=False, server_default="voting")  # voting/paused
+    channel_id = Column(BigInteger)
+    message_id = Column(BigInteger)  # vote message
+    nominate_message_id = Column(BigInteger)
+    scheduled_for = Column(DateTime(timezone=True))  # showtime
+    voting_opens_at = Column(DateTime(timezone=True))
+    closes_at = Column(DateTime(timezone=True))
+    winner_nomination_id = Column(Integer)  # no FK: cycle row predates nominations
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    closed_at = Column(DateTime(timezone=True))
+
+    __table_args__ = (Index("idx_movie_cycles_phase", "phase"),)
+
+
+class MovieNomination(Base):
+    """A film nominated for a Movie Night cycle (sourced from TMDB)."""
+
+    __tablename__ = "movie_nominations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cycle_id = Column(Integer, ForeignKey("movie_night_cycles.id", ondelete="CASCADE"), nullable=False)
+    tmdb_id = Column(Integer, nullable=False)
+    title = Column(String(500), nullable=False)
+    release_year = Column(Integer)
+    poster_url = Column(String(500))
+    overview = Column(Text)
+    nominated_by = Column(BigInteger, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("cycle_id", "tmdb_id", name="uq_movie_nom_cycle_tmdb"),
+        Index("idx_movie_noms_cycle", "cycle_id"),
+    )
+
+
+class MovieVote(Base):
+    """One vote per user per cycle (composite primary key; revote = upsert)."""
+
+    __tablename__ = "movie_votes"
+
+    cycle_id = Column(Integer, ForeignKey("movie_night_cycles.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(BigInteger, primary_key=True)
+    nomination_id = Column(Integer, ForeignKey("movie_nominations.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class BotConfig(Base):

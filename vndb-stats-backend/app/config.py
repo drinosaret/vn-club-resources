@@ -29,6 +29,7 @@ staff, or any bulk data. Use the local database via app/db/models.py instead.
 """
 
 from functools import lru_cache
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -82,6 +83,22 @@ class Settings(BaseSettings):
     # Admin authentication
     admin_api_key: str | None = None  # Required for admin/logs endpoints
 
+    # TMDB (Movie Night film search). https://www.themoviedb.org/settings/api
+    # Accepts a v4 read access token or a v3 API key.
+    tmdb_api_key: str | None = None
+
+    # Hikaru -> calendar sync (same-server, read-only). The worker mounts
+    # hikaru's data dir (HIKARU_DATA_DIR) read-only at /hikaru-data, so the DB
+    # path is fixed in-container; only the mount dir + guild id vary per env.
+    hikaru_db_path: str = "/hikaru-data/db.sqlite3"  # mounted hikaru SQLite (override only if mount differs)
+    # The bot's home guild: used for slash-command sync and as the default hikaru
+    # import source. Same VNCR id the bot config reads from DISCORD_GUILD_ID.
+    discord_guild_id: int | None = None
+    # Optional override for the hikaru import source guild; defaults to
+    # discord_guild_id (same VNCR guild for a single-server bot). Set this only if
+    # the source differs, e.g. a multi-server bot that syncs commands globally.
+    vncr_guild_id: int | None = None
+
     # CORS — production deployments MUST set CORS_ORIGINS env var explicitly.
     # Default includes localhost for development convenience only.
     cors_origins: list[str] = [
@@ -125,6 +142,20 @@ class Settings(BaseSettings):
     log_handler_shutdown_timeout: float = 30.0  # Seconds to wait for log flush
     log_handler_circuit_breaker_threshold: int = 5  # Failures before circuit opens
     discord_log_webhook_url: str | None = None  # Worker logs mirrored to Discord channel
+
+    @field_validator("vncr_guild_id", "discord_guild_id", mode="before")
+    @classmethod
+    def _blank_int_to_none(cls, v):
+        # An env var set to an empty string (e.g. DISCORD_GUILD_ID= for a global
+        # command sync) must read as None, not fail integer parsing at startup.
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    @property
+    def hikaru_source_guild_id(self) -> int | None:
+        """Guild whose hikaru winners are mirrored: explicit override or the bot's home guild."""
+        return self.vncr_guild_id or self.discord_guild_id
 
 
 @lru_cache

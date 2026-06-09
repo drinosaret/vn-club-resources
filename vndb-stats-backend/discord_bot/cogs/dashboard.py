@@ -18,7 +18,7 @@ class DashboardCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="dashboard", description="View system dashboard with status, stats, imports, and logs")
+    @app_commands.command(name="manage_dashboard", description="[ADMIN] System dashboard - status, stats, imports, and logs")
     @app_commands.default_permissions(administrator=True)
     @is_admin()
     async def dashboard(self, interaction: discord.Interaction):

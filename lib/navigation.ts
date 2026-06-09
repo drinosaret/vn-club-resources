@@ -43,6 +43,7 @@ export function getHeaderNavigation() {
       {
         name: 'More',
         items: [
+          { name: 'Events', href: '/events' },
           { name: 'Kana Quiz', href: '/quiz' },
           { name: 'Recommendations', href: '/recommendations' },
           { name: 'Compare', href: '/stats/compare' },
@@ -63,6 +64,7 @@ export function getHeaderNavigation() {
       {
         name: 'More',
         items: [
+          { name: 'Events', href: '/events' },
           { name: 'Kana Quiz', href: '/quiz' },
           { name: 'Recommendations', href: '/recommendations' },
           { name: 'Compare', href: '/stats/compare' },
@@ -126,6 +128,7 @@ export const navigation: NavSection[] = [
       { title: '3x3 Maker', slug: '3x3-maker', description: 'Create a VN cover collage' },
       { title: 'Roulette', slug: 'roulette', description: 'Spin the wheel to pick a VN' },
       { title: 'News', slug: 'news', description: 'VN news aggregator' },
+      { title: 'Events', slug: 'events', description: 'Club calendar: VN of the month/season, movie night' },
       { title: 'Quiz', slug: 'quiz', description: 'Kana practice quiz' },
     ],
   },

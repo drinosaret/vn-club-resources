@@ -19,8 +19,8 @@ class ImportsNewCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="imports",
-        description="Manage VNDB data imports - start, cancel, view history and logs",
+        name="manage_imports",
+        description="[ADMIN] Manage VNDB data imports - start, cancel, view history",
     )
     @app_commands.default_permissions(administrator=True)
     @is_admin()

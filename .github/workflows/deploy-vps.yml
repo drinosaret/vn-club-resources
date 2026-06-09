@@ -36,8 +36,10 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
           DISCORD_ADMIN_USER_IDS: ${{ secrets.DISCORD_ADMIN_USER_IDS }}
           DISCORD_LOG_WEBHOOK_URL: ${{ secrets.DISCORD_LOG_WEBHOOK_URL }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
           TWITTER_AUTH_TOKEN: ${{ secrets.TWITTER_AUTH_TOKEN }}
           UMAMI_DB_PASSWORD: ${{ secrets.UMAMI_DB_PASSWORD }}
           UMAMI_APP_SECRET: ${{ secrets.UMAMI_APP_SECRET }}
@@ -57,8 +59,10 @@ jobs:
           ENV_FILE=$(mktemp)
           {
             printf 'DISCORD_BOT_TOKEN=%q\n'              "$DISCORD_BOT_TOKEN"
+            printf 'DISCORD_GUILD_ID=%q\n'               "$DISCORD_GUILD_ID"
             printf 'DISCORD_ADMIN_USER_IDS=%q\n'         "$DISCORD_ADMIN_USER_IDS"
             printf 'DISCORD_LOG_WEBHOOK_URL=%q\n'        "$DISCORD_LOG_WEBHOOK_URL"
+            printf 'TMDB_API_KEY=%q\n'                   "$TMDB_API_KEY"
             printf 'TWITTER_AUTH_TOKEN=%q\n'             "$TWITTER_AUTH_TOKEN"
             printf 'UMAMI_DB_PASSWORD=%q\n'              "$UMAMI_DB_PASSWORD"
             printf 'UMAMI_APP_SECRET=%q\n'               "$UMAMI_APP_SECRET"

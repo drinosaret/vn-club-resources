@@ -248,6 +248,31 @@ export function isTwitterImageUrl(url: string): boolean {
 }
 
 /**
+ * Cover src for display. VNDB covers go through the cached /img/ pipeline; the jiten
+ * SFW-cover fallback (cdn.jiten.moe/{deckId}/cover.jpg, swapped in for borderline
+ * VNDB cover on the home page) maps to the clean /img/jiten/{deckId}.webp route, which
+ * downloads + WebP-caches it locally rather than hotlinking. Any other host returns null.
+ */
+export function getCoverSrc(
+  imageUrl: string | null | undefined,
+  options?: ImageWidth | ProxiedImageOptions,
+): string | null {
+  if (!imageUrl) return null;
+  const vndb = getProxiedImageUrl(imageUrl, options);
+  if (vndb) return vndb;
+  try {
+    const u = new URL(imageUrl);
+    if (u.hostname === 'cdn.jiten.moe') {
+      const deckId = u.pathname.split('/')[1];
+      if (/^\d+$/.test(deckId)) return `/img/jiten/${deckId}.webp`;
+    }
+  } catch {
+    // not a parseable absolute URL
+  }
+  return null;
+}
+
+/**
  * Gets the appropriate image URL for news items.
  * - VNDB images: routes through /img/ for caching
  * - Twitter images: routes through /api/proxy-image/ to avoid CORS

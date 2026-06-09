@@ -1,14 +1,17 @@
 import Link from 'next/link';
-import { Users } from 'lucide-react';
+import { Users, ArrowRight } from 'lucide-react';
 import { HeroSection } from '@/components/home/HeroSection';
 import { FeaturedVNs } from '@/components/home/FeaturedVNs';
 import { VNOfTheDay } from '@/components/home/VNOfTheDay';
+import { ClubPickCard } from '@/components/home/ClubPickCard';
 import { WordOfTheDay } from '@/components/home/WordOfTheDay';
 import { ExploreSection } from '@/components/home/ExploreSection';
 import { getGuidesWithImages } from '@/lib/navigation-server';
 import { getFeaturedVNsData } from '@/lib/featured-vns';
 import { getVNOfTheDay } from '@/lib/vn-of-the-day';
 import { getWordOfTheDay } from '@/lib/word-of-the-day';
+import { getRecentClubPicks } from '@/lib/events';
+import { safeHomepageCover } from '@/lib/safe-cover';
 import type { Metadata } from 'next';
 import { safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
@@ -77,11 +80,29 @@ export default async function Home() {
   // Get guides with images for the visual showcase
   const guides = getGuidesWithImages();
   // Fetch featured VNs and VN of the Day server-side with ISR caching
-  const [featuredVNs, vnOfTheDay, wordOfTheDay] = await Promise.all([
+  const [featuredVNs, vnOfTheDay, wordOfTheDay, clubPicks] = await Promise.all([
     getFeaturedVNsData(),
     getVNOfTheDay(),
     getWordOfTheDay(),
+    getRecentClubPicks(),
   ]);
+
+  // Home-page covers are held to a stricter NSFW bar: a cover at/over the threshold
+  // is swapped for jiten's SFW cover (or blurred when the VN isn't on jiten).
+  const [vnotdCover, monthCover, seasonCover] = await Promise.all([
+    vnOfTheDay ? safeHomepageCover(vnOfTheDay.vn_id, vnOfTheDay.image_url, vnOfTheDay.image_sexual) : null,
+    clubPicks.month ? safeHomepageCover(clubPicks.month.vn.id, clubPicks.month.vn.image_url, clubPicks.month.vn.image_sexual) : null,
+    clubPicks.season ? safeHomepageCover(clubPicks.season.vn.id, clubPicks.season.vn.image_url, clubPicks.season.vn.image_sexual) : null,
+  ]);
+  const vnOfTheDaySafe = vnOfTheDay && vnotdCover
+    ? { ...vnOfTheDay, image_url: vnotdCover.imageUrl, image_sexual: vnotdCover.imageSexual }
+    : vnOfTheDay;
+  const monthSafe = clubPicks.month && monthCover
+    ? { ...clubPicks.month, vn: { ...clubPicks.month.vn, image_url: monthCover.imageUrl ?? undefined, image_sexual: monthCover.imageSexual } }
+    : clubPicks.month;
+  const seasonSafe = clubPicks.season && seasonCover
+    ? { ...clubPicks.season, vn: { ...clubPicks.season.vn, image_url: seasonCover.imageUrl ?? undefined, image_sexual: seasonCover.imageSexual } }
+    : clubPicks.season;
 
   return (
     <>
@@ -102,12 +123,31 @@ export default async function Home() {
         {/* 3. Explore Section - Site Directory */}
         <ExploreSection guides={guides} />
 
-        {/* 4. Daily Picks (VN + Word of the Day) */}
+        {/* 4. From the VN Club: daily/seasonal picks + calendar */}
         <section className="pt-4 pb-10 md:pb-14 bg-gray-50 dark:bg-gray-900/50">
           <div className="container mx-auto px-4 max-w-6xl">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                  From the VN Club
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Daily and seasonal picks, plus the community calendar.
+                </p>
+              </div>
+              <Link
+                href="/events"
+                className="shrink-0 inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+              >
+                Events calendar
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <VNOfTheDay data={vnOfTheDay} compact />
+              <VNOfTheDay data={vnOfTheDaySafe} compact />
               <WordOfTheDay data={wordOfTheDay} compact />
+              <ClubPickCard pick={monthSafe} kind="month" />
+              <ClubPickCard pick={seasonSafe} kind="season" />
             </div>
           </div>
         </section>

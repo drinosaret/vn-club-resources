@@ -19,7 +19,7 @@ class SharedLinksCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="links", description="View and manage shared 3x3/tierlist links")
+    @app_commands.command(name="manage_links", description="[ADMIN] View and manage shared 3x3/tierlist links")
     @app_commands.default_permissions(administrator=True)
     @is_admin()
     async def links(self, interaction: discord.Interaction):

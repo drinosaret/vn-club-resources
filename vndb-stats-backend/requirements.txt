@@ -55,6 +55,9 @@ pydantic-settings>=2.7.0
 # Discord Bot
 discord.py>=2.3.0
 
+# Image rendering
+Pillow>=11.0.0
+
 # Rate limiting
 slowapi>=0.1.9
 

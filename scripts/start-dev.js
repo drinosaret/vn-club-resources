@@ -161,21 +161,32 @@ function startDevServers() {
   // Start Discord bot if configured
   const bot = startDiscordBot();
 
-  const next = spawn('npx next dev --turbo -p 3001', [], {
+  // Run Next directly via node, not through a shell. The cmd.exe a shell wraps it
+  // in mangles Ctrl+C on Windows (closing the whole terminal); the bin as a plain
+  // child can be torn down cleanly.
+  const nextBin = require.resolve('next/dist/bin/next');
+  const next = spawn(process.execPath, [nextBin, 'dev', '--turbo', '-p', '3001'], {
     stdio: 'inherit',
     cwd: path.join(__dirname, '..'),
-    shell: true,
   });
+
+  let shuttingDown = false;
+  function shutdown() {
+    if (shuttingDown) return; // Ctrl+C hits every process on the console; act once
+    shuttingDown = true;
+    if (bot) bot.kill();
+    next.kill();
+  }
 
   next.on('close', (code) => {
     if (bot) bot.kill();
-    process.exit(code);
+    process.exit(code ?? 0);
   });
 
-  process.on('SIGINT', () => {
-    if (bot) bot.kill();
-    next.kill('SIGINT');
-  });
+  // Stop the children and let this process exit normally so the shell regains
+  // control, rather than the default handler tearing it down.
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 async function main() {

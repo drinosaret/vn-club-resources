@@ -213,8 +213,8 @@ class WordOfTheDayCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="wotd",
-        description="View or manage Word of the Day",
+        name="manage_wotd",
+        description="[ADMIN] View or manage Word of the Day",
     )
     @app_commands.default_permissions(administrator=True)
     @is_admin()

@@ -184,8 +184,8 @@ class VNOfTheDayCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="vnotd",
-        description="View or manage VN of the Day",
+        name="manage_vnotd",
+        description="[ADMIN] View or manage VN of the Day",
     )
     @app_commands.default_permissions(administrator=True)
     @is_admin()

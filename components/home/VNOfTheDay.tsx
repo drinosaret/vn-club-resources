@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Star, ArrowRight } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
-import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { getCoverSrc } from '@/lib/vndb-image-cache';
 import { useImageFade } from '@/hooks/useImageFade';
 import { stripBBCode } from '@/lib/bbcode';
 import type { VNOfTheDayData } from '@/lib/vn-of-the-day';
@@ -45,7 +45,7 @@ export function VNOfTheDay({ data, compact }: VNOfTheDayProps) {
     { title: data.title, title_jp: data.title_jp ?? undefined, title_romaji: data.title_romaji ?? undefined },
     preference
   );
-  const imageUrl = getProxiedImageUrl(data.image_url, { width: 256 });
+  const imageUrl = getCoverSrc(data.image_url, { width: 256 });
 
   // Clean description: strip BBCode then collapse newlines for single-line preview
   const description = data.description
