@@ -164,6 +164,7 @@ export const navigation: NavSection[] = [
     title: 'Community',
     items: [
       { title: 'Discord', slug: 'join', description: 'Join our Discord server' },
+      { title: 'Changelog', slug: 'changelog', description: 'Major updates across the site and bots' },
     ],
   },
 ];

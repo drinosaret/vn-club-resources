@@ -116,6 +116,9 @@ export default function Footer() {
                 <FooterLink href="/events/">Events</FooterLink>
               </li>
               <li>
+                <FooterLink href="/changelog/">Changelog</FooterLink>
+              </li>
+              <li>
                 <a
                   href="https://github.com/drinosaret/vn-club-resources"
                   target="_blank"

@@ -114,6 +114,7 @@ function generateStaticEntries(): UrlEntry[] {
     { loc: `${SITE_URL}/higher-or-lower/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/news/`, changefreq: 'daily', priority: 0.6 },
     { loc: `${SITE_URL}/events/`, changefreq: 'daily', priority: 0.7 },
+    { loc: `${SITE_URL}/changelog/`, changefreq: 'weekly', priority: 0.5 },
     ...['all', 'recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
       loc: `${SITE_URL}/news/${slug}/`,
       changefreq: 'daily',

@@ -23,6 +23,7 @@ import {
   Smartphone,
   ArrowRight,
   ExternalLink,
+  History,
   LucideIcon,
 } from 'lucide-react';
 import { getSiteDirectorySections, NavItem } from '@/lib/navigation';
@@ -35,6 +36,7 @@ const iconMap: Record<string, LucideIcon> = {
   'sources': ShoppingBag,
   'tools': Package,
   'join': Users,
+  'changelog': History,
   'anki-guide': BookMarked,
   'jl-guide': Languages,
   'textractor-guide': Type,

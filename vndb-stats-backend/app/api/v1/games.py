@@ -66,7 +66,7 @@ async def higher_lower_pool(
     when the query changes so a stale Redis pool is not served.
     """
     cache = get_cache()
-    cache_key = f"games:hl:pool:v11:{olang}:{int(nsfw)}"
+    cache_key = f"games:hl:pool:v12:{olang}:{int(nsfw)}"
     cached = await cache.get(cache_key)
 
     if cached is None:
