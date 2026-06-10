@@ -21,6 +21,17 @@ export interface ProductMeta {
   chip: string;
 }
 
+export const CHANGELOG_MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+// Dates are sliced as strings: new Date('YYYY-MM-DD') parses as UTC and can
+// shift the displayed day depending on the timezone.
+export function formatChangelogDay(date: string): string {
+  return `${CHANGELOG_MONTHS[Number(date.slice(5, 7)) - 1].slice(0, 3)} ${Number(date.slice(8, 10))}`;
+}
+
 export const PRODUCT_META: Record<ChangelogProduct, ProductMeta> = {
   site: {
     label: 'vnclub.org',

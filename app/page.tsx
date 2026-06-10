@@ -6,6 +6,7 @@ import { VNOfTheDay } from '@/components/home/VNOfTheDay';
 import { ClubPickCard } from '@/components/home/ClubPickCard';
 import { WordOfTheDay } from '@/components/home/WordOfTheDay';
 import { ExploreSection } from '@/components/home/ExploreSection';
+import { WhatsNewSection } from '@/components/home/WhatsNewSection';
 import { getGuidesWithImages } from '@/lib/navigation-server';
 import { getFeaturedVNsData } from '@/lib/featured-vns';
 import { getVNOfTheDay } from '@/lib/vn-of-the-day';
@@ -176,6 +177,9 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        {/* 5. What's new: latest site updates */}
+        <WhatsNewSection />
 
         {/* 6. Community CTA */}
         <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">

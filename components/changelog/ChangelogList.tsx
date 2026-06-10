@@ -2,21 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { changelogEntries, PRODUCT_META, type ChangelogEntry, type ChangelogProduct } from '@/lib/changelog-data';
+import {
+  changelogEntries, PRODUCT_META, CHANGELOG_MONTHS, formatChangelogDay,
+  type ChangelogEntry, type ChangelogProduct,
+} from '@/lib/changelog-data';
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-// Dates are sliced as strings: new Date('YYYY-MM-DD') parses as UTC and can
-// shift the displayed day depending on the timezone.
 function monthLabel(key: string): string {
-  return `${MONTH_NAMES[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
-}
-
-function dayLabel(date: string): string {
-  return `${MONTH_NAMES[Number(date.slice(5, 7)) - 1].slice(0, 3)} ${Number(date.slice(8, 10))}`;
+  return `${CHANGELOG_MONTHS[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
 }
 
 function groupByMonth(entries: ChangelogEntry[]): Array<{ key: string; entries: ChangelogEntry[] }> {
@@ -157,7 +149,7 @@ export default function ChangelogList() {
                     </span>
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">{entry.title}</h3>
                     <time dateTime={entry.date} className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-                      {dayLabel(entry.date)}
+                      {formatChangelogDay(entry.date)}
                     </time>
                   </div>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{entry.description}</p>
