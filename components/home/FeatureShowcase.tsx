@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   BookOpen,
   RotateCw,
+  ArrowUpDown,
   Gamepad2,
 } from 'lucide-react';
 import { FadeIn } from '@/components/FadeIn';
@@ -39,6 +40,7 @@ const FUN_FEATURES: Feature[] = [
   { href: '/tierlist', icon: Rows3, title: 'Tier List', description: 'Rank your visual novels & export as an image', color: 'amber' },
   { href: '/3x3-maker', icon: Grid3X3, title: '3x3 Maker', description: 'Create a visual novel cover collage', color: 'purple' },
   { href: '/roulette/', icon: RotateCw, title: 'Roulette', description: 'Spin the wheel to pick your next VN', color: 'violet' },
+  { href: '/higher-or-lower/', icon: ArrowUpDown, title: 'Higher or Lower', description: 'Guess which VN is more popular', color: 'sky' },
 ];
 
 const COLOR_CLASSES: Record<string, { bg: string; text: string; hoverText: string }> = {

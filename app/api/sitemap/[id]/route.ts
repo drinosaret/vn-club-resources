@@ -111,6 +111,7 @@ function generateStaticEntries(): UrlEntry[] {
     { loc: `${SITE_URL}/tierlist/`, changefreq: 'monthly', priority: 0.7 },
     { loc: `${SITE_URL}/3x3-maker/`, changefreq: 'monthly', priority: 0.7 },
     { loc: `${SITE_URL}/roulette/`, changefreq: 'monthly', priority: 0.6 },
+    { loc: `${SITE_URL}/higher-or-lower/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/news/`, changefreq: 'daily', priority: 0.6 },
     { loc: `${SITE_URL}/events/`, changefreq: 'daily', priority: 0.7 },
     ...['all', 'recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({

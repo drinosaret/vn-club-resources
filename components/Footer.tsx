@@ -99,6 +99,9 @@ export default function Footer() {
               <li>
                 <FooterLink href="/roulette/">Roulette</FooterLink>
               </li>
+              <li>
+                <FooterLink href="/higher-or-lower/">Higher or Lower</FooterLink>
+              </li>
             </ul>
           </div>
 
@@ -108,6 +111,9 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li>
                 <FooterLink href="/join">Join Discord</FooterLink>
+              </li>
+              <li>
+                <FooterLink href="/events/">Events</FooterLink>
               </li>
               <li>
                 <a

@@ -94,16 +94,17 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
 
 
 // Shared overlay: pixelated micro-thumbnail + dark scrim + label
-function NSFWOverlay({ src, overlaySrc, compact }: { src: string; overlaySrc?: string; compact?: boolean }) {
+function NSFWOverlay({ src, overlaySrc, compact, objectPosition }: { src: string; overlaySrc?: string; compact?: boolean; objectPosition?: string }) {
   return (
     <div data-nsfw-overlay className="absolute inset-0">
-      {/* 32px thumbnail + pixelated rendering = mosaic censor, zero GPU cost */}
+      {/* 32px thumbnail + pixelated rendering = mosaic censor, zero GPU cost. Mirror the
+          main image's object-position so the censored preview crops the same region. */}
       <img
         src={overlaySrc ?? getTinySrc(src)}
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ imageRendering: 'pixelated' }}
+        style={{ imageRendering: 'pixelated', ...(objectPosition ? { objectPosition } : {}) }}
         loading="lazy"
         decoding="async"
       />
@@ -139,6 +140,8 @@ interface NSFWImageProps {
   overlaySrc?: string;
   /** Show only the eye icon without text (for small thumbnails) */
   compact?: boolean;
+  /** object-position for both the image and the blur overlay, so they crop alike. */
+  objectPosition?: string;
 }
 
 interface NSFWNextImageProps {
@@ -160,7 +163,7 @@ interface NSFWNextImageProps {
   hideOverlay?: boolean;
 }
 
-export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', fetchPriority, srcSet, sizes, style, onLoad, onError, overlaySrc, compact }: NSFWImageProps) {
+export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading = 'lazy', fetchPriority, srcSet, sizes, style, onLoad, onError, overlaySrc, compact, objectPosition }: NSFWImageProps) {
   const { shouldBlur, handleReveal, handleKeyDown, wrapperRef } = useNSFWReveal(vnId, imageSexual);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -189,7 +192,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         src={src}
         alt={alt}
         className={`${className}${shouldBlur ? ' invisible' : ''}`}
-        style={style}
+        style={objectPosition ? { ...style, objectPosition } : style}
         loading={loading}
         fetchPriority={fetchPriority}
         decoding="async"
@@ -198,7 +201,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
         onLoad={onLoad}
         onError={onError}
       />
-      {shouldBlur && <NSFWOverlay src={src} overlaySrc={overlaySrc} compact={compact} />}
+      {shouldBlur && <NSFWOverlay src={src} overlaySrc={overlaySrc} compact={compact} objectPosition={objectPosition} />}
     </div>
   );
 }

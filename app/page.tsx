@@ -76,6 +76,13 @@ const websiteSchema = {
   },
 };
 
+// Front-page only: surface content tags first in the pick previews. Stable sort
+// keeps the existing score order within each group.
+function prioritizeContentTags<T extends { category?: string | null }>(tags: T[] | undefined): T[] {
+  const rank = (t: T) => ((t.category ?? '').toLowerCase() === 'ero' ? 1 : 0);
+  return [...(tags ?? [])].sort((a, b) => rank(a) - rank(b));
+}
+
 export default async function Home() {
   // Get guides with images for the visual showcase
   const guides = getGuidesWithImages();
@@ -94,14 +101,32 @@ export default async function Home() {
     clubPicks.month ? safeHomepageCover(clubPicks.month.vn.id, clubPicks.month.vn.image_url, clubPicks.month.vn.image_sexual) : null,
     clubPicks.season ? safeHomepageCover(clubPicks.season.vn.id, clubPicks.season.vn.image_url, clubPicks.season.vn.image_sexual) : null,
   ]);
-  const vnOfTheDaySafe = vnOfTheDay && vnotdCover
-    ? { ...vnOfTheDay, image_url: vnotdCover.imageUrl, image_sexual: vnotdCover.imageSexual }
+  const vnOfTheDaySafe = vnOfTheDay
+    ? {
+        ...vnOfTheDay,
+        ...(vnotdCover ? { image_url: vnotdCover.imageUrl, image_sexual: vnotdCover.imageSexual } : {}),
+        tags: prioritizeContentTags(vnOfTheDay.tags),
+      }
     : vnOfTheDay;
-  const monthSafe = clubPicks.month && monthCover
-    ? { ...clubPicks.month, vn: { ...clubPicks.month.vn, image_url: monthCover.imageUrl ?? undefined, image_sexual: monthCover.imageSexual } }
+  const monthSafe = clubPicks.month
+    ? {
+        ...clubPicks.month,
+        vn: {
+          ...clubPicks.month.vn,
+          ...(monthCover ? { image_url: monthCover.imageUrl ?? undefined, image_sexual: monthCover.imageSexual } : {}),
+          tags: prioritizeContentTags(clubPicks.month.vn.tags),
+        },
+      }
     : clubPicks.month;
-  const seasonSafe = clubPicks.season && seasonCover
-    ? { ...clubPicks.season, vn: { ...clubPicks.season.vn, image_url: seasonCover.imageUrl ?? undefined, image_sexual: seasonCover.imageSexual } }
+  const seasonSafe = clubPicks.season
+    ? {
+        ...clubPicks.season,
+        vn: {
+          ...clubPicks.season.vn,
+          ...(seasonCover ? { image_url: seasonCover.imageUrl ?? undefined, image_sexual: seasonCover.imageSexual } : {}),
+          tags: prioritizeContentTags(clubPicks.season.vn.tags),
+        },
+      }
     : clubPicks.season;
 
   return (

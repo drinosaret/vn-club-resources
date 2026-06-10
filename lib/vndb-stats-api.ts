@@ -840,6 +840,29 @@ export interface TopVN {
   olang?: string;
 }
 
+// ============ Higher or Lower Game Types ============
+
+export interface HigherLowerPoolVN {
+  id: string;
+  title: string;
+  title_jp?: string | null;
+  title_romaji?: string | null;
+  image_url?: string | null;
+  image_sexual?: number | null;
+  votecount: number;
+  rating?: number | null;
+  year?: number | null;
+  developer?: string | null;
+  developer_original?: string | null;
+  tags?: string[];
+}
+
+export interface HigherLowerPoolResponse {
+  pool: HigherLowerPoolVN[];
+  count: number;
+  metric: string;
+}
+
 // ============ Tag Detail Types ============
 
 export interface TagDetail {
@@ -1603,6 +1626,16 @@ class VNDBStatsAPI {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * Get the full eligible VN pool for the Higher or Lower game.
+   * One fetch seeds the whole session; rounds then run client-side.
+   */
+  async getHigherLowerPool(nsfw: boolean = false): Promise<HigherLowerPoolResponse> {
+    return await this.fetch<HigherLowerPoolResponse>(
+      `/api/v1/games/higher-lower/pool?nsfw=${nsfw}`,
+    );
   }
 
   /**

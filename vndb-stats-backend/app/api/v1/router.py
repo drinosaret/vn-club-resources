@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import stats, recommendations, vn, user, news, admin, logs, characters, browse, blacklist, vn_of_the_day, word_of_the_day, shared, events
+from app.api.v1 import stats, recommendations, vn, user, news, admin, logs, characters, browse, blacklist, vn_of_the_day, word_of_the_day, shared, events, games
 
 api_router = APIRouter()
 
@@ -20,3 +20,4 @@ api_router.include_router(vn_of_the_day.router, prefix="/vn-of-the-day", tags=["
 api_router.include_router(word_of_the_day.router, prefix="/word-of-the-day", tags=["word-of-the-day"])
 api_router.include_router(shared.router, prefix="/shared", tags=["shared"])
 api_router.include_router(events.router, prefix="/events", tags=["events"])
+api_router.include_router(games.router, prefix="/games", tags=["games"])
