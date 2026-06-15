@@ -13,6 +13,9 @@ on:
         default: false
         type: boolean
 
+permissions:
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -20,10 +23,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4.1.0
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version: '20'
           cache: 'npm'
@@ -33,7 +36,7 @@ jobs:
 
       - name: Restore VNDB image cache
         if: ${{ github.event.inputs.force_full_sync != 'true' }}
-        uses: actions/cache/restore@v4.2.0
+        uses: actions/cache/restore@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         id: cache-restore
         with:
           path: public/cache/vndb
@@ -58,7 +61,7 @@ jobs:
           STATIC_EXPORT: 'true'
 
       - name: Save VNDB image cache
-        uses: actions/cache/save@v4.2.0
+        uses: actions/cache/save@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           path: public/cache/vndb
           key: vndb-images-${{ github.run_id }}

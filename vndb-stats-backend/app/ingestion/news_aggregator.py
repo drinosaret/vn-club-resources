@@ -75,7 +75,8 @@ def _patch_tweety_transaction():
                 raise Exception("Couldn't get animation key indices")
 
             on_demand_url = f"https://abs.twimg.com/responsive-web/client-web/ondemand.s.{hash_matches[0]}a.js"
-            on_demand_response = httpx.get(on_demand_url)
+            # Timeout so a hung twimg response can't stall the worker's news job.
+            on_demand_response = httpx.get(on_demand_url, timeout=10.0)
 
             key_byte_indices = []
             for item in transaction.INDICES_REGEX.finditer(on_demand_response.text):

@@ -79,10 +79,14 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "postcss": "^8",
+    "postcss": "^8.5.10",
     "tailwindcss": "^4.2.0",
     "tsx": "^4.19.0",
     "typescript": "^5",
     "typescript-eslint": "^8.56.0"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "shell-quote": "^1.8.4"
   }
 }

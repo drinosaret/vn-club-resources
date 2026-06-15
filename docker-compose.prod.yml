@@ -80,10 +80,13 @@ services:
       context: ./vndb-stats-backend
       dockerfile: Dockerfile
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3"]
+    # --proxy-headers + --forwarded-allow-ips: trust nginx's forwarded client IP
+    # (only nginx reaches this port on the internal network) so per-IP rate limits
+    # key on the real client, not the nginx container IP.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--proxy-headers", "--forwarded-allow-ips", "*"]
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in deploy/.env.prod}@redis:6379
       - DEBUG=false
       - ENABLE_API_DOCS=true
       - CORS_ORIGINS=["https://vnclub.org","https://api.vnclub.org","https://beta.vnclub.org"]
@@ -147,7 +150,7 @@ services:
   # Redis
   redis:
     image: redis:7.4-alpine
-    command: redis-server --appendonly yes --maxmemory 768mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes --maxmemory 768mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in deploy/.env.prod}
     volumes:
       - redisdata:/data
     deploy:
@@ -172,7 +175,7 @@ services:
       disable: true
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in deploy/.env.prod}@redis:6379
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
       - DISCORD_ADMIN_USER_IDS=${DISCORD_ADMIN_USER_IDS:-}
@@ -282,7 +285,7 @@ services:
           memory: 8G
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in deploy/.env.prod}@redis:6379
       - DEV_MODE=false
       - DUMP_STORAGE_PATH=/app/data
       - VNDB_API_URL=https://api.vndb.org/kana

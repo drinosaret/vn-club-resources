@@ -10,6 +10,11 @@ concurrency:
   group: deploy-vps
   cancel-in-progress: false
 
+# Least privilege: this job only checks out code and SSHes out; it never uses
+# GITHUB_TOKEN for writes.
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,15 +26,22 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           umask 077
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # TOFU host key fetch. To pin instead, replace this with the
-          # output of `ssh-keyscan -H <host>` from a trusted location.
-          ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          # Prefer a pinned host key: set the VPS_KNOWN_HOSTS secret to the output
+          # of `ssh-keyscan -H <host>` taken from a trusted machine. Fall back to
+          # TOFU keyscan only if the secret is absent (logs a warning).
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "WARNING: VPS_KNOWN_HOSTS not set; using TOFU ssh-keyscan (MITM-able)." >&2
+            ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          fi
           chmod 644 ~/.ssh/known_hosts
 
       - name: Push secrets and run remote deploy

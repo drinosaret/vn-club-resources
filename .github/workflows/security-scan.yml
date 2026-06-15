@@ -1,0 +1,46 @@
+name: Security Scan
+
+# Dependency vulnerability scanning for both halves of the stack.
+# Separate from the deploy workflow, so a finding surfaces as a failed check
+# without blocking deploys. Triage real findings; for an accepted advisory add
+# `--ignore-vuln <ID>` (pip-audit) or remove the offending dep (npm).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'  # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-deps:
+    name: Backend dependencies (pip-audit)
+    # Skip on PRs: resolving/installing deps could execute fork-modified package code.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Audit Python dependencies
+        run: |
+          python3 -m venv /tmp/audit
+          /tmp/audit/bin/pip install --quiet --upgrade pip uv pip-audit
+          # Resolve the floor-only requirements to pinned versions (metadata only,
+          # no wheel builds), then audit. VCS deps (tweety-ns) aren't on PyPI and
+          # are already commit-pinned, so drop them before auditing.
+          /tmp/audit/bin/uv pip compile vndb-stats-backend/requirements.txt -o /tmp/requirements.lock
+          grep -v 'git+' /tmp/requirements.lock > /tmp/requirements.audit.txt || true
+          /tmp/audit/bin/pip-audit -r /tmp/requirements.audit.txt
+
+  frontend-deps:
+    name: Frontend dependencies (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high

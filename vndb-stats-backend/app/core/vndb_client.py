@@ -34,6 +34,7 @@ import logging
 from collections import deque
 from time import time
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -172,10 +173,11 @@ class VNDBClient:
         """Look up a user by username or UID."""
         params = []
         if username:
-            params.append(f"q={username}")
+            # URL-encode so a username can't inject extra query params into the call.
+            params.append(f"q={quote(username, safe='')}")
         elif uid:
             # Use q parameter with full UID (e.g., q=u215373)
-            params.append(f"q={uid}")
+            params.append(f"q={quote(uid, safe='')}")
 
         query = "&".join(params)
         try:

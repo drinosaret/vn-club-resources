@@ -139,8 +139,11 @@ def compute_error_hash(message: str, url: str, component: Optional[str] = None) 
     return hashlib.sha256(content.encode()).hexdigest()[:32]
 
 
-# Rate limiting storage (simple in-memory, would use Redis in production)
+# Rate limiting storage (in-memory per worker). Stale buckets are evicted once the
+# table grows large, so rotating IP keys don't accumulate unbounded. A shared store
+# would be better across workers.
 _rate_limit_cache: dict[str, list[float]] = {}
+_RATE_LIMIT_MAX_KEYS = 10000
 
 
 def _escape_like(value: str) -> str:
@@ -153,16 +156,20 @@ def check_rate_limit(ip: str, limit: int = 100) -> bool:
     now = datetime.now(timezone.utc).timestamp()
     window = 60  # 1 minute
 
-    if ip not in _rate_limit_cache:
-        _rate_limit_cache[ip] = []
+    # When the table grows large, evict buckets whose hits have all aged out.
+    if len(_rate_limit_cache) > _RATE_LIMIT_MAX_KEYS:
+        for stale_ip in [k for k, hits in _rate_limit_cache.items()
+                         if not any(now - t < window for t in hits)]:
+            del _rate_limit_cache[stale_ip]
 
-    # Remove old entries
-    _rate_limit_cache[ip] = [t for t in _rate_limit_cache[ip] if now - t < window]
+    hits = [t for t in _rate_limit_cache.get(ip, []) if now - t < window]
 
-    if len(_rate_limit_cache[ip]) >= limit:
+    if len(hits) >= limit:
+        _rate_limit_cache[ip] = hits
         return False
 
-    _rate_limit_cache[ip].append(now)
+    hits.append(now)
+    _rate_limit_cache[ip] = hits
     return True
 
 
