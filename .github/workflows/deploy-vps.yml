@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    # CI-only and docs changes shouldn't trigger a production deploy.
+    paths-ignore:
+      - '.github/**'
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 
 concurrency:

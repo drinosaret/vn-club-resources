@@ -1,9 +1,0 @@
-version: 2
-updates:
-  # Keep GitHub Actions SHA pins (and their version comments) current.
-  # Dependency CVEs are covered by Dependabot security updates (Settings) and the
-  # CI audit, so npm/pip version-update PRs are intentionally not configured here.
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
