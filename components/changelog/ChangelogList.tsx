@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  changelogEntries, PRODUCT_META, CHANGELOG_MONTHS, formatChangelogDay,
-  type ChangelogEntry, type ChangelogProduct,
+  changelogEntries, PROJECT_META, CHANGELOG_MONTHS, formatChangelogDay,
+  type ChangelogEntry, type ChangelogProject,
 } from '@/lib/changelog-data';
 
 function monthLabel(key: string): string {
@@ -42,15 +42,15 @@ function EntryLink({ label, href }: { label: string; href: string }) {
   );
 }
 
-const ALL_PRODUCTS = Object.keys(PRODUCT_META) as ChangelogProduct[];
+const ALL_PROJECTS = Object.keys(PROJECT_META) as ChangelogProject[];
 
-type ActiveState = Record<ChangelogProduct, boolean>;
+type ActiveState = Record<ChangelogProject, boolean>;
 
 // Server render and first client render use this so hydration matches; the URL
 // is applied in an effect afterward.
 const DEFAULT_ACTIVE: ActiveState = { site: true, hikaru: false, muramasa: false, ichijou: false };
 
-function makeActive(on: ChangelogProduct[]): ActiveState {
+function makeActive(on: ChangelogProject[]): ActiveState {
   return {
     site: on.includes('site'),
     hikaru: on.includes('hikaru'),
@@ -64,24 +64,24 @@ function makeActive(on: ChangelogProduct[]): ActiveState {
 function parseShow(search: string): ActiveState | null {
   const raw = new URLSearchParams(search).get('show');
   if (raw === null) return null;
-  if (raw === 'all') return makeActive(ALL_PRODUCTS);
+  if (raw === 'all') return makeActive(ALL_PROJECTS);
   if (raw === 'none') return makeActive([]);
-  const valid = raw.split(',').map((t) => t.trim()).filter((t): t is ChangelogProduct => (ALL_PRODUCTS as string[]).includes(t));
+  const valid = raw.split(',').map((t) => t.trim()).filter((t): t is ChangelogProject => (ALL_PROJECTS as string[]).includes(t));
   if (valid.length === 0) return null;
   return makeActive(valid);
 }
 
 // Inverse of parseShow. Returns null for the default set (clean URL, no param).
 function serializeShow(active: ActiveState): string | null {
-  const on = ALL_PRODUCTS.filter((p) => active[p]);
+  const on = ALL_PROJECTS.filter((p) => active[p]);
   if (on.length === 1 && on[0] === 'site') return null;
   if (on.length === 0) return 'none';
-  if (on.length === ALL_PRODUCTS.length) return 'all';
+  if (on.length === ALL_PROJECTS.length) return 'all';
   return on.join(',');
 }
 
 // All entries render to the DOM regardless of filter (good for SEO and search);
-// inactive products are hidden with CSS so toggling never drops content.
+// inactive projects are hidden with CSS so toggling never drops content.
 const ALL_GROUPS = groupByMonth(changelogEntries);
 
 export default function ChangelogList() {
@@ -99,30 +99,30 @@ export default function ChangelogList() {
   // (StrictMode double-invokes them, and concurrent renders may call them
   // without committing). Reading `active` from the closure is safe since
   // toggles only fire from clicks, one per render.
-  const toggle = (product: ChangelogProduct) => {
-    const next = { ...active, [product]: !active[product] };
+  const toggle = (project: ChangelogProject) => {
+    const next = { ...active, [project]: !active[project] };
     const show = serializeShow(next);
     window.history.replaceState(null, '', show ? `${window.location.pathname}?show=${show}` : window.location.pathname);
     setActive(next);
   };
 
-  const anyVisible = changelogEntries.some((entry) => active[entry.product]);
+  const anyVisible = changelogEntries.some((entry) => active[entry.project]);
 
   return (
     <>
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-        {ALL_PRODUCTS.map((product) => (
-          <span key={product} className="inline-flex items-center gap-1.5">
+        {ALL_PROJECTS.map((project) => (
+          <span key={project} className="inline-flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => toggle(product)}
-              aria-pressed={active[product]}
-              title={active[product] ? 'Click to hide these updates' : 'Click to show these updates'}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-opacity cursor-pointer ${PRODUCT_META[product].chip} ${active[product] ? '' : 'opacity-40 grayscale'}`}
+              onClick={() => toggle(project)}
+              aria-pressed={active[project]}
+              title={active[project] ? 'Click to hide these updates' : 'Click to show these updates'}
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-opacity cursor-pointer ${PROJECT_META[project].chip} ${active[project] ? '' : 'opacity-40 grayscale'}`}
             >
-              {PRODUCT_META[product].label}
+              {PROJECT_META[project].label}
             </button>
-            <span className="text-gray-500 dark:text-gray-400">{PRODUCT_META[product].blurb}</span>
+            <span className="text-gray-500 dark:text-gray-400">{PROJECT_META[project].blurb}</span>
           </span>
         ))}
       </div>
@@ -134,7 +134,7 @@ export default function ChangelogList() {
       )}
 
       {ALL_GROUPS.map((group) => {
-        const visibleInGroup = group.entries.some((entry) => active[entry.product]);
+        const visibleInGroup = group.entries.some((entry) => active[entry.project]);
         return (
           <section key={group.key} className={visibleInGroup ? undefined : 'hidden'}>
             <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 pb-2">
@@ -142,10 +142,10 @@ export default function ChangelogList() {
             </h2>
             <ul className="space-y-5">
               {group.entries.map((entry) => (
-                <li key={`${entry.date}-${entry.title}`} className={active[entry.product] ? undefined : 'hidden'}>
+                <li key={`${entry.date}-${entry.title}`} className={active[entry.project] ? undefined : 'hidden'}>
                   <div className="flex flex-wrap items-baseline gap-2">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRODUCT_META[entry.product].chip}`}>
-                      {PRODUCT_META[entry.product].label}
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PROJECT_META[entry.project].chip}`}>
+                      {PROJECT_META[entry.project].label}
                     </span>
                     <h3 className="font-semibold text-gray-900 dark:text-gray-100">{entry.title}</h3>
                     <time dateTime={entry.date} className="ml-auto text-sm text-gray-500 dark:text-gray-400">

@@ -7,7 +7,7 @@ import { changelogEntries, formatChangelogDay } from '@/lib/changelog-data';
 export function WhatsNewSection() {
   const latest = [...changelogEntries]
     .sort((a, b) => b.date.localeCompare(a.date))
-    .filter((entry) => entry.product === 'site')
+    .filter((entry) => entry.project === 'site')
     .slice(0, 3);
 
   return (
