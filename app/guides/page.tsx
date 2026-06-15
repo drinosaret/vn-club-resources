@@ -48,8 +48,8 @@ export default async function GuidesPage() {
       <div className="space-y-6">
         {guides.map((guide) => (
           <Link
-            key={guide.slug}
-            href={`/${guide.slug}`}
+            key={encodeURIComponent(guide.slug)}
+            href={`/${encodeURIComponent(guide.slug)}`}
             className="block bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 group"
           >
             <div className="flex items-start gap-4">

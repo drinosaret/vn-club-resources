@@ -118,8 +118,9 @@ function cleanVNDBDescription(text: string): string {
 
   // Convert VNDB links to HTML links (with URL validation)
   result = result.replace(/\[url=([^\]]+)\]([^\[]+)\[\/url\]/gi, (match, url, linkText) => {
-    // Decode HTML entities in URL for validation (they were escaped above)
-    const decodedUrl = url.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+    // Decode HTML entities in URL for validation (they were escaped above).
+    // Unescape &amp; LAST so e.g. "&amp;lt;" decodes to the literal "&lt;", not "<".
+    const decodedUrl = url.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
     if (isValidUrl(decodedUrl)) {
       // Re-escape the URL for the href attribute
       const safeUrl = escapeHtml(decodedUrl);

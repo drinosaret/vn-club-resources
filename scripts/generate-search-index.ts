@@ -25,8 +25,10 @@ function stripMarkdown(text: string): string {
     .replace(/!\[.*?\]\(.*?\)/g, '')
     // Remove links but keep text
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    // Remove HTML tags
+    // Remove HTML tags, then strip any stray angle brackets so a malformed tag
+    // can't leave a "<script" fragment behind in the indexed text.
     .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
     // Remove headers markup but keep text
     .replace(/^#{1,6}\s+/gm, '')
     // Remove bold/italic

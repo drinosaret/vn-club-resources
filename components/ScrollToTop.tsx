@@ -70,7 +70,7 @@ export function ScrollToTop() {
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const link = (e.target as Element).closest('a');
-      if (link && link.href && !link.href.startsWith('#') && !link.href.startsWith('javascript:')) {
+      if (link && link.href && !link.href.startsWith('#') && !/^(javascript|data|vbscript):/i.test(link.href)) {
         try {
           const url = new URL(link.href);
           if (url.origin === window.location.origin) {

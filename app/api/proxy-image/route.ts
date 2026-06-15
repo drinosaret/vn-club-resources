@@ -123,6 +123,10 @@ async function doFetchAndCache(
         'Accept': 'image/*',
       },
       signal: controller.signal,
+      // Don't follow redirects: an open redirect on an allowlisted host could
+      // otherwise send this server-side fetch to an internal address (SSRF).
+      // A 3xx becomes a non-ok opaqueredirect and is rejected below.
+      redirect: 'manual',
     });
 
     clearTimeout(timeoutId);
