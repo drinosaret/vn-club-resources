@@ -80,6 +80,7 @@ function isAllowedUrl(url: string): boolean {
     const parsed = new URL(url);
     return (
       parsed.protocol === 'https:' &&
+      (parsed.port === '' || parsed.port === '443') &&
       ALLOWED_DOMAINS.includes(parsed.hostname)
     );
   } catch {
@@ -114,6 +115,13 @@ async function doFetchAndCache(
   cachePath: string,
 ): Promise<Buffer | null> {
   try {
+    // Defence in depth: re-check the host allow-list at the point of use, so
+    // this server-side fetch can only ever reach an approved public image host
+    // even if an upstream caller's validation were refactored away or bypassed.
+    if (!isAllowedUrl(url)) {
+      return null;
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 

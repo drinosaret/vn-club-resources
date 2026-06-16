@@ -16,7 +16,7 @@ const CONTENT_DIR = path.join(process.cwd(), 'content');
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'search-index.json');
 
 function stripMarkdown(text: string): string {
-  return text
+  let s = text
     // Remove code blocks
     .replace(/```[\s\S]*?```/g, '')
     // Remove inline code
@@ -24,11 +24,19 @@ function stripMarkdown(text: string): string {
     // Remove images
     .replace(/!\[.*?\]\(.*?\)/g, '')
     // Remove links but keep text
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    // Remove HTML tags, then strip any stray angle brackets so a malformed tag
-    // can't leave a "<script" fragment behind in the indexed text.
-    .replace(/<[^>]*>/g, '')
-    .replace(/[<>]/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+
+  // Remove HTML tags, looping until the string stops changing so a split tag
+  // like "<scr<script>ipt>" can't reassemble into "<script". Then drop any
+  // leftover angle brackets. (Input is our own MDX, but keep the index clean.)
+  let prev: string;
+  do {
+    prev = s;
+    s = s.replace(/<[^>]*>/g, '');
+  } while (s !== prev);
+  s = s.replace(/[<>]/g, '');
+
+  return s
     // Remove headers markup but keep text
     .replace(/^#{1,6}\s+/gm, '')
     // Remove bold/italic
