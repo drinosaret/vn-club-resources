@@ -76,7 +76,7 @@ export default function Header() {
               className="w-7 h-7 sm:w-8 sm:h-8"
             />
             <div className="flex items-center gap-0.5 sm:gap-1">
-              <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+              <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
                 VN
               </span>
               <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
