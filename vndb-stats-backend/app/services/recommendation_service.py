@@ -16,6 +16,7 @@ from app.db.models import (
     VisualNovel, Tag, VNTag, GlobalVote,
     CFVNFactors, TagVNVector,
 )
+from app.db.query_utils import in_ids, not_in_ids
 from app.db.schemas import (
     Recommendation, SimilarVNsResponse, VNSummary, SimilarVN,
 )
@@ -173,7 +174,7 @@ class TagBasedRecommender:
         query = (
             select(TagVNVector.vn_id, TagVNVector.tag_vector)
             .join(VisualNovel, VisualNovel.id == TagVNVector.vn_id)
-            .where(~TagVNVector.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(TagVNVector.vn_id, exclude_vns))
         )
         if min_rating > 0:
             query = query.where(VisualNovel.rating >= min_rating)
@@ -225,7 +226,7 @@ class CollaborativeRecommender:
         vote_vn_ids = [v["vn_id"] for v in user_votes]
         result = await self.db.execute(
             select(CFVNFactors.vn_id, CFVNFactors.factors)
-            .where(CFVNFactors.vn_id.in_(vote_vn_ids))
+            .where(in_ids(CFVNFactors.vn_id, vote_vn_ids))
         )
         vn_factors_map = {r.vn_id: np.array(r.factors) for r in result.all()}
 
@@ -247,7 +248,7 @@ class CollaborativeRecommender:
         # Get all VN factors (excluding user's VNs)
         result = await self.db.execute(
             select(CFVNFactors.vn_id, CFVNFactors.factors)
-            .where(~CFVNFactors.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(CFVNFactors.vn_id, exclude_vns))
             .limit(5000)
         )
         all_vn_factors = result.all()
@@ -995,7 +996,7 @@ class RecommendationService:
         result = await self.db.execute(
             select(VisualNovel.id)
             .where(VisualNovel.id != vn_id)
-            .where(~VisualNovel.id.in_(exclude_vns))
+            .where(not_in_ids(VisualNovel.id, exclude_vns))
             .limit(500)
         )
         candidate_ids = [r[0] for r in result.all()]

@@ -176,6 +176,7 @@ export default function RecommendationsContent() {
   const [minRating, setMinRating] = useState<string>('');
   const [lengthFilters, setLengthFilters] = useState<string[]>([]);
   const [japaneseOnly, setJapaneseOnly] = useState(true);
+  const [excludeBlacklist, setExcludeBlacklist] = useState(true);
   const [spoilerLevel, setSpoilerLevel] = useState(0);
   const [tagTraitFilters, setTagTraitFilters] = useState<SelectedItem[]>([]);
 
@@ -401,6 +402,7 @@ export default function RecommendationsContent() {
         params.append('max_length', String(sortedLengths[sortedLengths.length - 1]));
       }
       params.append('japanese_only', japaneseOnly.toString());
+      params.append('exclude_blacklist', excludeBlacklist.toString());
       if (spoilerLevel > 0) params.append('spoiler_level', String(spoilerLevel));
 
       // Add tag/trait filters - use override if provided, otherwise fall back to state
@@ -517,6 +519,7 @@ export default function RecommendationsContent() {
     setMinRating('');
     setLengthFilters([]);
     setJapaneseOnly(true);
+    setExcludeBlacklist(true);
     setSpoilerLevel(0);
     setTagTraitFilters([]);
 
@@ -679,12 +682,14 @@ export default function RecommendationsContent() {
                   minRating,
                   length: lengthFilters,
                   japaneseOnly,
+                  excludeBlacklist,
                   spoilerLevel,
                 }}
                 onFilterChange={(changes) => {
                   if (changes.minRating !== undefined) setMinRating(changes.minRating);
                   if (changes.length !== undefined) setLengthFilters(changes.length);
                   if (changes.japaneseOnly !== undefined) setJapaneseOnly(changes.japaneseOnly);
+                  if (changes.excludeBlacklist !== undefined) setExcludeBlacklist(changes.excludeBlacklist);
                   if (changes.spoilerLevel !== undefined) setSpoilerLevel(changes.spoilerLevel);
                 }}
                 tagTraitFilters={tagTraitFilters}

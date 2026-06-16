@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 
 from app.db.models import UserRecommendationCache, VisualNovel
+from app.db.query_utils import not_in_ids
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class UserCacheService:
             )
             .where(UserRecommendationCache.user_id == user_id)
             .where(UserRecommendationCache.updated_at >= freshness_threshold)
-            .where(~UserRecommendationCache.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(UserRecommendationCache.vn_id, exclude_vns))
             .order_by(UserRecommendationCache.combined_score.desc())
             .limit(limit * 2)  # Get extra for filtering
         )

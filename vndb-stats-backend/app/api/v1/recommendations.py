@@ -44,10 +44,16 @@ from app.db.database import get_db, async_session
 limiter = Limiter(key_func=get_remote_address)
 from app.db import schemas
 from app.db.models import UserRecommendationCache, VisualNovel
+from app.db.query_utils import not_in_ids
 from app.core.auth import is_admin_request
 from app.services.recommendation_service import RecommendationService
 from app.services.user_service import UserService
 from app.services.hybrid_recommender import HybridRecommender, RecommendationResult
+from app.services.recommendation_filters import (
+    LABEL_BLACKLIST,
+    LABEL_DROPPED,
+    compute_exclude_vn_ids,
+)
 
 MAX_FILTER_IDS = 30
 
@@ -99,6 +105,10 @@ async def get_recommendations(
         default=False,
         description="Skip generating personalized explanations (faster)"
     ),
+    exclude_blacklist: bool = Query(
+        default=True,
+        description="Exclude VNs on the user's VNDB blacklist"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -134,19 +144,14 @@ async def get_recommendations(
     if not user_data:
         raise HTTPException(status_code=404, detail=f"User {vndb_uid} not found")
 
-    # Only exclude VNs the user has consumed (not wishlist or custom lists)
-    # Labels: 1=Playing, 2=Finished, 3=Stalled, 4=Dropped, 8=Blacklist
+    # Exclude VNs the user has already engaged with (Playing/Finished/Stalled/Dropped);
+    # blacklisted VNs (label 6) are excluded only when exclude_blacklist is set.
     labels = user_data.get("labels", {})
-    consumed_labels = ["1", "2", "3", "4"]  # Playing, Finished, Stalled, Dropped
+    exclude_vns = compute_exclude_vn_ids(labels, exclude_blacklist=exclude_blacklist)
 
-    exclude_vns = set()
-    for label_id in consumed_labels:
-        exclude_vns.update(labels.get(label_id, []))
-
-    # Get dropped and blacklisted counts for messaging
-    dropped_ids = set(labels.get("4", []))  # Dropped
-    blacklisted_ids = set(labels.get("8", []))  # Blacklist
-    exclude_vns.update(blacklisted_ids)
+    # Counts for the exclusion message shown to the user.
+    dropped_ids = set(labels.get(LABEL_DROPPED, []))
+    blacklisted_ids = set(labels.get(LABEL_BLACKLIST, [])) if exclude_blacklist else set()
 
     # Note: exclude_wishlist param kept for backwards compatibility but no longer needed
     # since wishlist is not included in exclude_vns by default
@@ -266,7 +271,7 @@ async def get_cached_recommendations(
         .join(VisualNovel, UserRecommendationCache.vn_id == VisualNovel.id)
         .where(UserRecommendationCache.user_id == user_id)
         .where(UserRecommendationCache.updated_at >= cutoff)
-        .where(UserRecommendationCache.vn_id.notin_(exclude_vn_ids))
+        .where(not_in_ids(UserRecommendationCache.vn_id, exclude_vn_ids))
     )
 
     # Apply filters
@@ -398,6 +403,7 @@ async def get_recommendations_v2(
     include_details: bool = Query(default=False, description="Include full details for popup (slower)"),
     japanese_only: bool = Query(default=True, description="Only show Japanese original language VNs"),
     spoiler_level: int = Query(default=0, ge=0, le=2, description="Max tag/trait spoiler level: 0=none, 1=minor, 2=major"),
+    exclude_blacklist: bool = Query(default=True, description="Exclude VNs on the user's VNDB blacklist"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -425,13 +431,11 @@ async def get_recommendations_v2(
     if not user_data:
         raise HTTPException(status_code=404, detail=f"User {vndb_uid} not found")
 
-    # Only exclude VNs the user has consumed (not wishlist or custom lists)
-    # Labels: 1=Playing, 2=Finished, 3=Stalled, 4=Dropped, 8=Blacklist
+    # Exclude VNs the user has already engaged with (Playing/Finished/Stalled/Dropped);
+    # blacklisted VNs (label 6) are excluded only when exclude_blacklist is set (default on,
+    # exposed as a user toggle on the recommendations page).
     labels = user_data.get("labels", {})
-    consumed_labels = ["1", "2", "3", "4", "8"]  # Playing, Finished, Stalled, Dropped, Blacklist
-    exclude_vn_ids = set()
-    for label_id in consumed_labels:
-        exclude_vn_ids.update(labels.get(label_id, []))
+    exclude_vn_ids = compute_exclude_vn_ids(labels, exclude_blacklist=exclude_blacklist)
 
     # Filter votes to only include Finished VNs (label 2) to match stats page calculation
     finished_vn_ids = set(labels.get("2", []))

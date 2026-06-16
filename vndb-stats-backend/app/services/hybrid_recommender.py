@@ -28,6 +28,7 @@ from app.db.models import (
     VNSimilarity, VNCoOccurrence, VNSeiyuu, CharacterVN, CharacterTrait, Trait,
     ReleaseVN, ReleaseProducer, Producer
 )
+from app.db.query_utils import not_in_ids
 
 logger = logging.getLogger(__name__)
 
@@ -1809,7 +1810,7 @@ class HybridRecommender:
             result = await self.db.execute(
                 select(VNSimilarity.similar_vn_id, VNSimilarity.similarity_score)
                 .where(VNSimilarity.vn_id.in_(high_rated_vns))
-                .where(VNSimilarity.similar_vn_id.notin_(exclude_vn_ids))
+                .where(not_in_ids(VNSimilarity.similar_vn_id, exclude_vn_ids))
                 .order_by(VNSimilarity.similarity_score.desc())
                 .limit(limit)
             )
@@ -1915,7 +1916,7 @@ class HybridRecommender:
         )
         if exclude_vn_ids:
             candidates_query = candidates_query.where(
-                VNTag.vn_id.notin_(exclude_vn_ids)
+                not_in_ids(VNTag.vn_id, exclude_vn_ids)
             )
         candidates_query = (
             candidates_query
@@ -1964,7 +1965,7 @@ class HybridRecommender:
             .where(VNTag.lie == False)  # exclude disputed/incorrect tags
         )
         if exclude_vn_ids:
-            query = query.where(VNTag.vn_id.notin_(exclude_vn_ids))
+            query = query.where(not_in_ids(VNTag.vn_id, exclude_vn_ids))
 
         query = (
             query
@@ -1998,7 +1999,7 @@ class HybridRecommender:
             .where(VNCoOccurrence.user_count >= 20)  # Minimum confidence
         )
         if exclude_vn_ids:
-            query = query.where(VNCoOccurrence.similar_vn_id.notin_(exclude_vn_ids))
+            query = query.where(not_in_ids(VNCoOccurrence.similar_vn_id, exclude_vn_ids))
 
         query = query.order_by(VNCoOccurrence.co_rating_score.desc()).limit(limit)
 
@@ -2218,7 +2219,7 @@ class HybridRecommender:
             )
             if exclude_vn_ids:
                 exploration_query = exploration_query.where(
-                    VisualNovel.id.notin_(exclude_vn_ids)
+                    not_in_ids(VisualNovel.id, exclude_vn_ids)
                 )
             if japanese_only:
                 exploration_query = exploration_query.where(
@@ -2279,7 +2280,7 @@ class HybridRecommender:
 
             if exclude_vn_ids:
                 fallback_query = fallback_query.where(
-                    VisualNovel.id.notin_(exclude_vn_ids)
+                    not_in_ids(VisualNovel.id, exclude_vn_ids)
                 )
             if min_rating is not None:
                 fallback_query = fallback_query.where(VisualNovel.rating >= min_rating)

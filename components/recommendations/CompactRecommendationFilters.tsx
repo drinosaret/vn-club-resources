@@ -9,6 +9,7 @@ interface RecommendationFilters {
   minRating: string;
   length: string[];  // Now an array for multi-select
   japaneseOnly: boolean;
+  excludeBlacklist: boolean;
   spoilerLevel: number;  // 0=none, 1=minor, 2=major
 }
 
@@ -61,6 +62,7 @@ export function CompactRecommendationFilters({
     filters.minRating !== '' ||
     filters.length.length > 0 ||
     !filters.japaneseOnly ||
+    !filters.excludeBlacklist ||
     filters.spoilerLevel > 0 ||
     tagTraitFilters.length > 0;
 
@@ -108,6 +110,37 @@ export function CompactRecommendationFilters({
           </div>
         </div>
 
+        {/* Blacklist Toggle */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            Blacklist
+          </label>
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-[38px]">
+            <button
+              type="button"
+              onClick={() => onFilterChange({ excludeBlacklist: true })}
+              className={`flex-1 px-3 text-sm font-medium transition-colors ${
+                filters.excludeBlacklist
+                  ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              Hidden
+            </button>
+            <button
+              type="button"
+              onClick={() => onFilterChange({ excludeBlacklist: false })}
+              className={`flex-1 px-3 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
+                !filters.excludeBlacklist
+                  ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              Shown
+            </button>
+          </div>
+        </div>
+
         {/* Spoiler Level Toggle */}
         <div>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -137,11 +170,13 @@ export function CompactRecommendationFilters({
           </div>
         </div>
 
-        {/* Min Rating Slider */}
-        <MinRatingSlider
-          value={filters.minRating ? parseFloat(filters.minRating) : undefined}
-          onChange={(value) => onFilterChange({ minRating: value ? String(value) : '' })}
-        />
+        {/* Min Rating Slider: full-width on its own row so it isn't stranded beside the toggles */}
+        <div className="sm:col-span-2 lg:col-span-4">
+          <MinRatingSlider
+            value={filters.minRating ? parseFloat(filters.minRating) : undefined}
+            onChange={(value) => onFilterChange({ minRating: value ? String(value) : '' })}
+          />
+        </div>
       </div>
 
       {/* Active Filter Chips */}
@@ -184,6 +219,14 @@ export function CompactRecommendationFilters({
             />
           )}
 
+          {/* Blacklist shown chip (shows when blacklisted VNs are not hidden) */}
+          {!filters.excludeBlacklist && (
+            <FilterChip
+              label="Blacklist Shown"
+              onRemove={() => onFilterChange({ excludeBlacklist: true })}
+            />
+          )}
+
           {/* Spoiler level chip (shows when not default) */}
           {filters.spoilerLevel > 0 && (
             <FilterChip
@@ -197,6 +240,7 @@ export function CompactRecommendationFilters({
             filters.minRating ||
             filters.length.length > 0 ||
             !filters.japaneseOnly ||
+            !filters.excludeBlacklist ||
             filters.spoilerLevel > 0) && (
             <button
               type="button"

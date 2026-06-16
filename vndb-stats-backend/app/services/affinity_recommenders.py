@@ -19,6 +19,7 @@ from app.db.models import (
     GlobalVote, CFVNFactors, TagVNVector, VNGraphEmbedding, UserGraphEmbedding,
     VNSimilarity, VNCoOccurrence,
 )
+from app.db.query_utils import not_in_ids
 from app.services.preference_extractor import UserPreferences, PreferenceExtractor
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,7 @@ class TagAffinityRecommender:
             .where(VNTag.spoiler_level <= spoiler_level)
             .where(VNTag.score > 0)
             .where(VNTag.lie == False)  # exclude disputed/incorrect tags
-            .where(~VNTag.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(VNTag.vn_id, exclude_vns))
             .group_by(VNTag.vn_id)
             .order_by(func.count(VNTag.tag_id.distinct()).desc())
             .limit(limit * 3)  # Get more candidates for filtering
@@ -283,7 +284,7 @@ class TraitAffinityRecommender:
             .join(CharacterVN, CharacterVN.character_id == CharacterTrait.character_id)
             .where(CharacterTrait.trait_id.in_(trait_ids))
             .where(CharacterTrait.spoiler_level <= spoiler_level)
-            .where(~CharacterVN.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(CharacterVN.vn_id, exclude_vns))
             .group_by(CharacterVN.vn_id)
             .order_by(func.count(CharacterTrait.trait_id.distinct()).desc())
             .limit(limit * 3)
@@ -418,7 +419,7 @@ class StaffAffinityRecommender:
                 func.array_agg(VNStaff.staff_id.distinct()).label("matched_staff_ids"),
             )
             .where(VNStaff.staff_id.in_(staff_ids))
-            .where(~VNStaff.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(VNStaff.vn_id, exclude_vns))
         )
 
         if role_filter:
@@ -546,7 +547,7 @@ class SeiyuuAffinityRecommender:
                 func.array_agg(VNSeiyuu.staff_id.distinct()).label("matched_seiyuu_ids"),
             )
             .where(VNSeiyuu.staff_id.in_(seiyuu_ids))
-            .where(~VNSeiyuu.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(VNSeiyuu.vn_id, exclude_vns))
             .group_by(VNSeiyuu.vn_id)
             .order_by(func.count(VNSeiyuu.staff_id.distinct()).desc())
             .limit(limit * 3)
@@ -670,7 +671,7 @@ class ProducerAffinityRecommender:
             .join(ReleaseVN, ReleaseVN.release_id == ReleaseProducer.release_id)
             .where(ReleaseProducer.producer_id.in_(producer_ids))
             .where(ReleaseProducer.developer == True)  # Focus on developers
-            .where(~ReleaseVN.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(ReleaseVN.vn_id, exclude_vns))
             .group_by(ReleaseVN.vn_id)
             .order_by(func.count(ReleaseProducer.producer_id.distinct()).desc())
             .limit(limit * 3)
@@ -836,7 +837,7 @@ class SimilarToFavoritesRecommender:
             return []
 
         # Get candidate VNs
-        query = select(VisualNovel.id).where(~VisualNovel.id.in_(exclude_vns))
+        query = select(VisualNovel.id).where(not_in_ids(VisualNovel.id, exclude_vns))
         if min_rating > 0:
             query = query.where(VisualNovel.rating >= min_rating)
         if length_filter:
@@ -949,7 +950,7 @@ class SimilarUsersRecommender:
             )
             .where(GlobalVote.user_hash.in_(similar_users))
             .where(GlobalVote.vote >= 75)
-            .where(~GlobalVote.vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(GlobalVote.vn_id, exclude_vns))
             .group_by(GlobalVote.vn_id)
             .having(func.count(GlobalVote.user_hash) >= 2)  # At least 2 similar users
             .order_by(func.avg(GlobalVote.vote).desc())
@@ -1155,7 +1156,7 @@ class PrecomputedSimilarityRecommender:
                 VNSimilarity.similarity_score,
             )
             .where(VNSimilarity.vn_id == vn_id)
-            .where(~VNSimilarity.similar_vn_id.in_(exclude_vns) if exclude_vns else True)
+            .where(not_in_ids(VNSimilarity.similar_vn_id, exclude_vns))
             .order_by(VNSimilarity.similarity_score.desc())
             .limit(limit * 2)
         )
@@ -1232,7 +1233,7 @@ class PrecomputedSimilarityRecommender:
             query = (
                 select(VNSimilarity.similar_vn_id, VNSimilarity.similarity_score)
                 .where(VNSimilarity.vn_id == fav_id)
-                .where(~VNSimilarity.similar_vn_id.in_(exclude_vns) if exclude_vns else True)
+                .where(not_in_ids(VNSimilarity.similar_vn_id, exclude_vns))
                 .order_by(VNSimilarity.similarity_score.desc())
                 .limit(30)
             )
@@ -1358,7 +1359,7 @@ class ItemItemCFRecommender:
             query = (
                 select(VNCoOccurrence.similar_vn_id, VNCoOccurrence.co_rating_score, VNCoOccurrence.user_count)
                 .where(VNCoOccurrence.vn_id == seed_id)
-                .where(~VNCoOccurrence.similar_vn_id.in_(exclude_vns) if exclude_vns else True)
+                .where(not_in_ids(VNCoOccurrence.similar_vn_id, exclude_vns))
                 .order_by(VNCoOccurrence.co_rating_score.desc())
                 .limit(30)
             )
