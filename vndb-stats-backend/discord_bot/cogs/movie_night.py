@@ -655,14 +655,23 @@ class MovieNightCog(commands.Cog):
     @app_commands.describe(banner="Show a banner image (default) or a plain embed")
     async def movie(self, interaction: discord.Interaction, banner: bool = True):
         await interaction.response.defer()
+        now = datetime.now(timezone.utc)
         async with async_session_maker() as db:
             cycle = await mn.get_active_cycle(db)
-            ev = await mn.get_pick_event(db, datetime.now(timezone.utc))
+            ev = await mn.get_pick_event(db, now)
+        # A stored pick whose showtime already passed is history. While the pick is
+        # still flagged (pre-reset / right after the showing) it's the current answer,
+        # but once a fresh round is open, showing it as "next" misleads - explain
+        # that it's voting time instead.
+        if ev and ev.start_at and ev.start_at < now and not (cycle and cycle.winner_nomination_id):
+            ev = None
         if not ev:
             if cycle and cycle.phase == "paused":
                 msg = "Movie Night is paused right now."
             else:
-                msg = "No Movie Night has been picked yet - voting is open, cast yours with **/movie_vote**."
+                msg = "The next movie hasn't been picked yet - voting is open, cast yours with **/movie_vote**."
+                if cycle and cycle.scheduled_for and cycle.scheduled_for > now:
+                    msg += f"\nNext showtime: <t:{int(cycle.scheduled_for.timestamp())}:F>"
             await interaction.followup.send(msg)
             return
         extra = ev.extra_data or {}
