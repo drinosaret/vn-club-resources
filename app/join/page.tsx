@@ -48,6 +48,15 @@ const features = [
   'Custom immersion tracking bot, leaderboards, and monthly events',
 ];
 
+const banners = [
+  { src: '/assets/vnclub-banner-200x40.png', alt: 'VN Club - Learn Japanese with VNs' },
+  { src: '/assets/vnclub-resurrection-banner-200x40.png', alt: 'VN Club Resurrection - Learn Japanese with VNs' },
+];
+
+function bannerSnippet(banner: { src: string; alt: string }) {
+  return `<a href="https://vnclub.org/"><img src="https://vnclub.org${banner.src}" alt="${banner.alt}" width="200" height="40"></a>`;
+}
+
 const partners = [
   {
     name: 'Learn Japanese through Anime',
@@ -147,6 +156,29 @@ export default function JoinPage() {
                   />
                   {partner.name}
                 </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+              Link to us: add one of these banners to your site
+            </p>
+            <div className="space-y-5">
+              {banners.map((banner) => (
+                <div key={banner.src}>
+                  <Image
+                    src={banner.src}
+                    alt={banner.alt}
+                    width={200}
+                    height={40}
+                    className="mx-auto mb-3"
+                    unoptimized
+                  />
+                  <code className="block text-left text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md px-3 py-2 break-all select-all">
+                    {bannerSnippet(banner)}
+                  </code>
+                </div>
               ))}
             </div>
           </div>
