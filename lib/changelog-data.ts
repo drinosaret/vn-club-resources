@@ -57,6 +57,12 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-07-13',
+    project: 'hikaru',
+    title: 'Themed months and seasons',
+    description: 'A month or season can now have a theme, and nominations have to fit it.',
+  },
+  {
     date: '2026-06-14',
     project: 'muramasa',
     title: 'Role menu',

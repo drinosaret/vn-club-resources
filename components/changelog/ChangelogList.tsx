@@ -47,8 +47,9 @@ const ALL_PROJECTS = Object.keys(PROJECT_META) as ChangelogProject[];
 type ActiveState = Record<ChangelogProject, boolean>;
 
 // Server render and first client render use this so hydration matches; the URL
-// is applied in an effect afterward.
-const DEFAULT_ACTIVE: ActiveState = { site: true, hikaru: false, muramasa: false, ichijou: false };
+// is applied in an effect afterward. Default shows every project (the whole
+// changelog); a ?show= param narrows it.
+const DEFAULT_ACTIVE: ActiveState = { site: true, hikaru: true, muramasa: true, ichijou: true };
 
 function makeActive(on: ChangelogProject[]): ActiveState {
   return {
@@ -74,9 +75,9 @@ function parseShow(search: string): ActiveState | null {
 // Inverse of parseShow. Returns null for the default set (clean URL, no param).
 function serializeShow(active: ActiveState): string | null {
   const on = ALL_PROJECTS.filter((p) => active[p]);
-  if (on.length === 1 && on[0] === 'site') return null;
+  // All projects on is the default now, so it maps to a clean URL (no param).
+  if (on.length === ALL_PROJECTS.length) return null;
   if (on.length === 0) return 'none';
-  if (on.length === ALL_PROJECTS.length) return 'all';
   return on.join(',');
 }
 
