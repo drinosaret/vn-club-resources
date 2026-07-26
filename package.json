@@ -43,7 +43,7 @@
     "flexsearch": "^0.8.212",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.575.0",
-    "next": "^16.2.5",
+    "next": "^16.2.12",
     "nprogress": "^0.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -59,7 +59,7 @@
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "swr": "^2.4.0",
     "unified": "^11.0.5"
   },
@@ -74,12 +74,12 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "baseline-browser-mapping": "^2.10.0",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.4",
     "eslint": "^9",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.23",
     "tailwindcss": "^4.2.0",
     "tsx": "^4.19.0",
     "typescript": "^5",
@@ -87,6 +87,7 @@
   },
   "overrides": {
     "postcss": "$postcss",
-    "shell-quote": "^1.8.4"
+    "shell-quote": "^1.10.0",
+    "sharp": "$sharp"
   }
 }
