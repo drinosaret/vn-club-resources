@@ -3,7 +3,7 @@
 Ephemeral panel for the always-open vote: pick this week's winner (the leader stays
 in the pool, marked 👑), Reopen to clear the pick, Start new vote to wipe the pool for
 a fresh round, set the showtime, post the board, pause/resume, manage the pool/votes,
-or configure the weekly default + vote-role gate. The pool and votes persist; pausing
+or configure the weekly default, vote-role gate, and showtime ping. The pool and votes persist; pausing
 is the only thing that stops voting. Opened by the admin-gated /manage_movie_night.
 """
 
@@ -211,7 +211,7 @@ class _ShowtimeModal(ui.Modal, title="Schedule Movie Night"):
         await interaction.response.defer()
 
 
-# --- Configure sub-panel (channel + default schedule) --------------------
+# --- Configure sub-panel (channel + default schedule + roles) ------------
 
 class MovieNightConfigView(BaseView):
     def __init__(self, parent: MovieNightAdminView):
@@ -225,8 +225,9 @@ class MovieNightConfigView(BaseView):
         self.add_item(_ChannelSelect(self))
         self.add_item(_WeekdaySelect(self))
         self.add_item(_VoteRoleSelect(self))
-        self.add_item(_Btn(self._edit_time, "Set time", discord.ButtonStyle.secondary, "🕒", row=3))
-        self.add_item(_Btn(self._back, "Back", discord.ButtonStyle.secondary, "⬅️", row=3))
+        self.add_item(_NotifyRoleSelect(self))
+        self.add_item(_Btn(self._edit_time, "Set time", discord.ButtonStyle.secondary, "🕒", row=4))
+        self.add_item(_Btn(self._back, "Back", discord.ButtonStyle.secondary, "⬅️", row=4))
 
     def get_embed(self) -> discord.Embed:
         return self.cog.config_embed()
@@ -303,6 +304,26 @@ class _VoteRoleSelect(ui.RoleSelect):
         await interaction.response.defer()
         role_id = self.values[0].id if self.values else None
         await self.cfg_view.cog.set_config(vote_role_id=role_id)
+        await self.cfg_view._rerender(interaction)
+
+
+class _NotifyRoleSelect(ui.RoleSelect):
+    """Optional role pinged in the Movie Night channel when the showtime arrives;
+    deselect for no ping."""
+
+    def __init__(self, view: MovieNightConfigView):
+        super().__init__(
+            placeholder="Ping a role at showtime (deselect = no ping)…",
+            min_values=0,
+            max_values=1,
+            row=3,
+        )
+        self.cfg_view = view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        role_id = self.values[0].id if self.values else None
+        await self.cfg_view.cog.set_config(notify_role_id=role_id)
         await self.cfg_view._rerender(interaction)
 
 

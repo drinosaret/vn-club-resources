@@ -5,6 +5,9 @@
 - /manage_movie_night (admin): pick the winner, reopen, start a new vote, set the
   showtime, pause/resume, post the board, configure; see views/movie_night.py
 
+An optional role can be configured to be pinged in the Movie Night channel when the
+showtime arrives.
+
 Voting is ALWAYS open (no "open a round" step) unless an admin pauses it. The pool
 and votes PERSIST; one film is flagged as this week's pick (winner_nomination_id) and
 published to /events, but it stays in the pool, marked 👑. The admin picks the leader
@@ -45,8 +48,11 @@ CONFIG_MOVIE_CHANNEL = "movie_night_channel_id"  # optional: the channel the cyc
 CONFIG_MOVIE_SHOW_WEEKDAY = "movie_night_show_weekday"  # 0=Mon .. 6=Sun
 CONFIG_MOVIE_SHOW_TIME = "movie_night_show_time"  # "HH:MM" UTC
 CONFIG_MOVIE_VOTE_ROLE = mn.CONFIG_VOTE_ROLE  # optional role gate on voting
+CONFIG_MOVIE_NOTIFY_ROLE = "movie_night_notify_role_id"  # optional role pinged at showtime
+CONFIG_MOVIE_NOTIFIED_FOR = "movie_night_notified_showtime"  # showtime the ping already went out for
 DEFAULT_SHOW_TIME = "12:00"  # UTC; the weekly default time when none is configured
 AUTO_RESET_AFTER = timedelta(hours=2)  # hands-off mode: wait this long past showtime before the next round
+NOTIFY_GRACE = timedelta(minutes=30)  # past this, a caught-up showtime is stale: skip the ping
 
 WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 COLOR = 0xE11D48
@@ -64,18 +70,29 @@ class MovieNightCog(commands.Cog):
         self._show_weekday: int | None = None
         self._show_time = DEFAULT_SHOW_TIME
         self._vote_role_id: int | None = None
+        self._notify_role_id: int | None = None
+        self._notified_showtime = ""  # showtime (ISO) the ping already went out for
 
     async def cog_load(self) -> None:
         await self._load_config()
         self.scheduler_loop.start()
+        self.showtime_notify_loop.start()
 
     async def cog_unload(self) -> None:
         self.scheduler_loop.cancel()
+        self.showtime_notify_loop.cancel()
 
     # ── Config (channel + default weekly schedule) ────────────
 
     async def _load_config(self) -> None:
-        keys = [CONFIG_MOVIE_CHANNEL, CONFIG_MOVIE_SHOW_WEEKDAY, CONFIG_MOVIE_SHOW_TIME, CONFIG_MOVIE_VOTE_ROLE]
+        keys = [
+            CONFIG_MOVIE_CHANNEL,
+            CONFIG_MOVIE_SHOW_WEEKDAY,
+            CONFIG_MOVIE_SHOW_TIME,
+            CONFIG_MOVIE_VOTE_ROLE,
+            CONFIG_MOVIE_NOTIFY_ROLE,
+            CONFIG_MOVIE_NOTIFIED_FOR,
+        ]
         try:
             async with async_session_maker() as db:
                 result = await db.execute(select(BotConfig).where(BotConfig.key.in_(keys)))
@@ -89,6 +106,9 @@ class MovieNightCog(commands.Cog):
         self._show_time = cfg.get(CONFIG_MOVIE_SHOW_TIME) or DEFAULT_SHOW_TIME
         vr = cfg.get(CONFIG_MOVIE_VOTE_ROLE)
         self._vote_role_id = int(vr) if vr not in (None, "") else None
+        nr = cfg.get(CONFIG_MOVIE_NOTIFY_ROLE)
+        self._notify_role_id = int(nr) if nr not in (None, "") else None
+        self._notified_showtime = cfg.get(CONFIG_MOVIE_NOTIFIED_FOR) or ""
 
     async def _save_config(self, key: str, value: str) -> None:
         async with async_session_maker() as db:
@@ -102,7 +122,13 @@ class MovieNightCog(commands.Cog):
             await db.commit()
 
     async def set_config(
-        self, *, channel_id=_UNSET, show_weekday=_UNSET, show_time=_UNSET, vote_role_id=_UNSET
+        self,
+        *,
+        channel_id=_UNSET,
+        show_weekday=_UNSET,
+        show_time=_UNSET,
+        vote_role_id=_UNSET,
+        notify_role_id=_UNSET,
     ) -> None:
         if channel_id is not _UNSET:
             await self._save_config(CONFIG_MOVIE_CHANNEL, "" if channel_id is None else str(channel_id))
@@ -112,6 +138,8 @@ class MovieNightCog(commands.Cog):
             await self._save_config(CONFIG_MOVIE_SHOW_TIME, show_time or "")
         if vote_role_id is not _UNSET:
             await self._save_config(CONFIG_MOVIE_VOTE_ROLE, "" if vote_role_id is None else str(vote_role_id))
+        if notify_role_id is not _UNSET:
+            await self._save_config(CONFIG_MOVIE_NOTIFY_ROLE, "" if notify_role_id is None else str(notify_role_id))
         await self._load_config()
 
     def default_showtime_hint(self) -> str:
@@ -205,6 +233,8 @@ class MovieNightCog(commands.Cog):
         embed.add_field(name="Default schedule", value=sched, inline=False)
         vote_access = f"<@&{self._vote_role_id}> only" if self._vote_role_id else "Everyone"
         embed.add_field(name="Who can vote", value=vote_access, inline=False)
+        ping = f"<@&{self._notify_role_id}> at showtime" if self._notify_role_id else "Off"
+        embed.add_field(name="Showtime ping", value=ping, inline=False)
         return embed
 
     def pool_embed(self, cycle, standings, selected_id=None) -> discord.Embed:
@@ -300,6 +330,19 @@ class MovieNightCog(commands.Cog):
                 return  # transient -> leave it
         await self._post_vote_message(channel, cycle, standings)
 
+    async def _resolve_channel(self, channel_id: int | None):
+        """Resolve a channel from cache, falling back to a REST fetch. None if it can't
+        be reached (gone, or the bot can't see it)."""
+        if not channel_id:
+            return None
+        channel = self.bot.get_channel(channel_id)
+        if channel is not None:
+            return channel
+        try:
+            return await self.bot.fetch_channel(channel_id)
+        except discord.HTTPException:
+            return None
+
     # ── Admin actions (called by MovieNightAdminView) ─────────
 
     async def set_showtime(self, showtime: datetime | None = None) -> tuple[bool, str]:
@@ -331,12 +374,7 @@ class MovieNightCog(commands.Cog):
         target = self._channel_id or channel_id
         if not target:
             return False, "No channel set. Configure one, or run this in the channel you want."
-        channel = self.bot.get_channel(target)
-        if channel is None:
-            try:
-                channel = await self.bot.fetch_channel(target)
-            except discord.HTTPException:
-                channel = None
+        channel = await self._resolve_channel(target)
         if channel is None:
             logger.warning("Movie Night: configured channel %s is not reachable", target)
             return False, "Couldn't reach that channel - check it exists and the bot can see it."
@@ -597,6 +635,77 @@ class MovieNightCog(commands.Cog):
             if pool_n:
                 logger.info("Movie Night: auto-starting next round (showtime passed; clearing %d film(s))", pool_n)
             await self.start_new_vote()  # resets pool/votes/pick, advances showtime, posts a fresh board
+
+    # ── Showtime ping ─────────────────────────────────────────
+
+    @tasks.loop(minutes=1)
+    async def showtime_notify_loop(self):
+        await self._notify_tick()
+
+    @showtime_notify_loop.before_loop
+    async def before_notify(self):
+        await self.bot.wait_until_ready()
+
+    @showtime_notify_loop.error
+    async def notify_error(self, error: Exception):
+        logger.error("Movie Night showtime ping error: %s", error, exc_info=True)
+
+    def _ping_mentions(self, channel) -> discord.AllowedMentions:
+        """Let only the configured role ping (so a film title can't smuggle one in).
+        @everyone is the guild's default role, whose id is the guild id, and needs the
+        everyone flag rather than a role allow-list."""
+        guild = getattr(channel, "guild", None)
+        if guild and self._notify_role_id == guild.id:
+            return discord.AllowedMentions(everyone=True, users=False, roles=False)
+        return discord.AllowedMentions(
+            everyone=False, users=False, roles=[discord.Object(id=self._notify_role_id)]
+        )
+
+    async def _mark_notified(self, stamp: str) -> None:
+        await self._save_config(CONFIG_MOVIE_NOTIFIED_FOR, stamp)
+        self._notified_showtime = stamp
+
+    async def _notify_tick(self) -> None:
+        """Ping the configured role in the Movie Night channel when the showtime arrives.
+        Own loop rather than the 10-minute scheduler so the ping lands on the minute. The
+        showtime it fired for is stored, so a restart can't ping twice for one showing;
+        a showtime only caught up on long after the fact (bot was down) is marked without
+        pinging so members don't get a late ping for a film that already started."""
+        if not self._notify_role_id:
+            return
+        async with async_session_maker() as db:
+            cycle = await mn.get_active_cycle(db)
+        if not cycle or cycle.phase != "voting" or not cycle.scheduled_for:
+            return
+        now = datetime.now(timezone.utc)
+        if now < cycle.scheduled_for:
+            return
+        stamp = cycle.scheduled_for.isoformat()
+        if self._notified_showtime == stamp:
+            return
+        if now > cycle.scheduled_for + NOTIFY_GRACE:
+            await self._mark_notified(stamp)
+            return
+        if cycle.winner_nomination_id is None:
+            return  # no film picked yet: an admin pick within the grace window still pings
+        async with async_session_maker() as db:
+            nom = await mn.get_nomination(db, cycle.winner_nomination_id)
+        if nom is None:
+            return
+        channel = await self._resolve_channel(self._channel_id or cycle.channel_id)
+        if channel is None:
+            logger.warning("Movie Night: no reachable channel for the showtime ping")
+            return
+        year = f" ({nom.release_year})" if nom.release_year else ""
+        try:
+            await channel.send(
+                f"<@&{self._notify_role_id}> 🎬 **Movie Night** starts now: **{nom.title}{year}**",
+                allowed_mentions=self._ping_mentions(channel),
+            )
+        except discord.HTTPException as e:
+            logger.warning("Movie Night: showtime ping failed: %s", e)
+            return
+        await self._mark_notified(stamp)
 
     # ── Member commands ───────────────────────────────────────
 
