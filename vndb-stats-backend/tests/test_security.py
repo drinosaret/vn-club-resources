@@ -132,16 +132,15 @@ class TestTableNameValidation:
 
 
 class TestPathTraversal:
-    """Verify tar extraction path traversal checks."""
+    """Verify tar extraction path checks."""
 
     @staticmethod
     def _check_tar_member(member_name: str, output_dir: str) -> bool:
-        if os.path.isabs(member_name) or ".." in member_name:
-            return False
-        dest = os.path.realpath(os.path.join(output_dir, member_name))
-        if not dest.startswith(os.path.realpath(output_dir) + os.sep):
-            return False
-        return True
+        # Exercise the real helper rather than a copy of it, so the two cannot
+        # drift apart.
+        from app.ingestion.dump_downloader import is_safe_tar_member
+
+        return is_safe_tar_member(member_name, output_dir)
 
     def test_valid_paths(self):
         with tempfile.TemporaryDirectory() as d:

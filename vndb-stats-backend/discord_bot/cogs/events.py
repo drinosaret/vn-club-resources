@@ -103,7 +103,7 @@ class EventsCog(commands.Cog):
         """Admin: open the custom-events management view."""
         rows = await _load_events(include_inactive=False)
         view = EventManageView(user_id=interaction.user.id, events=rows, include_inactive=False)
-        await interaction.response.send_message(embed=view.get_embed(), view=view)
+        await interaction.response.send_message(embed=view.get_embed(), view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
 

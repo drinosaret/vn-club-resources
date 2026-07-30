@@ -15,7 +15,9 @@ from app.db.models import (
     SharedLayout,
 )
 from discord_bot.views.base import BaseView
-from discord_bot.utils.embeds import create_embed, Colors, format_relative_time
+from discord_bot.utils.embeds import (
+    create_embed, Colors, format_relative_time, inert_text,
+)
 from discord_bot.utils.cache import table_stats_cache
 
 
@@ -281,7 +283,7 @@ class DashboardView(BaseView):
         for log in reversed(logs):
             ts = log.timestamp.strftime("%m/%d %H:%M") if log.timestamp else "???"
             emoji = {"ERROR": "\u274c", "WARNING": "\u26a0\ufe0f", "INFO": "\u2139\ufe0f"}.get(log.level, "\u2753")
-            msg = (log.message[:60] + "...") if len(log.message or "") > 60 else (log.message or "")
+            msg = inert_text(log.message, limit=60)
             lines.append(f"`{ts}` {emoji} [{log.source}] {msg}")
 
         description = "\n".join(lines)

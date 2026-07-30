@@ -26,7 +26,8 @@ class DashboardCog(commands.Cog):
         view = DashboardView(user_id=interaction.user.id)
         embed = await view.get_tab_content()
 
-        await interaction.response.send_message(embed=embed, view=view)
+        # Management panels respond to the invoking user only.
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
         # Store message reference for timeout handling
         view.message = await interaction.original_response()

@@ -10,7 +10,7 @@ from app.db.database import async_session_maker
 from app.db.models import SharedLayout
 from app.core.cache import get_cache
 from discord_bot.views.base import BaseView, ConfirmView
-from discord_bot.utils.embeds import create_embed, Colors
+from discord_bot.utils.embeds import create_embed, Colors, inert_text
 
 
 CACHE_PREFIX = "shared:"
@@ -64,7 +64,9 @@ class SharedLinksView(BaseView):
                     size = data.get("gridSize", "?")
                     cells = data.get("cells", [])
                     filled = sum(1 for c in cells if c is not None)
-                    title = data.get("gridTitle", "")
+                    # Layout titles are free-form stored values; normalise the
+                    # type and length before display.
+                    title = inert_text(str(data.get("gridTitle") or ""), limit=80)
                     summary = f"{size}x{size} {mode} ({filled} items)"
                     if title:
                         summary = f"{title} - {summary}"
@@ -72,7 +74,7 @@ class SharedLinksView(BaseView):
                     mode = data.get("mode", "?")
                     tiers = data.get("tiers", {})
                     item_count = sum(len(v) for v in tiers.values()) if isinstance(tiers, dict) else 0
-                    title = data.get("listTitle", "")
+                    title = inert_text(str(data.get("listTitle") or ""), limit=80)
                     summary = f"{mode} ({item_count} items)"
                     if title:
                         summary = f"{title} - {summary}"

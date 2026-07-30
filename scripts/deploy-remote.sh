@@ -58,24 +58,29 @@ update_env NEXT_PUBLIC_UMAMI_WEBSITE_ID   "${NEXT_PUBLIC_UMAMI_WEBSITE_ID-}"
 update_env NEXT_PUBLIC_TURNSTILE_SITE_KEY "${NEXT_PUBLIC_TURNSTILE_SITE_KEY-}"
 update_env TURNSTILE_SECRET_KEY           "${TURNSTILE_SECRET_KEY-}"
 
-# Backup env file (sourced by cron, not inline)
+# Backup env file (sourced by cron, not inline).
+# The R2 remote is defined here as RCLONE_CONFIG_R2_* rather than through
+# `rclone config create`, so its settings live in this one file instead of
+# being duplicated into rclone.conf. rclone assembles the "r2" remote from
+# these at run time, so backup-to-r2.sh still just refers to `r2:`.
 if [ -n "${BACKUP_ENCRYPTION_KEY-}" ]; then
   umask 077
   # %q produces a shell-quoted form so values with quotes/backslashes are safe
-  printf 'export BACKUP_ENCRYPTION_KEY=%q\n' "$BACKUP_ENCRYPTION_KEY" > ~/.backup-env
+  {
+    printf 'export BACKUP_ENCRYPTION_KEY=%q\n' "$BACKUP_ENCRYPTION_KEY"
+    if [ -n "${R2_ACCESS_KEY_ID-}" ] && [ -n "${R2_SECRET_ACCESS_KEY-}" ] && [ -n "${R2_ENDPOINT-}" ]; then
+      printf 'export RCLONE_CONFIG_R2_TYPE=s3\n'
+      printf 'export RCLONE_CONFIG_R2_PROVIDER=Cloudflare\n'
+      printf 'export RCLONE_CONFIG_R2_ACL=private\n'
+      printf 'export RCLONE_CONFIG_R2_ACCESS_KEY_ID=%q\n'     "$R2_ACCESS_KEY_ID"
+      printf 'export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY=%q\n' "$R2_SECRET_ACCESS_KEY"
+      printf 'export RCLONE_CONFIG_R2_ENDPOINT=%q\n'          "$R2_ENDPOINT"
+    fi
+  } > ~/.backup-env
+  chmod 600 ~/.backup-env
 
   BACKUP_CRON='15 6 * * * . /home/deploy/.backup-env && /home/deploy/backup-to-r2.sh >> /home/deploy/backup.log 2>&1'
   (crontab -l 2>/dev/null | grep -v 'backup-to-r2'; echo "$BACKUP_CRON") | crontab -
-fi
-
-# Configure rclone R2 remote if credentials are set
-if [ -n "${R2_ACCESS_KEY_ID-}" ] && [ -n "${R2_SECRET_ACCESS_KEY-}" ] && [ -n "${R2_ENDPOINT-}" ]; then
-  rclone config create r2 s3 \
-    provider=Cloudflare \
-    access_key_id="$R2_ACCESS_KEY_ID" \
-    secret_access_key="$R2_SECRET_ACCESS_KEY" \
-    endpoint="$R2_ENDPOINT" \
-    acl=private --quiet 2>/dev/null || true
 fi
 
 # Generate git dates for guide pages (Docker has no .git)

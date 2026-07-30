@@ -51,6 +51,8 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
         NEXT_PUBLIC_UMAMI_URL: ${NEXT_PUBLIC_UMAMI_URL:-}
         NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID:-}
+        # Baked at build time: the widget reads this from the client bundle.
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
     environment:
       - NODE_ENV=production
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
@@ -97,6 +99,11 @@ services:
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
       - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      # Pairs with the web service's NEXT_PUBLIC_TURNSTILE_SITE_KEY build arg.
+      # Set both or neither, or the two halves are inconsistent and /shared
+      # submissions stop going through.
+      - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}
+      - TURNSTILE_FAIL_OPEN=${TURNSTILE_FAIL_OPEN:-false}
       - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
     depends_on:

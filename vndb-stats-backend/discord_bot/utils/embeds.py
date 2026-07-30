@@ -5,6 +5,41 @@ from datetime import datetime
 import discord
 
 
+_EMBED_SPECIAL = frozenset("\\`*_~|[]")
+
+
+def inert_text(text: str | None, limit: int | None = None) -> str:
+    """Flatten a stored value into a single plain line for an embed.
+
+    Embed descriptions interpret markdown and [label](url) syntax, so values
+    that this app did not format itself are reduced to literal characters
+    before being interpolated into a description.
+
+    Escaping runs in one pass rather than through utils.escape_markdown, which
+    only escapes "[" as part of a recognised link pattern and leaves other
+    brackets as-is. A single pass also keeps the backslash count right:
+    escaping an already-escaped character consumes the escape and restores the
+    original meaning.
+
+    `limit` applies to the source text so truncation cannot land inside an
+    escape sequence.
+    """
+    if not text:
+        return ""
+    if limit is not None and len(text) > limit:
+        text = text[:limit] + "..."
+    out = []
+    for ch in text:
+        # Keep each value on one row.
+        if ord(ch) < 32:
+            out.append(" ")
+        elif ch in _EMBED_SPECIAL:
+            out.append("\\" + ch)
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 # Standard colors
 class Colors:
     """Standard embed colors."""

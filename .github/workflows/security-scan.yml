@@ -36,6 +36,28 @@ jobs:
           grep -v 'git+' /tmp/requirements.lock > /tmp/requirements.audit.txt || true
           /tmp/audit/bin/pip-audit -r /tmp/requirements.audit.txt
 
+  backend-tests:
+    name: Backend tests (pytest)
+    # Runs the vndb-stats-backend suite. Not listed in deploy-vps.yml's
+    # REQUIRED array yet: add it there once it has been observed green, so a
+    # pre-existing failure can't block deploys the moment this lands.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        working-directory: vndb-stats-backend
+        run: |
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -r requirements-dev.txt
+      - name: Run tests
+        working-directory: vndb-stats-backend
+        run: python -m pytest tests/ -q
+
   frontend-deps:
     name: Frontend dependencies (npm audit)
     runs-on: ubuntu-latest

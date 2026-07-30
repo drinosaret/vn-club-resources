@@ -33,7 +33,7 @@ class SharedLinksCog(commands.Cog):
         view._update_nav_buttons()
         embed = await view.build_embed()
 
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
 

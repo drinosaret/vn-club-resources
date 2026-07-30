@@ -17,6 +17,21 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+
+def is_safe_tar_member(name: str, output_dir: str) -> bool:
+    """Return True if a tar member name resolves to a path inside output_dir.
+
+    Drive-letter prefixes and backslash separators are treated as absolute the
+    same way POSIX absolute paths are, so a name is judged consistently
+    regardless of the platform the archive was built on.
+    """
+    if not name or os.path.isabs(name) or ".." in name:
+        return False
+    if "\\" in name or (len(name) > 1 and name[1] == ":" and name[0].isalpha()):
+        return False
+    dest = os.path.realpath(os.path.join(output_dir, name))
+    return dest.startswith(os.path.realpath(output_dir) + os.sep)
+
 # Default max age for dump files (1 week)
 # VNDB updates dumps daily, but most changes are minor
 # Use longer default to avoid unnecessary re-downloads
@@ -166,14 +181,9 @@ def decompress_zstd_tar(input_path: str, output_dir: str) -> list[str]:
                 with tarfile.open(fileobj=reader, mode="r|") as tar:
                     for member in tar:
                         if member.isfile():
-                            # Prevent path traversal via malicious tar entries
-                            if os.path.isabs(member.name) or ".." in member.name:
-                                logger.warning(f"Skipping suspicious tar member: {member.name}")
-                                continue
-                            # Validate resolved path stays within output_dir
-                            dest = os.path.realpath(os.path.join(output_dir, member.name))
-                            if not dest.startswith(os.path.realpath(output_dir) + os.sep):
-                                logger.warning(f"Skipping path traversal attempt: {member.name}")
+                            # Only extract entries that land inside output_dir.
+                            if not is_safe_tar_member(member.name, output_dir):
+                                logger.warning(f"Skipping tar member: {member.name}")
                                 continue
                             tar.extract(member, output_dir)
                             extracted_files.append(

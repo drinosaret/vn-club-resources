@@ -17,6 +17,12 @@ coverage
 .env.development.local
 .env.test.local
 .env.production.local
+# The patterns above only match the context root. deploy/ holds runtime config
+# and nothing the web build needs.
+deploy/
+**/.env
+**/.env.*
+!**/.env.example
 
 # Debug
 npm-debug.log*

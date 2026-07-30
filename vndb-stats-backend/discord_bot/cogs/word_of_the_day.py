@@ -226,7 +226,7 @@ class WordOfTheDayCog(commands.Cog):
         view = WordOfTheDayView(user_id=interaction.user.id, pick=pick)
         embed = view.get_embed()
 
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
 

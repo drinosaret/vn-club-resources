@@ -23,8 +23,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Local development: publish on the loopback interface only.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     # NOTE: CORS_ORIGINS is set in .env (gitignored). For production, set it in deploy/.env.prod
@@ -121,8 +122,9 @@ services:
   # Umami analytics
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
+    # Loopback only, same as the api service above.
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_dev_password}@umami-db:5432/umami
       APP_SECRET: ${UMAMI_APP_SECRET:-replace-me-with-a-random-string}

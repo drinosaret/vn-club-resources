@@ -41,7 +41,7 @@ class NewsNewCog(commands.Cog):
         )
         embed = await view.format_page()
 
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
         view.message = await interaction.original_response()
 
 
