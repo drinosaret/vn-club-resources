@@ -38,9 +38,9 @@ jobs:
 
   backend-tests:
     name: Backend tests (pytest)
-    # Runs the vndb-stats-backend suite. Not listed in deploy-vps.yml's
-    # REQUIRED array yet: add it there once it has been observed green, so a
-    # pre-existing failure can't block deploys the moment this lands.
+    # Runs the vndb-stats-backend suite. Listed in deploy-vps.yml's REQUIRED
+    # array, so a failure here holds the deploy. Keep the job name in sync with
+    # that entry.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

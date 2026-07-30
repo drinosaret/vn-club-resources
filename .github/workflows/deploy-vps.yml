@@ -34,8 +34,8 @@ jobs:
         run: npm run build
 
   # Hard gate: the deploy runs ONLY if every other check on the commit is green.
-  # Waits for the Security Scan (npm + pip audit) and the CodeQL "Analyze" checks
-  # to finish and pass, then confirms CodeQL opened no critical/high alerts. Any
+  # Waits for the Security Scan jobs (npm audit, pip-audit, pytest) and the CodeQL
+  # "Analyze" checks to finish and pass, then confirms CodeQL opened no critical/high alerts. Any
   # red check, or any open critical/high finding, blocks the deploy and the live
   # site stays on the last good version. Fail-closed: a check that never reports,
   # or an API error, also blocks.
@@ -58,6 +58,7 @@ jobs:
           REQUIRED=(
             "Frontend dependencies (npm audit)"
             "Backend dependencies (pip-audit)"
+            "Backend tests (pytest)"
             "Analyze (actions)"
             "Analyze (javascript-typescript)"
             "Analyze (python)"
