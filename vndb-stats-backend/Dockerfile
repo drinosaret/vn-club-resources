@@ -14,8 +14,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+COPY requirements.lock requirements-vcs.txt ./
+# --require-hashes pins every version and checks its artifact, so a rebuild
+# installs exactly what was resolved rather than whatever the index serves that
+# day. Regenerate both files with scripts/lock-requirements.sh after editing
+# requirements.txt.
+RUN pip install --no-cache-dir --prefix=/install --require-hashes -r requirements.lock
+# Installed separately because a VCS URL cannot carry a hash, and --require-hashes
+# rejects a file containing any unhashed entry. --no-deps is safe: this package's
+# dependencies are resolved and hashed in requirements.lock above.
+RUN pip install --no-cache-dir --prefix=/install --no-deps -r requirements-vcs.txt
 
 # Stage 2: Runtime — clean image without build tools
 FROM python:3.11-slim

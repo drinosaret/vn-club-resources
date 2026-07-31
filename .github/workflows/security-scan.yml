@@ -25,16 +25,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check the lock covers requirements.txt
+        # A dependency added to requirements.txt without regenerating the lock
+        # would never be installed, since the image builds from the lock.
+        run: python3 .github/scripts/check_lock_coverage.py
       - name: Audit Python dependencies
+        # Audits the committed lock, which is what the image installs. Auditing a
+        # fresh resolution instead would report on versions that never ship.
+        # requirements-vcs.txt is excluded: it isn't on PyPI and is commit-pinned.
         run: |
           python3 -m venv /tmp/audit
-          /tmp/audit/bin/pip install --quiet --upgrade pip uv pip-audit
-          # Resolve the floor-only requirements to pinned versions (metadata only,
-          # no wheel builds), then audit. VCS deps (tweety-ns) aren't on PyPI and
-          # are already commit-pinned, so drop them before auditing.
-          /tmp/audit/bin/uv pip compile vndb-stats-backend/requirements.txt -o /tmp/requirements.lock
-          grep -v 'git+' /tmp/requirements.lock > /tmp/requirements.audit.txt || true
-          /tmp/audit/bin/pip-audit -r /tmp/requirements.audit.txt
+          /tmp/audit/bin/pip install --quiet --upgrade pip pip-audit
+          /tmp/audit/bin/pip-audit -r vndb-stats-backend/requirements.lock
 
   backend-tests:
     name: Backend tests (pytest)

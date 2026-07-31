@@ -47,6 +47,21 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+### Dependencies
+
+`requirements.txt` is the editable source. The Docker image installs from
+`requirements.lock` (pinned and hash-checked) plus `requirements-vcs.txt` (the
+git-sourced package, which cannot carry a hash).
+
+After changing `requirements.txt`, regenerate both:
+
+```bash
+./scripts/lock-requirements.sh
+```
+
+Commit all three together. CI fails if `requirements.txt` names a package the
+lock does not provide, since the image would otherwise never install it.
+
 ## API Endpoints
 
 ### Stats
