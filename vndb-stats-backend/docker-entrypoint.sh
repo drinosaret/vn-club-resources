@@ -24,59 +24,11 @@ if [ "${DEBUG}" != "true" ] && [ "${DEV_MODE}" != "true" ]; then
   fi
 fi
 
-# Database initialization strategy:
-# - Base tables (visual_novels, tags, etc.) are defined only in ORM models,
-#   not in any Alembic migration file.
-# - Alembic migrations reference these base tables via foreign keys.
-# - On a fresh DB: create all tables via ORM, then stamp Alembic to head.
-# - On an existing DB: just run Alembic migrations normally.
+# Schema setup: fresh-vs-existing detection, table creation, and migrations.
+# In scripts/schema_setup.py so the whole block runs under a single advisory
+# lock, since api, discord-bot and worker all reach this line concurrently.
 echo "Running database initialization..."
-python -c "
-import asyncio
-from app.db.database import Base, engine
-import app.db.models  # Register all models with Base.metadata
-
-async def init():
-    async with engine.connect() as conn:
-        # Check if alembic_version table exists (= existing database)
-        result = await conn.execute(
-            __import__('sqlalchemy').text(
-                \"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')\"
-            )
-        )
-        has_alembic = result.scalar()
-
-    if has_alembic:
-        print('Existing database detected, skipping table creation')
-    else:
-        print('Fresh database detected, creating all tables...')
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        print('✓ All tables created')
-
-    await engine.dispose()
-    return has_alembic
-
-has_alembic = asyncio.run(init())
-
-# Write result so bash can read it
-with open('/tmp/db_state', 'w') as f:
-    f.write('existing' if has_alembic else 'fresh')
-"
-
-DB_STATE=$(cat /tmp/db_state)
-
-if [ "$DB_STATE" = "fresh" ]; then
-  # Fresh DB: tables already created by ORM, just stamp migration history
-  echo "Stamping Alembic migration history..."
-  alembic stamp head
-  echo "✓ Migration history stamped"
-else
-  # Existing DB: run pending migrations normally
-  echo "Running schema migrations..."
-  alembic upgrade head
-  echo "✓ Schema migrations complete"
-fi
+python scripts/schema_setup.py
 
 # Run data migrations (populate new columns from dump files)
 echo "Running data migrations..."
