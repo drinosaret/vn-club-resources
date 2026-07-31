@@ -7,7 +7,7 @@ import { getBackendUrlOptional } from './config';
 import { getVNForMetadata } from './vndb-server';
 import type { VNDetail } from './vndb-stats-api';
 
-export type EventType = 'vn_of_month' | 'vn_of_season' | 'movie_night' | 'custom' | string;
+export type EventType = 'vn_of_month' | 'vn_of_season' | 'movie_night' | 'roudoku' | 'custom' | string;
 
 export interface EventItem {
   id: number;

@@ -901,6 +901,73 @@ class MovieVote(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class RoudokuCycle(Base):
+    """One long-lived Weekly Roudoku: an always-open pool + vote with one VN flagged
+    as the pick (winner_nomination_id). Pausing is the only thing that stops voting."""
+
+    __tablename__ = "roudoku_cycles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phase = Column(String(20), nullable=False, server_default="voting")  # voting/paused
+    channel_id = Column(BigInteger)
+    message_id = Column(BigInteger)  # vote message
+    scheduled_for = Column(DateTime(timezone=True))  # session start
+    closes_at = Column(DateTime(timezone=True))
+    winner_nomination_id = Column(Integer)  # no FK: cycle row predates nominations
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    closed_at = Column(DateTime(timezone=True))
+
+    __table_args__ = (Index("idx_roudoku_cycles_phase", "phase"),)
+
+
+class RoudokuNomination(Base):
+    """A VN nominated for a Weekly Roudoku cycle (sourced from the local VNDB dump).
+
+    The VN's data is snapshotted onto the row rather than joined at render time:
+    the daily dump import rewrites visual_novels, and the persistent vote board
+    has to keep rendering (and the length gate has to stay auditable) even when
+    the VN row moves or disappears underneath it. See vndb_id's lack of a FK.
+    """
+
+    __tablename__ = "roudoku_nominations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cycle_id = Column(Integer, ForeignKey("roudoku_cycles.id", ondelete="CASCADE"), nullable=False)
+    # No FK to visual_novels.id: the dump importer rewrites that table, so a
+    # cascade would delete a live nomination (or the live pick) mid-week and a
+    # restrict would break the import.
+    vndb_id = Column(String(10), nullable=False)
+    title = Column(String(500), nullable=False)
+    title_jp = Column(String(500))
+    title_romaji = Column(String(500))
+    released = Column(Date)
+    image_url = Column(String(500))
+    image_sexual = Column(Float)  # re-read live at publish; a dump can change it
+    length = Column(Integer)  # VNDB 1-5 category
+    length_minutes = Column(Integer)  # vote-based average
+    description = Column(Text)
+    # Per-nomination so the weekly pool wipe resets it without extra logic.
+    cover_mode = Column(String(10), nullable=False, server_default="auto")  # auto/shown/blurred/hidden
+    nominated_by = Column(BigInteger, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("cycle_id", "vndb_id", name="uq_roudoku_nom_cycle_vn"),
+        Index("idx_roudoku_noms_cycle", "cycle_id"),
+    )
+
+
+class RoudokuVote(Base):
+    """One vote per user per cycle (composite primary key; revote = upsert)."""
+
+    __tablename__ = "roudoku_votes"
+
+    cycle_id = Column(Integer, ForeignKey("roudoku_cycles.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(BigInteger, primary_key=True)
+    nomination_id = Column(Integer, ForeignKey("roudoku_nominations.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class BotConfig(Base):
     """Key-value store for Discord bot settings (e.g., channel IDs)."""
 

@@ -1,10 +1,35 @@
 """Base view classes for reusable Discord UI components."""
 
+import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Coroutine
 
 import discord
 from discord import ui
+
+
+async def resolve_voter_names(guild, bot, uids) -> dict[int, str]:
+    """Map user ids to display names. ichijou runs without the members intent, so the
+    member cache is sparse; fall back to a REST fetch (member, then global user) so the
+    admin sees names, not raw ids. Resolved concurrently, best-effort."""
+    async def one(uid: int) -> tuple[int, str]:
+        if guild:
+            member = guild.get_member(uid)
+            if member:
+                return uid, member.display_name
+            try:
+                member = await guild.fetch_member(uid)
+                return uid, member.display_name
+            except (discord.NotFound, discord.HTTPException):
+                pass
+        try:
+            user = await bot.fetch_user(uid)
+            return uid, user.display_name
+        except (discord.NotFound, discord.HTTPException):
+            return uid, f"User {uid}"
+
+    pairs = await asyncio.gather(*(one(uid) for uid in uids))
+    return dict(pairs)
 
 
 class BaseView(ui.View):

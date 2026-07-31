@@ -18,6 +18,7 @@ COG_EXTENSIONS = [
     "discord_bot.cogs.announcements",   # /manage_announcements - announcement management
     "discord_bot.cogs.events",          # /events (public), /manage_events (admin)
     "discord_bot.cogs.movie_night",     # /movie (public), /manage_movie_night (admin)
+    "discord_bot.cogs.roudoku",         # /roudoku (public), /manage_roudoku (admin)
     "discord_bot.cogs.vn_of_the_day",  # /manage_vnotd - VN of the Day management
     "discord_bot.cogs.word_of_the_day",  # /manage_wotd - Word of the Day management
     "discord_bot.cogs.settings",       # /manage_settings, /manage_backup, /manage_test_daily
@@ -57,10 +58,16 @@ class VNClubBot(commands.Bot):
             except Exception as e:
                 logger.error(f"Failed to load cog {ext}: {e}")
 
-        # Re-attach persistent Movie Night vote views so votes survive restarts
+        # Re-attach persistent vote views so votes survive restarts. Each in its own
+        # try/except so one feature's bad cycle doesn't strand the other's board.
         from discord_bot.views.movie_vote import register_persistent_movie_views
+        from discord_bot.views.roudoku_vote import register_persistent_roudoku_views
 
-        await register_persistent_movie_views(self)
+        for register in (register_persistent_movie_views, register_persistent_roudoku_views):
+            try:
+                await register(self)
+            except Exception as e:
+                logger.error(f"Failed to register persistent views via {register.__name__}: {e}")
 
         # Sync commands - to specific guild if configured, otherwise globally. Wrapped so
         # a transient Discord error during sync doesn't abort setup_hook (the bot keeps the

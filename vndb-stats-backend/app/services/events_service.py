@@ -7,7 +7,7 @@ in place; reconcile_external() lets a source prune rows it no longer owns.
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, func, and_
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +20,18 @@ from app.services import recurring_events
 logger = logging.getLogger(__name__)
 
 EVENTS_UPCOMING_KEY = "events:upcoming"
+
+# Event types that have a weekly placeholder to suppress in recurring_events.
+_SESSION_TYPES = ("movie_night", "roudoku")
+# A session can sit this far from its usual weekday and still own the slot, so the
+# rendered window has to be searched this much wider to find one that moved past
+# its edge (across a month boundary, or into yesterday on the upcoming feed).
+_SLOT_PAD = timedelta(days=recurring_events.SLOT_MATCH_DAYS)
+# Covers every weekly placeholder upcoming() can emit, so none of them is judged
+# against a window that stops short of the session filling it.
+_UPCOMING_SESSION_WINDOW = timedelta(
+    days=7 * max(recurring_events.MOVIE_NIGHT_UPCOMING_COUNT, recurring_events.ROUDOKU_UPCOMING_COUNT)
+) + _SLOT_PAD
 
 
 def events_month_key(year: int, month: int) -> str:
@@ -83,7 +95,7 @@ async def enrich_with_covers(db: AsyncSession, items: list[dict]) -> list[dict]:
     """
     wanted: dict[str, list[dict]] = {}
     for it in items:
-        if it.get("event_type") in ("vn_of_month", "vn_of_season"):
+        if it.get("event_type") in ("vn_of_month", "vn_of_season", "roudoku"):
             m = _VN_URL_RE.match(it.get("url") or "")
             if m:
                 wanted.setdefault(f"v{m.group(1)}", []).append(it)
@@ -119,6 +131,42 @@ async def get_month(db: AsyncSession, year: int, month: int) -> list[Event]:
     return list(result.scalars().all())
 
 
+async def get_session_dates(
+    db: AsyncSession, start: datetime, end: datetime
+) -> tuple[set[str], set[str]]:
+    """(movie_night dates, roudoku dates) as UTC ISO days in [start, end).
+
+    Feeds recurring_events' per-type placeholder suppression. Kept separate from
+    the rendered event list because the search window is deliberately wider: a
+    session that moved off its weekday can sit outside the month or the feed it
+    belongs to, and it still has to hide its own placeholder.
+    """
+    result = await db.execute(
+        select(Event.event_type, Event.start_at).where(
+            and_(
+                Event.is_active.is_(True),
+                Event.event_type.in_(_SESSION_TYPES),
+                Event.start_at >= start,
+                Event.start_at < end,
+            )
+        )
+    )
+    movie: set[str] = set()
+    roudoku: set[str] = set()
+    for event_type, start_at in result.all():
+        if start_at is None:
+            continue
+        iso = start_at.astimezone(timezone.utc).date().isoformat()
+        (movie if event_type == "movie_night" else roudoku).add(iso)
+    return movie, roudoku
+
+
+async def get_month_session_dates(db: AsyncSession, year: int, month: int) -> tuple[set[str], set[str]]:
+    """Session dates for a month, padded so a move across either edge still counts."""
+    start, end = _month_window(year, month)
+    return await get_session_dates(db, start - _SLOT_PAD, end + _SLOT_PAD)
+
+
 async def get_upcoming(db: AsyncSession, now: datetime, limit: int = 20) -> list[Event]:
     """Active events that have not yet ended, soonest first."""
     result = await db.execute(
@@ -143,8 +191,12 @@ async def get_upcoming_merged(db: AsyncSession, now: datetime) -> list[dict]:
     """
     rows = await get_upcoming(db, now, limit=100)
     db_items = [event_to_dict(e) for e in rows]
-    movie_dates = {it["start_at"][:10] for it in db_items if it["event_type"] == "movie_night"}
-    items = db_items + recurring_events.upcoming(now, skip_movie_dates=movie_dates)
+    movie_dates, roudoku_dates = await get_session_dates(
+        db, now - _SLOT_PAD, now + _UPCOMING_SESSION_WINDOW
+    )
+    items = db_items + recurring_events.upcoming(
+        now, skip_movie_dates=movie_dates, skip_roudoku_dates=roudoku_dates
+    )
     items.sort(key=lambda e: e["start_at"])
     return items
 

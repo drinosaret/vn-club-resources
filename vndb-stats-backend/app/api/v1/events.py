@@ -45,8 +45,10 @@ async def list_month(
     rows = await events.get_month(db, year, month)
     db_items = [events.event_to_dict(e) for e in rows]
     await events.enrich_with_covers(db, db_items)  # blur-capable covers for the site
-    movie_dates = {it["start_at"][:10] for it in db_items if it["event_type"] == "movie_night"}
-    items = db_items + recurring_events.for_month(year, month, skip_movie_dates=movie_dates)
+    movie_dates, roudoku_dates = await events.get_month_session_dates(db, year, month)
+    items = db_items + recurring_events.for_month(
+        year, month, skip_movie_dates=movie_dates, skip_roudoku_dates=roudoku_dates
+    )
     items.sort(key=lambda e: e["start_at"])
     response = {"events": items}
     await cache.set(cache_key, response, ttl=CACHE_TTL)

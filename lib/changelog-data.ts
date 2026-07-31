@@ -57,6 +57,13 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-07-31',
+    project: 'ichijou',
+    title: 'Weekly Roudoku',
+    description: 'Every week the club picks a very short visual novel and reads it aloud together. Nominate and vote in Discord, and the pick for each Sunday lands on the events calendar.',
+    links: [{ label: 'Events', href: '/events/' }],
+  },
+  {
     date: '2026-07-13',
     project: 'hikaru',
     title: 'Themed months and seasons',

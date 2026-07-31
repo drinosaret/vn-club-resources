@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { changelogEntries, formatChangelogDay } from '@/lib/changelog-data';
+import { changelogEntries, formatChangelogDay, PROJECT_META } from '@/lib/changelog-data';
 
-// Server component: renders the latest site changelog entries statically.
-// Site-only, so entries need no badge (they are always vnclub.org).
+// Server component: renders the latest changelog entries statically. Covers every
+// project, not just the site, so each entry carries the badge that says which one
+// it belongs to (same chip as /changelog).
 export function WhatsNewSection() {
   const latest = [...changelogEntries]
     .sort((a, b) => b.date.localeCompare(a.date))
-    .filter((entry) => entry.project === 'site')
     .slice(0, 3);
 
   return (
@@ -19,7 +19,7 @@ export function WhatsNewSection() {
               What&apos;s new
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              The latest site updates.
+              The latest updates across the site and the club bots.
             </p>
           </div>
           <Link
@@ -34,6 +34,9 @@ export function WhatsNewSection() {
           {latest.map((entry) => (
             <div key={`${entry.date}-${entry.title}`} className="p-4">
               <div className="flex flex-wrap items-baseline gap-2">
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PROJECT_META[entry.project].chip}`}>
+                  {PROJECT_META[entry.project].label}
+                </span>
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">{entry.title}</h3>
                 <time dateTime={entry.date} className="ml-auto text-sm text-gray-500 dark:text-gray-400">
                   {formatChangelogDay(entry.date)}

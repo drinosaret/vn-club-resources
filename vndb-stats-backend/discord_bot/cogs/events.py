@@ -23,6 +23,7 @@ _EMOJI = {
     "vn_of_month": "✨",
     "vn_of_season": "🍃",
     "movie_night": "🎬",
+    "roudoku": "📚",
     "vn_month_voting": "🗳️",
     "vn_season_voting": "🗳️",
     "custom": "📌",

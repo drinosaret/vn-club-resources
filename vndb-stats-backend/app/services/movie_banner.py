@@ -77,18 +77,30 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_w: int, max_lines: int
     return lines
 
 
-def _render(poster: bytes | None, title: str, subtitle: str, meta: str, eyebrow: str) -> bytes:
+def _render(
+    poster: bytes | None,
+    title: str,
+    subtitle: str,
+    meta: str,
+    eyebrow: str,
+    *,
+    blur: bool = False,
+    show_cover: bool = True,
+    accent: tuple[int, int, int] = ACCENT,
+) -> bytes:
     w, h = W * S, H * S
     img = Image.new("RGB", (w, h), (18, 18, 24))
 
     poster_img = None
-    if poster:
+    if poster and show_cover:
         try:
             poster_img = Image.open(io.BytesIO(poster)).convert("RGB")
         except Exception:
             poster_img = None
 
-    # Backdrop: blurred, cover-cropped poster (the VN-of-month look).
+    # Backdrop: blurred, cover-cropped poster (the VN-of-month look). Skipped
+    # along with the poster when show_cover is off: at 1000px wide a full-bleed
+    # blur of a hidden cover is still recognisable, so hiding has to mean both.
     if poster_img:
         bg = poster_img.copy()
         ratio = max(w / bg.width, h / bg.height)
@@ -113,6 +125,10 @@ def _render(poster: bytes | None, title: str, subtitle: str, meta: str, eyebrow:
         ph = int(pw * poster_img.height / poster_img.width)
         ptop = (h - ph) // 2
         sharp = poster_img.resize((pw, ph), Image.LANCZOS)
+        if blur:
+            # 20 * S, not 20: this composites at S× oversample before the final
+            # LANCZOS downsample, which would otherwise undo most of the blur.
+            sharp = sharp.filter(ImageFilter.GaussianBlur(20 * S))
         mask = Image.new("L", (pw, ph), 0)
         ImageDraw.Draw(mask).rounded_rectangle((0, 0, pw, ph), radius=12 * S, fill=255)
         img.paste(sharp, (pad, ptop), mask)
@@ -121,7 +137,7 @@ def _render(poster: bytes | None, title: str, subtitle: str, meta: str, eyebrow:
 
     text_w = w - text_x - pad
 
-    draw.text((text_x, pad + 4 * S), eyebrow, font=_font(20 * S, bold=True), fill=ACCENT)
+    draw.text((text_x, pad + 4 * S), eyebrow, font=_font(20 * S, bold=True), fill=accent)
 
     title_font = _font(52 * S, bold=True)
     y = pad + 42 * S
@@ -137,7 +153,7 @@ def _render(poster: bytes | None, title: str, subtitle: str, meta: str, eyebrow:
     if meta:
         draw.text((text_x, y), meta, font=sub_font, fill=MUTED)
 
-    draw.rectangle((0, 0, 8 * S, h), fill=ACCENT)  # accent bar
+    draw.rectangle((0, 0, 8 * S, h), fill=accent)  # accent bar
 
     img = img.resize((W, H), Image.LANCZOS)
     buf = io.BytesIO()
@@ -146,20 +162,36 @@ def _render(poster: bytes | None, title: str, subtitle: str, meta: str, eyebrow:
 
 
 async def render_winner_banner(
-    *, poster_url, title, subtitle="", meta="", eyebrow="MOVIE NIGHT WINNER"
+    *,
+    poster_url,
+    title,
+    subtitle="",
+    meta="",
+    eyebrow="MOVIE NIGHT WINNER",
+    blur=False,
+    show_cover=True,
+    accent=ACCENT,
 ) -> bytes | None:
-    """Fetch the poster and render the banner PNG (bytes), or None on error."""
+    """Fetch the poster and render the banner PNG (bytes), or None on error.
+
+    blur draws the cover behind a Gaussian blur (for an adult cover with no SFW
+    alternative); show_cover=False drops the cover art entirely and lets the text
+    reclaim its column.
+    """
     poster = None
-    if poster_url:
+    if poster_url and show_cover:
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(poster_url)
                 resp.raise_for_status()
                 poster = resp.content
         except Exception as e:
-            logger.warning("Movie banner: poster fetch failed: %s", e)
+            logger.warning("Winner banner: cover fetch failed: %s", e)
     try:
-        return await asyncio.to_thread(_render, poster, title, subtitle, meta, eyebrow)
+        return await asyncio.to_thread(
+            _render, poster, title, subtitle, meta, eyebrow,
+            blur=blur, show_cover=show_cover, accent=accent,
+        )
     except Exception as e:
-        logger.warning("Movie banner render failed: %s", e)
+        logger.warning("Winner banner render failed: %s", e)
         return None

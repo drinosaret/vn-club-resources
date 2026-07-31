@@ -7,7 +7,7 @@ import type { EventItem } from '@/lib/events';
 import { eventMeta, formatTime } from './event-meta';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
-import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
+import { getCoverSrc } from '@/lib/vndb-image-cache';
 import DayOverview from './DayOverview';
 
 // /vn/123/ -> "v123", for per-VN NSFW reveal persistence.
@@ -456,7 +456,7 @@ export default function EventsCalendar({
                 {cover ? (
                   <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-800">
                     <NSFWImage
-                      src={getProxiedImageUrl(cover, { width: 128 }) || cover}
+                      src={getCoverSrc(cover, { width: 128 }) || cover}
                       alt=""
                       imageSexual={e.image_sexual}
                       vnId={vnIdFromUrl(e.url)}
@@ -515,7 +515,7 @@ export default function EventsCalendar({
               <div className="relative mb-2 h-32 w-full overflow-hidden rounded bg-gray-100 dark:bg-gray-800">
                 <NSFWImage
                   src={
-                    getProxiedImageUrl(selected.cover_url || selected.image_url, { width: 256 }) ||
+                    getCoverSrc(selected.cover_url || selected.image_url, { width: 256 }) ||
                     selected.cover_url ||
                     selected.image_url ||
                     ''

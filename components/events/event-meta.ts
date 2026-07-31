@@ -1,6 +1,6 @@
 // Shared presentation metadata for calendar event types.
 import type { LucideIcon } from 'lucide-react';
-import { Sparkles, Leaf, Film, CalendarDays, Vote, Sprout, PartyPopper, Cake } from 'lucide-react';
+import { Sparkles, Leaf, Film, BookOpen, CalendarDays, Vote, Sprout, PartyPopper, Cake } from 'lucide-react';
 
 export interface EventMeta {
   label: string;
@@ -45,6 +45,15 @@ export const EVENT_META: Record<string, EventMeta> = {
     dot: 'bg-rose-500',
     chip: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
     accent: 'border-rose-400',
+  },
+  // Fuchsia rather than a blue/green: sky, teal, indigo and emerald are all taken,
+  // and the dots are 8px, so a near neighbour would be unreadable.
+  roudoku: {
+    label: 'Weekly Roudoku',
+    Icon: BookOpen,
+    dot: 'bg-fuchsia-500',
+    chip: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-500/20 dark:text-fuchsia-200',
+    accent: 'border-fuchsia-400',
   },
   custom: {
     label: 'Event',

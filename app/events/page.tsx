@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = generatePageMetadata({
   title: 'Events & Calendar - VN Club',
   description:
-    'Community calendar for the VN Club: VN of the Month, VN of the Season, weekly Movie Night, and special events for learning Japanese with visual novels.',
+    'Community calendar for the VN Club: VN of the Month, VN of the Season, weekly Movie Night and Roudoku, and special events for learning Japanese with visual novels.',
   path: '/events/',
 });
 
@@ -37,7 +37,7 @@ function buildEventsJsonLd(events: EventItem[]) {
     '@type': 'CollectionPage',
     name: 'VN Club Events & Calendar',
     description:
-      'Upcoming VN Club events: VN of the Month, VN of the Season, weekly Movie Night, and special events.',
+      'Upcoming VN Club events: VN of the Month, VN of the Season, weekly Movie Night and Roudoku, and special events.',
     url: `${SITE_URL}/events/`,
     isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
     mainEntity: {
@@ -102,8 +102,8 @@ export default async function EventsPage({
             Events &amp; Calendar
           </h1>
           <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-400">
-            VN of the Month, VN of the Season, weekly Movie Night, and special events for the VN
-            Club community. All times shown in your local timezone.
+            VN of the Month, VN of the Season, weekly Movie Night and Roudoku, and special events
+            for the VN Club community. All times shown in your local timezone.
           </p>
         </header>
 

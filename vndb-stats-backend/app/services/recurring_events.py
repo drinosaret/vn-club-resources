@@ -18,6 +18,7 @@ _TYPE_MOVIE_NIGHT = 3
 _TYPE_SEASON_START = 4
 _TYPE_HOLIDAY = 5
 _TYPE_ANNIVERSARY = 6
+_TYPE_ROUDOKU = 7
 
 # Days before the 1st that VN-of-the-month voting opens.
 VN_MONTH_VOTING_LEAD_DAYS = 7
@@ -28,6 +29,16 @@ MOVIE_NIGHT_WEEKDAY = 5
 # How many upcoming movie nights to surface in the upcoming feed (the grid still
 # shows every Saturday; this only limits the repetitive sidebar list).
 MOVIE_NIGHT_UPCOMING_COUNT = 2
+# Weekly roudoku (the club reads a VN aloud together) weekday. Sunday = 6.
+ROUDOKU_WEEKDAY = 6
+# How far off its usual weekday a real session can sit and still count as that
+# week's session. 3 is the largest value that stays unambiguous on a 7-day cycle:
+# every date is within 3 days of exactly one occurrence, so a moved session always
+# claims one placeholder and never two.
+SLOT_MATCH_DAYS = 3
+# Only one, unlike movie night's two: the sidebar holds 8 entries and weekly
+# placeholders from two features would take half of them.
+ROUDOKU_UPCOMING_COUNT = 1
 
 # Anime-season boundaries: month a season starts -> season name.
 _SEASON_START_MONTHS = {1: "Winter", 4: "Spring", 7: "Summer", 10: "Fall"}
@@ -100,9 +111,9 @@ def _vn_season_voting_window(season_year: int, season_start_month: int) -> dict:
     }
 
 
-def _saturdays_in_month(year: int, month: int) -> list[datetime]:
+def _weekdays_in_month(year: int, month: int, weekday: int) -> list[datetime]:
     first = _first_of_month(year, month)
-    d = first + timedelta(days=(MOVIE_NIGHT_WEEKDAY - first.weekday()) % 7)
+    d = first + timedelta(days=(weekday - first.weekday()) % 7)
     out: list[datetime] = []
     while d.year == year and d.month == month:
         out.append(d)
@@ -110,18 +121,39 @@ def _saturdays_in_month(year: int, month: int) -> list[datetime]:
     return out
 
 
-def _upcoming_saturdays(now: datetime, count: int) -> list[datetime]:
+def _upcoming_weekdays(now: datetime, weekday: int, count: int) -> list[datetime]:
     today = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-    d = today + timedelta(days=(MOVIE_NIGHT_WEEKDAY - today.weekday()) % 7)
+    d = today + timedelta(days=(weekday - today.weekday()) % 7)
     return [d + timedelta(days=7 * i) for i in range(count)]
+
+
+def _slot_taken(d: datetime, session_dates: set[str]) -> bool:
+    """Whether a real session already fills the weekly slot anchored on `d`.
+
+    Matched by proximity, not by an exact date, because a session gets moved off
+    its usual weekday for a week (a Saturday movie night held on the Sunday) and
+    would otherwise leave its placeholder behind as a ghost event.
+    """
+    return any(
+        (d + timedelta(days=offset)).date().isoformat() in session_dates
+        for offset in range(-SLOT_MATCH_DAYS, SLOT_MATCH_DAYS + 1)
+    )
+
+
+def _saturdays_in_month(year: int, month: int) -> list[datetime]:
+    return _weekdays_in_month(year, month, MOVIE_NIGHT_WEEKDAY)
+
+
+def _upcoming_saturdays(now: datetime, count: int) -> list[datetime]:
+    return _upcoming_weekdays(now, MOVIE_NIGHT_WEEKDAY, count)
 
 
 def _movie_night_event(d: datetime) -> dict:
     """Weekly movie night on the given Saturday (an all-day slot on the calendar).
 
     The actual film + showtime, once chosen by voting, is published separately as
-    its own movie_night event; the API drops this placeholder for any date that
-    already has one (see skip_movie_dates).
+    its own movie_night event; the API drops this placeholder once a real one
+    fills the slot, even on a nearby weekday (see skip_movie_dates, _slot_taken).
     """
     return {
         "id": -(_TYPE_MOVIE_NIGHT * 100_000_000 + d.year * 10_000 + d.month * 100 + d.day),
@@ -136,6 +168,30 @@ def _movie_night_event(d: datetime) -> dict:
         "location": None,
         "is_active": True,
         "external_key": f"auto:movie_night:{d.date().isoformat()}",
+        "created_by": "auto",
+    }
+
+
+def _roudoku_event(d: datetime) -> dict:
+    """Weekly roudoku on the given Sunday (an all-day slot on the calendar).
+
+    The actual VN + session time, once chosen by voting, is published separately
+    as its own roudoku event; the API drops this placeholder once a real one fills
+    the slot, even on a nearby weekday (see skip_roudoku_dates, _slot_taken).
+    """
+    return {
+        "id": -(_TYPE_ROUDOKU * 100_000_000 + d.year * 10_000 + d.month * 100 + d.day),
+        "event_type": "roudoku",
+        "title": "Weekly Roudoku",
+        "description": "We read a very short visual novel aloud together. Nominate and vote in Discord.",
+        "start_at": d.isoformat(),
+        "end_at": None,
+        "all_day": True,
+        "image_url": None,
+        "url": None,
+        "location": None,
+        "is_active": True,
+        "external_key": f"auto:roudoku:{d.date().isoformat()}",
         "created_by": "auto",
     }
 
@@ -277,23 +333,34 @@ def _holiday_event(year: int, month: int, day: int, name_en: str, name_jp: str, 
     }
 
 
-def for_month(year: int, month: int, skip_movie_dates: set[str] | None = None) -> list[dict]:
+def for_month(
+    year: int,
+    month: int,
+    skip_movie_dates: set[str] | None = None,
+    skip_roudoku_dates: set[str] | None = None,
+) -> list[dict]:
     """Synthetic events whose window falls within the given calendar month.
 
     Voting that happens during month M is for month M+1 (its window is M's last
     week). When M+1 also begins a new anime season, the season's voting window
     falls in the same week, so both can appear together. Movie nights fall on
-    every Saturday. skip_movie_dates (ISO YYYY-MM-DD) suppresses the generic
-    movie-night placeholder on days that already have a real one.
+    every Saturday and roudoku on every Sunday. The skip_* sets (ISO YYYY-MM-DD)
+    hold the dates of real events of that type and suppress the placeholder for
+    the slot each one fills (see _slot_taken); they are per-type, so a real movie
+    night never hides a roudoku slot.
     """
     skip = skip_movie_dates or set()
+    skip_roudoku = skip_roudoku_dates or set()
     ny, nm = _add_month(year, month)
     out = [_vn_month_voting_window(ny, nm)]
     if nm in _SEASON_START_MONTHS:
         out.append(_vn_season_voting_window(ny, nm))
     for sat in _saturdays_in_month(year, month):
-        if sat.date().isoformat() not in skip:
+        if not _slot_taken(sat, skip):
             out.append(_movie_night_event(sat))
+    for sun in _weekdays_in_month(year, month, ROUDOKU_WEEKDAY):
+        if not _slot_taken(sun, skip_roudoku):
+            out.append(_roudoku_event(sun))
     # Season start (grid marker) + holidays (grey). These are display-only and
     # intentionally absent from upcoming() so they never crowd the Upcoming feed.
     if month in _SEASON_START_MONTHS:
@@ -307,11 +374,17 @@ def for_month(year: int, month: int, skip_movie_dates: set[str] | None = None) -
     return out
 
 
-def upcoming(now: datetime, months_ahead: int = 2, skip_movie_dates: set[str] | None = None) -> list[dict]:
+def upcoming(
+    now: datetime,
+    months_ahead: int = 2,
+    skip_movie_dates: set[str] | None = None,
+    skip_roudoku_dates: set[str] | None = None,
+) -> list[dict]:
     """Synthetic events ending at or after `now`, soonest first. Kept short
     (near-term voting windows + the next couple movie nights) so the Upcoming
     sidebar doesn't fill with repetitive recurring entries."""
     skip = skip_movie_dates or set()
+    skip_roudoku = skip_roudoku_dates or set()
     out: list[dict] = []
     y, m = now.year, now.month
     for _ in range(months_ahead + 1):
@@ -331,9 +404,11 @@ def upcoming(now: datetime, months_ahead: int = 2, skip_movie_dates: set[str] | 
 
     today_iso = now.date().isoformat()
     for sat in _upcoming_saturdays(now, MOVIE_NIGHT_UPCOMING_COUNT):
-        iso = sat.date().isoformat()
-        if iso >= today_iso and iso not in skip:
+        if sat.date().isoformat() >= today_iso and not _slot_taken(sat, skip):
             out.append(_movie_night_event(sat))
+    for sun in _upcoming_weekdays(now, ROUDOKU_WEEKDAY, ROUDOKU_UPCOMING_COUNT):
+        if sun.date().isoformat() >= today_iso and not _slot_taken(sun, skip_roudoku):
+            out.append(_roudoku_event(sun))
 
     out.sort(key=lambda e: e["start_at"])
     return out
