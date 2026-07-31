@@ -70,9 +70,7 @@ DEFAULT_SHOW_TIME = "12:00"  # UTC
 # Longer than Movie Night's 2h: a reading session runs longer than a screening.
 AUTO_RESET_AFTER = timedelta(hours=3)
 NOTIFY_GRACE = timedelta(minutes=30)  # past this, a caught-up session is stale: skip the ping
-# Members need time to actually read the pick, so the vote closes well before the
-# session rather than the day before.
-VOTE_LEAD = timedelta(days=3)
+VOTE_LEAD = timedelta(days=1)  # the session is streamed, so the pick only needs announcing
 
 ACCENT_RGB = (217, 70, 239)  # the banner's accent bar; COLOR in views/roudoku_vote.py as RGB
 
