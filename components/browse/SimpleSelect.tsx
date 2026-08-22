@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { Fragment, useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface SimpleSelectOption {
   value: string;
   label: string;
+  /** Options sharing a group are listed under one heading, in the order given. */
+  group?: string;
 }
 
 interface SimpleSelectProps {
@@ -42,10 +44,11 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
     }
   }, [isOpen, options, value]);
 
-  // Scroll focused item into view
+  // Scroll focused item into view. Located by index attribute rather than by position among
+  // the children, which group headings would otherwise shift.
   useEffect(() => {
     if (isOpen && focusedIndex >= 0 && listRef.current) {
-      const item = listRef.current.children[focusedIndex] as HTMLElement | undefined;
+      const item = listRef.current.querySelector<HTMLElement>(`[data-option-index="${focusedIndex}"]`);
       item?.scrollIntoView({ block: 'nearest' });
     }
   }, [isOpen, focusedIndex]);
@@ -122,27 +125,37 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
           className={`absolute z-50 mt-1 w-full sm:min-w-[180px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto ${align === 'right' ? 'right-0' : ''}`}
         >
           {options.map((option, index) => (
-            <button
-              key={option.value}
-              type="button"
-              role="option"
-              aria-selected={option.value === value}
-              onClick={() => { onChange(option.value); setIsOpen(false); }}
-              onMouseEnter={() => setFocusedIndex(index)}
-              className={`
-                w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors
-                ${option.value === value
-                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                  : index === focusedIndex
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
-              `}
-            >
-              <span className="w-4 shrink-0">
-                {option.value === value && <Check className="w-4 h-4 text-primary-500" />}
-              </span>
-              {option.label}
-            </button>
+            <Fragment key={option.value}>
+              {option.group && option.group !== options[index - 1]?.group && (
+                <div
+                  role="presentation"
+                  className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                >
+                  {option.group}
+                </div>
+              )}
+              <button
+                type="button"
+                role="option"
+                data-option-index={index}
+                aria-selected={option.value === value}
+                onClick={() => { onChange(option.value); setIsOpen(false); }}
+                onMouseEnter={() => setFocusedIndex(index)}
+                className={`
+                  w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors
+                  ${option.value === value
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                    : index === focusedIndex
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
+                `}
+              >
+                <span className="w-4 shrink-0">
+                  {option.value === value && <Check className="w-4 h-4 text-primary-500" />}
+                </span>
+                {option.label}
+              </button>
+            </Fragment>
           ))}
         </div>
       )}

@@ -48,6 +48,9 @@ services:
       - ./scripts:/app/scripts
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+      # Mounted for the same reason as the source: without it the image's copy is what runs,
+      # so an added test passes by never having been collected.
+      - ./tests:/app/tests
       - ./docker-entrypoint.sh:/app/docker-entrypoint.sh
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app", "--reload-delay", "1.0"]
@@ -79,7 +82,11 @@ services:
   # Redis for caching
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    # Everything stored here is a cache entry carrying a TTL, and some of those entries
+    # are keyed by request parameters, so the keyspace grows with traffic rather than
+    # with the data. A ceiling with an eviction policy keeps that growth away from the
+    # host; with no ceiling the default policy refuses writes once memory runs out.
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy volatile-lru
     volumes:
       - redisdata:/data
     # Port NOT exposed to host — access via docker network only
@@ -98,6 +105,13 @@ services:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-vndb_dev_password}@db:5432/vndb_stats
       - REDIS_URL=redis://redis:6379
       - PYTHONUNBUFFERED=1
+    # The image carries a healthcheck that curls the API's /health, which is right for the
+    # service that serves it and unanswerable here: this container runs a different command
+    # and no HTTP server. Left inherited it reports unhealthy for ever, which costs nothing
+    # directly, since nothing waits on it, but buries a genuinely unhealthy API in a status
+    # column that is already red.
+    healthcheck:
+      disable: true
     depends_on:
       db:
         condition: service_healthy
@@ -168,6 +182,13 @@ services:
       # DEV_MODE is inherited from .env (DEV_MODE=true in dev, false in production)
       # In dev: automatic imports disabled, entrypoint password check skipped
       # In production: automatic daily updates at 4 AM UTC
+    # The image carries a healthcheck that curls the API's /health, which is right for the
+    # service that serves it and unanswerable here: this container runs a different command
+    # and no HTTP server. Left inherited it reports unhealthy for ever, which costs nothing
+    # directly, since nothing waits on it, but buries a genuinely unhealthy API in a status
+    # column that is already red.
+    healthcheck:
+      disable: true
     depends_on:
       db:
         condition: service_healthy

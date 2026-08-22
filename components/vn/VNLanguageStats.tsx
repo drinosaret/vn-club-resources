@@ -14,6 +14,7 @@ import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
 import { ChartHelpTooltip } from '@/components/stats/ChartHelpTooltip';
+import { difficultyColor, difficultyLabel } from '@/lib/difficulty';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -59,21 +60,11 @@ interface VNLanguageStatsProps {
 
 // ──────────── Helpers ────────────
 
-function getDifficultyColor(difficulty: number): string {
-  if (difficulty <= 1.5) return '#22c55e';
-  if (difficulty <= 2.5) return '#3b82f6';
-  if (difficulty <= 3.5) return '#f59e0b';
-  if (difficulty <= 4.5) return '#f97316';
-  return '#ef4444';
-}
-
-function getDifficultyLabel(difficulty: number): string {
-  if (difficulty <= 1.5) return 'Beginner';
-  if (difficulty <= 2.5) return 'Easy';
-  if (difficulty <= 3.5) return 'Intermediate';
-  if (difficulty <= 4.5) return 'Hard';
-  return 'Expert';
-}
+// Difficulty banding lives in lib/difficulty.ts: the same title must not be labelled one
+// way here and another way on the pages that also show it.
+const getDifficultyColor = difficultyColor;
+const getDifficultyLabel = (difficulty: number): string =>
+  difficultyLabel(difficulty) ?? 'Unrated';
 
 function getLengthColor(chars: number): string {
   if (chars <= 100_000) return '#22c55e';

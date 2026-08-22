@@ -368,7 +368,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
   const staffAltName = staffDisplayName === staff.name ? staff.original : staff.name;
 
   return (
-    <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+    <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-clip">
       {isRefreshing && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -383,6 +383,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
         <div className="flex items-start gap-4">
           <button
             onClick={() => window.history.back()}
+            aria-label="Go back"
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mt-1"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -488,7 +489,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
       {activeTab === 'summary' && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatsSummaryCard
               icon={<Star className="w-5 h-5" />}
               label="Average Rating"
@@ -517,7 +518,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ScoreDistributionChart
+            <ScoreDistributionChart headingLevel="h2"
               distribution={stats.score_distribution}
               jpDistribution={stats.score_distribution_jp}
               average={stats.average_rating ?? 0}
@@ -525,14 +526,14 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
               entityType="seiyuu"
               entityName={staffDisplayName}
             />
-            <ReleaseYearChart
+            <ReleaseYearChart headingLevel="h2"
               distribution={stats.release_year_distribution}
               distributionWithRatings={stats.release_year_with_ratings}
               entityId={staffId}
               entityType="seiyuu"
               entityName={staffDisplayName}
             />
-            <LengthChart
+            <LengthChart headingLevel="h2"
               distribution={stats.length_distribution}
               entityId={staffId}
               entityType="seiyuu"
@@ -541,7 +542,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
             {Object.keys(stats.age_rating_distribution).some(
               k => stats.age_rating_distribution[k].count > 0
             ) && (
-              <AgeRatingChart
+              <AgeRatingChart headingLevel="h2"
                 distribution={stats.age_rating_distribution}
                 entityId={staffId}
                 entityType="seiyuu"

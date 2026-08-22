@@ -14,6 +14,29 @@ export interface NavSection {
   items: NavItem[];
 }
 
+/**
+ * The "More" menu, grouped by intent.
+ *
+ * A flat list in build order tells a visitor nothing about which entry they want. The
+ * groups are the three reasons anyone opens this menu: to find something to read, to look
+ * at what the community is doing, or to play with the data.
+ */
+const MORE_MENU = [
+  { name: 'Recommendations', href: '/recommendations', group: 'Find a VN' },
+  { name: 'Random', href: '/random', group: 'Find a VN' },
+  { name: 'Roulette', href: '/roulette', group: 'Find a VN' },
+
+  { name: 'Rankings', href: '/stats/rankings', group: 'Community' },
+  { name: 'Trends', href: '/stats/trends', group: 'Community' },
+  { name: 'Compare', href: '/stats/compare', group: 'Community' },
+  { name: 'Events', href: '/events', group: 'Community' },
+
+  { name: 'Tier List', href: '/tierlist', group: 'Make & play' },
+  { name: '3x3 Maker', href: '/3x3-maker', group: 'Make & play' },
+  { name: 'Higher or Lower', href: '/higher-or-lower', group: 'Make & play' },
+  { name: 'Kana Quiz', href: '/quiz', group: 'Make & play' },
+];
+
 // Helper to convert navigation to header format
 export function getHeaderNavigation() {
   const startHere = navigation.find(s => s.title === 'Start Here');
@@ -42,39 +65,18 @@ export function getHeaderNavigation() {
       { name: 'News', href: '/news' },
       {
         name: 'More',
-        items: [
-          { name: 'Events', href: '/events' },
-          { name: 'Kana Quiz', href: '/quiz' },
-          { name: 'Recommendations', href: '/recommendations' },
-          { name: 'Compare', href: '/stats/compare' },
-          { name: 'Random', href: '/random' },
-          { name: 'Tier List', href: '/tierlist' },
-          { name: '3x3 Maker', href: '/3x3-maker' },
-          { name: 'Roulette', href: '/roulette' },
-          { name: 'Higher or Lower', href: '/higher-or-lower' },
-        ],
+        items: MORE_MENU,
       },
     ],
     desktop: [
       { name: 'Home', href: '/' },
       { name: 'Guides', href: '/guide' },
-      { name: 'Resources', href: '/find' },
       { name: 'Browse', href: '/browse' },
       { name: 'Stats', href: '/stats' },
       { name: 'News', href: '/news' },
       {
         name: 'More',
-        items: [
-          { name: 'Events', href: '/events' },
-          { name: 'Kana Quiz', href: '/quiz' },
-          { name: 'Recommendations', href: '/recommendations' },
-          { name: 'Compare', href: '/stats/compare' },
-          { name: 'Random', href: '/random' },
-          { name: 'Tier List', href: '/tierlist' },
-          { name: '3x3 Maker', href: '/3x3-maker' },
-          { name: 'Roulette', href: '/roulette' },
-          { name: 'Higher or Lower', href: '/higher-or-lower' },
-        ],
+        items: MORE_MENU,
       },
     ],
   };
@@ -125,6 +127,8 @@ export const navigation: NavSection[] = [
       { title: 'Beginner VNs', slug: 'beginner-vns', description: 'Recommended beginner visual novels' },
       { title: 'Browse', slug: 'browse', description: 'Search and browse visual novels' },
       { title: 'Stats', slug: 'stats', description: 'VNDB stats and analytics' },
+      { title: 'Rankings', slug: 'stats/rankings', description: 'Community leaderboards across VNDB' },
+      { title: 'Trends', slug: 'stats/trends', description: 'How reading and publishing shifted over time' },
       { title: 'Recommendations', slug: 'recommendations', description: 'Personalized VN recommendations' },
       { title: 'Tier List', slug: 'tierlist', description: 'Rank your visual novels' },
       { title: '3x3 Maker', slug: '3x3-maker', description: 'Create a VN cover collage' },

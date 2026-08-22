@@ -4,6 +4,7 @@ import { X, Tag, Minus, User, Pen, Mic, Building2, Newspaper } from 'lucide-reac
 import { BrowseFilters } from '@/lib/vndb-stats-api';
 import { SelectedTag, FilterEntityType } from './TagFilter';
 import { LANGUAGE_LABELS, PLATFORM_LABELS, LENGTH_LABELS, AGE_LABELS, STATUS_LABELS } from './filter-constants';
+import { DIFFICULTY_BANDS } from '@/lib/difficulty';
 
 interface ActiveFilterChipsProps {
   filters: BrowseFilters;
@@ -249,6 +250,24 @@ export function ActiveFilterChips({
         key="votecount"
         label={voteLabel}
         onRemove={() => onRemoveFilter('min_votecount')}
+      />
+    );
+  }
+
+  // Japanese reading difficulty. Named by band rather than by number, and tested against
+  // undefined rather than truthiness because band 0 is the easiest band, not "unset".
+  if (filters.min_difficulty !== undefined || filters.max_difficulty !== undefined) {
+    const name = (band?: number) =>
+      band === undefined ? null : DIFFICULTY_BANDS[band]?.label ?? String(band);
+    const low = name(filters.min_difficulty);
+    const high = name(filters.max_difficulty);
+    const label =
+      low && high ? (low === high ? low : `${low} - ${high}`) : (low ? `${low}+` : `Up to ${high}`);
+    chips.push(
+      <Chip
+        key="difficulty"
+        label={`Difficulty: ${label}`}
+        onRemove={() => onRemoveFilter('min_difficulty')}
       />
     );
   }

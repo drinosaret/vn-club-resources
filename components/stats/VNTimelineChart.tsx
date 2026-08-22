@@ -183,9 +183,14 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
     while (current <= maxDate) {
       const position = ((current.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24)) / totalDays * 100;
       const isJanuary = current.getMonth() === 0;
+      const shortYear = current.getFullYear().toString().slice(-2);
       markers.push({
         date: new Date(current),
-        label: isJanuary ? current.getFullYear().toString() : current.toLocaleDateString('en-US', { month: 'short' }),
+        // Only a narrow slice of a multi-year range is on screen at once, so every label carries
+        // its year: January as the full year, the rest abbreviated.
+        label: isJanuary
+          ? current.getFullYear().toString()
+          : `${current.toLocaleDateString('en-US', { month: 'short' })} '${shortYear}`,
         position,
       });
       current.setMonth(current.getMonth() + 1);
@@ -256,6 +261,28 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
 
   // Recalculate visible items when zoom or data changes
   useEffect(() => { updateViewport(); }, [zoom, filteredTrackData, updateViewport]);
+
+  // A reading history spans years while the viewport holds a few months, and the oldest end of
+  // the range is usually empty padding, so the opening position is anchored to the newest entry.
+  const didInitialScroll = useRef(false);
+  useEffect(() => {
+    if (didInitialScroll.current) return;
+    const el = scrollContainerRef.current;
+    // Width is zero while the surrounding panel is hidden; a later pass positions the chart.
+    if (!el || el.clientWidth === 0 || ganttData.length === 0) return;
+
+    const latest = ganttData.reduce((acc, item) => {
+      const date = item.endDate || item.startDate;
+      return date && date.getTime() > acc ? date.getTime() : acc;
+    }, minDate.getTime());
+    const dayOffset = Math.floor((latest - minDate.getTime()) / MS_PER_DAY);
+    const latestPixel = (dayOffset + 1) * CELL_SIZE * zoom;
+
+    // Leaves a sliver of empty track after the newest bar so it does not sit flush to the edge.
+    el.scrollLeft = Math.max(0, latestPixel - el.clientWidth * 0.85);
+    didInitialScroll.current = true;
+    updateViewport();
+  }, [ganttData, minDate, zoom, viewport.viewWidth, updateViewport]);
 
   // Virtualization: only render elements visible in the scroll viewport + buffer
   const visibleBars = useMemo(() => {

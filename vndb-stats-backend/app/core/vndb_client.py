@@ -173,10 +173,11 @@ class VNDBClient:
         """Look up a user by username or UID."""
         params = []
         if username:
-            # URL-encode so a username can't inject extra query params into the call.
+            # The name is caller-supplied and goes into a query string, so it is encoded
+            # rather than concatenated.
             params.append(f"q={quote(username, safe='')}")
         elif uid:
-            # Use q parameter with full UID (e.g., q=u215373)
+            # The uid form of the q parameter keeps its `u` prefix, as in q=u12345.
             params.append(f"q={quote(uid, safe='')}")
 
         query = "&".join(params)

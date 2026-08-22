@@ -7,6 +7,7 @@ import { DiscordCTA } from '@/components/shared/DiscordCTA';
 import type { FeaturedVNData } from '@/lib/featured-vns';
 import { FEATURED_VN_IDS } from '@/lib/featured-vns';
 import { VNCard } from '@/components/vn/VNCard';
+import { difficultyBand } from '@/lib/difficulty';
 
 interface EasyVN {
   vnId: string;
@@ -174,14 +175,13 @@ export default function BeginnerVNsContent({
 }
 
 function DifficultyBadge({ difficulty }: { difficulty: number }) {
-  const color =
-    difficulty <= 1.2
-      ? 'bg-emerald-600/90'
-      : difficulty <= 1.8
-        ? 'bg-sky-600/90'
-        : 'bg-amber-600/90';
+  // Banding comes from lib/difficulty.ts so this badge and the title's own page agree.
+  const band = difficultyBand(difficulty);
   return (
-    <div className={`absolute top-2 left-2 px-1.5 py-0.5 ${color} text-white text-[10px] font-medium rounded-sm`}>
+    <div
+      className={`absolute top-2 left-2 px-1.5 py-0.5 ${band?.badgeClass ?? 'bg-gray-600/90'} text-white text-[10px] font-medium rounded-sm`}
+      title={band ? `${band.label} (${difficulty.toFixed(1)})` : undefined}
+    >
       {difficulty.toFixed(1)}
     </div>
   );

@@ -4,6 +4,7 @@ import { useState, useMemo, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { Heart, ChevronDown, ChevronUp, ArrowUpDown, Info } from 'lucide-react';
 import type { TraitBreakdown } from '@/lib/vndb-stats-api';
+import { RankNumber } from '@/components/stats/RankNumber';
 
 interface TraitsSectionProps {
   traits: TraitBreakdown[];
@@ -193,8 +194,8 @@ export function TraitsSection({ traits }: TraitsSectionProps) {
       </div>
 
       <div className="space-y-3" style={showAll ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' } : undefined}>
-        {mounted && displayedTraits.map((trait) => (
-          <TraitBar key={trait.id} trait={trait} maxValue={maxValue} sortMode={sortMode} />
+        {mounted && displayedTraits.map((trait, index) => (
+          <TraitBar key={trait.id} rank={index + 1} trait={trait} maxValue={maxValue} sortMode={sortMode} />
         ))}
       </div>
 
@@ -265,7 +266,7 @@ export function TraitsSection({ traits }: TraitsSectionProps) {
   );
 }
 
-function TraitBar({ trait, maxValue, sortMode }: { trait: TraitWithNormalizedScores; maxValue: number; sortMode: SortMode }) {
+function TraitBar({ rank, trait, maxValue, sortMode }: { rank: number; trait: TraitWithNormalizedScores; maxValue: number; sortMode: SortMode }) {
   // Calculate bar width based on sort mode
   let barValue: number;
   switch (sortMode) {
@@ -290,6 +291,7 @@ function TraitBar({ trait, maxValue, sortMode }: { trait: TraitWithNormalizedSco
     <div className="group">
       <div className="flex items-center justify-between mb-1 gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          <RankNumber rank={rank} />
           <Link
             href={`/stats/trait/i${trait.id}`}
             className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"

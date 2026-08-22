@@ -31,6 +31,18 @@ function formatElapsedTime(ms: number): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
+/**
+ * Why the screen reserves more than a viewport, and why it does not centre in it.
+ *
+ * A loading state stands in for a page, so it has to occupy roughly what the page will. Held
+ * to its own content, it leaves the footer sitting at the fold, and the footer then travels
+ * the height of the loaded page the moment the data lands. The extra band keeps the footer
+ * below the fold until there is a page to put above it.
+ *
+ * The band is taller than the viewport, so its middle is past the fold: centring inside it
+ * would put the thing the reader is waiting on somewhere they cannot see. The content sits
+ * near the top of the band instead, and the rest of the band is empty on purpose.
+ */
 export function StatsLoadingScreen({
   title,
   username,
@@ -43,7 +55,7 @@ export function StatsLoadingScreen({
   const displayTitle = title || (username ? `Loading Stats for ${username}` : 'Loading Stats');
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+    <div className="flex flex-col items-center justify-start min-h-[calc(100vh+8rem)] p-8 pt-[12vh]">
       {/* Title */}
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
         {displayTitle}
@@ -152,20 +164,23 @@ export function SimpleLoadingScreen({
   showElapsedTime?: boolean;
 }) {
   const [elapsedTime, setElapsedTime] = useState(0);
-  const startTimeRef = useRef(Date.now());
+  const startTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!showElapsedTime) return;
 
+    // Set here rather than as the ref's initial value: the clock belongs to the mounted
+    // component, and a render can happen without one following it.
+    startTimeRef.current = Date.now();
     const interval = setInterval(() => {
-      setElapsedTime(Date.now() - startTimeRef.current);
+      setElapsedTime(Date.now() - (startTimeRef.current ?? Date.now()));
     }, 100);
 
     return () => clearInterval(interval);
   }, [showElapsedTime]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+    <div className="flex flex-col items-center justify-start min-h-[calc(100vh+8rem)] p-8 pt-[12vh]">
       <Loader2 className="w-10 h-10 text-primary-500 animate-spin mb-4" />
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
         {title}

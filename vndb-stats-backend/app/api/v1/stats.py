@@ -137,6 +137,283 @@ async def get_global_stats(
     return result
 
 
+@router.get("/global/timeline")
+async def get_global_timeline(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """How the database's output changed over time.
+
+    Releases per year split by original language and by platform, plus median length and
+    average rating by release year. Split out from /global rather than added to it so the
+    dashboard can render its summary immediately and fill the trends in behind it.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.services.global_dashboard import get_release_timeline
+
+    result = await get_release_timeline(db)
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/database")
+async def get_global_database(
+    request: Request,
+    response: Response,
+    language: str = Query(
+        "ja",
+        pattern="^(all|ja)$",
+        description="'ja' restricts the figures to Japanese-original titles",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """When the database itself was built, and where the editing effort went.
+
+    Entry dates, not release dates: a title from 2003 catalogued in 2019 counts toward 2019
+    here. Empty until an import has populated the entry metadata columns.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.services.global_dashboard import get_database_growth
+
+    result = await get_database_growth(db, japanese_only=language == "ja")
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/activity")
+async def get_global_activity(request: Request, response: Response):
+    """When the community votes: by year, by month of the year, and by weekday.
+
+    Built by the nightly leaderboard job, which already reads the whole vote table, so this
+    is a cache read. Empty until that job has run once.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+    from app.leaderboards.compute import VOTE_ACTIVITY_CACHE_KEY
+
+    result = await get_cache().get(VOTE_ACTIVITY_CACHE_KEY) or {
+        "by_year": [],
+        "by_month": [],
+        "by_weekday": [],
+        "total": 0,
+    }
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/reading-trends")
+async def get_global_reading_trends(request: Request, response: Response):
+    """How far back the community reads, and how that has moved.
+
+    Keyed on when a vote was cast against when its title came out, which is a question about
+    the audience rather than about the medium: the release timeline says what was published
+    in a year, this says what was being read in one.
+
+    Built by the nightly leaderboard job, which already holds every vote with its date, so
+    this is a cache read. Empty until that job has run once.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+    from app.leaderboards.compute import READING_TRENDS_CACHE_KEY
+
+    result = await get_cache().get(READING_TRENDS_CACHE_KEY) or {"years": [], "eras": []}
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/trend-feed")
+async def get_global_trend_feed(
+    request: Request,
+    response: Response,
+    language: str = Query(
+        "ja",
+        pattern="^(all|ja)$",
+        description="'ja' restricts the figures to Japanese-original titles",
+    ),
+):
+    """The moving sections of the trends page, in one payload.
+
+    Reception shifting against a title's settled average, titles new enough to still be
+    finding an audience, what readers have been finishing, Japanese titles still ahead of
+    release, and the community's own week-by-week activity. Every one of them answers itself
+    differently tomorrow, which is the only thing they have in common.
+
+    Built by the nightly leaderboard job, so this is a cache read. Empty until it has run.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+    from app.leaderboards.compute import TREND_FEED_CACHE_KEY, trends_key
+
+    result = await get_cache().get(trends_key(TREND_FEED_CACHE_KEY, language)) or {
+        "reference": None,
+        "shifting": {},
+        "new_releases": [],
+        "finishing": [],
+        "anticipated": [],
+        "pulse": [],
+    }
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/hot-now")
+async def get_global_hot_now(
+    request: Request,
+    response: Response,
+    language: str = Query(
+        "ja",
+        pattern="^(all|ja)$",
+        description="'ja' restricts the figures to Japanese-original titles",
+    ),
+):
+    """What is being read now, and which way it is moving.
+
+    Each period carries both its own counts and the counts from the period before it, so the
+    page can show a direction rather than a standing. The movers list is the point: the plain
+    count barely changes week to week, while a title's window against its own previous window
+    is where a release or a burst of attention shows up.
+
+    Built by the nightly leaderboard job, so this is a cache read. Empty until it has run.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+    from app.leaderboards.compute import HOT_NOW_CACHE_KEY, trends_key
+
+    result = await get_cache().get(trends_key(HOT_NOW_CACHE_KEY, language)) or {
+        "reference": None,
+        "periods": [],
+    }
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/year-explorer")
+async def get_global_year_explorer(
+    request: Request,
+    response: Response,
+    language: str = Query(
+        "ja",
+        pattern="^(all|ja)$",
+        description="'ja' restricts the figures to Japanese-original titles",
+    ),
+):
+    """Year by year: what came out, and what people were reading.
+
+    Two lists per year rather than one, because they answer different questions. A title can
+    head the release side of 1996 and never appear on any reading side, and the years where
+    the two disagree are the interesting ones.
+
+    Built by the nightly leaderboard job, so this is a cache read. Empty until it has run.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+    from app.leaderboards.compute import YEAR_EXPLORER_CACHE_KEY, trends_key
+
+    result = await get_cache().get(trends_key(YEAR_EXPLORER_CACHE_KEY, language)) or {
+        "years": []
+    }
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/month-explorer")
+async def get_global_month_explorer(
+    request: Request,
+    response: Response,
+    month: str | None = None,
+    language: str = Query(
+        "ja",
+        pattern="^(all|ja)$",
+        description="'ja' restricts the figures to Japanese-original titles",
+    ),
+):
+    """One month of reading history: what was read most, and what jumped.
+
+    Served a month at a time rather than as one payload. The page shows a single month and
+    the whole history runs to half a megabyte, most of which nobody scrubbing through it
+    will look at.
+
+    Without a month, returns the most recent one available. The index of months is returned
+    either way so the page can build its scrubber from one request.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+    from app.leaderboards.compute import (
+        MONTH_EXPLORER_INDEX_KEY,
+        MONTH_EXPLORER_KEY_PREFIX,
+        trends_key,
+    )
+
+    cache = get_cache()
+    index = await cache.get(trends_key(MONTH_EXPLORER_INDEX_KEY, language)) or {"months": []}
+    months = index.get("months", [])
+
+    # Validated against the index rather than parsed: the value reaches a cache key, and the
+    # set of legitimate values is already known.
+    wanted = month if month in months else (months[-1] if months else None)
+    prefix = trends_key(MONTH_EXPLORER_KEY_PREFIX.rstrip(":"), language) + ":"
+    payload = await cache.get(f"{prefix}{wanted}") if wanted else None
+
+    result = {
+        "months": months,
+        "month": wanted,
+        "read": (payload or {}).get("read", []),
+        "jumped": (payload or {}).get("jumped", []),
+        "in_progress": (payload or {}).get("in_progress", False),
+    }
+
+    etag = generate_etag(result)
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
 @router.get("/tag/{tag_id}", response_model=schemas.TagStatsResponse)
 async def get_tag_stats(
     tag_id: str,

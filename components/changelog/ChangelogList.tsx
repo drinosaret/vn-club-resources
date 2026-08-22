@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import {
   changelogEntries, PROJECT_META, CHANGELOG_MONTHS, formatChangelogDay,
   type ChangelogEntry, type ChangelogProject,
 } from '@/lib/changelog-data';
+import { EntryLink } from './EntryLink';
 
 function monthLabel(key: string): string {
   return `${CHANGELOG_MONTHS[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`;
@@ -24,22 +24,6 @@ function groupByMonth(entries: ChangelogEntry[]): Array<{ key: string; entries: 
     }
   }
   return groups;
-}
-
-function EntryLink({ label, href }: { label: string; href: string }) {
-  const className = 'text-primary-600 dark:text-primary-400 hover:underline';
-  if (href.startsWith('/')) {
-    return (
-      <Link href={href} className={className}>
-        {label}
-      </Link>
-    );
-  }
-  return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
-      {label}
-    </a>
-  );
 }
 
 const ALL_PROJECTS = Object.keys(PROJECT_META) as ChangelogProject[];

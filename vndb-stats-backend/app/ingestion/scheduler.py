@@ -2,9 +2,20 @@
 Scheduled tasks for data ingestion and model training.
 
 ============================================================================
-DAILY DATA PIPELINE - KEEPS LOCAL DATABASE UP TO DATE
+NOT THE LIVE PIPELINE. NOTHING STARTS THIS MODULE.
 ============================================================================
-This scheduler runs the daily ingestion pipeline that:
+start_scheduler() has no callers anywhere in the repository, and AUTO_UPDATE is off in
+compose. The daily job that actually runs is scripts/worker.py, and that is where the
+live ordering lives; treat any difference between the two as this file being out of date.
+
+The step this file has that worker.py does not is precompute_user_recommendations, which
+has therefore never executed in production. Before wiring it up, read the storage note in
+app/ingestion/precompute_user_recs: it writes hundreds of rows per active user, and the
+host it runs on is disk-constrained.
+
+The pipeline below is retained as the reference ordering for model training.
+============================================================================
+This scheduler would run the daily ingestion pipeline that:
 
 1. Downloads fresh VNDB database dumps (dl.vndb.org/dump/)
 2. Imports data into LOCAL PostgreSQL (40k+ VNs, tags, traits, staff, etc.)

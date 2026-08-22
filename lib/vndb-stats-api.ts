@@ -49,6 +49,7 @@ function getBackendUrlLazy(): string {
 
 // Import correlation ID for request tracing
 import { getCorrelationId } from './log-reporter';
+import type { BrowseSort } from './browse-metrics';
 
 // ============ Batch Result Cache ============
 // Cache for individual tag/trait lookups to avoid redundant fetches
@@ -350,6 +351,7 @@ export interface SharedVNScore {
   vn_id: string;
   title: string;
   title_jp?: string;
+  title_romaji?: string;
   image_url: string | null;
   user1_score: number;
   user2_score: number;
@@ -360,7 +362,7 @@ export interface UserComparisonResponse {
   user2: UserInfo;
   compatibility_score: number;
   shared_vns: number;
-  score_correlation: number;
+  score_correlation: number | null;  // null when there are too few shared rated titles
   shared_favorites: SharedVNScore[];
   biggest_disagreements: SharedVNScore[];
   common_tags: string[];
@@ -616,6 +618,7 @@ export interface VNSearchResult {
   votecount?: number;
   olang?: string;
   description?: string;  // Truncated description snippet (up to 200 chars)
+  metric_value?: number | null;  // Value of the ranking metric, when sorting by one
 }
 
 export interface VNSearchResponse {
@@ -659,6 +662,10 @@ export interface BrowseFilters {
   max_rating?: number;
   min_votecount?: number;
   max_votecount?: number;
+  // Setting either of these restricts results to titles whose script has been analysed,
+  // which is a small fraction of the database.
+  min_difficulty?: number;
+  max_difficulty?: number;
   // Multi-select filters (comma-separated values)
   length?: string;               // very_short, short, medium, long, very_long (comma-separated)
   exclude_length?: string;       // Exclude lengths (comma-separated)
@@ -677,7 +684,7 @@ export interface BrowseFilters {
   developer?: string;            // Comma-separated developer (producer) IDs to filter by
   publisher?: string;            // Comma-separated publisher (producer) IDs to filter by
   producer?: string;             // Comma-separated producer IDs (matches developer OR publisher role)
-  sort?: 'rating' | 'released' | 'votecount' | 'title' | 'random';
+  sort?: BrowseSort;
   sort_order?: 'asc' | 'desc';
   page?: number;
   limit?: number;
@@ -690,6 +697,13 @@ export interface BrowseResponse {
   page: number;
   pages: number;
   query_time?: number;           // Query execution time in seconds
+  // Present only when sorting by a ranking metric. The floor is imposed by the sort rather
+  // than chosen by the reader, so it has to be stated rather than silently applied.
+  metric?: string | null;
+  metric_label?: string | null;
+  metric_floor_note?: string | null;
+  metric_high_means?: string | null;
+  metric_low_means?: string | null;
 }
 
 export interface FilterSearchResult {
@@ -815,6 +829,393 @@ export interface DataStatus {
   next_update?: string;
 }
 
+/** One year of a composition series. Keys beyond `year` are per-series counts. */
+export type TimelineYear = { year: number } & Record<string, number>;
+
+export interface GlobalTimeline {
+  /** Series keys given their own band; everything else is pooled under "other". */
+  languages: string[];
+  platforms: string[];
+  by_language: TimelineYear[];
+  by_platform: TimelineYear[];
+  median_length: { year: number; median_minutes: number; count: number }[];
+  average_rating: { year: number; average: number; count: number }[];
+}
+
+/**
+ * When votes were cast, rather than when titles were released.
+ *
+ * Month and weekday carry a share as well as a count, because the raw counts are dominated
+ * by how many years of data exist and say nothing about seasonality on their own.
+ */
+/** One question the slice route can answer, as the backend describes it. */
+export interface CustomQuestion {
+  key: string;
+  label: string;
+  blurb: string;
+  metric: string;
+  high_means: string;
+  needs_difficulty: boolean;
+  needs_year: boolean;
+}
+
+export interface CustomQuestions {
+  vns: CustomQuestion[];
+  readers: CustomQuestion[];
+}
+
+/** Every axis a ranking can be narrowed by. All optional: nothing set means everything. */
+export interface CustomRankingQuery {
+  subject: 'vns' | 'readers';
+  question: string;
+  olang?: string;
+  /** Released in this language and no other, so 'ja' means never translated. */
+  lang_only?: string | null;
+  /** 'free' has a free release anywhere; 'ja' means every Japanese release is free. */
+  free?: string | null;
+  /** Ceiling on VNDB's own vote count, which is how "barely read" is expressed. */
+  votecount_max?: number | null;
+  tag?: number | null;
+  year_min?: number | null;
+  year_max?: number | null;
+  platform?: string | null;
+  length?: number | null;
+  minage_max?: number;
+  difficulty_min?: number | null;
+  difficulty_max?: number | null;
+  /** Only for the as-of question, where the year is the question rather than a filter. */
+  year?: number | null;
+  limit?: number;
+}
+
+export interface GlobalVoteActivity {
+  by_year: { year: number; count: number }[];
+  by_month: { month: number; count: number; share: number }[];
+  by_weekday: { weekday: number; count: number; share: number }[];
+  total: number;
+}
+
+export interface GlobalDatabaseStats {
+  growth: { month: string; count: number }[];
+  most_edited: {
+    id: string;
+    title: string;
+    title_jp: string | null;
+    title_romaji: string | null;
+    edits: number;
+    editors: number;
+    last_edited: string | null;
+  }[];
+  recently_updated: {
+    id: string;
+    title: string;
+    title_jp: string | null;
+    title_romaji: string | null;
+    image_url: string | null;
+    image_sexual: number | null;
+    last_edited: string | null;
+  }[];
+  summary: {
+    entries_with_dates: number;
+    first_entry: string | null;
+    total_edits: number;
+    mean_edits: number;
+  };
+}
+
+/**
+ * One ranked entry. The same shape is used whatever a board ranks, which is what lets a
+ * single table render users, visual novels and studios without branching.
+ */
+export interface LeaderboardRow {
+  rank: number;
+  id: string;
+  /**
+   * The database's own title or name, which for a Japanese work is the Japanese form. Not
+   * safe to render directly: resolve it against the reader's title preference first.
+   */
+  label: string;
+  sublabel?: string | null;
+  /** Title variants for a visual novel, for `getDisplayTitle`. */
+  title_jp?: string | null;
+  title_romaji?: string | null;
+  /** Romanised name of a person or company, for `getEntityDisplayName`. */
+  name_original?: string | null;
+  href?: string | null;
+  image_url?: string | null;
+  image_sexual?: number | null;
+  /**
+   * The visual novel the cover belongs to, which is not always the row's own id: a series
+   * row is identified by the franchise but illustrated by one of its entries. Keys the
+   * click-to-reveal state so a reveal here carries to that title's page.
+   */
+  image_vn_id?: string | null;
+  value: number;
+  value_label: string;
+  secondary?: Record<string, number | string>;
+}
+
+export interface Leaderboard {
+  slug?: string | null;
+  title: string;
+  blurb: string;
+  subject: string;
+  metric: string;
+  window: string;
+  /** Which page lists this board: 'rankings' or 'trends'. */
+  home?: string;
+  facet: Record<string, unknown>;
+  facet_description: string;
+  /** Which language view this payload is. */
+  language: 'ja' | 'all';
+  /** Whether a Japanese-only view exists, and so whether to offer the toggle. */
+  has_language_variants: boolean;
+  generated_at?: string | null;
+  dump_date?: string | null;
+  /** Always false: boards are rebuilt once a day, never live. */
+  is_live: boolean;
+  total_ranked: number;
+  rows: LeaderboardRow[];
+  /** Caveats that belong beside the numbers, not in documentation. */
+  /**
+   * How this board is counted: what was eligible, the minimum sample, the formula, and who
+   * was left out. Every board answers all four in its own terms.
+   */
+  disclosure?: {
+    population: string;
+    floor: string;
+    score: string;
+    excluded: string;
+  } | null;
+  /** Credit for data this site did not produce, where the board rests on any. */
+  attribution?: { label: string; href: string } | null;
+  /** Board-specific caveats beyond the four standing answers. */
+  notes: string[];
+}
+
+/**
+ * Why a board is not being shown, when it is not.
+ *
+ * `rebuilding` is expected and temporary; `unavailable` means the backend could not be
+ * reached and is worth surfacing differently.
+ */
+export type LeaderboardResult =
+  | { state: 'ok'; board: Leaderboard }
+  | { state: 'rebuilding' }
+  | { state: 'missing' }
+  /** The request was refused, and the server said why. Not a fault in the service. */
+  | { state: 'invalid'; detail: string }
+  | { state: 'unavailable' };
+
+export interface LeaderboardCatalogueEntry {
+  slug: string;
+  title: string;
+  blurb: string;
+  subject: string;
+  metric: string;
+  window: string;
+  /** Which page lists this board: 'rankings' or 'trends'. */
+  home?: string;
+  /** For share boards, which composition of a reader's library is ranked. */
+  composition?: string;
+  facet_description: string;
+  /** What the facet narrows by: 'none', 'era', 'attention' or 'kind'. Groups the catalogue. */
+  facet_kind?: string;
+  total_ranked: number;
+  generated_at?: string | null;
+}
+
+/** How the community's reading has moved through the medium's history. */
+export interface ReadingTrendsYear {
+  year: number;
+  votes: number;
+  /** Median age of a title, in years, at the moment it was rated. */
+  median_age: number;
+  mean_age: number;
+  /** Share of that year's votes per era key, summing to 1. */
+  eras: Record<string, number>;
+}
+
+export interface ReadingTrends {
+  years: ReadingTrendsYear[];
+  /** Era keys in display order, oldest first. */
+  eras: string[];
+}
+
+/** One title in either explorer, on either side. */
+export interface TitleIdentity {
+  id: string;
+  title: string;
+  title_romaji?: string | null;
+  title_jp?: string | null;
+  href: string;
+  image_url?: string | null;
+  image_sexual?: number | null;
+}
+
+/** A title plus the one figure the list it appears in is ordered by. */
+export interface ExplorerTitle extends TitleIdentity {
+  value_label: string;
+}
+
+export interface YearExplorerYear {
+  year: number;
+  /** The dump lands part-way through this one, so its counts cover the period so far. */
+  in_progress?: boolean;
+  /** Best rated of the titles first released that year. */
+  released: ExplorerTitle[];
+  /** Most voted on during that year, whenever they came out. Empty for the early years. */
+  read: ExplorerTitle[];
+}
+
+export interface YearExplorer {
+  years: YearExplorerYear[];
+}
+
+/** One title in the hot list, with where it sat in the previous window. */
+export interface HotTitle extends TitleIdentity {
+  /** Votes in the current window. */
+  current: number;
+  /** Votes in the window immediately before it. */
+  previous: number;
+  /** Place in the current window, or null if it drew no votes. */
+  place: number | null;
+  /** Place in the previous window. Null means it drew no votes at all then. */
+  previous_place: number | null;
+  /** Current window against its own previous one, damped. Above 1 means climbing. */
+  lift: number;
+}
+
+export interface HotPeriod {
+  key: string;
+  days: number;
+  votes: number;
+  previous_votes: number;
+  /** Most voted on in the window. */
+  top: HotTitle[];
+  /** Furthest above their own previous window. */
+  movers: HotTitle[];
+}
+
+export interface HotNow {
+  /** The most recent vote date in the dump, which is what "now" means here. */
+  reference: string | null;
+  periods: HotPeriod[];
+}
+
+/** A title whose reception is moving, over one window. */
+export interface ShiftingTitle extends TitleIdentity {
+  /** Rating points the window sits above or below the comparison. */
+  shift: number;
+  /** Votes behind the figure. For the all-time window, the title's whole public count. */
+  window_votes: number;
+  /** The title's settled lifetime average. Absent on the all-time window. */
+  baseline?: number;
+  /** Its average inside the window. Absent on the all-time window. */
+  current_score?: number;
+}
+
+export interface ShiftingPeriod {
+  /** Days in the window, or null for the all-time comparison. */
+  days: number | null;
+  rising: ShiftingTitle[];
+  falling: ShiftingTitle[];
+}
+
+export interface NewReleaseTitle extends TitleIdentity {
+  released: string | null;
+  votes: number;
+  score: number;
+}
+
+export interface FinishedTitle extends TitleIdentity {
+  finishes: number;
+}
+
+export interface AnticipatedTitle extends TitleIdentity {
+  out_on: string | null;
+  /** Readers with it wishlisted. */
+  waiting: number;
+}
+
+export interface PulseWeek {
+  week: string;
+  votes: number;
+  readers: number;
+  new_readers: number;
+}
+
+export interface TrendFeed {
+  reference: string | null;
+  /** Keyed by window: 'week', 'month', 'quarter', 'all'. */
+  shifting: Record<string, ShiftingPeriod>;
+  new_releases: NewReleaseTitle[];
+  finishing: FinishedTitle[];
+  anticipated: AnticipatedTitle[];
+  pulse: PulseWeek[];
+}
+
+/** One month of reading history, plus the index of months that have one. */
+export interface MonthExplorer {
+  /** Every month with a payload, oldest first, as 'YYYY-MM'. */
+  months: string[];
+  /** The month shown is still running, so its counts cover only the days elapsed. */
+  in_progress?: boolean;
+  /** The month this response describes, or null before the nightly job has run. */
+  month: string | null;
+  /** Most voted on that month. */
+  read: ExplorerTitle[];
+  /** Read far above their own normal rate that month. */
+  jumped: ExplorerTitle[];
+}
+
+export interface LeaderboardCatalogue {
+  boards: LeaderboardCatalogueEntry[];
+  generated_at?: string | null;
+  dump_date?: string | null;
+}
+
+export interface UserPercentiles {
+  uid: string;
+  /** Keyed by distribution name; absent when the population sketch has not been built. */
+  percentiles: Record<
+    string,
+    {
+      value: number;
+      /** Share of readers at or below this figure. */
+      percentile: number;
+      /** Share strictly below it. The gap to `percentile` is the share holding it exactly. */
+      below: number | null;
+    }
+  >;
+}
+
+export interface LeaderboardStanding {
+  slug: string;
+  title: string;
+  rank: number;
+  total_ranked: number;
+  percentile?: number | null;
+}
+
+export interface LeaderboardStandings {
+  uid: string;
+  /**
+   * Only boards the reader actually places on. Boards where they fall outside the indexed
+   * depth are omitted rather than reported vaguely.
+   */
+  standings: LeaderboardStanding[];
+}
+
+export interface LeaderboardRank {
+  slug: string;
+  id: string;
+  rank?: number | null;
+  total_ranked: number;
+  percentile?: number | null;
+  value?: number | null;
+}
+
 export interface GlobalStats {
   total_vns: number;
   total_with_ratings: number;
@@ -831,6 +1232,7 @@ export interface TopVN {
   id: string;
   title: string;
   alttitle?: string;
+  title_romaji?: string;
   image_url?: string;
   image_sexual?: number;
   released?: string;
@@ -1236,6 +1638,78 @@ function getHealthCheckBackoffMs(failureCount: number): number {
   return Math.min(delay, HEALTH_MAX_BACKOFF_MS);
 }
 
+export interface MilestonePoint {
+  date: string;
+  title: string;
+  title_jp: string | null;
+  title_romaji: string | null;
+  score: number;
+  href: string;
+}
+
+export interface DriftHalf {
+  titles: number;
+  average: number | null;
+  near_release: number | null;
+  long_titles: number | null;
+  adult: number | null;
+}
+
+export interface ReaderProfile {
+  uid: string;
+  rated: number;
+  sole_voter: number;
+  median_other_voters: number | null;
+  bias: number | null;
+  divergence: number | null;
+  comparable: number;
+  drift: { early: DriftHalf; late: DriftHalf } | null;
+  milestones: {
+    first: MilestonePoint | null;
+    latest: MilestonePoint | null;
+    longest_gap_days: number | null;
+    active_days: number;
+  } | null;
+  japanese: {
+    characters: number;
+    measured: number;
+    finished: number;
+    difficulty: number | null;
+    coverage: number;
+  } | null;
+  era_from: number | null;
+  era_to: number | null;
+  era_median: number | null;
+  percentiles: { obscurity: number | null; bias: number | null };
+}
+
+/** One finished title jiten has measured, behind the character total. */
+export interface MeasuredTitle {
+  vn_id: string;
+  title: string;
+  title_jp: string | null;
+  title_romaji: string | null;
+  characters: number;
+  difficulty: number | null;
+  href: string;
+  /** The deck page this title's figures were read from. */
+  source_href: string;
+}
+
+export interface ReadingYear {
+  year: number;
+  rated: number;
+  average: number | null;
+  best: {
+    id: string;
+    title: string;
+    title_jp: string | null;
+    title_romaji: string | null;
+    score: number;
+    href: string;
+  } | null;
+}
+
 class VNDBStatsAPI {
   private baseUrl: string;
 
@@ -1583,6 +2057,8 @@ class VNDBStatsAPI {
     if (filters.max_rating !== undefined) params.set('max_rating', String(filters.max_rating));
     if (filters.min_votecount !== undefined) params.set('min_votecount', String(filters.min_votecount));
     if (filters.max_votecount !== undefined) params.set('max_votecount', String(filters.max_votecount));
+    if (filters.min_difficulty !== undefined) params.set('min_difficulty', String(filters.min_difficulty));
+    if (filters.max_difficulty !== undefined) params.set('max_difficulty', String(filters.max_difficulty));
     if (filters.length) params.set('length', filters.length);
     if (filters.exclude_length) params.set('exclude_length', filters.exclude_length);
     if (filters.minage) params.set('minage', filters.minage);
@@ -1620,9 +2096,90 @@ class VNDBStatsAPI {
    * Get top VNs by rating or votecount.
    * ALL data comes from local database.
    */
-  async getTopVNs(sort: 'rating' | 'votecount', limit: number = 10): Promise<TopVN[]> {
+  /** How far back the community reads, by year. Built nightly; empty until then. */
+  async getReadingTrends(): Promise<ReadingTrends | null> {
     try {
-      return await this.fetch<TopVN[]>(`/api/v1/vn/top?sort=${sort}&limit=${limit}`);
+      return await this.fetch<ReadingTrends>('/api/v1/stats/global/reading-trends');
+    } catch {
+      // Null rather than an empty payload: the section tells a reader an empty result
+      // means the nightly rebuild has not run, and a failed request is not that.
+      return null;
+    }
+  }
+
+  /** The moving sections of the trends page: shifts, new releases, finishes, pulse. */
+  async getTrendFeed(language: 'ja' | 'all' = 'ja'): Promise<TrendFeed | null> {
+    try {
+      return await this.fetch<TrendFeed>(
+        `/api/v1/stats/global/trend-feed?language=${language}`,
+      );
+    } catch {
+      // Null rather than an empty payload: a request that failed and a period with nothing
+      // in it are different things, and a caller that cannot tell them apart reports an
+      // outage as an absence of data.
+      return null;
+    }
+  }
+
+  /** What is being read now, and which way each title is moving. Built nightly. */
+  async getHotNow(language: 'ja' | 'all' = 'ja'): Promise<HotNow | null> {
+    try {
+      return await this.fetch<HotNow>(`/api/v1/stats/global/hot-now?language=${language}`);
+    } catch {
+      // Null rather than an empty payload: a request that failed and a period with nothing
+      // in it are different things, and a caller that cannot tell them apart reports an
+      // outage as an absence of data.
+      return null;
+    }
+  }
+
+  /** What came out each year, and what was being read that year. Built nightly. */
+  async getYearExplorer(language: 'ja' | 'all' = 'ja'): Promise<YearExplorer | null> {
+    try {
+      return await this.fetch<YearExplorer>(
+        `/api/v1/stats/global/year-explorer?language=${language}`,
+      );
+    } catch {
+      // Null rather than an empty payload: a request that failed and a period with nothing
+      // in it are different things, and a caller that cannot tell them apart reports an
+      // outage as an absence of data.
+      return null;
+    }
+  }
+
+  /**
+   * One month of reading history. Served a month at a time, so the caller asks again as the
+   * reader moves; omitting the month returns the most recent one.
+   */
+  async getMonthExplorer(
+    month?: string,
+    language: 'ja' | 'all' = 'ja',
+  ): Promise<MonthExplorer | null> {
+    const query = month ? `&month=${encodeURIComponent(month)}` : '';
+    try {
+      return await this.fetch<MonthExplorer>(
+        `/api/v1/stats/global/month-explorer?language=${language}${query}`,
+      );
+    } catch {
+      // Null rather than an empty payload: a request that failed and a period with nothing
+      // in it are different things, and a caller that cannot tell them apart reports an
+      // outage as an absence of data.
+      return null;
+    }
+  }
+
+  /**
+   * @param olang Restrict the ranking to titles originally in this language. Passed to the
+   *   server rather than filtered here: a filtered top ten is not a top ten.
+   */
+  async getTopVNs(
+    sort: 'rating' | 'votecount',
+    limit: number = 10,
+    olang?: string,
+  ): Promise<TopVN[]> {
+    try {
+      const suffix = olang ? `&olang=${encodeURIComponent(olang)}` : '';
+      return await this.fetch<TopVN[]>(`/api/v1/vn/top?sort=${sort}&limit=${limit}${suffix}`);
     } catch {
       return [];
     }
@@ -1828,6 +2385,245 @@ class VNDBStatsAPI {
 
     // No fallback for global stats - requires backend
     return null;
+  }
+
+  // ============ Global Dashboard Methods ============
+  // Split out from getGlobalStats so the dashboard renders its summary immediately and
+  // fills the trend sections in behind it, rather than blocking on the slowest query.
+
+  async getGlobalTimeline(): Promise<GlobalTimeline | null> {
+    try {
+      return await this.fetch<GlobalTimeline>('/api/v1/stats/global/timeline');
+    } catch {
+      return null;
+    }
+  }
+
+  async getGlobalDatabase(
+    language: 'ja' | 'all' = 'ja',
+  ): Promise<GlobalDatabaseStats | null> {
+    try {
+      return await this.fetch<GlobalDatabaseStats>(
+        `/api/v1/stats/global/database?language=${language}`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async getGlobalActivity(): Promise<GlobalVoteActivity | null> {
+    try {
+      return await this.fetch<GlobalVoteActivity>('/api/v1/stats/global/activity');
+    } catch {
+      return null;
+    }
+  }
+
+  // ============ Leaderboard Methods ============
+  // Boards are built by the nightly worker and served from cache, so these are plain
+  // reads. A 503 means the board exists but has no current copy; it is surfaced as null
+  // rather than as an error, since the page renders a "rebuilding" state either way.
+
+  async getLeaderboardCatalogue(): Promise<LeaderboardCatalogue | null> {
+    try {
+      return await this.fetch<LeaderboardCatalogue>('/api/v1/leaderboards');
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch one board.
+   *
+   * Returns which kind of absence occurred rather than a bare null. A board that is
+   * mid-rebuild and a backend that cannot be reached call for different copy, and
+   * collapsing them into one state makes an outage indistinguishable from normal operation.
+   */
+  async getLeaderboard(
+    slug: string,
+    options?: { limit?: number; offset?: number; language?: 'ja' | 'all' },
+  ): Promise<LeaderboardResult> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.offset) params.set('offset', String(options.offset));
+    if (options?.language) params.set('language', options.language);
+    const query = params.toString() ? `?${params}` : '';
+
+    try {
+      const board = await this.fetch<Leaderboard>(`/api/v1/leaderboards/${slug}${query}`);
+      return { state: 'ok', board };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('404') || message === 'Not found') {
+        return { state: 'missing' };
+      }
+      // The API answers 503 while a board has no cached copy, which is a normal state just
+      // after a flush or before the first nightly run.
+      if (message.includes('503')) {
+        return { state: 'rebuilding' };
+      }
+      return { state: 'unavailable' };
+    }
+  }
+
+  /**
+   * One ranking over any slice of the database, computed on request.
+   *
+   * Shares the result shape and the absence states with the curated boards, so the same
+   * table and the same empty states render either without knowing which it has. Every axis
+   * is optional: the empty slice is the whole database.
+   */
+  async getCustomRanking(
+    slice: CustomRankingQuery,
+    signal?: AbortSignal,
+  ): Promise<LeaderboardResult> {
+    const params = new URLSearchParams();
+    params.set('subject', slice.subject);
+    params.set('question', slice.question);
+    params.set('olang', slice.olang ?? 'ja');
+    if (slice.lang_only) params.set('lang_only', slice.lang_only);
+    if (slice.free) params.set('free', slice.free);
+    if (slice.votecount_max) params.set('votecount_max', String(slice.votecount_max));
+    if (slice.tag) params.set('tag', String(slice.tag));
+    if (slice.year_min) params.set('year_min', String(slice.year_min));
+    if (slice.year_max) params.set('year_max', String(slice.year_max));
+    if (slice.platform) params.set('platform', slice.platform);
+    if (slice.length) params.set('length', String(slice.length));
+    if (slice.minage_max !== undefined) params.set('minage_max', String(slice.minage_max));
+    if (slice.difficulty_min) params.set('difficulty_min', String(slice.difficulty_min));
+    if (slice.difficulty_max) params.set('difficulty_max', String(slice.difficulty_max));
+    if (slice.year) params.set('year', String(slice.year));
+    if (slice.limit) params.set('limit', String(slice.limit));
+
+    try {
+      const board = await this.fetch<Leaderboard>(
+        `/api/v1/leaderboards/custom?${params}`,
+        { signal },
+      );
+      return { state: 'ok', board };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('404') || message === 'Not found') {
+        return { state: 'missing' };
+      }
+      if (message.includes('503')) {
+        return { state: 'rebuilding' };
+      }
+      // A slice the server refused. Reporting it as an outage would blame the service for a
+      // combination the reader can see on screen and change.
+      if (message.includes('400') || message.includes('422')) {
+        return { state: 'invalid', detail: 'That combination cannot be ranked.' };
+      }
+      return { state: 'unavailable' };
+    }
+  }
+
+  /**
+   * What the slice route can be asked.
+   *
+   * Fetched rather than duplicated in the picker, so a question added to the backend appears
+   * here without a second edit and one removed cannot linger.
+   */
+  async getCustomQuestions(): Promise<CustomQuestions | null> {
+    try {
+      return await this.fetch<CustomQuestions>('/api/v1/leaderboards/custom/questions');
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Where a reader sits in the population on each tracked distribution.
+   *
+   * The caller supplies its own totals because the page already has them; recomputing a
+   * user's list server-side to answer a comparison would be the expensive part.
+   */
+  /**
+   * How one reader stands against the whole vote record.
+   *
+   * Absent rather than empty when the reader has no public votes, which is a real state and
+   * not a failure: the card simply does not appear.
+   */
+  async getReadingProfile(uid: string): Promise<ReaderProfile | null> {
+    try {
+      return await this.fetch<ReaderProfile>(
+        `/api/v1/leaderboards/reading-profile/${encodeURIComponent(uid)}`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  /** The finished titles behind a reader's character total, heaviest first. */
+  async getJapaneseTitles(uid: string): Promise<MeasuredTitle[]> {
+    try {
+      const data = await this.fetch<{ titles: MeasuredTitle[] }>(
+        `/api/v1/leaderboards/japanese-titles/${encodeURIComponent(uid)}`,
+      );
+      return data.titles ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** A reader's rating history, one entry per year, newest first. */
+  async getReadingYears(uid: string): Promise<ReadingYear[]> {
+    try {
+      const data = await this.fetch<{ years: ReadingYear[] }>(
+        `/api/v1/leaderboards/reading-years/${encodeURIComponent(uid)}`,
+      );
+      return data.years ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  async getUserPercentiles(
+    uid: string,
+    totals: {
+      votes?: number;
+      finished?: number;
+      dropped?: number;
+      wishlist?: number;
+      average?: number;
+    },
+  ): Promise<UserPercentiles | null> {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(totals)) {
+      // Zero is a figure worth placing: a reader who has given nothing up stands somewhere
+      // on that distribution. Only an absent number is left out.
+      if (value !== undefined && value !== null) params.set(key, String(value));
+    }
+    if (!params.toString()) return null;
+
+    try {
+      return await this.fetch<UserPercentiles>(
+        `/api/v1/leaderboards/percentiles/${uid}?${params}`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  /** Every reader leaderboard a person places on, best placement first. */
+  async getLeaderboardStandings(uid: string): Promise<LeaderboardStandings | null> {
+    try {
+      return await this.fetch<LeaderboardStandings>(
+        `/api/v1/leaderboards/standings/${uid}`,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  async getLeaderboardRank(slug: string, id: string): Promise<LeaderboardRank | null> {
+    try {
+      return await this.fetch<LeaderboardRank>(
+        `/api/v1/leaderboards/${slug}/rank?id=${encodeURIComponent(id)}`,
+      );
+    } catch {
+      return null;
+    }
   }
 
   // ============ Tag Detail Methods ============
@@ -2716,28 +3512,20 @@ class VNDBStatsAPI {
     const searchParams = this.buildBrowseParams(params);
     if (params.category) searchParams.set('category', params.category);
 
-    try {
-      return await this.fetch<BrowseTagsResponse>(
-        `/api/v1/browse/tags?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseTagsResponse>(
+      `/api/v1/browse/tags?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async browseTraits(params: BrowseTraitParams = {}): Promise<BrowseTraitsResponse> {
     const searchParams = this.buildBrowseParams(params);
     if (params.group_name) searchParams.set('group_name', params.group_name);
 
-    try {
-      return await this.fetch<BrowseTraitsResponse>(
-        `/api/v1/browse/traits?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseTraitsResponse>(
+      `/api/v1/browse/traits?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async browseStaff(params: BrowseStaffParams = {}): Promise<BrowseStaffResponse> {
@@ -2746,14 +3534,10 @@ class VNDBStatsAPI {
     if (params.lang) searchParams.set('lang', params.lang);
     if (params.gender) searchParams.set('gender', params.gender);
 
-    try {
-      return await this.fetch<BrowseStaffResponse>(
-        `/api/v1/browse/staff?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseStaffResponse>(
+      `/api/v1/browse/staff?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async browseSeiyuu(params: BrowseSeiyuuParams = {}): Promise<BrowseSeiyuuResponse> {
@@ -2761,14 +3545,10 @@ class VNDBStatsAPI {
     if (params.lang) searchParams.set('lang', params.lang);
     if (params.gender) searchParams.set('gender', params.gender);
 
-    try {
-      return await this.fetch<BrowseSeiyuuResponse>(
-        `/api/v1/browse/seiyuu?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseSeiyuuResponse>(
+      `/api/v1/browse/seiyuu?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async browseDevelopers(params: BrowseProducerParams = {}): Promise<BrowseProducersResponse> {
@@ -2776,14 +3556,10 @@ class VNDBStatsAPI {
     if (params.type) searchParams.set('type', params.type);
     if (params.lang) searchParams.set('lang', params.lang);
 
-    try {
-      return await this.fetch<BrowseProducersResponse>(
-        `/api/v1/browse/developers?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseProducersResponse>(
+      `/api/v1/browse/developers?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async browsePublishers(params: BrowseProducerParams = {}): Promise<BrowseProducersResponse> {
@@ -2791,14 +3567,10 @@ class VNDBStatsAPI {
     if (params.type) searchParams.set('type', params.type);
     if (params.lang) searchParams.set('lang', params.lang);
 
-    try {
-      return await this.fetch<BrowseProducersResponse>(
-        `/api/v1/browse/publishers?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseProducersResponse>(
+      `/api/v1/browse/publishers?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async browseProducers(params: BrowseProducerParams = {}): Promise<BrowseProducersResponse> {
@@ -2807,14 +3579,10 @@ class VNDBStatsAPI {
     if (params.lang) searchParams.set('lang', params.lang);
     if (params.role) searchParams.set('role', params.role);
 
-    try {
-      return await this.fetch<BrowseProducersResponse>(
-        `/api/v1/browse/producers?${searchParams.toString()}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-    } catch {
-      return { items: [], total: 0, page: 1, pages: 1 };
-    }
+    return this.fetch<BrowseProducersResponse>(
+      `/api/v1/browse/producers?${searchParams.toString()}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
   }
 
   async getRandomVN(): Promise<string | null> {
@@ -2858,4 +3626,18 @@ export function getVNDBUrl(vnId: string): string {
 export function getVNDBUserUrl(uid: string): string {
   if (!/^u\d+$/.test(uid)) return 'https://vndb.org/';
   return `https://vndb.org/${uid}`;
+}
+
+/**
+ * VNDB page for any entity, whatever its type.
+ *
+ * VNDB ids carry their type as a prefix, so the id is the path: v for visual novels, u for
+ * users, p for producers, s for staff, g for tags, i for traits, c for characters.
+ *
+ * Returns null rather than the VNDB homepage for anything unrecognised, so a caller can
+ * omit the link instead of offering one that goes somewhere unhelpful.
+ */
+export function getVNDBEntityUrl(id: string | null | undefined): string | null {
+  if (!id || !/^[vupsgic]\d+$/.test(id)) return null;
+  return `https://vndb.org/${id}`;
 }

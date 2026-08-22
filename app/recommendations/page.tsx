@@ -6,7 +6,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumb
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Personalized Visual Novel Recommendations',
-  description: 'Get personalized visual novel recommendations based on your VNDB list. Discover your next VN based on your reading history and preferences.',
+  description: 'Recommendations for readers who learn Japanese with visual novels: feed in your VNDB ratings and get titles matched on tags, staff and similar readers, filtered by length, score and language.',
   path: '/recommendations/',
 });
 

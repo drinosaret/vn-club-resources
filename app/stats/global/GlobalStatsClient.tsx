@@ -9,16 +9,34 @@ import { ReleaseYearChart } from '@/components/stats/ReleaseYearChart';
 import { LengthChart } from '@/components/stats/LengthChart';
 import { AgeRatingChart } from '@/components/stats/AgeRatingChart';
 import { LastUpdated } from '@/components/stats/LastUpdated';
+import { DataFreshness } from '@/components/stats/DataFreshness';
+import { VoteActivitySection } from '@/components/stats/global/VoteActivitySection';
+import { ReleaseTimelineSection } from '@/components/stats/global/ReleaseTimelineSection';
+import { ReadingTrendsSection } from '@/components/stats/global/ReadingTrendsSection';
+import { DatabaseGrowthSection } from '@/components/stats/global/DatabaseGrowthSection';
 import { FadeIn } from '@/components/FadeIn';
+import { StatsCrossLinks } from '@/components/stats/StatsCrossLinks';
 
 export default function GlobalStatsClient() {
   const [topRated, setTopRated] = useState<TopVN[]>([]);
   const [mostPopular, setMostPopular] = useState<TopVN[]>([]);
+  // Ranked separately rather than filtered from the lists above: filtering a fixed-length
+  // list down to its Japanese-original entries leaves however many happen to survive, which
+  // is not a top ten of anything.
+  const [topRatedJa, setTopRatedJa] = useState<TopVN[]>([]);
+  const [mostPopularJa, setMostPopularJa] = useState<TopVN[]>([]);
   const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshBlocked, setIsRefreshBlocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dumpDate, setDumpDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    vndbStatsApi.getLeaderboardCatalogue().then((catalogue) => {
+      if (catalogue?.dump_date) setDumpDate(catalogue.dump_date);
+    });
+  }, []);
 
   const loadData = useCallback(async (forceRefresh = false) => {
     if (!forceRefresh) setIsLoading(true);
@@ -29,9 +47,14 @@ export default function GlobalStatsClient() {
       vndbStatsApi.getTopVNs('rating', 10),
       vndbStatsApi.getTopVNs('votecount', 10),
       vndbStatsApi.getGlobalStats({ nocache: forceRefresh }),
+      vndbStatsApi.getTopVNs('rating', 10, 'ja'),
+      vndbStatsApi.getTopVNs('votecount', 10, 'ja'),
     ]);
 
-    const [ratedResult, popularResult, statsResult] = results;
+    const [ratedResult, popularResult, statsResult, ratedJaResult, popularJaResult] = results;
+
+    setTopRatedJa(ratedJaResult.status === 'fulfilled' ? ratedJaResult.value : []);
+    setMostPopularJa(popularJaResult.status === 'fulfilled' ? popularJaResult.value : []);
 
     // Handle each result independently
     if (ratedResult.status === 'fulfilled') {
@@ -88,6 +111,7 @@ export default function GlobalStatsClient() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => window.history.back()}
+            aria-label="Go back"
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -96,12 +120,9 @@ export default function GlobalStatsClient() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Globe className="w-6 h-6 text-primary-500" />
               Global VNDB Stats
-              <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
-                BETA
-              </span>
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Top visual novels across the entire database
+              The shape of the database as it stands. For what is moving, see trends.
             </p>
           </div>
         </div>
@@ -117,6 +138,11 @@ export default function GlobalStatsClient() {
           <LastUpdated timestamp={globalStats?.last_updated} />
         </div>
       </div>
+
+      {/* The dump the figures come from, not the last time a row was written. The importer
+          stamps updated_at on every row it touches, so that clock runs months ahead of the
+          data and disagreed with the same line on the rankings pages. */}
+      <DataFreshness dumpDate={dumpDate} className="mb-6" />
 
       {/* Error Banner */}
       {error && (
@@ -174,6 +200,19 @@ export default function GlobalStatsClient() {
               ))}
             </div>
           </div>
+
+          {/* The chart sections, which are the bulk of this page. Covering only the two blocks
+              above left the page a third of its loaded height, so everything below the fold
+              travelled when the data arrived. */}
+          {[0, 1, 2, 3].map((i) => (
+            <div key={`section-${i}`}>
+              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="image-placeholder h-64 rounded-xl" />
+                <div className="image-placeholder h-64 rounded-xl" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -205,6 +244,7 @@ export default function GlobalStatsClient() {
                   <TopVNsTable
                     title="Highest Rated"
                     vns={topRated}
+                    japaneseVns={topRatedJa}
                     icon={<Star className="w-5 h-5 text-yellow-500" />}
                     showVotes={true}
                     showRating={true}
@@ -212,6 +252,7 @@ export default function GlobalStatsClient() {
                   <TopVNsTable
                     title="Most Popular"
                     vns={mostPopular}
+                    japaneseVns={mostPopularJa}
                     icon={<Users className="w-5 h-5 text-blue-500" />}
                     showVotes={true}
                     showRating={true}
@@ -301,6 +342,60 @@ export default function GlobalStatsClient() {
             </FadeIn>
           )}
 
+          {/* These key on when a vote was cast, a title was released, or an entry was
+              catalogued, which are all facts about the database itself. How the community's
+              reading has shifted is a fact about its readers, and lives with the trends. */}
+          <FadeIn delay={150}>
+            <section className="mt-10">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                When people read
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                These key on when votes were cast rather than when titles came out, so they
+                describe the community rather than the medium.
+              </p>
+              <VoteActivitySection />
+            </section>
+          </FadeIn>
+
+          <FadeIn delay={170}>
+            <section className="mt-10">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                How far back people read
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                Keyed on when a vote was cast against when its title came out. This describes
+                the audience rather than the medium, and it has moved a long way.
+              </p>
+              <ReadingTrendsSection />
+            </section>
+          </FadeIn>
+
+          <FadeIn delay={175}>
+            <section className="mt-10">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                What was published
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                Keyed on the year a title was first released.
+              </p>
+              <ReleaseTimelineSection />
+            </section>
+          </FadeIn>
+
+          <FadeIn delay={200}>
+            <section className="mt-10">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                How the record was built
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                Keyed on when an entry was catalogued, which is a fact about the editors
+                rather than about the games.
+              </p>
+              <DatabaseGrowthSection />
+            </section>
+          </FadeIn>
+
           {/* Fallback message if no global stats */}
           {!globalStats && (
             <FadeIn delay={100}>
@@ -320,6 +415,8 @@ export default function GlobalStatsClient() {
               </div>
             </FadeIn>
           )}
+
+          <StatsCrossLinks current="global" />
         </>
       )}
     </div>

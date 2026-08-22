@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Mic2, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
 import type { SeiyuuBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';
+import { RankNumber } from '@/components/stats/RankNumber';
 
 interface SeiyuuSectionProps {
   seiyuu: SeiyuuBreakdown[];
@@ -148,8 +149,8 @@ export function SeiyuuSection({ seiyuu }: SeiyuuSectionProps) {
       </div>
 
       <div className="space-y-3" style={showAll ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' } : undefined}>
-        {displayedSeiyuu.map((s) => (
-          <SeiyuuBar key={s.id} seiyuu={s} maxValue={maxValue} sortMode={sortMode} preference={preference} />
+        {displayedSeiyuu.map((s, index) => (
+          <SeiyuuBar key={s.id} rank={index + 1} seiyuu={s} maxValue={maxValue} sortMode={sortMode} preference={preference} />
         ))}
       </div>
 
@@ -220,7 +221,7 @@ export function SeiyuuSection({ seiyuu }: SeiyuuSectionProps) {
   );
 }
 
-function SeiyuuBar({ seiyuu, maxValue, sortMode, preference }: { seiyuu: SeiyuuWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
+function SeiyuuBar({ rank, seiyuu, maxValue, sortMode, preference }: { rank: number; seiyuu: SeiyuuWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
   const displayName = getEntityDisplayName(seiyuu, preference);
 
   // Calculate bar width based on sort mode
@@ -242,14 +243,17 @@ function SeiyuuBar({ seiyuu, maxValue, sortMode, preference }: { seiyuu: SeiyuuW
 
   return (
     <div className="group">
-      <div className="flex items-center justify-between mb-1">
-        <Link
-          href={`/stats/seiyuu/${seiyuu.id}`}
-          className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-        >
-          {displayName}
-        </Link>
-        <div className="flex items-center gap-3 text-sm">
+      <div className="flex items-center justify-between mb-1 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <RankNumber rank={rank} />
+          <Link
+            href={`/stats/seiyuu/${seiyuu.id}`}
+            className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+          >
+            {displayName}
+          </Link>
+        </div>
+        <div className="flex items-center gap-3 text-sm shrink-0">
           <Link
             href={`/browse?seiyuu=${encodeURIComponent(seiyuu.id)}&tag_names=${encodeURIComponent(`seiyuu:${seiyuu.id}:${displayName}`)}`}
             className={`hover:text-primary-600 dark:hover:text-primary-400 transition-colors inline-flex items-center gap-1 ${sortMode === 'count'

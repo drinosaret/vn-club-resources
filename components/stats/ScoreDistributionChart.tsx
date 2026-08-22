@@ -7,6 +7,15 @@ import { VNListDropdown } from './VNListDropdown';
 import { ChartHelpTooltip } from './ChartHelpTooltip';
 
 interface ScoreDistributionChartProps {
+  /**
+   * Heading level for this section's title.
+   *
+   * Defaults to a subsection, which is what it is on the global dashboard where these sit
+   * under a heading of their own. A page that renders this directly under its title passes
+   * 'h2', because jumping from the page heading straight to a third-level one leaves a gap
+   * in the outline a screen reader reads as a missing section.
+   */
+  headingLevel?: 'h2' | 'h3';
   distribution: Record<string, number>;
   /** JP-original VN counts per score bucket (olang='ja') */
   jpDistribution?: Record<string, number>;
@@ -29,6 +38,7 @@ export function ScoreDistributionChart({
   entityType,
   entityName,
   tooltip,
+  headingLevel: Heading = 'h3',
 }: ScoreDistributionChartProps) {
   const data = useMemo(() => {
     const scores = [];
@@ -48,9 +58,9 @@ export function ScoreDistributionChart({
   if (total === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Score Distribution
-        </h3>
+        </Heading>
         <p className="text-gray-500 dark:text-gray-400">No rating data available</p>
       </div>
     );
@@ -60,9 +70,9 @@ export function ScoreDistributionChart({
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
             Score Distribution
-          </h3>
+          </Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
         <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -74,7 +84,9 @@ export function ScoreDistributionChart({
         {data.map((d) => {
           const heightPx = (d.count / maxCount) * 160; // 160px max height (leaving room for labels)
           const percentage = total > 0 ? ((d.count / total) * 100).toFixed(0) : '0';
-          const isAverage = Math.round(average) === d.score;
+          // An empty bucket takes no emphasis. Rounding the mean can land it on a score
+          // nobody gave, and the highlight then points at a bar that stands for nothing.
+          const isAverage = d.count > 0 && Math.round(average) === d.score;
           const browseUrl = entityType && entityId ? getScoreFilterUrl(entityType, entityId, d.score, entityName) : null;
 
           const barContent = (
@@ -95,7 +107,9 @@ export function ScoreDistributionChart({
                     ? 'bg-linear-to-t from-primary-600 to-primary-400'
                     : 'bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
                 } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
-                style={{ height: `${Math.max(heightPx, 4)}px` }}
+                // The minimum is for a bar that exists. Giving an empty bucket the same
+                // stub makes nothing look identical to a couple of titles.
+                style={{ height: `${Math.max(heightPx, d.count > 0 ? 4 : 0)}px` }}
               >
                 {/* Tooltip */}
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">

@@ -23,6 +23,8 @@
     "api:rebuild": "cd vndb-stats-backend && docker compose build --no-cache",
     "api:import": "cd vndb-stats-backend && docker compose exec worker python scripts/initial_import.py",
     "api:update": "cd vndb-stats-backend && docker compose exec worker python -c \"import asyncio; from scripts.worker import run_daily_update; asyncio.run(run_daily_update())\"",
+    "api:test": "cd vndb-stats-backend && docker compose exec api sh -c \"python -m pytest -q 2>/dev/null || (pip install -q pytest pytest-asyncio && python -m pytest -q)\"",
+    "api:leaderboards": "cd vndb-stats-backend && docker compose exec worker python scripts/refresh_leaderboards.py",
     "api:status": "cd vndb-stats-backend && docker compose exec api python scripts/check_db_status.py",
     "api:migrate": "cd vndb-stats-backend && docker compose exec api alembic upgrade head",
     "api:data-migrate": "cd vndb-stats-backend && docker compose exec api python -c \"import asyncio; from app.ingestion.data_migrations import run_pending_migrations, load_migrations; load_migrations(); asyncio.run(run_pending_migrations())\"",

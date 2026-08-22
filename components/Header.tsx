@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useRef, useEffect } from 'react';
+import { Fragment, useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
@@ -109,12 +109,25 @@ export default function Header() {
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === item.name ? 'rotate-180' : ''}`} />
                     </button>
                     {openDropdown === item.name && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-44 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-50">
-                        {item.items.map(sub => {
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-50">
+                        {item.items.map((sub, subIndex) => {
                           const isSubActive = normalizedPathname.startsWith(sub.href);
+                          const group = 'group' in sub ? sub.group : undefined;
+                          const startsGroup =
+                            !!group && group !== (item.items[subIndex - 1] as typeof sub)?.group;
                           return (
+                            <Fragment key={sub.href}>
+                            {startsGroup && (
+                              <div
+                                role="presentation"
+                                className={`px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 ${
+                                  subIndex === 0 ? 'pt-1' : 'pt-2.5 mt-1 border-t border-gray-100 dark:border-gray-700/60'
+                                }`}
+                              >
+                                {group}
+                              </div>
+                            )}
                             <Link
-                              key={sub.href}
                               href={sub.href}
                               onClick={(e) => {
                                 setOpenDropdown(null);
@@ -128,6 +141,7 @@ export default function Header() {
                             >
                               {sub.name}
                             </Link>
+                            </Fragment>
                           );
                         })}
                       </div>

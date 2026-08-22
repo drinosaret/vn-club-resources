@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { TrendingUp, BookOpen, Clock, Star, Info } from 'lucide-react';
 import { TrendLineChart } from './TrendLineChart';
 import { VNTimelineChart } from './VNTimelineChart';
-import { MonthlyActivity, VNDBListItem } from '@/lib/vndb-stats-api';
+import { MonthlyActivity, VNDBListItem, formatScore } from '@/lib/vndb-stats-api';
 
 interface TrendsSectionProps {
   monthlyActivity: MonthlyActivity[];
@@ -21,12 +21,15 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
 
   // Calculate cumulative data
   const cumulativeData = useMemo(() => {
+    // Accumulated in a loop rather than inside a map callback: the running totals belong to
+    // this one pass, and a callback closing over them outlives it.
     let totalVns = 0;
     let totalHours = 0;
     let totalScoreSum = 0;
     let totalScoredVns = 0;
+    const rows = [];
 
-    return monthlyActivity.map((item) => {
+    for (const item of monthlyActivity) {
       totalVns += item.completed;
       totalHours += item.hours;
 
@@ -36,13 +39,15 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
         totalScoredVns += item.completed;
       }
 
-      return {
+      rows.push({
         ...item,
         cumulativeVns: totalVns,
         cumulativeHours: totalHours,
         cumulativeAvgScore: totalScoredVns > 0 ? totalScoreSum / totalScoredVns : null,
-      };
-    });
+      });
+    }
+
+    return rows;
   }, [monthlyActivity]);
 
   // Calculate stats for summary
@@ -72,7 +77,8 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
       dateRange: firstMonth && lastMonth ? { first: firstMonth, last: lastMonth } : null,
       avgPerMonth: Math.round(avgPerMonth * 10) / 10,
       peakMonth,
-      avgScore: avgScore !== null ? Math.round(avgScore * 10) / 10 : null,
+      // Kept unrounded: the tile shares the summary tab's formatter, which sets the precision.
+      avgScore,
     };
   }, [monthlyActivity, cumulativeData]);
 
@@ -128,7 +134,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg per Month</div>
             <div className="text-lg font-semibold text-gray-900 dark:text-white">
-              {stats.avgPerMonth} VNs
+              {stats.avgPerMonth} {stats.avgPerMonth === 1 ? 'VN' : 'VNs'}
             </div>
           </div>
           {stats.peakMonth && (
@@ -144,7 +150,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Overall Avg Score</div>
               <div className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
                 <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                {stats.avgScore}
+                {formatScore(stats.avgScore)}
               </div>
             </div>
           )}
@@ -238,7 +244,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
             VNs without either date are excluded from these charts but still counted in the Summary tab.
           </p>
           <p>
-            Reading hours are estimated based on VNDB's length categories (Very Short = ~1h, Short = ~6h, Medium = ~20h, Long = ~40h, Very Long = ~60h).
+            Reading hours are estimated based on VNDB&apos;s length categories (Very Short = ~1h, Short = ~6h, Medium = ~20h, Long = ~40h, Very Long = ~60h).
           </p>
         </div>
       </div>

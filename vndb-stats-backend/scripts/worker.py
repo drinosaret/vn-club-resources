@@ -212,7 +212,7 @@ async def run_daily_update():
     try:
         async with asyncio.timeout(max_duration):
             # Phase 1: Import data
-            logger.info("\n>>> PHASE 1/3: DATA IMPORT <<<")
+            logger.info("\n>>> PHASE 1/4: DATA IMPORT <<<")
             if run_id:
                 await run_import_with_tracking(run_id, force_download=True)
             else:
@@ -221,23 +221,60 @@ async def run_daily_update():
                 await run_full_import(settings.dump_storage_path, max_age_hours=24, force=True)
 
             # Phase 2: Compute models
-            logger.info("\n>>> PHASE 2/3: COMPUTING MODELS <<<")
+            logger.info("\n>>> PHASE 2/4: COMPUTING MODELS <<<")
             await compute_tag_vectors()
             await train_collaborative_filter()
 
             # Phase 3: Compute similarity tables
-            logger.info("\n>>> PHASE 3/3: COMPUTING SIMILARITY TABLES <<<")
+            logger.info("\n>>> PHASE 3/4: COMPUTING SIMILARITY TABLES <<<")
             await compute_vn_similarities()
             await compute_item_item_similarity()
             await swap_similarity_tables()
 
-            # Flush stale user caches so fresh data is served immediately
+            # Flush stale caches so fresh data is served immediately. Entity, VN and
+            # global caches are included: they have their own TTLs, but leaving them to
+            # expire means serving pre-import numbers for up to an hour afterwards.
+            #
+            # Everything the leaderboard rebuild owns is deliberately absent from this
+            # list. The rebuild overwrites each of its keys, so clearing them first buys
+            # nothing, and it is what would leave the site with no boards at all if the
+            # rebuild then failed. Their own TTL is what retires a key no longer written.
             from app.core.cache import get_cache
             cache = get_cache()
-            flushed_lists = await cache.flush_pattern("user:list:*")
-            flushed_stats = await cache.flush_pattern("user:stats:*")
-            flushed_browse = await cache.flush_pattern("browse:*")
-            logger.info(f"Flushed {flushed_lists} user list caches, {flushed_stats} user stats caches, and {flushed_browse} browse caches")
+            flushed = {
+                pattern: await cache.flush_pattern(pattern)
+                for pattern in (
+                    "user:list:*", "user:stats:*", "browse:*",
+                    "tag_stats:*", "trait_stats:*", "producer_stats:*",
+                    "staff_stats:*", "seiyuu_stats:*", "similar_tags:*",
+                    "similar_traits:*", "tag_traits:*", "trait_tags:*",
+                    "vn:*", "global_stats:*",
+                )
+            }
+            logger.info(
+                "Flushed caches: "
+                + ", ".join(f"{n} {p}" for p, n in flushed.items() if n)
+            )
+
+            # Phase 4: Rebuild the leaderboards from the freshly imported data.
+            logger.info("\n>>> PHASE 4/4: BUILDING LEADERBOARDS <<<")
+            try:
+                from app.leaderboards.compute import refresh_leaderboards
+                board_stats = await refresh_leaderboards()
+                logger.info(f"Leaderboards: {board_stats}")
+            except Exception as e:
+                # A failed rebuild leaves yesterday's boards in place until their TTL
+                # expires, which is preferable to failing the whole import over them.
+                logger.error(f"Leaderboard refresh failed: {e}", exc_info=True)
+
+            # Reading difficulty comes from a third party rather than the dump, so it is
+            # refreshed alongside rather than as part of the import, and its failure is
+            # never allowed to fail the run: the mirror keeps the previous rows.
+            try:
+                from app.ingestion.jiten_difficulty import import_jiten_difficulty
+                logger.info(f"Difficulty: {await import_jiten_difficulty()}")
+            except Exception as e:
+                logger.error(f"Difficulty refresh failed: {e}", exc_info=True)
 
             # Update last import time
             async with async_session_maker() as session:
@@ -591,6 +628,41 @@ async def main():
     # Run catch-up tasks on startup (with delay to let DB warm up)
     if not settings.dev_mode:
         await asyncio.sleep(30)
+        # The rankings and everything drawn from them live in Redis with a TTL, so an empty
+        # cache is the normal state after a deploy, a Redis restart, or a missed night. The
+        # rebuild reads the dump already in Postgres and takes a few minutes; leaving it to
+        # the nightly cron leaves every board unavailable until then.
+        try:
+            from app.core.cache import get_cache
+            from app.leaderboards.spec import CATALOGUE_CACHE_KEY
+
+            if await get_cache().get(CATALOGUE_CACHE_KEY) is None:
+                logger.info("No leaderboards in cache; building them now")
+                from app.leaderboards.compute import refresh_leaderboards
+
+                logger.info(f"Leaderboards: {await refresh_leaderboards()}")
+        except Exception as e:
+            logger.error(f"Startup leaderboard build failed: {e}", exc_info=True)
+
+        # The difficulty mirror lives in Postgres rather than the cache, so it survives a
+        # restart, but it is empty on a database that has never imported it and several
+        # surfaces read it directly.
+        try:
+            from sqlalchemy import text as _text
+
+            from app.db.database import async_session
+
+            async with async_session() as db:
+                measured = await db.execute(_text("SELECT count(*) FROM vn_difficulty"))
+                held = measured.scalar() or 0
+            if not held:
+                logger.info("Difficulty mirror is empty; importing it now")
+                from app.ingestion.jiten_difficulty import import_jiten_difficulty
+
+                logger.info(f"Difficulty: {await import_jiten_difficulty()}")
+        except Exception as e:
+            logger.error(f"Startup difficulty import failed: {e}", exc_info=True)
+
         try:
             await run_news_catch_up()
         except Exception as e:

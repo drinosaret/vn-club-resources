@@ -1,13 +1,55 @@
 import { Suspense } from 'react';
-import { generatePageMetadata } from '@/lib/metadata-utils';
+import type { Metadata } from 'next';
+import {
+  generatePageMetadata,
+  safeJsonLdStringify,
+  SITE_URL,
+  generateBreadcrumbJsonLd,
+} from '@/lib/metadata-utils';
 import CompareContent from './CompareContent';
 import { ArrowLeft, Users } from 'lucide-react';
 
-export const metadata = generatePageMetadata({
+export const metadata: Metadata = generatePageMetadata({
   title: 'Compare Lists',
   description: 'Compare your visual novel reading list with another VNDB user. Find readers with similar taste, see shared VNs, and discover score differences across your libraries.',
   path: '/stats/compare/',
 });
+
+// Nothing is listed until two usernames are entered, so this is a tool rather than a
+// collection of items.
+const compareJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Compare Visual Novel Lists',
+  description:
+    'Compare two VNDB reading lists side by side: shared visual novels, score differences, and a taste compatibility score, plus a mode that finds readers with the closest lists.',
+  url: `${SITE_URL}/stats/compare/`,
+  applicationCategory: 'EducationalApplication',
+  operatingSystem: 'Any',
+  browserRequirements: 'Requires JavaScript',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  featureList: [
+    'Two-user reading list comparison',
+    'Shared visual novels with per-title score differences',
+    'Taste compatibility score',
+    'Similar reader lookup from a single username',
+  ],
+  isPartOf: {
+    '@type': 'WebSite',
+    name: 'VN Club',
+    url: SITE_URL,
+  },
+};
+
+const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'Stats', path: '/stats/' },
+  { name: 'Compare', path: '/stats/compare/' },
+]);
 
 function LoadingFallback() {
   return (
@@ -18,11 +60,8 @@ function LoadingFallback() {
           <ArrowLeft className="w-5 h-5 text-gray-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Compare Lists
-            <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
-              BETA
-            </span>
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             See how your VN taste matches with another user
@@ -61,8 +100,16 @@ function LoadingFallback() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <CompareContent />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLdStringify([compareJsonLd, breadcrumbJsonLd]),
+        }}
+      />
+      <Suspense fallback={<LoadingFallback />}>
+        <CompareContent />
+      </Suspense>
+    </>
   );
 }

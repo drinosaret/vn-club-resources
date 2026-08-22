@@ -1,15 +1,18 @@
 """
-Simplified Hybrid Recommendation Engine
+Hybrid recommendation engine.
 
-Combines three signals with weighted scoring:
-- Tag cosine similarity (weight: 1.5) - content-based
-- Collaborative filtering (weight: 1.0) - "users who liked X also liked Y"
-- Staff/developer match (weight: 0.5) - bonus for preferred creators
+Scores a candidate set as a weighted blend of eight signals: tag affinity, VN-to-VN
+similarity, co-occurrence ("users also read"), developer, staff, seiyuu and character
+trait affinity, and a raw quality term. SIGNAL_WEIGHTS below is the source of truth for
+how they are balanced; read it rather than trusting any prose restatement of the numbers.
 
-Inspired by VisualNovelRecommendationEngine's approach:
-- Sparse matrix operations for efficiency
-- Higher weight on content (tags) to prevent popularity bias
-- Pre-computation for fast queries
+Design notes that are not obvious from the scoring itself:
+- Content signals outweigh popularity ones, which keeps well-known titles from crowding
+  out the personalised result.
+- The two item-item signals read nightly-materialised tables rather than computing
+  similarity per request.
+- Results are re-ranked for diversity after scoring, so a single strong cluster cannot
+  fill the whole list.
 """
 
 import logging
@@ -53,12 +56,55 @@ SEIYUU_WEIGHT = 0.3              # Voice actor preference signal
 TRAIT_WEIGHT = 0.5               # Character trait preference signal
 QUALITY_WEIGHT = 1.5             # Quality signal using raw average rating (not Bayesian)
 
-# Maximum theoretical weighted score (for normalization to 0-100)
-MAX_WEIGHTED_SCORE = (
-    TAG_WEIGHT + VN_SIMILARITY_WEIGHT + USERS_ALSO_READ_WEIGHT +
-    DEVELOPER_WEIGHT + STAFF_WEIGHT + SEIYUU_WEIGHT + TRAIT_WEIGHT +
-    QUALITY_WEIGHT
-)  # = 10.4
+# Keyed by the signal names used in the API response, so a client can line the weights up
+# with the per-signal scores it receives. Adding a signal here without scoring it, or
+# scoring one absent from here, skews every match percentage.
+SIGNAL_WEIGHTS = {
+    "tag": TAG_WEIGHT,
+    "similar_games": VN_SIMILARITY_WEIGHT,
+    "users_also_read": USERS_ALSO_READ_WEIGHT,
+    "quality": QUALITY_WEIGHT,
+    "developer": DEVELOPER_WEIGHT,
+    "staff": STAFF_WEIGHT,
+    "trait": TRAIT_WEIGHT,
+    "seiyuu": SEIYUU_WEIGHT,
+}
+
+# Score a VN would reach by maxing out every signal; the divisor for the 0-100 scale.
+MAX_WEIGHTED_SCORE = sum(SIGNAL_WEIGHTS.values())
+
+
+def normalize_score(total_score: float) -> int:
+    """Map a raw weighted score onto the 0-100 scale shown as a match percentage.
+
+    Every surface that displays a match percentage must go through this, including the
+    cached-result path: a second formula elsewhere silently changes what the same
+    recommendation appears to be worth.
+    """
+    return min(100, round((total_score / MAX_WEIGHTED_SCORE) * 100))
+
+
+def attach_source_titles(
+    details: list[dict],
+    titles: dict[str, dict[str, Optional[str]]],
+) -> list[dict]:
+    """Copy each source VN's title variants onto its match entry.
+
+    The client picks between the forms per the reader's title preference, so all of them
+    have to travel with the match, not just the database title.
+    """
+    enriched = []
+    for detail in details:
+        source_id = detail["source_vn_id"]
+        variants = titles.get(source_id) or {}
+        enriched.append({
+            **detail,
+            "source_title": variants.get("title") or source_id,
+            "source_title_jp": variants.get("title_jp"),
+            "source_title_romaji": variants.get("title_romaji"),
+        })
+    return enriched
+
 
 # Elite tier multipliers for user's top-ranked tags
 # These boost the influence of a user's strongest preferences
@@ -92,38 +138,36 @@ class RecommendationResult:
 
     # Detailed breakdown for popup (populated when generating recommendations)
     matched_tags: list[dict] = field(default_factory=list)
-    # [{"id": 123, "name": "Mystery", "user_weight": 1.8, "vn_score": 2.1}]
+    # [{"id": ..., "name": ..., "user_weight": ..., "vn_score": ...}]
 
     matched_staff: list[dict] = field(default_factory=list)
-    # [{"id": "s123", "name": "Jun Maeda", "user_avg_rating": 8.5}]
+    # [{"id": ..., "name": ..., "name_original": ..., "user_avg_rating": ...}]
 
     matched_developers: list[dict] = field(default_factory=list)
-    # [{"name": "Key", "user_avg_rating": 8.3}]
+    # [{"name": ..., "name_original": ..., "user_avg_rating": ...}]
 
     matched_seiyuu: list[dict] = field(default_factory=list)
-    # [{"id": "s123", "name": "Sawashiro Miyuki", "weighted_score": 85, "count": 5}]
+    # [{"id": ..., "name": ..., "name_original": ..., "weighted_score": ..., "count": ...}]
 
     matched_traits: list[dict] = field(default_factory=list)
-    # [{"id": 123, "name": "Kuudere", "weighted_score": 75, "count": 8}]
+    # [{"id": ..., "name": ..., "weighted_score": ..., "count": ...}]
 
     contributing_vns: list[dict] = field(default_factory=list)
-    # [{"id": "v4", "title": "Clannad", "similarity": 0.85}]
+    # [{"id": ..., "title": ..., "similarity": ...}]
 
     similar_games_details: list[dict] = field(default_factory=list)
-    # [{"source_vn_id": "v4", "source_title": "Clannad", "similarity": 0.85}]
+    # [{"source_vn_id": ..., "source_title": ..., "source_title_jp": ...,
+    #   "source_title_romaji": ..., "similarity": ...}]
 
     users_also_read_details: list[dict] = field(default_factory=list)
-    # [{"source_vn_id": "v4", "source_title": "Clannad", "co_score": 0.76, "user_count": 145}]
+    # [{"source_vn_id": ..., "source_title": ..., "source_title_jp": ...,
+    #   "source_title_romaji": ..., "co_score": ..., "user_count": ...}]
 
 
 class HybridRecommender:
-    """
-    Simplified hybrid recommendation engine.
+    """Hybrid recommendation engine.
 
-    Uses three weighted signals:
-    1. Tag cosine similarity (1.5x) - finds VNs with similar tags
-    2. Collaborative filtering (1.0x) - finds VNs liked by similar users
-    3. Staff match bonus (0.5x) - boosts VNs by preferred developers/writers
+    Blends the signals defined in SIGNAL_WEIGHTS; see the module docstring.
     """
 
     def __init__(self, db: AsyncSession):
@@ -386,14 +430,8 @@ class HybridRecommender:
             users_also_read_score, users_also_read_details_raw = users_also_read_data.get(vn_id, (0.0, []))
 
             # Enrich details with VN titles (for display in frontend)
-            similar_games_details = [
-                {**d, "source_title": user_vn_titles.get(d["source_vn_id"], d["source_vn_id"])}
-                for d in similar_games_details_raw
-            ]
-            users_also_read_details = [
-                {**d, "source_title": user_vn_titles.get(d["source_vn_id"], d["source_vn_id"])}
-                for d in users_also_read_details_raw
-            ]
+            similar_games_details = attach_source_titles(similar_games_details_raw, user_vn_titles)
+            users_also_read_details = attach_source_titles(users_also_read_details_raw, user_vn_titles)
 
             # Weighted combination (Similar Games and Users Also Read are the dominant signals)
             total_score = (
@@ -408,9 +446,7 @@ class HybridRecommender:
             )
 
             # Calculate normalized score (0-100) before popularity penalty
-            overall_normalized_score = min(100, round((total_score / MAX_WEIGHTED_SCORE) * 100))
-            if overall_normalized_score == 0 and total_score > 0:
-                logger.warning(f"VN {vn_id}: normalized_score=0 but total_score={total_score:.4f}, tag={tag_score:.3f}, sim={similar_games_score:.3f}, cooc={users_also_read_score:.3f}")
+            overall_normalized_score = normalize_score(total_score)
 
             # Note: Popularity penalty disabled - letting quality scores speak for themselves
 
@@ -526,6 +562,14 @@ class HybridRecommender:
             max_trait_weighted = user_profile.get("max_trait_weighted", 1.0)
             user_tags = user_profile["tag_weights"]
 
+            matched_dev_names = {
+                dev
+                for result in diverse_results
+                for dev in all_developers.get(result.vn_id, [])
+                if dev in user_devs
+            }
+            dev_originals = await self._batch_get_producer_originals(matched_dev_names)
+
             for result in diverse_results:
                 vn_id = result.vn_id
                 vn_tags = all_tags.get(vn_id, {})
@@ -565,6 +609,7 @@ class HybridRecommender:
                     normalized_score = (weighted_score_raw / max_dev_weighted) * 100 if max_dev_weighted > 0 else 0
                     matched_developers_detail.append({
                         "name": dev_name,
+                        "name_original": dev_originals.get(dev_name),
                         "user_avg_rating": round(dev_delta + user_overall_avg, 1),
                         "weight": round(dev_delta, 2),
                         "weighted_score": round(normalized_score, 1),
@@ -577,7 +622,8 @@ class HybridRecommender:
                 matched_staff_detail = []
                 vn_staff_set = set(vn_staff)
                 for staff_id in vn_staff_set.intersection(user_staff_prefs.keys()):
-                    staff_name = staff_names.get(staff_id, "")
+                    staff_entry = staff_names.get(staff_id) or {}
+                    staff_name = staff_entry.get("name") or ""
                     if staff_name:
                         staff_delta = user_staff_prefs.get(staff_id, 0)
                         weighted_score_raw = staff_weighted_scores.get(staff_id, user_overall_avg)
@@ -585,6 +631,7 @@ class HybridRecommender:
                         matched_staff_detail.append({
                             "id": staff_id,
                             "name": staff_name,
+                            "name_original": staff_entry.get("original"),
                             "user_avg_rating": round(staff_delta + user_overall_avg, 1),
                             "weight": round(staff_delta, 2),
                             "weighted_score": round(normalized_score, 1),
@@ -597,13 +644,15 @@ class HybridRecommender:
                 matched_seiyuu_detail = []
                 vn_seiyuu_set = set(vn_seiyuu)
                 for seiyuu_id in vn_seiyuu_set.intersection(user_seiyuu_prefs.keys()):
-                    seiyuu_name = seiyuu_names.get(seiyuu_id, "")
+                    seiyuu_entry = seiyuu_names.get(seiyuu_id) or {}
+                    seiyuu_name = seiyuu_entry.get("name") or ""
                     if seiyuu_name:
                         weighted_score_raw = seiyuu_weighted_scores.get(seiyuu_id, user_overall_avg)
                         normalized_score = (weighted_score_raw / max_seiyuu_weighted) * 100 if max_seiyuu_weighted > 0 else 0
                         matched_seiyuu_detail.append({
                             "id": seiyuu_id,
                             "name": seiyuu_name,
+                            "name_original": seiyuu_entry.get("original"),
                             "weighted_score": round(normalized_score, 1),
                             "count": seiyuu_counts.get(seiyuu_id, 0),
                         })
@@ -637,7 +686,7 @@ class HybridRecommender:
                     if sim > 0.3:
                         contributing_vns_detail.append({
                             "id": user_vn_id,
-                            "title": user_vn_titles.get(user_vn_id, user_vn_id),
+                            "title": (user_vn_titles.get(user_vn_id) or {}).get("title") or user_vn_id,
                             "similarity": round(sim * 100, 0),
                         })
                 contributing_vns_detail.sort(key=lambda x: x["similarity"], reverse=True)
@@ -732,14 +781,8 @@ class HybridRecommender:
         users_also_read_score, users_also_read_details_raw = users_also_read_data.get(vn_id, (0.0, []))
 
         # Enrich details with VN titles (for display in frontend)
-        similar_games_details = [
-            {**d, "source_title": user_vn_titles.get(d["source_vn_id"], d["source_vn_id"])}
-            for d in similar_games_details_raw
-        ]
-        users_also_read_details = [
-            {**d, "source_title": user_vn_titles.get(d["source_vn_id"], d["source_vn_id"])}
-            for d in users_also_read_details_raw
-        ]
+        similar_games_details = attach_source_titles(similar_games_details_raw, user_vn_titles)
+        users_also_read_details = attach_source_titles(users_also_read_details_raw, user_vn_titles)
 
         # Compute total score
         total_score = (
@@ -754,7 +797,7 @@ class HybridRecommender:
         )
 
         # Calculate normalized score (0-100) before any adjustments
-        overall_normalized_score = min(100, round((total_score / MAX_WEIGHTED_SCORE) * 100))
+        overall_normalized_score = normalize_score(total_score)
 
         # Build detailed breakdown
         user_tags = user_profile["tag_weights"]
@@ -797,15 +840,18 @@ class HybridRecommender:
         dev_weighted_scores = user_profile.get("dev_weighted_scores", {})
         dev_counts = user_profile.get("dev_counts", {})
         vn_devs_set = set(vn_developers)
+        matched_dev_names = vn_devs_set.intersection(user_devs.keys())
+        dev_originals = await self._batch_get_producer_originals(matched_dev_names)
 
         matched_developers_detail = []
-        for dev_name in vn_devs_set.intersection(user_devs.keys()):
+        for dev_name in matched_dev_names:
             dev_delta = user_devs.get(dev_name, 0)
             weighted_score_raw = dev_weighted_scores.get(dev_name, user_overall_avg)
             # Normalize to 0-100 scale where user's top developer = 100 (matches stats page)
             normalized_score = (weighted_score_raw / max_dev_weighted) * 100 if max_dev_weighted > 0 else 0
             matched_developers_detail.append({
                 "name": dev_name,
+                "name_original": dev_originals.get(dev_name),
                 "user_avg_rating": round(dev_delta + user_overall_avg, 1),
                 "weight": round(dev_delta, 2),
                 "weighted_score": round(normalized_score, 1),
@@ -820,7 +866,8 @@ class HybridRecommender:
 
         matched_staff_detail = []
         for staff_id in vn_staff_set.intersection(user_staff_prefs.keys()):
-            staff_name = staff_names.get(staff_id, "")
+            staff_entry = staff_names.get(staff_id) or {}
+            staff_name = staff_entry.get("name") or ""
             if staff_name:
                 staff_delta = user_staff_prefs.get(staff_id, 0)
                 weighted_score_raw = staff_weighted_scores.get(staff_id, user_overall_avg)
@@ -829,6 +876,7 @@ class HybridRecommender:
                 matched_staff_detail.append({
                     "id": staff_id,
                     "name": staff_name,
+                    "name_original": staff_entry.get("original"),
                     "user_avg_rating": round(staff_delta + user_overall_avg, 1),
                     "weight": round(staff_delta, 2),
                     "weighted_score": round(normalized_score, 1),
@@ -844,13 +892,15 @@ class HybridRecommender:
 
         matched_seiyuu_detail = []
         for seiyuu_id in vn_seiyuu_set.intersection(user_seiyuu_prefs.keys()):
-            seiyuu_name = seiyuu_names.get(seiyuu_id, "")
+            seiyuu_entry = seiyuu_names.get(seiyuu_id) or {}
+            seiyuu_name = seiyuu_entry.get("name") or ""
             if seiyuu_name:
                 weighted_score_raw = seiyuu_weighted_scores.get(seiyuu_id, user_overall_avg)
                 normalized_score = (weighted_score_raw / max_seiyuu_weighted) * 100 if max_seiyuu_weighted > 0 else 0
                 matched_seiyuu_detail.append({
                     "id": seiyuu_id,
                     "name": seiyuu_name,
+                    "name_original": seiyuu_entry.get("original"),
                     "weighted_score": round(normalized_score, 1),
                     "count": seiyuu_counts.get(seiyuu_id, 0),
                 })
@@ -888,7 +938,7 @@ class HybridRecommender:
             if sim > 0.3:
                 contributing_vns_detail.append({
                     "id": user_vn_id,
-                    "title": user_vn_titles.get(user_vn_id, user_vn_id),
+                    "title": (user_vn_titles.get(user_vn_id) or {}).get("title") or user_vn_id,
                     "similarity": round(sim * 100, 0),
                 })
         contributing_vns_detail.sort(key=lambda x: x["similarity"], reverse=True)
@@ -1077,17 +1127,24 @@ class HybridRecommender:
             logger.warning(f"Failed to load tag names: {e}")
             return {}
 
-    async def _batch_get_staff_names(self, staff_ids: set[str]) -> dict[str, str]:
-        """Batch load staff names for display."""
+    async def _batch_get_staff_names(self, staff_ids: set[str]) -> dict[str, dict[str, Optional[str]]]:
+        """Batch load staff names for display.
+
+        `name` holds the native form and `original` the romanised one, so both travel
+        together for the reader's name preference to choose from.
+        """
         if not staff_ids:
             return {}
 
         try:
             result = await self.db.execute(
-                select(Staff.id, Staff.name)
+                select(Staff.id, Staff.name, Staff.original)
                 .where(Staff.id.in_(list(staff_ids)))
             )
-            return {row.id: row.name for row in result.all()}
+            return {
+                row.id: {"name": row.name, "original": row.original}
+                for row in result.all()
+            }
         except Exception as e:
             logger.warning(f"Failed to load staff names: {e}")
             return {}
@@ -1107,19 +1164,54 @@ class HybridRecommender:
             logger.warning(f"Failed to load trait names: {e}")
             return {}
 
-    async def _batch_get_vn_titles(self, vn_ids: list[str]) -> dict[str, str]:
-        """Batch load VN titles for display."""
+    async def _batch_get_vn_titles(self, vn_ids: list[str]) -> dict[str, dict[str, Optional[str]]]:
+        """Batch load VN title variants for display.
+
+        Carries every form a reader's title preference can select between, since the
+        database title alone is Japanese for some works and Latin for others.
+        """
         if not vn_ids:
             return {}
 
         try:
             result = await self.db.execute(
-                select(VisualNovel.id, VisualNovel.title)
+                select(
+                    VisualNovel.id,
+                    VisualNovel.title,
+                    VisualNovel.title_jp,
+                    VisualNovel.title_romaji,
+                )
                 .where(VisualNovel.id.in_(vn_ids))
             )
-            return {row.id: row.title for row in result.all()}
+            return {
+                row.id: {
+                    "title": row.title,
+                    "title_jp": row.title_jp,
+                    "title_romaji": row.title_romaji,
+                }
+                for row in result.all()
+            }
         except Exception as e:
             logger.warning(f"Failed to load VN titles: {e}")
+            return {}
+
+    async def _batch_get_producer_originals(self, names: set[str]) -> dict[str, str]:
+        """Map producer names to their romanised form.
+
+        Developer preferences are keyed by producer name rather than id, so the romanised
+        form has to be reachable by that same key.
+        """
+        if not names:
+            return {}
+
+        try:
+            result = await self.db.execute(
+                select(Producer.name, Producer.original)
+                .where(Producer.name.in_(list(names)))
+            )
+            return {row.name: row.original for row in result.all() if row.original}
+        except Exception as e:
+            logger.warning(f"Failed to load producer names: {e}")
             return {}
 
     async def _batch_get_collab_details(
@@ -1224,8 +1316,8 @@ class HybridRecommender:
         max_elite_contrib = top_user_weights[0] * 3.0 if top_user_weights else 1.0
         best_match_score = min(1.0, best_elite_contribution / max_elite_contrib) if max_elite_contrib > 0 else 0.0
 
-        # Blend sum-based and best-match components
-        # 70% sum (rewards breadth) + 30% best-match (rewards depth on top tags)
+        # Blend the two components: the sum rewards breadth of overlap, the best-match term
+        # rewards depth on the user's top tags. BEST_MATCH_WEIGHT sets the split.
         blended = (1 - BEST_MATCH_WEIGHT) * sum_score + BEST_MATCH_WEIGHT * best_match_score
 
         # Small bonus for matching many tags (up to 10% boost)
@@ -1596,11 +1688,6 @@ class HybridRecommender:
             staff_counts[staff_id] = count
             preferred_staff[staff_id] = weighted - user_overall_avg
 
-            # Debug milktub
-            if staff_id == 's465':
-                logger.info(f"[RECS DEBUG] milktub: count={count}, avg={staff_avg:.4f}, "
-                           f"user_overall={user_overall_avg:.4f}, bayesian={bayesian:.4f}, weighted={weighted:.4f}")
-
         # Group VNs by developer: {developer: [vn_ids]}
         dev_to_vns: dict[str, list[str]] = {}
         for vn_id in vn_ids:
@@ -1709,12 +1796,6 @@ class HybridRecommender:
         max_dev_weighted = max(dev_weighted_scores.values()) if dev_weighted_scores else 1.0
         max_seiyuu_weighted = max(seiyuu_weighted_scores.values()) if seiyuu_weighted_scores else 1.0
         max_trait_weighted = max(trait_weighted_scores.values()) if trait_weighted_scores else 1.0
-
-        # Debug: log milktub normalized score
-        if 's465' in staff_weighted_scores:
-            milktub_weighted = staff_weighted_scores['s465']
-            milktub_normalized = (milktub_weighted / max_staff_weighted) * 100
-            logger.info(f"[RECS DEBUG] milktub normalized: {milktub_weighted:.4f} / {max_staff_weighted:.4f} * 100 = {milktub_normalized:.1f}")
 
         logger.info(
             f"Built user profile: {len(tag_weights)} tags, {len(preferred_staff)} staff, "
@@ -2385,20 +2466,41 @@ class HybridRecommender:
         spoiler_level: int = 0,
     ) -> list[dict]:
         """Filter candidates by tag requirements."""
+        if not include_tags and not exclude_tags:
+            return candidates
+
+        # Only the filtered tags matter here, so the query is narrowed to them rather than
+        # loading every tag on every candidate.
+        relevant_tags = set(include_tags or []) | set(exclude_tags or [])
+        vn_ids = [vn["id"] for vn in candidates]
+
+        result = await self.db.execute(
+            select(VNTag.vn_id, VNTag.tag_id)
+            .where(VNTag.vn_id.in_(vn_ids))
+            .where(VNTag.tag_id.in_(relevant_tags))
+            .where(VNTag.spoiler_level <= spoiler_level)
+            .where(VNTag.score > 0)
+            .where(VNTag.lie == False)  # exclude disputed/incorrect tags
+        )
+
+        vn_tags: dict[str, set[int]] = {}
+        for vn_id, tag_id in result.all():
+            vn_tags.setdefault(vn_id, set()).add(tag_id)
+
+        include_set = set(include_tags) if include_tags else None
+        exclude_set = set(exclude_tags) if exclude_tags else None
+
         filtered = []
         for vn in candidates:
-            vn_tags = await self._get_vn_tags(vn["id"], spoiler_level=spoiler_level)
-            vn_tag_ids = set(vn_tags.keys())
+            vn_tag_ids = vn_tags.get(vn["id"], set())
 
             # Check include tags (VN must have at least one)
-            if include_tags:
-                if not vn_tag_ids.intersection(set(include_tags)):
-                    continue
+            if include_set and not vn_tag_ids & include_set:
+                continue
 
             # Check exclude tags (VN must not have any)
-            if exclude_tags:
-                if vn_tag_ids.intersection(set(exclude_tags)):
-                    continue
+            if exclude_set and vn_tag_ids & exclude_set:
+                continue
 
             filtered.append(vn)
 

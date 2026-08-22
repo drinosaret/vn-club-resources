@@ -3,8 +3,11 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, BarChart3, Sparkles, Users, TrendingUp, Globe, Database } from 'lucide-react';
+import { Search, BarChart3, Sparkles, Users, TrendingUp } from 'lucide-react';
 import { vndbStatsApi, DataStatus } from '@/lib/vndb-stats-api';
+import { DataFreshness } from '@/components/stats/DataFreshness';
+import { FeaturedRanking } from '@/components/stats/FeaturedRanking';
+import { TrendsHighlight } from '@/components/stats/TrendsHighlight';
 
 export default function StatsPageClient() {
   const router = useRouter();
@@ -41,52 +44,24 @@ export default function StatsPageClient() {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center px-4 py-12">
-      <div className="max-w-4xl w-full">
+      <div className="w-full max-w-3xl">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-4">
             <BarChart3 className="w-10 h-10 text-primary-600 dark:text-primary-400" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 flex items-center justify-center gap-3">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
             VNDB Stats
-            <span className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
-              BETA
-            </span>
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
             Analyze your visual novel reading habits and explore the database
           </p>
-          <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-            This feature is in beta. Expect bugs and missing data. Feedback welcome!
-          </p>
         </div>
 
-        {/* Navigation Links */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-          <Link
-            href="/stats/global"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
-          >
-            <Globe className="w-4 h-4" />
-            Global Stats
-          </Link>
-          <Link
-            href="/stats/compare"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
-          >
-            <Users className="w-4 h-4" />
-            Compare
-          </Link>
-          <Link
-            href="/recommendations"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            Recommendations
-          </Link>
-        </div>
-
-        {/* Recommendations Link removed (now a tab above) */}
+        {/* No row of destination buttons here. The section navigation at the top of every
+            page in this section already lists all of them, and a second copy on this page
+            alone was the same set of links twice: on a narrow screen the copy had to scroll
+            sideways, so it also hid what the navigation above was showing in full. */}
 
         {/* Search Form */}
         <form onSubmit={handleSubmit} className="mb-8">
@@ -96,13 +71,13 @@ export default function StatsPageClient() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Enter your VNDB username"
-              className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
+              className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:focus:border-primary-400 dark:focus:ring-primary-400 transition-colors"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !query.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 focus:outline-2 focus:outline-offset-[-4px] focus:outline-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -117,7 +92,7 @@ export default function StatsPageClient() {
         </form>
 
         {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-2xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           <FeatureCard
             icon={<TrendingUp className="w-6 h-6" />}
             title="Reading Stats"
@@ -137,19 +112,26 @@ export default function StatsPageClient() {
           </Link>
         </div>
 
+        {/* Something to look at before a username has been entered, and the clearest place to
+            show that the two sections answer different kinds of question: one states a
+            standing, the other states a change. */}
+        <div className="mt-10 grid gap-4 lg:grid-cols-2 text-left">
+          <div className="min-w-0">
+            <TrendsHighlight />
+          </div>
+          <div className="min-w-0">
+            <FeaturedRanking />
+          </div>
+        </div>
+
         {/* Note & Data Status */}
         <div className="mt-10 text-sm text-gray-500 dark:text-gray-500 text-center space-y-2">
           <p>Your VNDB list must be public for stats to be generated.</p>
-          {dataStatus?.last_import && (
-            <p className="flex items-center justify-center gap-1.5 text-xs">
-              <Database className="w-3.5 h-3.5" />
-              {(() => { const dump = getVndbDumpInfo(dataStatus.last_import); return <>Using VNDB data from {dump.date} ({dump.ago})</>; })()}
-              <span className="text-gray-400">· Next update {getNextUpdateCountdown()}</span>
-              {dataStatus.vn_count && (
-                <span className="text-gray-400">({dataStatus.vn_count.toLocaleString()} VNs)</span>
-              )}
-            </p>
-          )}
+          <DataFreshness
+            lastImport={dataStatus?.last_import}
+            vnCount={dataStatus?.vn_count}
+            className="justify-center"
+          />
           <p className="text-xs text-gray-400 dark:text-gray-600">
             Inspired by the now-defunct vnstat.net
           </p>
@@ -173,80 +155,12 @@ function FeatureCard({
       <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 mb-3">
         {icon}
       </div>
-      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+      <h2 className="font-semibold text-gray-900 dark:text-white mb-1">
         {title}
-      </h3>
+      </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400">
         {description}
       </p>
     </div>
   );
-}
-
-function getVndbDumpInfo(lastImport: string): { date: string; ago: string } {
-  // VNDB publishes dumps daily at 8:00 UTC.
-  // Find the most recent 8:00 UTC before the import timestamp.
-  const hasTimezone = /[Zz]$/.test(lastImport) || /[+-]\d{2}:\d{2}$/.test(lastImport);
-  const normalized = hasTimezone ? lastImport : lastImport + 'Z';
-  const importDate = new Date(normalized);
-
-  // Start from the same day at 08:00 UTC
-  const dumpDate = new Date(Date.UTC(
-    importDate.getUTCFullYear(),
-    importDate.getUTCMonth(),
-    importDate.getUTCDate(),
-    8, 0, 0
-  ));
-
-  // If the import happened before 08:00 UTC, the dump is from the previous day
-  if (importDate < dumpDate) {
-    dumpDate.setUTCDate(dumpDate.getUTCDate() - 1);
-  }
-
-  const date = dumpDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' at 8:00 UTC';
-
-  const now = new Date();
-  const diffMs = now.getTime() - dumpDate.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-  let ago: string;
-  if (diffHours < 1) {
-    ago = 'just now';
-  } else if (diffHours < 24) {
-    ago = `${diffHours}h ago`;
-  } else {
-    const diffDays = Math.floor(diffHours / 24);
-    const remainingHours = diffHours % 24;
-    ago = remainingHours > 0
-      ? `${diffDays}d ${remainingHours}h ago`
-      : `${diffDays}d ago`;
-  }
-
-  return { date, ago };
-}
-
-function getNextUpdateCountdown(): string {
-  // Worker imports daily at 4:00 UTC. Compute the next 4:00 UTC from now.
-  const now = new Date();
-  const next = new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-    4, 0, 0
-  ));
-  if (now >= next) {
-    next.setUTCDate(next.getUTCDate() + 1);
-  }
-
-  const diffMs = next.getTime() - now.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMinutes / 60);
-  const remainingMinutes = diffMinutes % 60;
-
-  if (diffHours < 1) {
-    return `in ${diffMinutes}m`;
-  }
-  return remainingMinutes > 0
-    ? `in ${diffHours}h ${remainingMinutes}m`
-    : `in ${diffHours}h`;
 }

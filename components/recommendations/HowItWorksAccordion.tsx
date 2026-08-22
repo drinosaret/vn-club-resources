@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { ChevronDown, Tag, Users, BookOpen, Building2, Pen, Mic, Heart, Star } from 'lucide-react';
 
+import { MAX_RAW_SCORE, SIGNAL_WEIGHTS, maxContributionPct } from '@/lib/recommendation-weights';
+
 interface AccordionSectionProps {
   title: string;
   children: React.ReactNode;
@@ -34,16 +36,17 @@ function AccordionSection({ title, children, defaultOpen = false }: AccordionSec
   );
 }
 
-// Signal configuration for consistent styling
+// Presentation only. The weights themselves come from the shared table so this explainer
+// cannot drift from the arithmetic it describes.
 const signals = [
-  { name: 'Tag Matching', weight: 2.5, maxPct: 24, Icon: Tag, color: 'blue', desc: 'Themes and content tags matching your preferences' },
-  { name: 'Similar Games', weight: 2.0, maxPct: 19, Icon: BookOpen, color: 'purple', desc: 'VNs similar to your highly-rated favorites' },
-  { name: 'Users Also Read', weight: 2.0, maxPct: 19, Icon: Users, color: 'green', desc: 'VNs that fans of your favorites also enjoyed' },
-  { name: 'Quality', weight: 1.5, maxPct: 14, Icon: Star, color: 'yellow', desc: 'VNDB global average rating' },
-  { name: 'Developer', weight: 0.6, maxPct: 6, Icon: Building2, color: 'orange', desc: 'Studios/publishers you\'ve enjoyed' },
-  { name: 'Staff', weight: 0.5, maxPct: 5, Icon: Pen, color: 'amber', desc: 'Writers, artists, composers you like' },
-  { name: 'Traits', weight: 0.5, maxPct: 5, Icon: Heart, color: 'rose', desc: 'Character archetypes you prefer' },
-  { name: 'Seiyuu', weight: 0.3, maxPct: 3, Icon: Mic, color: 'pink', desc: 'Voice actors from VNs you rated highly' },
+  { name: 'Tag Matching', weight: SIGNAL_WEIGHTS.tag, Icon: Tag, color: 'blue', desc: 'Themes and content tags matching your preferences' },
+  { name: 'Similar Games', weight: SIGNAL_WEIGHTS.similar_games, Icon: BookOpen, color: 'purple', desc: 'VNs similar to your highly-rated favorites' },
+  { name: 'Users Also Read', weight: SIGNAL_WEIGHTS.users_also_read, Icon: Users, color: 'green', desc: 'VNs that fans of your favorites also enjoyed' },
+  { name: 'Quality', weight: SIGNAL_WEIGHTS.quality, Icon: Star, color: 'yellow', desc: 'VNDB global average rating' },
+  { name: 'Developer', weight: SIGNAL_WEIGHTS.developer, Icon: Building2, color: 'orange', desc: 'Studios/publishers you\'ve enjoyed' },
+  { name: 'Staff', weight: SIGNAL_WEIGHTS.staff, Icon: Pen, color: 'amber', desc: 'Writers, artists, composers you like' },
+  { name: 'Traits', weight: SIGNAL_WEIGHTS.trait, Icon: Heart, color: 'rose', desc: 'Character archetypes you prefer' },
+  { name: 'Seiyuu', weight: SIGNAL_WEIGHTS.seiyuu, Icon: Mic, color: 'pink', desc: 'Voice actors from VNs you rated highly' },
 ];
 
 const colorClasses: Record<string, string> = {
@@ -68,11 +71,11 @@ export function HowItWorksAccordion() {
             how well a VN aligns with your preferences based on your VNDB ratings.
           </p>
           <p>
-            It combines <strong className="text-gray-900 dark:text-white">8 independent signals</strong> with
-            different weights. The maximum possible raw score is 10.4 (sum of all weights).
+            It combines <strong className="text-gray-900 dark:text-white">{signals.length} independent signals</strong> with
+            different weights. The maximum possible raw score is {MAX_RAW_SCORE.toFixed(1)} (sum of all weights).
           </p>
           <p className="font-mono text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded-sm">
-            normalized_score = (total_weighted_score / 10.4) × 100
+            normalized_score = (total_weighted_score / {MAX_RAW_SCORE.toFixed(1)}) × 100
           </p>
         </div>
       </AccordionSection>
@@ -99,11 +102,11 @@ export function HowItWorksAccordion() {
                     signal.color === 'rose' ? 'bg-rose-500' :
                     'bg-pink-500'
                   }`}
-                  style={{ width: `${signal.maxPct * 4}%` }}
+                  style={{ width: `${maxContributionPct(signal.weight) * 4}%` }}
                 />
               </div>
               <span className="text-gray-500 dark:text-gray-500 w-10 text-right text-xs">
-                {signal.maxPct}%
+                {maxContributionPct(signal.weight)}%
               </span>
             </div>
           ))}

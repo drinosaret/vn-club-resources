@@ -5,7 +5,7 @@ import { generatePageMetadata, safeJsonLdStringify, SITE_URL, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'Global Visual Novel Statistics',
   description:
-    'Explore global visual novel statistics from VNDB — top rated VNs, score distributions, release trends, and reading activity across the community.',
+    'See the shape of the whole VNDB database at once: the highest rated and most popular visual novels, Japanese-only lists of both, score and release year distributions, and how much of it is rated.',
   path: '/stats/global/',
 });
 
@@ -13,7 +13,7 @@ const globalStatsJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: 'Global Visual Novel Statistics',
-  description: 'Explore global visual novel statistics from VNDB — top rated VNs, score distributions, release trends, and more.',
+  description: 'The shape of the whole VNDB database: highest rated and most popular visual novels, score and release year distributions, and rating coverage.',
   url: `${SITE_URL}/stats/global/`,
   isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
 };

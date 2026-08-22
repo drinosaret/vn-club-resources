@@ -1631,16 +1631,215 @@ async def _update_vn_minage_from_releases(releases_file: str, releases_vn_file: 
     logger.info(f"Updated minage/released for {update_count} VNs")
 
 
-async def update_vn_platforms_and_languages():
-    """Aggregate platforms and languages from release data into the visual_novels table.
+def _find_dump_file(extract_dir: str, name: str) -> str | None:
+    """Locate a named file anywhere under the extracted dump directory."""
+    for root, dirs, files in os.walk(extract_dir):
+        if name in files:
+            return os.path.join(root, name)
+    return None
 
-    The VNDB dump excludes cached columns (c_platforms, c_languages) from the vn table,
-    so we reconstruct them from release_platforms and releases.olang respectively.
+
+def _read_dump_rows(path: str):
+    """Yield rows of a dump file as dicts, using its sidecar .header for field names."""
+    header_file = path + ".header"
+    try:
+        with open(header_file, "r", encoding="utf-8") as f:
+            fieldnames = f.read().strip().split("\t")
+    except FileNotFoundError:
+        logger.error(f"Header not found: {header_file}")
+        return
+
+    with open(path, "r", encoding="utf-8") as f:
+        yield from csv.DictReader(
+            f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE
+        )
+
+
+def _parse_dump_date(value: str | None):
+    """Parse a dump date field, treating VNDB's NULL sentinel as absent."""
+    if not value or value == "\\N":
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _parse_dump_int(value: str | None) -> int | None:
+    """Parse a dump integer field, treating VNDB's NULL sentinel as absent."""
+    if not value or value == "\\N":
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+async def import_entry_meta(extract_dir: str, force: bool = False):
+    """Copy VN entry provenance from the entry_meta dump onto visual_novels.
+
+    entry_meta covers every entry type; only VN rows are kept, which is a small fraction of
+    the file. The remainder describes releases, characters, producers and staff, none of which
+    the site charts, and storing them would cost disk for nothing.
+
+    Written as an UPDATE rather than a staging swap because visual_novels is upsert-based
+    and not in STAGING_TABLES.
     """
-    logger.info("Aggregating VN platforms and languages from release data...")
+    entry_meta_file = _find_dump_file(extract_dir, "entry_meta")
+    if not entry_meta_file:
+        logger.warning("entry_meta file not found in extracted files")
+        return
+
+    if not await should_import(entry_meta_file, "entry_meta", force):
+        return
+
+    logger.info(f"Importing VN entry metadata from {entry_meta_file}")
+
+    batch: list[dict] = []
+    count = 0
+    BATCH_SIZE = 5000
+    statement = text(
+        "UPDATE visual_novels SET entry_created = :created, entry_lastmod = :lastmod, "
+        "entry_num_edits = :num_edits, entry_num_users = :num_users WHERE id = :id"
+    )
+
+    async def flush(rows: list[dict]):
+        if not rows:
+            return
+        async with async_session() as db:
+            await db.execute(statement, rows)
+            await db.commit()
+
+    for row in _read_dump_rows(entry_meta_file):
+        entry_id = row.get("id", "")
+        if not entry_id.startswith("v"):
+            continue
+
+        batch.append({
+            "id": entry_id,
+            "created": _parse_dump_date(row.get("created")),
+            "lastmod": _parse_dump_date(row.get("lastmod")),
+            "num_edits": _parse_dump_int(row.get("num_edits")),
+            "num_users": _parse_dump_int(row.get("num_users")),
+        })
+        count += 1
+
+        if len(batch) >= BATCH_SIZE:
+            await flush(batch)
+            batch = []
+
+    await flush(batch)
+
+    logger.info(f"Updated entry metadata for {count} VNs")
+    await mark_import_complete(entry_meta_file, "entry_meta")
+
+
+def _compute_release_facets(extract_dir: str) -> dict[str, dict] | None:
+    """Derive per-VN language and freeware facets from the release dump files.
+
+    Returns None when the files are unavailable, so the caller can fall back.
+
+    Languages come from releases_titles rather than releases.olang: olang is the single
+    original language of a release, so a VN with an English release of a Japanese game
+    would look Japanese-only under it. releases_titles lists every language a release
+    carries, which is what "released in language X" actually means, and is what the
+    Japanese-only facet needs to be correct rather than approximate.
+    """
+    releases_file = _find_dump_file(extract_dir, "releases")
+    titles_file = _find_dump_file(extract_dir, "releases_titles")
+    release_vn_file = _find_dump_file(extract_dir, "releases_vn")
+
+    if not (releases_file and titles_file and release_vn_file):
+        logger.warning("Release dump files incomplete; skipping language/freeware facets")
+        return None
+
+    # Two things are asked of each release: whether it is free at all, and whether it is
+    # something a person could actually read on its own. A patch is not, because it needs
+    # the game underneath it.
+    is_free: dict[str, bool] = {}
+    is_patch: dict[str, bool] = {}
+    for row in _read_dump_rows(releases_file):
+        release_id = row.get("id", "")
+        is_free[release_id] = row.get("freeware") == "t"
+        is_patch[release_id] = row.get("patch") == "t"
+
+    release_langs: dict[str, set[str]] = {}
+    for row in _read_dump_rows(titles_file):
+        lang = row.get("lang", "")
+        if lang and lang != "\\N":
+            release_langs.setdefault(row.get("id", ""), set()).add(lang)
+
+    facets: dict[str, dict] = {}
+    for row in _read_dump_rows(release_vn_file):
+        release_id = row.get("id", "")
+        vn_id = row.get("vid", "")
+        if not vn_id:
+            continue
+        if not vn_id.startswith("v"):
+            vn_id = f"v{vn_id}"
+
+        langs = release_langs.get(release_id, set())
+        free = is_free.get(release_id, False)
+        patch = is_patch.get(release_id, False)
+        rtype = (row.get("rtype", "") or "").strip()
+
+        vn = facets.setdefault(
+            vn_id,
+            {"languages": set(), "paid_releases": 0, "free_readable": 0,
+             "ja_total": 0, "ja_free": 0, "ja_readable": 0},
+        )
+        vn["languages"].update(langs)
+
+        if not free:
+            vn["paid_releases"] += 1
+        # Complete and not a patch: something a person could sit down and read without
+        # owning anything else.
+        elif rtype == "complete" and not patch:
+            vn["free_readable"] += 1
+
+        if "ja" in langs:
+            vn["ja_total"] += 1
+            if free:
+                vn["ja_free"] += 1
+                if rtype == "complete" and not patch:
+                    vn["ja_readable"] += 1
+
+    for vn in facets.values():
+        # A title is freeware when it has no paid release at all, and at least one free
+        # release someone could read on its own.
+        #
+        # The weaker reading, "has some free release", does not survive contact with the
+        # data: a commercial title with one promotional free edition satisfies it, and so
+        # which fills the board with games nobody can get for nothing. Whether every route to
+        # a title is free is the only test that matches what the word is taken to mean.
+        #
+        # The cost is titles that were released free and later sold commercially. They are
+        # excluded, which is the right answer for anyone asking what they can read today.
+        vn["has_free_release"] = vn["paid_releases"] == 0 and vn["free_readable"] > 0
+
+        # The same test restricted to Japanese releases, for the Japanese-freeware boards.
+        vn["jp_freeware"] = (
+            vn["ja_total"] > 0
+            and vn["ja_free"] == vn["ja_total"]
+            and vn["ja_readable"] > 0
+        )
+
+    return facets
+
+
+async def update_vn_release_facets(extract_dir: str | None = None):
+    """Aggregate platforms, languages and freeware flags from release data.
+
+    The VNDB dump omits the vn table's cached columns (c_platforms, c_languages), so these
+    are reconstructed after the release tables land. Platforms come from the imported
+    release_platforms table; languages and the freeware flags are derived from the dump
+    files directly, since releases_titles is not imported.
+    """
+    logger.info("Aggregating VN platforms, languages and freeware flags...")
 
     async with async_session() as db:
-        # Update platforms from release_platforms + release_vn
+        # Platforms from the imported tables. The IS DISTINCT FROM guard keeps this from
+        # rewriting every row nightly, which the index on the column makes expensive.
         result = await db.execute(text("""
             UPDATE visual_novels vn
             SET platforms = sub.platforms
@@ -1650,30 +1849,72 @@ async def update_vn_platforms_and_languages():
                 JOIN release_platforms rp ON rv.release_id = rp.release_id
                 GROUP BY rv.vn_id
             ) sub
-            WHERE vn.id = sub.vn_id
+            WHERE vn.id = sub.vn_id AND vn.platforms IS DISTINCT FROM sub.platforms
         """))
-        platforms_count = result.rowcount
-        logger.info(f"Updated platforms for {platforms_count} VNs")
-
-        # Update languages from releases.olang + release_vn
-        result = await db.execute(text("""
-            UPDATE visual_novels vn
-            SET languages = sub.languages
-            FROM (
-                SELECT rv.vn_id, array_agg(DISTINCT r.olang ORDER BY r.olang) as languages
-                FROM release_vn rv
-                JOIN releases r ON rv.release_id = r.id
-                WHERE r.olang IS NOT NULL
-                GROUP BY rv.vn_id
-            ) sub
-            WHERE vn.id = sub.vn_id
-        """))
-        languages_count = result.rowcount
-        logger.info(f"Updated languages for {languages_count} VNs")
-
+        logger.info(f"Updated platforms for {result.rowcount} VNs")
         await db.commit()
 
-    logger.info("Finished aggregating VN platforms and languages")
+    facets = _compute_release_facets(extract_dir) if extract_dir else None
+
+    if facets is None:
+        # Fallback: olang gives one language per release, so the resulting set is a subset
+        # of the true one. Adequate for display, not for the Japanese-only facet.
+        async with async_session() as db:
+            result = await db.execute(text("""
+                UPDATE visual_novels vn
+                SET languages = sub.languages
+                FROM (
+                    SELECT rv.vn_id, array_agg(DISTINCT r.olang ORDER BY r.olang) as languages
+                    FROM release_vn rv
+                    JOIN releases r ON rv.release_id = r.id
+                    WHERE r.olang IS NOT NULL
+                    GROUP BY rv.vn_id
+                ) sub
+                WHERE vn.id = sub.vn_id AND vn.languages IS DISTINCT FROM sub.languages
+            """))
+            logger.info(f"Updated languages for {result.rowcount} VNs (olang fallback)")
+            await db.commit()
+        logger.info("Finished aggregating VN release facets (without freeware flags)")
+        return
+
+    statement = text(
+        "UPDATE visual_novels SET languages = :languages, "
+        "has_free_release = :has_free_release, jp_freeware = :jp_freeware "
+        "WHERE id = :id AND (languages IS DISTINCT FROM :languages "
+        "OR has_free_release IS DISTINCT FROM :has_free_release "
+        "OR jp_freeware IS DISTINCT FROM :jp_freeware)"
+    )
+
+    rows = [
+        {
+            "id": vn_id,
+            "languages": sorted(vn["languages"]),
+            "has_free_release": vn["has_free_release"],
+            "jp_freeware": vn["jp_freeware"],
+        }
+        for vn_id, vn in facets.items()
+    ]
+
+    updated = 0
+    BATCH_SIZE = 5000
+    for i in range(0, len(rows), BATCH_SIZE):
+        async with async_session() as db:
+            await db.execute(statement, rows[i : i + BATCH_SIZE])
+            await db.commit()
+        updated += len(rows[i : i + BATCH_SIZE])
+
+    free_count = sum(1 for vn in facets.values() if vn["has_free_release"])
+    jp_free_count = sum(1 for vn in facets.values() if vn["jp_freeware"])
+    logger.info(
+        f"Updated languages and freeware flags for {updated} VNs "
+        f"({free_count} with a free full release, {jp_free_count} Japanese freeware)"
+    )
+    logger.info("Finished aggregating VN release facets")
+
+
+# Retained so existing callers and the progress-tracked pipeline keep working.
+async def update_vn_platforms_and_languages(extract_dir: str | None = None):
+    await update_vn_release_facets(extract_dir)
 
 
 async def update_browse_precomputed_counts():
@@ -4738,8 +4979,23 @@ async def import_vndb_users(extract_dir: str, force: bool = False):
     await prepare_staging("vndb_users")
 
     count = 0
-    batch: list[tuple] = []
+    ignored = 0
+    batch: list[dict] = []
     BATCH_SIZE = 10000
+
+    insert_statement = text(
+        "INSERT INTO vndb_users_staging (uid, username, ign_votes) "
+        "VALUES (:uid, :username, :ign_votes) "
+        "ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username, "
+        "ign_votes = EXCLUDED.ign_votes"
+    )
+
+    async def flush(rows: list[dict]):
+        if not rows:
+            return
+        async with async_session() as db:
+            await db.execute(insert_statement, rows)
+            await db.commit()
 
     with open(users_file, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t", fieldnames=fieldnames, quoting=csv.QUOTE_NONE)
@@ -4751,28 +5007,22 @@ async def import_vndb_users(extract_dir: str, force: bool = False):
             if not uid.startswith("u"):
                 uid = f"u{uid}"
 
-            batch.append((uid, username))
+            # Marks accounts VNDB keeps out of public vote aggregates. Boards built from
+            # list labels have to apply it themselves; the votes dump already omits them.
+            ign_votes = row.get("ign_votes") == "t"
+            if ign_votes:
+                ignored += 1
+
+            batch.append({"uid": uid, "username": username, "ign_votes": ign_votes})
             count += 1
 
             if len(batch) >= BATCH_SIZE:
-                async with async_session() as db:
-                    await db.execute(
-                        text("INSERT INTO vndb_users_staging (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
-                        [{"uid": u, "username": n} for u, n in batch],
-                    )
-                    await db.commit()
+                await flush(batch)
                 batch = []
 
-    # Flush remaining
-    if batch:
-        async with async_session() as db:
-            await db.execute(
-                text("INSERT INTO vndb_users_staging (uid, username) VALUES (:uid, :username) ON CONFLICT (uid) DO UPDATE SET username = EXCLUDED.username"),
-                [{"uid": u, "username": n} for u, n in batch],
-            )
-            await db.commit()
+    await flush(batch)
 
-    logger.info(f"Imported {count} VNDB users")
+    logger.info(f"Imported {count} VNDB users ({ignored} with votes ignored)")
 
     # Atomically swap staging to live
     await swap_staging_to_live("vndb_users")
@@ -4860,7 +5110,7 @@ async def _run_full_import_inner(
         logger.info(f"{progress} {name.upper()} - {status} (elapsed: {elapsed_str})")
         logger.info(f"{'=' * 50}")
 
-    total_steps = 30  # Including download, length votes, users, ulist, average ratings, browse counts, and analyze
+    total_steps = 31  # Including download, length votes, users, ulist, average ratings, entry metadata, browse counts, and analyze
 
     # Safety net: ensure all indexes exist before starting (catch orphaned state from previous crashes)
     await ensure_all_import_indexes()
@@ -5026,16 +5276,21 @@ async def _run_full_import_inner(
     log_step(27, total_steps, "Computing average ratings", "raw averages for quality signal")
     await compute_average_ratings()
 
-    # Step 28: Aggregate platforms and languages from release data
-    log_step(28, total_steps, "Aggregating VN platforms and languages", "from release data")
-    await update_vn_platforms_and_languages()
+    # Step 28: Aggregate platforms, languages and freeware flags from release data
+    log_step(28, total_steps, "Aggregating VN release facets", "platforms, languages, freeware")
+    await update_vn_release_facets(extract_dir)
 
-    # Step 29: Compute precomputed browse counts for staff and producers
-    log_step(29, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
+    # Step 29: VN entry provenance (created/lastmod/edit counts)
+    if "db" in paths:
+        log_step(29, total_steps, "Importing VN entry metadata", "entry created/lastmod/edits")
+        await import_entry_meta(extract_dir, force=force)
+
+    # Step 30: Compute precomputed browse counts for staff and producers
+    log_step(30, total_steps, "Computing browse counts", "staff/producer vn_count, roles")
     await update_browse_precomputed_counts()
 
-    # Step 30: Analyze tables
-    log_step(30, total_steps, "Analyzing tables", "updating query planner statistics")
+    # Step 31: Analyze tables
+    log_step(31, total_steps, "Analyzing tables", "updating query planner statistics")
     await analyze_import_tables()
 
     total_time = time.time() - start_time
@@ -5339,20 +5594,25 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
             await log_and_track(25, "ulist_labels", "Importing user list labels (Playing/Finished/etc.)...")
             await import_ulist_labels(extract_dir)
 
-        # Step 26: Aggregate platforms and languages from release data
-        await log_and_track(26, "vn_platforms_languages", "Aggregating VN platforms and languages from release data...")
-        await update_vn_platforms_and_languages()
+        # Step 26: Aggregate platforms, languages and freeware flags from release data
+        await log_and_track(26, "vn_release_facets", "Aggregating VN platforms, languages and freeware flags...")
+        await update_vn_release_facets(extract_dir)
 
-        # Step 27: Compute precomputed browse counts for staff and producers
-        await log_and_track(27, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
+        # Step 27: VN entry provenance (created/lastmod/edit counts)
+        if "db" in paths:
+            await log_and_track(27, "entry_meta", "Importing VN entry metadata (created/lastmod/edits)...")
+            await import_entry_meta(extract_dir)
+
+        # Step 28: Compute precomputed browse counts for staff and producers
+        await log_and_track(28, "browse_counts", "Computing browse counts (staff/producer vn_count, roles)...")
         await update_browse_precomputed_counts()
 
-        # Step 28: Analyze tables
-        await log_and_track(28, "analyze", "Analyzing tables for query planner...")
+        # Step 29: Analyze tables
+        await log_and_track(29, "analyze", "Analyzing tables for query planner...")
         await analyze_import_tables()
 
-        # Step 29: Evaluate auto-blacklist rules
-        await log_and_track(29, "blacklist", "Evaluating cover blacklist rules...")
+        # Step 30: Evaluate auto-blacklist rules
+        await log_and_track(30, "blacklist", "Evaluating cover blacklist rules...")
         from app.services.blacklist_service import evaluate_auto_blacklist
         async with async_session() as db:
             blacklist_stats = await evaluate_auto_blacklist(db)

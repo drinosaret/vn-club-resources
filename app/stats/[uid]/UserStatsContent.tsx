@@ -16,6 +16,14 @@ import {
   getVNDBUserUrl,
 } from '@/lib/vndb-stats-api';
 import { StatsSummaryCard } from '@/components/stats/StatsSummaryCard';
+import { PercentileBar } from '@/components/stats/PercentileBar';
+import { JapaneseRead } from '@/components/stats/JapaneseRead';
+import { ReadingProfile } from '@/components/stats/ReadingProfile';
+import { ReadingYears } from '@/components/stats/ReadingYears';
+import { StatsCrossLinks } from '@/components/stats/StatsCrossLinks';
+import { TasteFingerprint } from '@/components/stats/TasteFingerprint';
+import { counted } from '@/lib/plural';
+import { YourStandings } from '@/components/stats/YourStandings';
 import { ScoreDistributionChart } from '@/components/stats/ScoreDistributionChart';
 import { ReleaseYearChart } from '@/components/stats/ReleaseYearChart';
 import { LengthChart } from '@/components/stats/LengthChart';
@@ -445,7 +453,9 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
   // isn't completely blank between hydration and the first useEffect firing
   if (isLoading && !cacheCheckComplete && !stats) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      // Holds a page's worth while the cached copy is checked. Anything shorter leaves the
+      // footer in view, and the footer then travels the height of the loaded page.
+      <div className="min-h-[calc(100vh+8rem)] flex items-start justify-center pt-[12vh]">
         <RefreshCw className="w-6 h-6 animate-spin text-primary-500/40" />
       </div>
     );
@@ -469,8 +479,21 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
     return <ErrorState error={error} uid={uid} />;
   }
 
+  // The whole list rather than the finished part: `total_vns` is the completed count under
+  // another name, so anything dividing by it makes every reader a hundred per cent finisher.
+  const listSize =
+    stats.summary.completed +
+    stats.summary.playing +
+    stats.summary.dropped +
+    stats.summary.wishlist;
+
   return (
-    <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+    // Clipped rather than hidden. `overflow-x: hidden` forces the other axis to `auto`,
+    // which makes this container its own scrollport: the page then paints a second
+    // scrollbar beside the window's whenever the content grows past the height the
+    // container happens to have. `clip` trims horizontal spill and leaves the vertical
+    // axis alone, which is all this container needs.
+    <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-clip">
       {isRefreshing && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -486,6 +509,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <button
               onClick={() => window.history.back()}
+              aria-label="Go back"
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
             >
               <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -493,9 +517,6 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
             <div className="min-w-0">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <span className="truncate">{stats.user.username}</span>
-                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-sm bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 shrink-0">
-                  BETA
-                </span>
               </h1>
               <a
                 href={getVNDBUserUrl(uid)}
@@ -569,20 +590,36 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
         <div className="flex-1 min-w-0 overflow-hidden">
           {/* Summary Tab */}
           <TabPanel active={activeTab === 'summary'}>
+          {/* Four across only once a card can hold its own label. At the narrower
+              breakpoint each of the four is about a hundred pixels wide, which leaves a
+              two-word label no room to sit on one line. */}
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Labelled for what it counts. The figure behind it is the finished titles, so
+                calling it a total put a number on screen smaller than the wishlist beside it
+                and smaller than the list size this card's own subtext now states. */}
             <StatsSummaryCard
               icon={<BookOpen className="w-5 h-5" />}
-              label="Total VNs"
-              value={stats.summary.total_vns.toString()}
-              subtext={`${stats.summary.completed} completed`}
-              tooltip="All VNs on your VNDB list. Count is based on database dump (updated daily) and may differ slightly from VNDB's displayed count."
+              label="Completed"
+              value={stats.summary.completed.toLocaleString()}
+              subtext={`of ${listSize.toLocaleString()} on your list`}
+              tooltip="Titles you have marked finished. Counted from the daily database dump, so it can differ slightly from VNDB's own display."
             />
             <StatsSummaryCard
               icon={<Star className="w-5 h-5" />}
               label="Average Score"
-              value={formatScore(stats.summary.average_score)}
-              subtext={`${stats.summary.total_votes} votes`}
+              // Zero is a legal rating, so a reader who has rated nothing must not be given
+              // one: an empty average is missing data rather than a low opinion.
+              value={
+                stats.summary.total_votes > 0
+                  ? formatScore(stats.summary.average_score)
+                  : String.fromCharCode(8212)
+              }
+              subtext={
+                stats.summary.total_votes > 0
+                  ? counted(stats.summary.total_votes, 'vote', 'votes')
+                  : 'nothing rated yet'
+              }
               tooltip="Mean of votes on finished VNs (VNDB 10-100 scale converted to 1-10). Vote count includes all voted VNs."
             />
             <StatsSummaryCard
@@ -591,7 +628,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
               value={formatHours(stats.summary.estimated_hours)}
               subtext={
                 stats.summary.average_hours_per_vn && stats.summary.vns_with_length_data
-                  ? `~${Math.round(stats.summary.average_hours_per_vn)}h avg per VN (${stats.summary.vns_with_length_data}/${stats.summary.completed} with data)`
+                  ? `~${Math.round(stats.summary.average_hours_per_vn)}h avg per VN (${stats.summary.vns_with_length_data.toLocaleString()}/${stats.summary.completed.toLocaleString()} with data)`
                   : 'reading time'
               }
               tooltip="Sum of estimated playtime for finished VNs using VNDB length data (not all VNs have length info)"
@@ -599,33 +636,80 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
             <StatsSummaryCard
               icon={<Trophy className="w-5 h-5" />}
               label="Wishlist"
-              value={stats.summary.wishlist.toString()}
+              value={stats.summary.wishlist.toLocaleString()}
               subtext="to read"
               tooltip="VNs marked as 'Wishlist' on your VNDB list"
             />
           </div>
 
+          {/* Two cards of comparable height, and only those two. The rest are full width
+              because their content is: a row of one-line facts, a chart beside its written
+              breakdown, a list of placements. Squeezing any of them into a half column was
+              what left the short ones looking stranded. */}
+          {/* [&>*]:min-w-0 because a grid item defaults to min-width:auto, which lets a card
+              with a long unbroken line push past its own track rather than wrapping. */}
+          <div className="mb-4 grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
+            <PercentileBar
+              uid={uid}
+              votes={stats.summary.total_votes}
+              finished={stats.summary.completed}
+              dropped={stats.summary.dropped}
+              wishlist={stats.summary.wishlist}
+              average={stats.summary.average_score}
+            />
+            <ReadingYears uid={uid} />
+          </div>
+
+          <div className="mb-4">
+            <ReadingProfile uid={uid} />
+          </div>
+
+          <div className="mb-4">
+            <TasteFingerprint
+              averageScore={stats.summary.average_score}
+              completed={stats.summary.completed}
+              totalOnList={listSize}
+              releaseYears={stats.release_year_distribution}
+              lengths={stats.length_distribution_detailed ?? stats.length_distribution}
+              ageRatings={stats.age_rating_distribution ?? {}}
+              topTagWeights={(tags?.top_tags ?? [])
+                .map((tag) => tag.weighted_score ?? tag.bayesian_score ?? tag.avg_score ?? 0)
+                .filter((weight) => weight > 0)}
+            />
+          </div>
+
+          <div className="mb-4">
+            <YourStandings uid={uid} />
+          </div>
+
+          {/* Last of the group, and full width. It answers a question not every reader on
+              this page is asking, and it is the one card whose figure needs its conditions
+              stated beside it rather than under it. */}
+          <div className="mb-8">
+            <JapaneseRead uid={uid} />
+          </div>
+
           {/* Charts - only show when there's data */}
           {stats.summary.total_vns > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ScoreDistributionChart
+            <ScoreDistributionChart headingLevel="h2"
               distribution={stats.score_distribution}
               average={stats.summary.average_score}
               tooltip="Your score distribution across all rated VNs. The highlighted bar shows the score closest to your average. Hover over bars to see counts."
             />
-            <ReleaseYearChart
+            <ReleaseYearChart headingLevel="h2"
               distribution={stats.release_year_distribution}
               distributionWithRatings={stats.release_year_with_ratings}
               tooltip="VNs in your list grouped by their original release year. Blue dots show your average rating for VNs from each year."
             />
             {stats.length_distribution_detailed && (
-              <LengthChart
+              <LengthChart headingLevel="h2"
                 distribution={stats.length_distribution_detailed}
                 tooltip="VNs categorized by estimated playtime (Very Short: <2h, Short: 2-10h, Medium: 10-30h, Long: 30-50h, Very Long: >50h). Blue dots show your average rating for each length."
               />
             )}
             {stats.age_rating_distribution && (
-              <AgeRatingChart
+              <AgeRatingChart headingLevel="h2"
                 distribution={stats.age_rating_distribution}
                 tooltip="VNs grouped by content rating. All Ages (0-12), Teen (13-17), and Adult (18+). Blue dots show your average rating for each category."
               />
@@ -655,11 +739,12 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           {/* Trends Tab */}
           <TabPanel active={activeTab === 'trends'} mounted={mountedTabs.has('trends')}>
           {isLoadingNovels || novels === null ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw className="w-6 h-6 animate-spin text-primary-500" />
-                <span className="ml-2 text-gray-500 dark:text-gray-400">Loading trends data...</span>
-              </div>
+            // Shaped and sized like the charts that follow. A spinner in a short box lets the
+            // footer sit at the fold, and the footer then travels the height of the section.
+            <div className="space-y-6">
+              <div className="image-placeholder h-[26rem] rounded-xl" />
+              <div className="image-placeholder h-[26rem] rounded-xl" />
+              <div className="image-placeholder h-56 rounded-xl" />
             </div>
           ) : (
             <TrendsSection
@@ -741,6 +826,10 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
             <TraitsSection traits={stats.traits_breakdown || []} />
           </TabPanel>
 
+          {/* Outside the tabs on purpose: whichever panel someone finishes on, the rest of
+              the stats section is the likeliest next thing they want. Inside the content
+              column, since the row's other children are laid out as columns beside it. */}
+          <StatsCrossLinks current="mine" className="mt-10" />
         </div>
       </div>
     </div>

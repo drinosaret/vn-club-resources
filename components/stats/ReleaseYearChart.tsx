@@ -8,6 +8,15 @@ import { VNListDropdown } from './VNListDropdown';
 import { ChartHelpTooltip } from './ChartHelpTooltip';
 
 interface ReleaseYearChartProps {
+  /**
+   * Heading level for this section's title.
+   *
+   * Defaults to a subsection, which is what it is on the global dashboard where these sit
+   * under a heading of their own. A page that renders this directly under its title passes
+   * 'h2', because jumping from the page heading straight to a third-level one leaves a gap
+   * in the outline a screen reader reads as a missing section.
+   */
+  headingLevel?: 'h2' | 'h3';
   distribution: Record<string, number>;
   distributionWithRatings?: YearWithRating[];
   /** Entity ID for links (e.g., "g106" for tag, "s123" for staff) */
@@ -20,7 +29,7 @@ interface ReleaseYearChartProps {
   tooltip?: string;
 }
 
-export function ReleaseYearChart({ distribution, distributionWithRatings, entityId, entityType, entityName, tooltip }: ReleaseYearChartProps) {
+export function ReleaseYearChart({ distribution, distributionWithRatings, entityId, entityType, entityName, tooltip, headingLevel: Heading = 'h3' }: ReleaseYearChartProps) {
   const [hoveredYear, setHoveredYear] = useState<number | null>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const clearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,9 +94,9 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
   if (data.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Release Years
-        </h3>
+        </Heading>
         <p className="text-gray-500 dark:text-gray-400">No release year data available</p>
       </div>
     );
@@ -103,9 +112,9 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
             Release Year
-          </h3>
+          </Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
         <div className="flex items-center flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm">
@@ -182,7 +191,7 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
                           ? 'bg-linear-to-t from-primary-500 to-primary-300 dark:from-primary-600 dark:to-primary-400'
                           : 'bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
                     } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
-                    style={{ height: `${Math.max(heightPx, 4)}px` }}
+                    style={{ height: `${Math.max(heightPx, d.count > 0 ? 4 : 0)}px` }}
                   />
                 </>
               );

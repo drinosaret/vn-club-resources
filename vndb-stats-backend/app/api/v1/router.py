@@ -2,11 +2,14 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import stats, recommendations, vn, user, news, admin, logs, characters, browse, blacklist, vn_of_the_day, word_of_the_day, shared, events, games
+from app.api.v1 import stats, recommendations, vn, user, news, admin, logs, characters, browse, blacklist, vn_of_the_day, word_of_the_day, shared, events, games, leaderboards
 
 api_router = APIRouter()
 
 api_router.include_router(stats.router, prefix="/stats", tags=["stats"])
+# Deliberately not nested under /stats: that router matches /stats/{vndb_uid}, which would
+# capture any sibling path segment before it could reach a leaderboard route.
+api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(vn.router, prefix="/vn", tags=["visual-novels"])
 api_router.include_router(characters.router, prefix="/characters", tags=["characters"])

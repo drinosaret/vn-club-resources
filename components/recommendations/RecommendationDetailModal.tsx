@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { X, ExternalLink, Tag, Users, BookOpen, ImageOff, Mic, Heart, Building2, Pen, Star, LucideIcon } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
-import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
+import { SIGNAL_WEIGHTS } from '@/lib/recommendation-weights';
+import { useTitlePreference, getDisplayTitle, getEntityDisplayName, TitlePreference } from '@/lib/title-preference';
 import { NSFWNextImage } from '@/components/NSFWImage';
 
 interface MatchedTag {
@@ -21,6 +22,7 @@ interface MatchedTag {
 interface MatchedStaff {
   id: string;
   name: string;
+  name_original?: string | null;  // Romanized name
   user_avg_rating: number;
   weight: number;  // Delta from user's average
   weighted_score: number;  // Stats page weighted score (0-100 scale)
@@ -29,6 +31,7 @@ interface MatchedStaff {
 
 interface MatchedDeveloper {
   name: string;
+  name_original?: string | null;  // Romanized name
   user_avg_rating: number;
   weight: number;  // Delta from user's average
   weighted_score: number;  // Stats page weighted score (0-100 scale)
@@ -44,6 +47,7 @@ interface ContributingVN {
 interface MatchedSeiyuu {
   id: string;
   name: string;
+  name_original?: string | null;  // Romanized name
   weighted_score: number;
   count: number;
 }
@@ -58,12 +62,16 @@ interface MatchedTrait {
 interface SimilarGamesDetail {
   source_vn_id: string;
   source_title?: string;
+  source_title_jp?: string | null;      // Original Japanese title (kanji/kana)
+  source_title_romaji?: string | null;  // Romanized title
   similarity: number;
 }
 
 interface UsersAlsoReadDetail {
   source_vn_id: string;
   source_title?: string;
+  source_title_jp?: string | null;      // Original Japanese title (kanji/kana)
+  source_title_romaji?: string | null;  // Romanized title
   co_score: number;
   user_count: number;
 }
@@ -85,7 +93,7 @@ interface Recommendation {
   title_jp?: string;       // Original Japanese title (kanji/kana)
   title_romaji?: string;   // Romanized title
   score: number;
-  normalized_score?: number;  // 0-100 scale from backend
+  normalized_score: number;  // 0-100 match percentage, always computed by the backend
   match_reasons: string[];
   image_url: string | null;
   image_sexual: number | null;  // For NSFW blur (0=safe, 1=suggestive, 2=explicit)
@@ -119,6 +127,28 @@ interface CategoryConfig {
   textColorClass: string;
   percent: number;
   renderContent: () => React.ReactNode;
+}
+
+// Source VNs carry every title form, so the reader's preference picks between them here
+// rather than falling back to whichever form the database happens to store as the title.
+function getSourceTitle(
+  match: {
+    source_vn_id: string;
+    source_title?: string;
+    source_title_jp?: string | null;
+    source_title_romaji?: string | null;
+  },
+  preference: TitlePreference
+): string {
+  const displayed = getDisplayTitle(
+    {
+      title: match.source_title,
+      title_jp: match.source_title_jp ?? undefined,
+      title_romaji: match.source_title_romaji ?? undefined,
+    },
+    preference
+  );
+  return displayed || match.source_vn_id;
 }
 
 export function RecommendationDetailModal({ recommendation, onClose, isLoading = false }: RecommendationDetailModalProps) {
@@ -173,16 +203,15 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
     return () => clearTimeout(timer);
   }, [isLoading, details, loadingTimedOut]);
 
-  // Calculate total weighted score and percentages (must match backend weights)
-  // Backend weights: TAG=2.5, VN_SIMILARITY=2.0, USERS_ALSO_READ=2.0, QUALITY=1.5, DEVELOPER=0.6, STAFF=0.5, SEIYUU=0.3, TRAIT=0.5
-  const tagContribution = scores.tag * 2.5;
-  const similarGamesContribution = scores.similar_games * 2.0;
-  const usersAlsoReadContribution = scores.users_also_read * 2.0;
-  const qualityContribution = (scores.quality || 0) * 1.5;
-  const developerContribution = (scores.developer || 0) * 0.6;
-  const staffContribution = scores.staff * 0.5;
-  const seiyuuContribution = (scores.seiyuu || 0) * 0.3;
-  const traitContribution = (scores.trait || 0) * 0.5;
+  // Weighted contribution of each signal, using the shared weight table.
+  const tagContribution = scores.tag * SIGNAL_WEIGHTS.tag;
+  const similarGamesContribution = scores.similar_games * SIGNAL_WEIGHTS.similar_games;
+  const usersAlsoReadContribution = scores.users_also_read * SIGNAL_WEIGHTS.users_also_read;
+  const qualityContribution = (scores.quality || 0) * SIGNAL_WEIGHTS.quality;
+  const developerContribution = (scores.developer || 0) * SIGNAL_WEIGHTS.developer;
+  const staffContribution = scores.staff * SIGNAL_WEIGHTS.staff;
+  const seiyuuContribution = (scores.seiyuu || 0) * SIGNAL_WEIGHTS.seiyuu;
+  const traitContribution = (scores.trait || 0) * SIGNAL_WEIGHTS.trait;
   const totalContribution = tagContribution + similarGamesContribution + usersAlsoReadContribution + qualityContribution + developerContribution + staffContribution + seiyuuContribution + traitContribution;
 
   // Calculate percentage of total score each component contributes
@@ -195,8 +224,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
   const seiyuuPercent = totalContribution > 0 ? Math.round((seiyuuContribution / totalContribution) * 100) : 0;
   const traitPercent = totalContribution > 0 ? Math.round((traitContribution / totalContribution) * 100) : 0;
 
-  // Overall score from backend (0-100) or fallback calculation
-  const overallPercent = recommendation.normalized_score ?? Math.min(100, Math.round(recommendation.score * 18));
+  const overallPercent = recommendation.normalized_score;
 
   // Build sortable categories array
   const categories = useMemo<CategoryConfig[]>(() => {
@@ -267,7 +295,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                 {details.matched_developers.slice(0, 5).map((dev, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      <span className="font-medium">{dev.name}</span>
+                      <span className="font-medium">{getEntityDisplayName({ name: dev.name, original: dev.name_original }, titlePreference)}</span>
                     </span>
                     <span
                       className="text-sm font-medium text-orange-600 dark:text-orange-400 ml-2 shrink-0"
@@ -307,7 +335,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                 {details.matched_staff.slice(0, 5).map((staff) => (
                   <div key={staff.id} className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      <span className="font-medium">{staff.name}</span>
+                      <span className="font-medium">{getEntityDisplayName({ name: staff.name, original: staff.name_original }, titlePreference)}</span>
                     </span>
                     <span
                       className="text-sm font-medium text-amber-600 dark:text-amber-400 ml-2 shrink-0"
@@ -347,7 +375,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                 {details.matched_seiyuu.map((seiyuu) => (
                   <div key={seiyuu.id} className="flex items-center justify-between">
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      {seiyuu.name}
+                      {getEntityDisplayName({ name: seiyuu.name, original: seiyuu.name_original }, titlePreference)}
                     </span>
                     <span
                       className="text-sm font-medium text-pink-600 dark:text-pink-400 ml-2 shrink-0"
@@ -434,7 +462,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                       className="text-sm text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 truncate"
                       onClick={onClose}
                     >
-                      {match.source_title || match.source_vn_id}
+                      {getSourceTitle(match, titlePreference)}
                     </Link>
                     <span className="text-sm font-medium text-green-600 dark:text-green-400 ml-2 shrink-0">
                       {(match.similarity * 100).toFixed(0)}% similar
@@ -472,7 +500,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
                       className="text-sm text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 truncate"
                       onClick={onClose}
                     >
-                      {match.source_title || match.source_vn_id}
+                      {getSourceTitle(match, titlePreference)}
                     </Link>
                     <span className="text-sm text-teal-600 dark:text-teal-400 ml-2 shrink-0">
                       <span className="font-medium">{match.user_count}</span> in common
@@ -515,7 +543,7 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
 
     // Sort by percentage (highest first) - show all categories for debugging
     return cats.sort((a, b) => b.percent - a.percent);
-  }, [details, tagPercent, similarGamesPercent, usersAlsoReadPercent, qualityPercent, developerPercent, staffPercent, seiyuuPercent, traitPercent, scores.quality]);
+  }, [details, titlePreference, tagPercent, similarGamesPercent, usersAlsoReadPercent, qualityPercent, developerPercent, staffPercent, seiyuuPercent, traitPercent, scores.quality]);
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="rec-detail-modal-title">

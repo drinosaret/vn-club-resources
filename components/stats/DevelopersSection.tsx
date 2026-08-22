@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Building2, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
 import type { ProducerBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';
+import { RankNumber } from '@/components/stats/RankNumber';
 
 interface DevelopersSectionProps {
   developers: ProducerBreakdown[];
@@ -196,8 +197,8 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
       )}
 
       <div className="space-y-3" style={showAll ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' } : undefined}>
-        {displayedDevelopers.map((dev) => (
-          <DeveloperBar key={dev.id} developer={dev} maxValue={maxValue} sortMode={sortMode} preference={preference} />
+        {displayedDevelopers.map((dev, index) => (
+          <DeveloperBar key={dev.id} rank={index + 1} developer={dev} maxValue={maxValue} sortMode={sortMode} preference={preference} />
         ))}
       </div>
 
@@ -268,7 +269,7 @@ export function DevelopersSection({ developers }: DevelopersSectionProps) {
   );
 }
 
-function DeveloperBar({ developer, maxValue, sortMode, preference }: { developer: DeveloperWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
+function DeveloperBar({ rank, developer, maxValue, sortMode, preference }: { rank: number; developer: DeveloperWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
   const displayName = getEntityDisplayName(developer, preference);
 
   // Calculate bar width based on sort mode
@@ -292,6 +293,7 @@ function DeveloperBar({ developer, maxValue, sortMode, preference }: { developer
     <div className="group">
       <div className="flex items-center justify-between mb-1 gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          <RankNumber rank={rank} />
           <Link
             href={`/stats/producer/${developer.id}`}
             className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"

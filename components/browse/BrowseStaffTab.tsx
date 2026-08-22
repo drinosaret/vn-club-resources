@@ -68,7 +68,7 @@ export function BrowseStaffTab({ isActive = true }: BrowseStaffTabProps) {
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Use SWR for data fetching with caching
-  const { data, isLoading, isValidating } = useBrowseStaff(debouncedParams, isActive);
+  const { data, error, isLoading, isValidating } = useBrowseStaff(debouncedParams, isActive);
 
   // Default data structure
   const items = data?.items ?? [];
@@ -189,9 +189,12 @@ export function BrowseStaffTab({ isActive = true }: BrowseStaffTabProps) {
   ];
 
   // Show loading state only on initial load (no data yet)
-  const showLoadingSkeleton = !data;
+  // A stale page from an earlier query is worth keeping on screen. A failure with nothing
+  // behind it has to stop the skeleton, or the panel waits for data that is not coming.
+  const failed = Boolean(error) && items.length === 0;
+  const showLoadingSkeleton = !data && !failed;
   // Show subtle loading indicator when revalidating with existing data
-  const showLoadingIndicator = !data || isLoading || isValidating;
+  const showLoadingIndicator = (!data && !failed) || isLoading || isValidating;
 
   return (
     <div className="space-y-4">
@@ -293,9 +296,15 @@ export function BrowseStaffTab({ isActive = true }: BrowseStaffTabProps) {
           getKey={(item) => item.id}
           getLink={(item) => `/stats/staff/${item.id}`}
           isLoading={showLoadingIndicator}
+          failed={failed}
         />
       ) : (
-        <EntityCards isLoading={showLoadingSkeleton} isValidating={isValidating && items.length > 0} isEmpty={items.length === 0 && !showLoadingIndicator}>
+        <EntityCards
+          isLoading={showLoadingSkeleton}
+          isValidating={isValidating && items.length > 0}
+          isEmpty={items.length === 0 && !showLoadingIndicator && !failed}
+          failed={failed}
+        >
           {items.map((item) => {
             const displayName = preference === 'romaji' && item.original ? item.original : item.name;
             const altName = preference === 'romaji' && item.original ? item.name : item.original;

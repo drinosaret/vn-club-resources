@@ -70,11 +70,13 @@ interface EntityCardsProps {
   isValidating?: boolean;
   emptyMessage?: string;
   isEmpty?: boolean;
+  /** Set when the request did not come back, which is not the same as matching nothing. */
+  failed?: boolean;
 }
 
 // Pure component — no hooks. SWR's keepPreviousData handles stale data display,
 // so we don't need refs to cache previous children.
-export function EntityCards({ children, isLoading, isValidating, emptyMessage = 'No results found.', isEmpty }: EntityCardsProps) {
+export function EntityCards({ children, isLoading, isValidating, emptyMessage = 'No results found.', isEmpty, failed }: EntityCardsProps) {
   // Show skeleton on initial load (no data yet)
   if (isLoading) {
     return (
@@ -97,6 +99,20 @@ export function EntityCards({ children, isLoading, isValidating, emptyMessage = 
   }
 
   // Show empty state
+  // Ahead of the empty state on purpose: an unanswered request would otherwise read as a
+  // confident "nothing matched", and the filters are the first thing a reader would blame.
+  if (failed) {
+    return (
+      <div
+        role="status"
+        className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400"
+      >
+        These results could not be loaded. The stats service did not answer, which is usually
+        brief.
+      </div>
+    );
+  }
+
   if (isEmpty) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">

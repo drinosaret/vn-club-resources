@@ -65,7 +65,7 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Use SWR for data fetching with caching
-  const { data, isLoading, isValidating } = useBrowseTraits(debouncedParams, isActive);
+  const { data, error, isLoading, isValidating } = useBrowseTraits(debouncedParams, isActive);
 
   // Default data structure
   const items = data?.items ?? [];
@@ -172,9 +172,12 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
   ];
 
   // Show loading state only on initial load (no data yet)
-  const showLoadingSkeleton = !data;
+  // A stale page from an earlier query is worth keeping on screen. A failure with nothing
+  // behind it has to stop the skeleton, or the panel waits for data that is not coming.
+  const failed = Boolean(error) && items.length === 0;
+  const showLoadingSkeleton = !data && !failed;
   // Show subtle loading indicator when revalidating with existing data
-  const showLoadingIndicator = !data || isLoading || isValidating;
+  const showLoadingIndicator = (!data && !failed) || isLoading || isValidating;
 
   return (
     <div className="space-y-4">
@@ -264,9 +267,15 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
           getKey={(item) => item.id}
           getLink={(item) => `/stats/trait/i${item.id}`}
           isLoading={showLoadingIndicator}
+          failed={failed}
         />
       ) : (
-        <EntityCards isLoading={showLoadingSkeleton} isValidating={isValidating && items.length > 0} isEmpty={items.length === 0 && !showLoadingIndicator}>
+        <EntityCards
+          isLoading={showLoadingSkeleton}
+          isValidating={isValidating && items.length > 0}
+          isEmpty={items.length === 0 && !showLoadingIndicator && !failed}
+          failed={failed}
+        >
           {items.map((item) => (
             <EntityCard
               key={item.id}

@@ -34,7 +34,6 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import insert
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -46,9 +45,14 @@ from app.db import schemas
 from app.db.models import UserRecommendationCache, VisualNovel
 from app.db.query_utils import not_in_ids
 from app.core.auth import is_admin_request
+from app.services.recommendation_cache import build_cache_records, upsert_statement
 from app.services.recommendation_service import RecommendationService
 from app.services.user_service import UserService
-from app.services.hybrid_recommender import HybridRecommender, RecommendationResult
+from app.services.hybrid_recommender import (
+    HybridRecommender,
+    RecommendationResult,
+    normalize_score,
+)
 from app.services.recommendation_filters import (
     LABEL_BLACKLIST,
     LABEL_DROPPED,
@@ -311,6 +315,7 @@ async def get_cached_recommendations(
             "title_jp": row.title_jp,
             "title_romaji": row.title_romaji,
             "score": round(row.combined_score, 3),
+            "normalized_score": normalize_score(row.combined_score),
             "match_reasons": reasons if reasons else ["Matches your preferences"],
             "image_url": row.image_url,
             "image_sexual": row.image_sexual,
@@ -341,45 +346,12 @@ async def cache_recommendations_async(
     if not results:
         return
 
-    now = datetime.utcnow()
-    records = [
-        {
-            "user_id": user_id,
-            "vn_id": r.vn_id,
-            "combined_score": r.score,
-            "tag_score": r.tag_score,
-            "cf_score": r.similar_games_score,  # Legacy column name
-            "hgat_score": r.staff_score,  # Legacy column name
-            "users_also_read_score": r.users_also_read_score,
-            "developer_score": r.developer_score,
-            "seiyuu_score": r.seiyuu_score,
-            "trait_score": r.trait_score,
-            "quality_score": r.quality_score,
-            "updated_at": now,
-        }
-        for r in results
-    ]
+    records = build_cache_records(user_id, results, datetime.utcnow())
 
     try:
         # Use a new session for background task to avoid conflicts with request session
         async with async_session() as db:
-            stmt = insert(UserRecommendationCache).values(records)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["user_id", "vn_id"],
-                set_={
-                    "combined_score": stmt.excluded.combined_score,
-                    "tag_score": stmt.excluded.tag_score,
-                    "cf_score": stmt.excluded.cf_score,
-                    "hgat_score": stmt.excluded.hgat_score,
-                    "users_also_read_score": stmt.excluded.users_also_read_score,
-                    "developer_score": stmt.excluded.developer_score,
-                    "seiyuu_score": stmt.excluded.seiyuu_score,
-                    "trait_score": stmt.excluded.trait_score,
-                    "quality_score": stmt.excluded.quality_score,
-                    "updated_at": stmt.excluded.updated_at,
-                },
-            )
-            await db.execute(stmt)
+            await db.execute(upsert_statement(records))
             await db.commit()
     except Exception:
         # Cache write failed - silently ignore
@@ -407,13 +379,13 @@ async def get_recommendations_v2(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get personalized VN recommendations using the new hybrid algorithm.
+    Get personalized VN recommendations from the hybrid recommender.
 
-    This endpoint uses a simplified but more effective approach:
-    - Tag cosine similarity (weight: 1.5) - content-based
-    - Collaborative filtering (weight: 1.0) - "users who liked X also liked Y"
-    - Staff/developer match (weight: 0.5) - bonus for preferred creators
-    - MMR diversity reranking to prevent result clustering
+    Scores candidates as a weighted blend of eight signals (tag affinity, VN-to-VN
+    similarity, co-occurrence, quality, developer, staff, character trait and seiyuu
+    affinity), then re-ranks for diversity so one cluster cannot fill the list. Each
+    result carries its per-signal breakdown under `scores`, and `normalized_score` is the
+    0-100 match percentage.
 
     **Cache behavior:**
     - Pre-computed recommendations are served from cache when available (<24h old)

@@ -12,7 +12,16 @@ import { useImageFade } from '@/hooks/useImageFade';
 
 interface TopVNsTableProps {
   title: string;
+  /** The ranking across every language. */
   vns: TopVN[];
+  /**
+   * The same ranking computed over Japanese-original titles only.
+   *
+   * A separate list rather than a filter over the one above: filtering a top ten leaves
+   * however many entries happen to survive, which is not a top ten of anything. Both lists
+   * are held so the toggle stays instant.
+   */
+  japaneseVns?: TopVN[];
   showRating?: boolean;
   showVotes?: boolean;
   icon?: React.ReactNode;
@@ -21,6 +30,7 @@ interface TopVNsTableProps {
 export function TopVNsTable({
   title,
   vns,
+  japaneseVns,
   showRating = true,
   showVotes = true,
   icon,
@@ -29,10 +39,14 @@ export function TopVNsTable({
   const { preference } = useTitlePreference();
 
   const filteredVNs = useMemo(() => {
-    const filtered = vns.filter(vn => filterByLanguage(vn, langFilter));
-    // Re-rank after filtering
-    return filtered.map((vn, idx) => ({ ...vn, rank: idx + 1 }));
-  }, [vns, langFilter]);
+    // Fall back to filtering only where no Japanese-only ranking was supplied, so callers
+    // that pass one list keep working.
+    const chosen =
+      langFilter === 'all'
+        ? vns
+        : japaneseVns ?? vns.filter((vn) => filterByLanguage(vn, langFilter));
+    return chosen.map((vn, idx) => ({ ...vn, rank: idx + 1 }));
+  }, [vns, japaneseVns, langFilter]);
 
   if (vns.length === 0) {
     return null;
@@ -72,7 +86,7 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
       className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
       {/* Rank */}
-      <span className="w-6 text-center text-sm font-medium text-gray-400 dark:text-gray-500">
+      <span className="w-6 shrink-0 text-center text-sm font-medium text-gray-400 dark:text-gray-500">
         {vn.rank}
       </span>
 
@@ -83,7 +97,7 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
             <div className={shimmerClass} />
             <NSFWImage
               src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.id })}
-              alt={getDisplayTitle({ title: vn.title, title_jp: vn.alttitle }, preference)}
+              alt={getDisplayTitle({ title: vn.title, title_jp: vn.alttitle, title_romaji: vn.title_romaji }, preference)}
               vnId={vn.id}
               imageSexual={vn.image_sexual}
               className={`w-full h-full object-cover object-top ${fadeClass}`}
@@ -100,25 +114,30 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
         )}
       </div>
 
-      {/* Title */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-          {getDisplayTitle({ title: vn.title, title_jp: vn.alttitle }, preference)}
-        </p>
-      </div>
+      {/* Title and figures share a column on a phone and a line on anything wider. Side by
+          side at phone width the vote count and the rating hold a quarter of the row, leaving
+          the title around a dozen characters, so a ranking of titles reads as a list of
+          prefixes. Given its own line the title takes the full width and the figures lose
+          nothing. */}
+      <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
+        <div className="min-w-0 sm:flex-1">
+          <p className="text-sm font-medium text-gray-900 line-clamp-2 sm:block sm:truncate dark:text-white">
+            {getDisplayTitle({ title: vn.title, title_jp: vn.alttitle, title_romaji: vn.title_romaji }, preference)}
+          </p>
+        </div>
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 text-sm">
-        {showVotes && vn.votecount !== undefined && (
-          <span className="text-gray-500 dark:text-gray-400 tabular-nums">
-            {vn.votecount.toLocaleString()}
-          </span>
-        )}
-        {showRating && vn.rating !== undefined && (
-          <span className="flex items-center gap-1 font-semibold text-primary-600 dark:text-primary-400 tabular-nums">
-            {vn.rating.toFixed(2)}
-          </span>
-        )}
+        <div className="mt-0.5 flex items-center gap-4 text-sm sm:mt-0 sm:shrink-0">
+          {showVotes && vn.votecount !== undefined && (
+            <span className="text-gray-500 dark:text-gray-400 tabular-nums">
+              {vn.votecount.toLocaleString()}
+            </span>
+          )}
+          {showRating && vn.rating !== undefined && (
+            <span className="flex items-center gap-1 font-semibold text-primary-600 dark:text-primary-400 tabular-nums">
+              {vn.rating.toFixed(2)}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

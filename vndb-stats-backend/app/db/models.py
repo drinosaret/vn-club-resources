@@ -75,11 +75,47 @@ class VisualNovel(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # VNDB entry provenance, from the entry_meta dump. Distinct from `released`, which is
+    # when the game came out rather than when the entry was catalogued or last edited.
+    entry_created = Column(Date)
+    entry_lastmod = Column(Date)
+    entry_num_edits = Column(Integer)
+    entry_num_users = Column(Integer)
+
+    # Precomputed release facets. Both require joining releases to release_vn with an
+    # rtype filter, too costly to evaluate per leaderboard query.
+    has_free_release = Column(Boolean, nullable=False, default=False)  # any non-trial freeware release
+    jp_freeware = Column(Boolean, nullable=False, default=False)  # every Japanese release is free
+
+    # Per-title statistics written by the nightly leaderboard job, which is the only place
+    # they are derived. They exist here so a reader's own filters can be ranked by them.
+    #
+    # NULL means "not yet derived", which is not the same as zero: a title with no list
+    # entries and a title the job has never seen must not sort alike.
+    #
+    # Distinct from `votecount` above, which is VNDB's own figure and counts private votes.
+    public_votes = Column(Integer)
+    public_mean = Column(Float)  # mean of those votes, on the 1-10 scale
+    vote_stddev = Column(Float)  # spread of opinion, the divisiveness metric
+    votes_30d = Column(Integer)
+    votes_365d = Column(Integer)
+    reputation_shift = Column(Float)  # later-half mean minus earlier-half, in rating points
+    list_playing = Column(Integer)
+    list_finished = Column(Integer)
+    list_stalled = Column(Integer)
+    list_dropped = Column(Integer)
+    list_wishlist = Column(Integer)
+
     # Relationships
     tags = relationship("VNTag", back_populates="visual_novel", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_vn_released", "released"),
+        Index("idx_vn_entry_created", "entry_created"),
+        Index("idx_vn_vote_stddev", vote_stddev.desc().nullslast()),
+        Index("idx_vn_reputation_shift", "reputation_shift"),
+        Index("idx_vn_platforms_gin", "platforms", postgresql_using="gin"),
+        Index("idx_vn_languages_gin", "languages", postgresql_using="gin"),
         Index("idx_vn_rating", rating.desc()),
         Index("idx_vn_title", "title"),
         # Composite indexes for common browse patterns
@@ -130,6 +166,35 @@ class TagParent(Base):
     )
 
 
+class VNDifficulty(Base):
+    """Japanese reading difficulty, from jiten.moe's text analysis.
+
+    Covers only the titles jiten has analysed, which is a small fraction of the database.
+    Absence therefore means "not measured", never "easy", and anything reading this has to
+    say so rather than treat the gap as a value.
+    """
+
+    __tablename__ = "vn_difficulty"
+
+    vn_id = Column(String(10), ForeignKey("visual_novels.id", ondelete="CASCADE"), primary_key=True)
+    jiten_deck_id = Column(Integer, nullable=False)
+    difficulty = Column(Integer)  # published bucket
+    difficulty_raw = Column(Float)  # the continuous value the bucket comes from
+    character_count = Column(Integer)
+    word_count = Column(Integer)
+    unique_word_count = Column(Integer)
+    unique_kanji_count = Column(Integer)
+    sentence_count = Column(Integer)
+    average_sentence_length = Column(Float)
+    dialogue_percentage = Column(Float)
+    updated_at = Column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("idx_vn_difficulty_raw", "difficulty_raw"),
+        Index("idx_vn_difficulty_deck", "jiten_deck_id", unique=True),
+    )
+
+
 class VNTag(Base):
     """Many-to-many relationship between VNs and tags with score."""
 
@@ -157,18 +222,27 @@ class VNTag(Base):
 
 
 class GlobalVote(Base):
-    """Global votes from VNDB votes dump for collaborative filtering."""
+    """Global votes from the VNDB votes dump.
+
+    Accounts VNDB marks as ignored are already absent from this dump, so aggregates built
+    here need no further exclusion.
+    """
 
     __tablename__ = "global_votes"
 
     vn_id = Column(String(10), ForeignKey("visual_novels.id", ondelete="CASCADE"), primary_key=True)
-    user_hash = Column(String(64), primary_key=True)  # Anonymized user ID
+    # The VNDB user id with its `u` prefix stripped, despite the column name: `u12345`
+    # arrives here as `12345`. Anything joining this to a uid-keyed table has to convert.
+    user_hash = Column(String(64), primary_key=True)
     vote = Column(Integer, nullable=False)  # 10-100
     date = Column(Date)
 
     __table_args__ = (
         Index("idx_global_votes_vn", "vn_id"),
         Index("idx_global_votes_user", "user_hash"),
+        # Serves the windowed leaderboards: leading date for the range, trailing user_hash
+        # so per-user counts in a period can be answered from the index alone.
+        Index("idx_global_votes_date", "date", "user_hash"),
     )
 
 
@@ -239,6 +313,9 @@ class VndbUser(Base):
 
     uid = Column(String(20), primary_key=True)  # e.g., "u12345"
     username = Column(String(100), nullable=False)
+    # VNDB excludes these accounts from public vote aggregates. The votes dump already
+    # omits them, so this only matters for boards built from list labels.
+    ign_votes = Column(Boolean, nullable=False, default=False)
 
 
 class CachedUserList(Base):

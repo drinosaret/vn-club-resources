@@ -34,10 +34,11 @@ function formatRelativeTime(timestamp: string): string {
     return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
   } else {
     // Format as date for older timestamps
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
+    // An explicit locale, not the reader's: this sits inside English copy.
+    return date.toLocaleDateString('en-GB', {
       day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
   }
 }

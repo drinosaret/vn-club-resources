@@ -15,20 +15,21 @@ from slowapi.util import get_remote_address
 
 from app.db.database import get_db, async_session_maker
 from app.db import schemas
-from app.db.models import VisualNovel, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
+from app.db.models import VisualNovel, VNDifficulty, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
 from app.services.extlinks_service import build_extlink_url, build_wikidata_links, get_site_label, SHOP_SITES, LINK_SITES, LINK_SORT_ORDER, SHOP_SORT_ORDER, DEPRECATED_SITES, TRANSLATION_ONLY_SITES, NON_JP_CONSOLE_STORES
 from app.core.vndb_client import get_vndb_client
 from app.core.auth import require_admin
 from app.core.cache import get_cache
 from app.core.search_utils import relevance_rank
+from app.leaderboards.browse_metrics import METRIC_SORTS, describe_floor
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
-# Security: maximum number of IDs allowed in comma-separated filter parameters
-# to prevent DoS via excessively complex queries (each ID can generate a subquery)
+# Ceiling on the ids accepted in a comma-separated filter. Each id can add a subquery, so
+# the cost of one request grows with the length of the list.
 MAX_FILTER_IDS = 30
 
 # Genre tags used for percentile ranking in vote-stats endpoint
@@ -112,6 +113,82 @@ async def get_vn_sitemap_ids(
     return {"items": items, "total": total}
 
 
+@router.get("/difficulty/")
+@limiter.limit("60/minute")
+async def list_by_difficulty(
+    request: Request,
+    min_difficulty: float | None = Query(default=None, ge=0, le=10),
+    max_difficulty: float | None = Query(default=None, ge=0, le=10),
+    near_difficulty: float | None = Query(default=None, ge=0, le=10, description="Order by closeness to this difficulty"),
+    near_characters: int | None = Query(default=None, ge=0, description="Order by closeness to this script length"),
+    exclude: str | None = Query(default=None, description="Comma-separated VN IDs to omit"),
+    limit: int = Query(default=10, ge=1, le=100),
+    response: Response = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Titles from the local reading-difficulty mirror.
+
+    Serves the beginner list and the two "similar to this" panels from the local mirror, so
+    neither makes an outbound call per request, and neither renders empty while the upstream
+    service is unreachable.
+    """
+    query = (
+        select(
+            VisualNovel.id,
+            VisualNovel.title,
+            VisualNovel.title_jp,
+            VisualNovel.title_romaji,
+            VisualNovel.image_url,
+            VisualNovel.image_sexual,
+            VNDifficulty.difficulty_raw,
+            VNDifficulty.difficulty,
+            VNDifficulty.character_count,
+        )
+        .join(VNDifficulty, VNDifficulty.vn_id == VisualNovel.id)
+        .where(VNDifficulty.difficulty_raw.isnot(None))
+    )
+
+    if min_difficulty is not None:
+        query = query.where(VNDifficulty.difficulty_raw >= min_difficulty)
+    if max_difficulty is not None:
+        query = query.where(VNDifficulty.difficulty_raw <= max_difficulty)
+    if exclude:
+        excluded = _parse_str_list(exclude)
+        if excluded:
+            query = query.where(VisualNovel.id.notin_(excluded))
+
+    # Closeness beats ordering by the raw value here: "similar to this one" means either
+    # side of it, and a plain ascending sort would only ever return the easier neighbours.
+    if near_difficulty is not None:
+        query = query.order_by(func.abs(VNDifficulty.difficulty_raw - near_difficulty))
+    elif near_characters is not None:
+        query = query.order_by(func.abs(VNDifficulty.character_count - near_characters))
+    else:
+        query = query.order_by(VNDifficulty.difficulty_raw.asc())
+
+    rows = (await db.execute(query.limit(limit))).all()
+
+    if response is not None:
+        response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
+
+    return {
+        "results": [
+            {
+                "id": row.id,
+                "title": row.title,
+                "title_jp": row.title_jp,
+                "title_romaji": row.title_romaji,
+                "image_url": row.image_url,
+                "image_sexual": row.image_sexual,
+                "difficulty": row.difficulty_raw,
+                "difficulty_band": row.difficulty,
+                "character_count": row.character_count,
+            }
+            for row in rows
+        ]
+    }
+
+
 @router.get("/random/")
 async def random_vn(
     db: AsyncSession = Depends(get_db),
@@ -156,13 +233,15 @@ async def search_vns(
     max_rating: float | None = Query(default=None, ge=0, le=10, description="Maximum rating"),
     min_votecount: int | None = Query(default=None, ge=0, description="Minimum vote count"),
     max_votecount: int | None = Query(default=None, ge=0, description="Maximum vote count"),
+    min_difficulty: float | None = Query(default=None, ge=0, le=10, description="Minimum Japanese reading difficulty (restricts to analysed titles)"),
+    max_difficulty: float | None = Query(default=None, ge=0, le=10, description="Maximum Japanese reading difficulty (restricts to analysed titles)"),
 
     # Category filters (support comma-separated values for multi-select)
     length: str | None = Query(default=None, description="Length: very_short, short, medium, long, very_long (comma-separated)"),
     minage: str | None = Query(default=None, description="Age rating: all_ages, teen, adult (comma-separated)"),
     devstatus: str | None = Query(default="0", description="Dev status: 0=finished, 1=in_dev, 2=cancelled, -1=all (comma-separated)"),
     olang: str | None = Query(default=None, description="Original language code (ja, en, zh, etc.) (comma-separated)"),
-    platform: str | None = Query(default=None, description="Platform (win, lin, mac, web, and, ios, swi, ps4, ps5) (comma-separated)"),
+    platform: str | None = Query(default=None, description="VNDB platform code, comma-separated. Any code VNDB uses is accepted, including the Japanese retro computers: p98, p88, x68, x1s, fmt, fm7, fm8, msx."),
 
     # Exclude filters
     exclude_length: str | None = Query(default=None, description="Exclude lengths (comma-separated)"),
@@ -185,7 +264,7 @@ async def search_vns(
     nsfw: bool = Query(default=False, description="Include adult (18+) content"),
 
     # Sorting & pagination
-    sort: str = Query(default="rating", description="Sort: rating, released, votecount, title, random"),
+    sort: str = Query(default="rating", description="Sort: rating, released, votecount, title, random, or a ranking metric (divisiveness, reputation, rising_month, rising_year, drop_rate, completion_rate, wishlist)"),
     sort_order: str = Query(default="desc", description="Sort order: asc, desc"),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=24, ge=1, le=100),
@@ -217,6 +296,7 @@ async def search_vns(
     cache_params = (
         q, first_char, tags, exclude_tags, tag_mode, traits, exclude_traits,
         include_children, year_min, year_max, min_rating, max_rating, min_votecount, max_votecount,
+        min_difficulty, max_difficulty,
         length, minage, devstatus, olang, platform,
         exclude_length, exclude_minage, exclude_devstatus, exclude_olang, exclude_platform,
         staff, seiyuu, developer, publisher, producer,
@@ -231,6 +311,10 @@ async def search_vns(
                 response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=300"
             return schemas.VNSearchResponse(**cached)
 
+    # A ranking metric rather than one of the plain columns. It carries its own sample floor,
+    # which is applied as a filter so the result count reports what is actually rankable.
+    metric = METRIC_SORTS.get(sort)
+
     # Only select the columns needed for VNSummary response
     _browse_columns = [
         VisualNovel.id, VisualNovel.title, VisualNovel.title_jp,
@@ -241,8 +325,19 @@ async def search_vns(
     # Include description snippet only for text searches (used by search bar dropdown)
     if q:
         _browse_columns.append(func.left(VisualNovel.description, 200).label('description'))
+    if metric is not None:
+        _browse_columns.append(metric.expression.label('metric_value'))
     query = select(*_browse_columns)
     count_query = select(func.count(VisualNovel.id))
+
+    if metric is not None:
+        if metric.join_model is not None:
+            # An inner join, so titles the source has not measured are simply absent rather
+            # than sorted to one end as though their value were known to be extreme.
+            query = query.join(metric.join_model, metric.join_condition)
+            count_query = count_query.join(metric.join_model, metric.join_condition)
+        query = query.where(metric.floor)
+        count_query = count_query.where(metric.floor)
 
     # Text search
     # Expression indexes exist for these patterns (migration 032) - expressions must match exactly.
@@ -325,6 +420,18 @@ async def search_vns(
     if max_votecount is not None:
         query = query.where(VisualNovel.votecount <= max_votecount)
         count_query = count_query.where(VisualNovel.votecount <= max_votecount)
+
+    # Reading difficulty. Only a small fraction of titles have been analysed, so asking for a
+    # difficulty at all restricts the results to those, which is why it is expressed as a
+    # subquery on presence rather than an outer join that would admit unmeasured titles.
+    if min_difficulty is not None or max_difficulty is not None:
+        measured = select(VNDifficulty.vn_id)
+        if min_difficulty is not None:
+            measured = measured.where(VNDifficulty.difficulty_raw >= min_difficulty)
+        if max_difficulty is not None:
+            measured = measured.where(VNDifficulty.difficulty_raw <= max_difficulty)
+        query = query.where(VisualNovel.id.in_(measured))
+        count_query = count_query.where(VisualNovel.id.in_(measured))
 
     # Length filter (using length_minutes when available)
     # Helper function for length filter conditions
@@ -679,7 +786,6 @@ async def search_vns(
             "votecount": VisualNovel.votecount,
             "title": VisualNovel.title,
         }
-        sort_col = sort_columns.get(sort, VisualNovel.rating)
 
         order_clauses = []
 
@@ -690,11 +796,17 @@ async def search_vns(
             )
             order_clauses.append(relevance.asc())
 
-        if sort_order == "asc":
-            order_clauses.append(sort_col.asc().nullslast())
+        if metric is not None:
+            # The metric supplies its own tie-break so an unfiltered browse reproduces the
+            # matching board exactly. Ratios tie often enough for that to be visible.
+            order_clauses.extend(metric.order_by(descending=sort_order != "asc"))
         else:
-            order_clauses.append(sort_col.desc().nullslast())
-        order_clauses.append(VisualNovel.id.asc())
+            sort_col = sort_columns.get(sort, VisualNovel.rating)
+            if sort_order == "asc":
+                order_clauses.append(sort_col.asc().nullslast())
+            else:
+                order_clauses.append(sort_col.desc().nullslast())
+            order_clauses.append(VisualNovel.id.asc())
 
         query = query.order_by(*order_clauses)
 
@@ -728,6 +840,15 @@ async def search_vns(
     if not skip_count and has_tag_or_trait_filter and spoiler_level < 2:
         # Build a count query with spoiler_level=2 to get the count including all spoilers
         spoiler_count_query = select(func.count(VisualNovel.id))
+
+        # The metric floor narrows the main count, so it has to narrow this one too, or the
+        # "including spoilers" figure would be the larger of two differently-filtered sets.
+        if metric is not None:
+            if metric.join_model is not None:
+                spoiler_count_query = spoiler_count_query.join(
+                    metric.join_model, metric.join_condition
+                )
+            spoiler_count_query = spoiler_count_query.where(metric.floor)
 
         # Apply all non-tag/trait filters (same as above)
         if q:
@@ -997,6 +1118,7 @@ async def search_vns(
                 votecount=vn.votecount,
                 olang=vn.olang,
                 description=getattr(vn, 'description', None),
+                metric_value=getattr(vn, 'metric_value', None),
             )
             for vn in vns
         ],
@@ -1005,6 +1127,11 @@ async def search_vns(
         page=page,
         pages=(total + limit - 1) // limit,
         query_time=round(elapsed_time, 3),
+        metric=metric.key if metric else None,
+        metric_label=metric.label if metric else None,
+        metric_floor_note=describe_floor(metric) if metric else None,
+        metric_high_means=metric.high_means if metric else None,
+        metric_low_means=metric.low_means if metric else None,
     )
 
     # Cache the response for 1 hour (data only changes daily via VNDB dumps).
@@ -1443,6 +1570,7 @@ async def batch_vns(
 async def get_top_vns(
     sort: str = Query(default="rating", description="Sort by: rating, votecount"),
     limit: int = Query(default=10, ge=1, le=100, description="Number of results"),
+    olang: str | None = Query(default=None, description="Restrict to titles originally written in this language, e.g. ja"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1450,6 +1578,10 @@ async def get_top_vns(
 
     Used by the global stats page to display highest rated and most popular VNs.
     Requires minimum 100 votes for rating-based ranking to ensure reliability.
+
+    `olang` restricts the ranking rather than the page filtering the result afterwards.
+    Filtering a top ten down to the Japanese-original entries leaves however many happen to
+    survive, which is a short list with a gap in it, not a top ten.
     """
     if sort == "rating":
         order_by = VisualNovel.rating.desc().nulls_last()
@@ -1463,9 +1595,11 @@ async def get_top_vns(
         select(VisualNovel)
         .where(VisualNovel.rating.isnot(None))
         .where(min_votes_filter)
-        .order_by(order_by)
-        .limit(limit)
     )
+    if olang:
+        query = query.where(VisualNovel.olang == olang)
+
+    query = query.order_by(order_by).limit(limit)
 
     result = await db.execute(query)
     vns = result.scalars().all()
@@ -1475,6 +1609,7 @@ async def get_top_vns(
             id=vn.id,
             title=vn.title,
             alttitle=vn.title_jp,
+            title_romaji=vn.title_romaji,
             image_url=vn.image_url,
             image_sexual=vn.image_sexual,
             released=vn.released.isoformat() if vn.released else None,

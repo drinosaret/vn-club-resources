@@ -1,8 +1,21 @@
 """Pre-compute user recommendations for active users.
 
-This module runs as part of the daily pipeline to pre-compute top 200
-recommendations for active users, storing them in user_recommendation_cache
-for fast retrieval via the API.
+Computes top-N recommendations for active users and stores them in
+user_recommendation_cache for fast retrieval via the API.
+
+NOT WIRED INTO THE LIVE PIPELINE. The only caller is app.ingestion.scheduler, which
+nothing starts; the daily job that actually runs is scripts/worker.py. Enabling this
+writes on the order of RECOMMENDATIONS_PER_USER rows per active user, so the storage
+budget has to be checked against the host before it is switched on. The request-time
+writer in the recommendations endpoint keeps the same table warm for users who visit.
+
+Two things must hold for a row written here to ever be read back, and neither is enforced
+by the schema:
+
+- user_id has to carry the `u` prefix. global_votes.user_hash is the VNDB numeric id with
+  that prefix stripped, so it cannot be used as a cache key unmodified.
+- every score column has to be populated with the meaning the read path expects, which is
+  why the record shape lives in app.services.recommendation_cache rather than here.
 """
 
 import asyncio
@@ -10,16 +23,15 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import select, func, delete, and_
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import select, func, delete
 
 from app.db.database import async_session
 from app.db.models import (
     GlobalVote,
     UserRecommendationCache,
-    VisualNovel,
 )
 from app.services.hybrid_recommender import HybridRecommender
+from app.services.recommendation_cache import build_cache_records, upsert_statement
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +66,7 @@ async def get_active_users(
     Get list of active VNDB user IDs.
 
     Active users are those with at least min_votes votes in the last N months.
-    Returns user IDs sorted by vote count (most active first).
+    Returns prefixed user IDs (`u12345`) sorted by vote count, most active first.
     """
     cutoff_date = datetime.utcnow() - timedelta(days=months * 30)
 
@@ -66,18 +78,21 @@ async def get_active_users(
             .having(func.count(GlobalVote.vn_id) >= min_votes)
             .order_by(func.count(GlobalVote.vn_id).desc())
         )
-        active_users = [row.user_hash for row in result.fetchall()]
+        # global_votes stores the bare numeric id; the cache is keyed by the prefixed form.
+        active_users = [f"u{row.user_hash}" for row in result.fetchall()]
 
     logger.info(f"Found {len(active_users)} active users with >={min_votes} votes")
     return active_users
 
 
 async def get_user_votes(user_id: str) -> list[dict]:
-    """Get all votes for a user."""
+    """Get all votes for a user, given the prefixed uid used as the cache key."""
+    user_hash = user_id[1:] if user_id.startswith("u") else user_id
+
     async with async_session() as db:
         result = await db.execute(
             select(GlobalVote.vn_id, GlobalVote.vote)
-            .where(GlobalVote.user_hash == user_id)
+            .where(GlobalVote.user_hash == user_hash)
             .where(GlobalVote.vote.isnot(None))
         )
         return [{"vn_id": row.vn_id, "score": row.vote} for row in result.fetchall()]
@@ -96,40 +111,11 @@ async def cache_user_recommendations(
     if not recommendations:
         return 0
 
+    records = build_cache_records(user_id, recommendations, datetime.utcnow())
+
     async with async_session() as db:
-        now = datetime.utcnow()
-
-        # Prepare records for upsert
-        # Note: cf_score and hgat_score columns repurposed for new signals
-        # combined_score already includes all weighted signals for proper ranking
-        records = [
-            {
-                "user_id": user_id,
-                "vn_id": rec.vn_id,
-                "combined_score": rec.score,
-                "tag_score": rec.tag_score,
-                "cf_score": rec.similar_games_score,  # Repurposed for VNSimilarity signal
-                "hgat_score": rec.users_also_read_score,  # Repurposed for VNCoOccurrence signal
-                "updated_at": now,
-            }
-            for rec in recommendations
-        ]
-
-        # Upsert in batches
         for i in range(0, len(records), 500):
-            batch = records[i : i + 500]
-            stmt = insert(UserRecommendationCache).values(batch)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["user_id", "vn_id"],
-                set_={
-                    "combined_score": stmt.excluded.combined_score,
-                    "tag_score": stmt.excluded.tag_score,
-                    "cf_score": stmt.excluded.cf_score,
-                    "hgat_score": stmt.excluded.hgat_score,
-                    "updated_at": stmt.excluded.updated_at,
-                },
-            )
-            await db.execute(stmt)
+            await db.execute(upsert_statement(records[i : i + 500]))
         await db.commit()
 
     return len(records)

@@ -65,7 +65,7 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 1G
+          memory: 2G
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
       interval: 30s
@@ -142,9 +142,14 @@ services:
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     deploy:
       resources:
+        # Postgres maps shared_buffers into every backend, so concurrent heavy queries
+        # push the cgroup well above steady-state usage. Below this the kernel reaps a
+        # backend and the whole cluster restarts into recovery, killing anything in
+        # flight. Kept close to the observed peak rather than generous: memory left
+        # spare here is memory the nightly recompute needs at the same hour.
         limits:
           cpus: '2'
-          memory: 4G
+          memory: 6G
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vndb -d vndb_stats"]
       interval: 5s
@@ -287,6 +292,10 @@ services:
       disable: true
     deploy:
       resources:
+        # The nightly recompute builds its candidate-pair index in process memory and
+        # peaks near 7G before dropping back, so the ceiling has to clear that peak by
+        # a real margin. Sizing it below the peak turns a working nightly job into one
+        # that is reaped every run.
         limits:
           cpus: '3'
           memory: 8G

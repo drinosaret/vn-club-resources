@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Pen, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
 import type { StaffBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';
+import { RankNumber } from '@/components/stats/RankNumber';
 
 interface StaffSectionProps {
   staff: StaffBreakdown[];
@@ -215,7 +216,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
 
       <div className="space-y-3" style={showAll ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' } : undefined}>
         {displayedStaff.map((s, i) => (
-          <StaffBar key={`${s.id}-${i}`} staff={s} maxValue={maxValue} sortMode={sortMode} preference={preference} />
+          <StaffBar key={`${s.id}-${i}`} rank={i + 1} staff={s} maxValue={maxValue} sortMode={sortMode} preference={preference} />
         ))}
       </div>
 
@@ -286,7 +287,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
   );
 }
 
-function StaffBar({ staff, maxValue, sortMode, preference }: { staff: StaffWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
+function StaffBar({ rank, staff, maxValue, sortMode, preference }: { rank: number; staff: StaffWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
   const displayName = getEntityDisplayName(staff, preference);
 
   // Calculate bar width based on sort mode
@@ -310,6 +311,7 @@ function StaffBar({ staff, maxValue, sortMode, preference }: { staff: StaffWithN
     <div className="group">
       <div className="flex items-center justify-between mb-1 gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          <RankNumber rank={rank} />
           <Link
             href={`/stats/staff/${staff.id}`}
             className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"

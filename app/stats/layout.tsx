@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/metadata-utils';
+import { StatsCrossLinks } from '@/components/stats/StatsCrossLinks';
+import { StatsSectionNav } from '@/components/stats/StatsSectionNav';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 
 const baseMetadata = generatePageMetadata({
@@ -23,6 +25,9 @@ export default function StatsLayout({
 }) {
   return (
     <>
+      {/* Above the page rather than inside it, so every page in the section carries the same
+          navigation without each one remembering to render it. */}
+      <StatsSectionNav />
       {children}
       <VNDBAttribution />
     </>

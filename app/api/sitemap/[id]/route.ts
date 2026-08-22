@@ -96,7 +96,25 @@ function xmlResponse(xml: string): NextResponse {
 
 // ============ Static pages + guides (id=0) ============
 
-function generateStaticEntries(): UrlEntry[] {
+/**
+ * Board URLs come from the live catalogue rather than a hardcoded list, so adding a
+ * leaderboard to the backend registry puts it in the sitemap without a second edit here.
+ */
+async function fetchLeaderboardSlugs(): Promise<string[]> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return [];
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/leaderboards`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.boards ?? []).map((board: { slug: string }) => board.slug);
+  } catch {
+    return [];
+  }
+}
+
+async function generateStaticEntries(): Promise<UrlEntry[]> {
   const entries: UrlEntry[] = [
     { loc: `${SITE_URL}/`, changefreq: 'weekly', priority: 1.0 },
     { loc: `${SITE_URL}/guide/`, changefreq: 'weekly', priority: 1.0 },
@@ -107,15 +125,19 @@ function generateStaticEntries(): UrlEntry[] {
     { loc: `${SITE_URL}/stats/`, changefreq: 'daily', priority: 0.8 },
     { loc: `${SITE_URL}/stats/global/`, changefreq: 'daily', priority: 0.8 },
     { loc: `${SITE_URL}/stats/compare/`, changefreq: 'monthly', priority: 0.6 },
+    { loc: `${SITE_URL}/stats/rankings/`, changefreq: 'daily', priority: 0.8 },
+    { loc: `${SITE_URL}/stats/rankings/build/`, changefreq: 'daily', priority: 0.7 },
+    { loc: `${SITE_URL}/stats/trends/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/recommendations/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/tierlist/`, changefreq: 'monthly', priority: 0.7 },
     { loc: `${SITE_URL}/3x3-maker/`, changefreq: 'monthly', priority: 0.7 },
     { loc: `${SITE_URL}/roulette/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/higher-or-lower/`, changefreq: 'monthly', priority: 0.6 },
-    { loc: `${SITE_URL}/news/`, changefreq: 'daily', priority: 0.6 },
     { loc: `${SITE_URL}/events/`, changefreq: 'daily', priority: 0.7 },
     { loc: `${SITE_URL}/changelog/`, changefreq: 'weekly', priority: 0.5 },
-    ...['all', 'recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
+    // /news/ redirects to /news/all/, so the destination stands in for the news landing page.
+    { loc: `${SITE_URL}/news/all/`, changefreq: 'daily', priority: 0.6 },
+    ...['recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
       loc: `${SITE_URL}/news/${slug}/`,
       changefreq: 'daily',
       priority: 0.5,
@@ -150,7 +172,22 @@ function generateStaticEntries(): UrlEntry[] {
       });
     }
   } catch {
-    // MDX loading may fail during edge cases — still return static pages
+    // MDX loading may fail during edge cases; still return static pages
+  }
+
+  // Board standings are recomputed from each data import, so the import timestamp is their lastmod.
+  const [boardSlugs, boardsLastmod] = await Promise.all([
+    fetchLeaderboardSlugs(),
+    fetchLastImportDate(),
+  ]);
+
+  for (const slug of boardSlugs) {
+    entries.push({
+      loc: `${SITE_URL}/stats/rankings/${slug}/`,
+      lastmod: boardsLastmod,
+      changefreq: 'daily',
+      priority: 0.6,
+    });
   }
 
   return entries;
@@ -193,7 +230,7 @@ export async function GET(
 
   // Static pages (id=0)
   if (numId === 0) {
-    return xmlResponse(buildUrlsetXml(generateStaticEntries()));
+    return xmlResponse(buildUrlsetXml(await generateStaticEntries()));
   }
 
   // Entity sitemaps need the last import date

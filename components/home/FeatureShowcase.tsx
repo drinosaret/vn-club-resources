@@ -13,6 +13,8 @@ import {
   ChevronRight,
   LayoutGrid,
   BookOpen,
+  Trophy,
+  Flame,
   RotateCw,
   ArrowUpDown,
   Gamepad2,
@@ -34,6 +36,8 @@ const FEATURES: Feature[] = [
   { href: '/news', icon: Newspaper, title: 'News', description: 'VN industry news & weekly digests', color: 'rose' },
   { href: '/random', icon: Dices, title: 'Random', description: 'Filtered random VN picker', color: 'primary' },
   { href: '/quiz', icon: Languages, title: 'Kana Quiz', description: 'Test your hiragana & katakana', color: 'emerald' },
+  { href: '/stats/trends/', icon: Flame, title: 'Trends', description: "What's being read now, and every year before", color: 'orange' },
+  { href: '/stats/rankings/', icon: Trophy, title: 'Rankings', description: 'Community leaderboards, and build your own', color: 'amber' },
 ];
 
 const FUN_FEATURES: Feature[] = [
@@ -52,6 +56,7 @@ const COLOR_CLASSES: Record<string, { bg: string; text: string; hoverText: strin
   purple:  { bg: 'bg-purple-100 dark:bg-purple-900/30',   text: 'text-purple-600 dark:text-purple-400',   hoverText: 'group-hover:text-purple-600 dark:group-hover:text-purple-400' },
   primary: { bg: 'bg-primary-100 dark:bg-primary-900/30', text: 'text-primary-600 dark:text-primary-400', hoverText: 'group-hover:text-primary-600 dark:group-hover:text-primary-400' },
   emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', hoverText: 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400' },
+  orange:  { bg: 'bg-orange-100 dark:bg-orange-900/30',   text: 'text-orange-600 dark:text-orange-400',   hoverText: 'group-hover:text-orange-600 dark:group-hover:text-orange-400' },
 };
 
 function FeatureGrid({ items }: { items: Feature[] }) {

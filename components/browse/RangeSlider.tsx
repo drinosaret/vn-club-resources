@@ -11,6 +11,8 @@ interface RangeSliderProps {
   onChange: (min: number | undefined, max: number | undefined) => void;
   formatValue?: (value: number) => string;
   label?: string;
+  /** One short line under the label, for a caveat the range itself cannot express. */
+  hint?: string;
   /** Compact mode: inline label+value on one row, tighter spacing */
   compact?: boolean;
 }
@@ -24,6 +26,7 @@ export function RangeSlider({
   onChange,
   formatValue = (v) => String(v),
   label,
+  hint,
   compact = false,
 }: RangeSliderProps) {
   // Internal state for dragging (to avoid calling onChange on every pixel)
@@ -173,7 +176,7 @@ export function RangeSlider({
       {compact ? (
         label && (
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400" title={hint}>{label}</label>
             <div className="flex items-center gap-1">
               <span className={`text-xs ${isFiltered ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}>
                 {formatValue(localMin)} — {formatValue(localMax)}
@@ -190,6 +193,9 @@ export function RangeSlider({
             <div className="flex items-center justify-between">
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
                 {label}
+                {hint && (
+                  <span className="block font-normal text-gray-400 dark:text-gray-500">{hint}</span>
+                )}
               </label>
               {isFiltered && (
                 <button

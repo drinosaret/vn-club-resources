@@ -10,6 +10,7 @@ import { GridSize, flexItemClasses } from './ViewModeToggle';
 import { NSFWImage, isNsfwContent } from '@/components/NSFWImage';
 import { usePreloadBuffer, PRELOAD_DEFAULTS, PRELOAD_COUNTS } from '@/lib/use-preload-buffer';
 import { useImageLoadState } from '@/lib/use-image-load-state';
+import { BrowseMetric, formatMetricValue } from '@/lib/browse-metrics';
 
 // Map grid size to the primary image width for preloading and fallback.
 // The actual rendering uses srcset with multiple widths so the browser
@@ -46,9 +47,11 @@ interface VNGridProps {
   preference: TitlePreference;
   gridSize?: GridSize;
   skeletonCount?: number;
+  /** Ranking metric ordering the results, when the sort is one of them. */
+  metric?: BrowseMetric | null;
 }
 
-export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = false, skipPreload = false, preference, gridSize = 'medium', skeletonCount = 12 }: VNGridProps) {
+export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = false, skipPreload = false, preference, gridSize = 'medium', skeletonCount = 12, metric = null }: VNGridProps) {
   // Track if component has mounted to avoid hydration mismatches
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -129,7 +132,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       {/* Flexbox layout centers incomplete last row like VNDB */}
       <div className={`browse-vn-grid-content flex flex-wrap justify-center gap-x-4 gap-y-6 my-6 ${hasMounted && isBusy ? 'pointer-events-none' : ''}`}>
         {displayResults.map((vn, index) => (
-          <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} aboveFold={index < preloadCount && !hasMounted} />
+          <VNCover key={index} vn={vn} preference={preference} imageWidth={GRID_IMAGE_WIDTHS[gridSize]} srcsetWidths={GRID_SRCSET_WIDTHS[gridSize]} imageSizes={IMAGE_SIZES[gridSize]} itemClass={flexItemClasses[gridSize]} aboveFold={index < preloadCount && !hasMounted} metric={metric} />
         ))}
       </div>
     </div>
@@ -151,9 +154,10 @@ interface VNCoverProps {
   itemClass?: string;
   /** True for above-fold images on SSR — uses loading="eager" for faster LCP */
   aboveFold?: boolean;
+  metric?: BrowseMetric | null;
 }
 
-const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass, aboveFold }: VNCoverProps) {
+const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths, imageSizes, itemClass, aboveFold, metric }: VNCoverProps) {
   const title = getDisplayTitle({
     title: vn.title,
     title_jp: vn.title_jp || vn.alttitle,
@@ -181,6 +185,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
         .join(', ')
     : undefined;
   const isNsfw = isNsfwContent(vn.image_sexual);
+  const metricValue = formatMetricValue(metric, vn.metric_value);
 
   return (
     <Link
@@ -221,6 +226,15 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
             18+
           </div>
         )}
+
+        {/* The value the results are ordered by. Without it a ranked list asks the reader to
+            take the order on trust, and the ordering column is not one of the two shown below
+            the cover. */}
+        {metricValue && (
+          <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-gray-900/80 text-white text-[10px] font-semibold rounded-sm z-10 backdrop-blur-xs">
+            {metricValue}
+          </div>
+        )}
       </div>
 
       {/* Info section below the cover - always visible */}
@@ -250,6 +264,8 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
     prevProps.srcsetWidths === nextProps.srcsetWidths &&
     prevProps.imageSizes === nextProps.imageSizes &&
     prevProps.itemClass === nextProps.itemClass &&
-    prevProps.aboveFold === nextProps.aboveFold
+    prevProps.aboveFold === nextProps.aboveFold &&
+    prevProps.metric === nextProps.metric &&
+    prevProps.vn.metric_value === nextProps.vn.metric_value
   );
 });

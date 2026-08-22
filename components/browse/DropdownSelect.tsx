@@ -1,12 +1,20 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, Plus, Minus, X } from 'lucide-react';
+import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { ChevronDown, Plus, Minus, Search, X } from 'lucide-react';
 
 export interface SelectOption {
   value: string;
   label: string;
+  /** Options sharing a group are listed under one heading, in the order given. */
+  group?: string;
 }
+
+/**
+ * Above this many options the list gains a search box. Below it, scanning is faster than
+ * typing; above it, the platform list runs to nearly fifty and scrolling is not scanning.
+ */
+const SEARCHABLE_FROM = 15;
 
 export interface SelectedValue {
   value: string;
@@ -36,8 +44,24 @@ export function DropdownSelect({
 }: DropdownSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [query, setQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const searchable = options.length >= SEARCHABLE_FROM;
+
+  // Everything index-based below walks this rather than `options`: with a filter applied
+  // the two differ, and keyboard focus has to follow what is actually on screen.
+  const visibleOptions = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return options;
+    return options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(needle) ||
+        option.value.toLowerCase().includes(needle),
+    );
+  }, [options, query]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -58,15 +82,26 @@ export function DropdownSelect({
     }
   }, [isOpen, selected.length]);
 
-  // Scroll focused item into view
+  // Scroll focused item into view. Located by index attribute rather than by position
+  // among the children, which the search box and group headings would otherwise shift.
   useEffect(() => {
     if (isOpen && focusedIndex >= 0 && listRef.current) {
-      // +1 offset to skip the clear button if present
-      const childIndex = selected.length > 0 ? focusedIndex + 1 : focusedIndex;
-      const item = listRef.current.children[childIndex] as HTMLElement | undefined;
-      item?.scrollIntoView({ block: 'nearest' });
+      listRef.current
+        .querySelector<HTMLElement>(`[data-option-index="${focusedIndex}"]`)
+        ?.scrollIntoView({ block: 'nearest' });
     }
-  }, [isOpen, focusedIndex, selected.length]);
+  }, [isOpen, focusedIndex]);
+
+  // A stale filter would hide most of the list the next time it opens.
+  useEffect(() => {
+    if (!isOpen) setQuery('');
+    else if (searchable) searchRef.current?.focus();
+  }, [isOpen, searchable]);
+
+  // Focus moves back to the top whenever the filter changes what is on screen.
+  useEffect(() => {
+    setFocusedIndex(query ? 0 : -1);
+  }, [query]);
 
   const getSelectionState = (value: string): 'none' | 'include' | 'exclude' => {
     const found = selected.find(s => s.value === value);
@@ -102,14 +137,14 @@ export function DropdownSelect({
         e.preventDefault();
         setFocusedIndex(prev => {
           const min = selected.length > 0 ? -1 : 0;
-          return prev < options.length - 1 ? prev + 1 : min;
+          return prev < visibleOptions.length - 1 ? prev + 1 : min;
         });
         break;
       case 'ArrowUp':
         e.preventDefault();
         setFocusedIndex(prev => {
           const min = selected.length > 0 ? -1 : 0;
-          return prev > min ? prev - 1 : options.length - 1;
+          return prev > min ? prev - 1 : visibleOptions.length - 1;
         });
         break;
       case 'Enter':
@@ -118,8 +153,8 @@ export function DropdownSelect({
         if (focusedIndex === -1 && selected.length > 0) {
           onChange([]);
           setIsOpen(false);
-        } else if (focusedIndex >= 0 && focusedIndex < options.length) {
-          handleOptionClick(options[focusedIndex].value);
+        } else if (focusedIndex >= 0 && focusedIndex < visibleOptions.length) {
+          handleOptionClick(visibleOptions[focusedIndex].value);
         }
         break;
       case 'Escape':
@@ -132,10 +167,10 @@ export function DropdownSelect({
         break;
       case 'End':
         e.preventDefault();
-        setFocusedIndex(options.length - 1);
+        setFocusedIndex(visibleOptions.length - 1);
         break;
     }
-  }, [isOpen, focusedIndex, options, selected, onChange, handleOptionClick]);
+  }, [isOpen, focusedIndex, visibleOptions, selected, onChange, handleOptionClick]);
 
   // Display text for the button
   const getDisplayText = () => {
@@ -216,13 +251,48 @@ export function DropdownSelect({
             </button>
           )}
 
-          {options.map((option, index) => {
+          {searchable && (
+            <div className="sticky top-0 z-10 p-1.5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={`Search ${label.toLowerCase()}`}
+                  aria-label={`Search ${label.toLowerCase()}`}
+                  className="w-full pl-7 pr-2 py-1.5 text-sm rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-primary-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {visibleOptions.length === 0 && (
+            <p className="px-3 py-4 text-sm text-center text-gray-500 dark:text-gray-400">
+              Nothing matches &ldquo;{query}&rdquo;.
+            </p>
+          )}
+
+          {visibleOptions.map((option, index) => {
             const state = getSelectionState(option.value);
             const isFocused = index === focusedIndex;
+            const startsGroup =
+              !!option.group && option.group !== visibleOptions[index - 1]?.group;
 
             return (
+              <Fragment key={option.value}>
+              {startsGroup && (
+                <div
+                  role="presentation"
+                  className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                >
+                  {option.group}
+                </div>
+              )}
               <button
-                key={option.value}
+                data-option-index={index}
                 type="button"
                 role="option"
                 aria-selected={state !== 'none'}
@@ -252,6 +322,7 @@ export function DropdownSelect({
                   {option.label}
                 </span>
               </button>
+              </Fragment>
             );
           })}
         </div>

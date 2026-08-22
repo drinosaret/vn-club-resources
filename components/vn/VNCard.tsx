@@ -66,9 +66,9 @@ export function VNCard({ id, title, titleJp, titleRomaji, imageUrl, imageSexual,
       </div>
 
       <div className="p-2">
-        <h4 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+        <h3 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
           {displayTitle}
-        </h4>
+        </h3>
       </div>
     </Link>
   );

@@ -1,4 +1,9 @@
 import { SelectOption } from './DropdownSelect';
+import {
+  PLATFORMS as ALL_PLATFORMS,
+  PLATFORM_GROUPS,
+  PLATFORM_SHORT_LABELS,
+} from '@/lib/platforms';
 
 // Shared filter option arrays and label maps used by CompactFilterBar, SidebarFilters, and ActiveFilterChips
 
@@ -16,18 +21,15 @@ export const LANGUAGES: SelectOption[] = [
   { value: 'vi', label: 'Vietnamese' },
 ];
 
-export const PLATFORMS: SelectOption[] = [
-  { value: 'win', label: 'Windows' },
-  { value: 'lin', label: 'Linux' },
-  { value: 'mac', label: 'Mac' },
-  { value: 'web', label: 'Web' },
-  { value: 'and', label: 'Android' },
-  { value: 'ios', label: 'iOS' },
-  { value: 'swi', label: 'Switch' },
-  { value: 'ps4', label: 'PS4' },
-  { value: 'ps5', label: 'PS5' },
-  { value: 'psv', label: 'PS Vita' },
-];
+// Every platform VNDB records, grouped for a list this long. Derived from lib/platforms
+// rather than listed again here, so partial copies of this map cannot drift apart.
+export const PLATFORMS: SelectOption[] = PLATFORM_GROUPS.flatMap((group) =>
+  ALL_PLATFORMS.filter((platform) => platform.group === group).map((platform) => ({
+    value: platform.code,
+    label: platform.label,
+    group,
+  })),
+);
 
 export const LENGTHS: SelectOption[] = [
   { value: 'very_short', label: 'Very Short (<2h)' },
@@ -59,7 +61,7 @@ function toLabelMap(options: SelectOption[]): Record<string, string> {
 }
 
 export const LANGUAGE_LABELS = toLabelMap(LANGUAGES);
-export const PLATFORM_LABELS = toLabelMap(PLATFORMS);
+export const PLATFORM_LABELS = PLATFORM_SHORT_LABELS;
 export const LENGTH_LABELS = toLabelMap(LENGTHS);
 export const AGE_LABELS = toLabelMap(AGE_RATINGS);
 export const STATUS_LABELS = toLabelMap(DEV_STATUS);

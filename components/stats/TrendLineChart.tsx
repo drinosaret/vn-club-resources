@@ -1,18 +1,17 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  TooltipProps,
-} from 'recharts';
+
+import { ChartFrame } from '@/components/charts/ChartFrame';
+import { LineChart } from '@/components/charts/LineChart';
+import { cumulative, formatMonthLabel } from '@/lib/chart-scales';
+
+/**
+ * Trend chart used by the user stats and VN stats tabs.
+ *
+ * Callers pass rows plus the keys to read, so the props stay independent of the renderer
+ * underneath and callers need not shape their data for it.
+ */
 
 interface TrendLineChartProps<T> {
   data: T[];
@@ -28,6 +27,8 @@ interface TrendLineChartProps<T> {
   height?: number;
   cumulative?: boolean;
   headerRight?: React.ReactNode;
+  referenceValue?: number;
+  referenceLabel?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,124 +42,41 @@ export function TrendLineChart<T extends Record<string, any>>({
   areaFill = true,
   yAxisLabel,
   formatValue = (v) => v.toLocaleString(),
-  formatXAxis = (v) => v,
+  formatXAxis,
   height = 200,
-  cumulative = false,
+  cumulative: isCumulative = false,
   headerRight,
+  referenceValue,
+  referenceLabel,
 }: TrendLineChartProps<T>) {
-  // Process data for cumulative if needed
-  const chartData = useMemo(() => {
-    if (!cumulative) return data;
+  const points = useMemo(() => {
+    const xs = data.map((item) => String(item[xAxisKey] ?? ''));
+    const raw = data.map((item) => Number(item[dataKey]) || 0);
+    const ys = isCumulative ? cumulative(raw) : raw;
+    return xs.map((x, i) => ({ x, y: ys[i] }));
+  }, [data, dataKey, xAxisKey, isCumulative]);
 
-    let total = 0;
-    return data.map((item) => {
-      const value = item[dataKey] as number;
-      total += value || 0;
-      return { ...item, [dataKey]: total };
-    });
-  }, [data, dataKey, cumulative]);
-
-  // Custom tooltip
-  const CustomTooltip = (props: TooltipProps<number, string>) => {
-    const { active, payload, label } = props as { active?: boolean; payload?: Array<{ value?: number }>; label?: string };
-    if (!active || !payload || !payload.length) return null;
-
-    const value = payload[0].value as number;
-    return (
-      <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400">{formatXAxis(label || '')}</p>
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">
-          {formatValue(value)}
-          {yAxisLabel && <span className="text-gray-500 dark:text-gray-400 font-normal"> {yAxisLabel}</span>}
-        </p>
-      </div>
-    );
-  };
-
-  // Format month for display (YYYY-MM -> MMM 'YY)
-  const formatMonth = (month: string) => {
-    if (!month || month.length < 7) return month;
-    const [year, monthNum] = month.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthName = monthNames[parseInt(monthNum, 10) - 1] || monthNum;
-    return `${monthName} '${year.slice(-2)}`;
-  };
-
-  const xAxisFormatter = formatXAxis || formatMonth;
-
-  if (!data || data.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">{title}</h3>
-        <div className="h-48 flex items-center justify-center text-gray-400 dark:text-gray-500">
-          No data available
-        </div>
-      </div>
-    );
-  }
-
-  const ChartComponent = areaFill ? AreaChart : LineChart;
+  const formatX = formatXAxis ?? formatMonthLabel;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">{title}</h3>
-          {subtitle && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>
-          )}
-        </div>
-        {headerRight}
-      </div>
-      <ResponsiveContainer width="100%" height={height} className="[&_svg]:outline-hidden [&_svg_*]:outline-hidden [&_svg]:[-webkit-tap-highlight-color:transparent]">
-        <ChartComponent data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-          <defs>
-            <linearGradient id={`gradient-${dataKey as string}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-          <XAxis
-            dataKey={xAxisKey as string}
-            tickFormatter={xAxisFormatter}
-            tick={{ fontSize: 11 }}
-            className="text-gray-500 dark:text-gray-400"
-            axisLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            tick={{ fontSize: 11 }}
-            className="text-gray-500 dark:text-gray-400"
-            axisLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickFormatter={(v) => formatValue(v)}
-            width={50}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          {areaFill ? (
-            <Area
-              type="monotone"
-              dataKey={dataKey as string}
-              stroke={color}
-              strokeWidth={2}
-              fill={`url(#gradient-${dataKey as string})`}
-              dot={false}
-              activeDot={{ r: 4, fill: color }}
-            />
-          ) : (
-            <Line
-              type="monotone"
-              dataKey={dataKey as string}
-              stroke={color}
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, fill: color }}
-            />
-          )}
-        </ChartComponent>
-      </ResponsiveContainer>
-    </div>
+    <ChartFrame
+      title={title}
+      subtitle={subtitle}
+      headerRight={headerRight}
+      height={height}
+      empty={!data || data.length === 0}
+    >
+      <LineChart
+        points={points}
+        color={color}
+        area={areaFill}
+        height={height}
+        formatValue={formatValue}
+        formatX={formatX}
+        valueSuffix={yAxisLabel}
+        referenceValue={referenceValue}
+        referenceLabel={referenceLabel}
+      />
+    </ChartFrame>
   );
 }

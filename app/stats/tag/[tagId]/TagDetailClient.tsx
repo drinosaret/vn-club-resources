@@ -353,7 +353,7 @@ export default function TagDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
+    <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-clip">
       {isRefreshing && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -367,6 +367,7 @@ export default function TagDetailPage({ params }: PageProps) {
         <div className="flex items-start gap-4">
           <button
             onClick={() => window.history.back()}
+            aria-label="Go back"
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mt-1"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -402,14 +403,25 @@ export default function TagDetailPage({ params }: PageProps) {
                 </span>
               )}
             </div>
-            <a
-              href={`https://vndb.org/${tag.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1"
-            >
-              View on VNDB <ExternalLink className="w-3 h-3" />
-            </a>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <a
+                href={`https://vndb.org/${tag.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1"
+              >
+                View on VNDB <ExternalLink className="w-3 h-3" />
+              </a>
+              {/* Anyone reading a tag's page is the person most likely to want its readers
+                  ranked, and the ranking is reachable from nowhere else nearby. The id is
+                  carried in VNDB's prefixed form here and bare in the ranking's URL. */}
+              <Link
+                href={`/stats/rankings/build/?subject=readers&question=read-most&tag=${tag.id.replace(/^g/, '')}&name=${encodeURIComponent(tag.name)}`}
+                className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                See who reads it
+              </Link>
+            </div>
             {tag.description && (
               <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl wrap-break-word">
                 <p>
@@ -480,9 +492,9 @@ export default function TagDetailPage({ params }: PageProps) {
           {/* Child Tags */}
           {children.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none mb-8">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                 Child Tags ({children.length})
-              </h3>
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {children.map(child => (
                   <Link
@@ -538,26 +550,26 @@ export default function TagDetailPage({ params }: PageProps) {
 
               {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <ScoreDistributionChart
+                <ScoreDistributionChart headingLevel="h2"
                   distribution={stats.score_distribution}
                   jpDistribution={stats.score_distribution_jp}
                   average={stats.average_rating}
                   entityId={tagId}
                   entityType="tag"
                 />
-                <ReleaseYearChart
+                <ReleaseYearChart headingLevel="h2"
                   distribution={stats.release_year_distribution}
                   distributionWithRatings={stats.release_year_with_ratings}
                   entityId={tagId}
                   entityType="tag"
                 />
-                <LengthChart
+                <LengthChart headingLevel="h2"
                   distribution={stats.length_distribution}
                   entityId={tagId}
                   entityType="tag"
                 />
                 {Object.keys(stats.age_rating_distribution).length > 0 && (
-                  <AgeRatingChart
+                  <AgeRatingChart headingLevel="h2"
                     distribution={stats.age_rating_distribution}
                     entityId={tagId}
                     entityType="tag"

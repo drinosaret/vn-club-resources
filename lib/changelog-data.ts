@@ -57,6 +57,39 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-08-21',
+    project: 'site',
+    title: 'Stats overhaul',
+    description:
+      'Your stats page rebuilt: how your taste is scored and how it has shifted, how much Japanese you have read, and where you stand against everyone else. Browse results sort into rankings too.',
+    links: [
+      { label: 'Stats', href: '/stats/' },
+      { label: 'Browse', href: '/browse/?sort=divisiveness&view=ranked' },
+    ],
+  },
+  {
+    date: '2026-08-21',
+    project: 'site',
+    title: 'Rankings',
+    description:
+      'Community leaderboards, plus a builder: rank any era, platform, length or tag by rating, divisiveness, drop rate or Japanese difficulty. Each ranking shows how it was counted.',
+    links: [
+      { label: 'Rankings', href: '/stats/rankings/' },
+      { label: 'Build a ranking', href: '/stats/rankings/build/' },
+    ],
+  },
+  {
+    date: '2026-08-21',
+    project: 'site',
+    title: 'Trends',
+    description:
+      'A new Trends page for what the community is reading: what is hot this week and which way it moved, plus the biggest jump in every month.',
+    links: [
+      { label: 'Trends', href: '/stats/trends/' },
+      { label: 'Stats', href: '/stats/' },
+    ],
+  },
+  {
     date: '2026-07-31',
     project: 'ichijou',
     title: 'Weekly Roudoku',

@@ -4,6 +4,7 @@
  */
 
 import { VNDetail, VNCharacter, SimilarVNsResponse, BrowseResponse, BrowseFilters } from './vndb-stats-api';
+import type { Leaderboard, LeaderboardCatalogue } from '@/lib/vndb-stats-api';
 import { getBackendUrlOptional } from './config';
 
 // Default items per page (matches medium grid size: 5 cols × 7 rows at xl)
@@ -43,6 +44,8 @@ function parseSearchParams(
     max_rating: getNumber('max_rating'),
     min_votecount: getNumber('min_votecount'),
     max_votecount: getNumber('max_votecount'),
+    min_difficulty: getNumber('min_difficulty'),
+    max_difficulty: getNumber('max_difficulty'),
     length: getString('length'),
     exclude_length: getString('exclude_length'),
     minage: getString('minage'),
@@ -171,6 +174,112 @@ export async function getTagForMetadata(
     if (!res.ok) return null;
     const data = await res.json();
     return data.tag || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch a leaderboard's descriptive fields server-side, for page metadata.
+ *
+ * Reads the catalogue rather than the board itself: the catalogue is one small cached
+ * document covering every board, so rendering any ranking page costs at most one fetch
+ * regardless of how many boards exist.
+ */
+export async function getLeaderboardForMetadata(
+  slug: string
+): Promise<{ title: string; blurb: string; subject: string; home: string } | null> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return null;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/leaderboards`, {
+      next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const board = (data.boards || []).find(
+      (entry: { slug: string }) => entry.slug === slug
+    ) as { title: string; blurb: string; subject: string; home?: string } | undefined;
+    if (!board) return null;
+
+    return {
+      title: board.title,
+      blurb: board.blurb,
+      subject: board.subject,
+      home: board.home ?? 'rankings',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A board lookup, with a missing board told apart from an unreachable one.
+ *
+ * The distinction decides whether the route may answer 404. A slug the registry does not
+ * define should, or the route mints an indexable page for every typo pointed at it. A board
+ * the backend cannot answer for right now must not, or an outage would take all of them out
+ * of the index at once and a build with no backend would ship none of them at all.
+ */
+export type BoardLookup =
+  | { status: 'found'; board: Leaderboard }
+  | { status: 'missing' }
+  | { status: 'unavailable' };
+
+/**
+ * Fetch one board server-side, rows included.
+ *
+ * Language matches the client's opening state so the markup the crawler is served is the
+ * markup the first paint shows; a mismatch would swap the whole table out on hydration.
+ */
+export async function getBoard(slug: string): Promise<BoardLookup> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return { status: 'unavailable' };
+
+  try {
+    // The slug is a URL segment, so it is encoded rather than pasted into the path: a value
+    // carrying its own separators would otherwise resolve to a different backend route.
+    const res = await fetch(`${backendUrl}/api/v1/leaderboards/${encodeURIComponent(slug)}?language=ja`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    // Only the registry can say a slug does not exist. Every other failure is this request's
+    // problem rather than the board's.
+    if (res.status === 404) return { status: 'missing' };
+    if (!res.ok) return { status: 'unavailable' };
+
+    const board = (await res.json()) as Leaderboard;
+    if (!board || !board.title) return { status: 'unavailable' };
+
+    return { status: 'found', board };
+  } catch {
+    return { status: 'unavailable' };
+  }
+}
+
+/**
+ * Fetch the board catalogue server-side.
+ *
+ * The catalogue page exists to point at the boards, and a list of links that only appears
+ * after hydration points at nothing as far as a crawler is concerned. Returns null rather
+ * than throwing so an unreachable backend leaves the page to fetch for itself.
+ */
+export async function getLeaderboardCatalogue(): Promise<LeaderboardCatalogue | null> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return null;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/leaderboards`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as LeaderboardCatalogue;
+    return data?.boards?.length ? data : null;
   } catch {
     return null;
   }

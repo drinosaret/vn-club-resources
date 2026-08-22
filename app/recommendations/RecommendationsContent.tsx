@@ -41,7 +41,7 @@ interface Recommendation {
   title_jp?: string;       // Original Japanese title (kanji/kana)
   title_romaji?: string;   // Romanized title
   score: number;
-  normalized_score?: number;  // 0-100 scale from backend
+  normalized_score: number;  // 0-100 match percentage, always computed by the backend
   match_reasons: string[];
   image_url: string | null;
   image_sexual: number | null;  // For NSFW blur (0=safe, 1=suggestive, 2=explicit)
@@ -122,15 +122,15 @@ function RecommendationCard({ rec, index, titlePreference, onInfoClick }: Recomm
           {/* Match Score Badge */}
           <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-violet-600/90 text-white text-xs font-bold rounded-sm">
             <Sparkles className="w-3 h-3" />
-            {rec.normalized_score ?? Math.min(100, Math.round(rec.score * 18))}%
+            {rec.normalized_score}%
           </div>
         </div>
 
         {/* Content */}
         <div className="p-2">
-          <h4 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors" title={getDisplayTitle({ title: rec.title, title_jp: rec.title_jp, title_romaji: rec.title_romaji }, titlePreference)}>
+          <h2 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors" title={getDisplayTitle({ title: rec.title, title_jp: rec.title_jp, title_romaji: rec.title_romaji }, titlePreference)}>
             {getDisplayTitle({ title: rec.title, title_jp: rec.title_jp, title_romaji: rec.title_romaji }, titlePreference)}
-          </h4>
+          </h2>
         </div>
       </Link>
 
@@ -329,7 +329,8 @@ export default function RecommendationsContent() {
 
     const uid = searchParams.get('uid');
     const uname = searchParams.get('username');
-    // Validate uid format (numeric or u-prefixed numeric) to prevent path traversal
+    // The uid arrives from the query string and goes on to build a request path, so it is
+    // accepted only in the shape VNDB issues.
     if (uid && /^u?\d+$/.test(uid)) {
       setUserId(uid);
       if (uname) setUsername(uname);
@@ -463,7 +464,7 @@ export default function RecommendationsContent() {
         setError('Request timed out. The server may be busy - please try again.');
       } else {
         console.error('Failed to load recommendations:', err);
-        setError('Failed to load recommendations. Data may be refreshing — please try again in a few minutes.');
+        setError('Failed to load recommendations. Data may be refreshing, please try again in a few minutes.');
       }
     } finally {
       // Only clear loading if we're not auto-retrying
@@ -594,6 +595,7 @@ export default function RecommendationsContent() {
                 <button
                   type="submit"
                   disabled={isLoadingUser}
+                  aria-label="Get recommendations"
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isLoadingUser ? (
@@ -754,7 +756,7 @@ export default function RecommendationsContent() {
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
                   {loadingElapsed}s elapsed
-                  {loadingElapsed >= 15 && ' — Almost there!'}
+                  {loadingElapsed >= 15 && '. Almost there!'}
                   {loadingElapsed >= 30 && ' (Very large collections may take up to 60s)'}
                 </p>
               </div>
@@ -861,9 +863,9 @@ function FeatureCard({
       <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 mb-3">
         {icon}
       </div>
-      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+      <h2 className="font-semibold text-gray-900 dark:text-white mb-1">
         {title}
-      </h3>
+      </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400">
         {description}
       </p>

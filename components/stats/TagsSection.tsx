@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Tag, ChevronDown, ChevronUp, ArrowUpDown, Info } from 'lucide-react';
 import type { TagAnalytics, TagStats } from '@/lib/vndb-stats-api';
+import { RankNumber } from '@/components/stats/RankNumber';
 
 type SortMode = 'weighted' | 'count' | 'rating';
 
@@ -99,8 +100,8 @@ export function TagsSection({ tags, expanded = false }: TagsSectionProps) {
       </div>
 
       <div className="space-y-3" style={showAll ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' } : undefined}>
-        {displayTags.map((tag) => (
-          <TagBar key={tag.tag_id} tag={tag} maxValue={maxValue} sortMode={sortMode} />
+        {displayTags.map((tag, index) => (
+          <TagBar key={tag.tag_id} rank={index + 1} tag={tag} maxValue={maxValue} sortMode={sortMode} />
         ))}
       </div>
 
@@ -171,7 +172,7 @@ export function TagsSection({ tags, expanded = false }: TagsSectionProps) {
   );
 }
 
-function TagBar({ tag, maxValue, sortMode }: { tag: TagStats; maxValue: number; sortMode: SortMode }) {
+function TagBar({ rank, tag, maxValue, sortMode }: { rank: number; tag: TagStats; maxValue: number; sortMode: SortMode }) {
   // Calculate bar width based on sort mode
   let barValue: number;
   switch (sortMode) {
@@ -199,14 +200,17 @@ function TagBar({ tag, maxValue, sortMode }: { tag: TagStats; maxValue: number; 
 
   return (
     <div className="group">
-      <div className="flex items-center justify-between mb-1">
-        <Link
-          href={`/stats/tag/${tagIdForUrl}`}
-          className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-        >
-          {tag.name}
-        </Link>
-        <div className="flex items-center gap-3 text-sm">
+      <div className="flex items-center justify-between mb-1 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <RankNumber rank={rank} />
+          <Link
+            href={`/stats/tag/${tagIdForUrl}`}
+            className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+          >
+            {tag.name}
+          </Link>
+        </div>
+        <div className="flex items-center gap-3 text-sm shrink-0">
           <span className="text-gray-500 dark:text-gray-400">
             {tag.count} VNs
           </span>

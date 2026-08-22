@@ -72,7 +72,10 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   const [currentPage, setCurrentPage] = useState(1);
   const { preference: titlePreference } = useTitlePreference();
 
-  const isPaginatingRef = useRef(false);
+  // State rather than a ref: this is read while rendering to choose the preload config, and
+  // both writers set it from somewhere React can see. Paging sets it in the handler that
+  // also moves the page, so the two land in one render.
+  const [isPaginating, setIsPaginating] = useState(false);
   // Scroll target for bottom pagination (scrolls to section, not window top)
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -105,26 +108,30 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     // Sort
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case 'score':
+        case 'score': {
           // Sort by user vote descending, nulls last
           const aScore = a.vote ?? -1;
           const bScore = b.vote ?? -1;
           return bScore - aScore;
-        case 'rating':
+        }
+        case 'rating': {
           // Sort by global rating descending, nulls last
           const aRating = a.vn?.rating ?? -1;
           const bRating = b.vn?.rating ?? -1;
           return bRating - aRating;
-        case 'title':
+        }
+        case 'title': {
           // Sort by display title based on user preference
           const aTitle = a.vn ? getDisplayTitle({ title: a.vn.title, title_jp: a.vn.title_jp, title_romaji: a.vn.title_romaji }, titlePreference) : '';
           const bTitle = b.vn ? getDisplayTitle({ title: b.vn.title, title_jp: b.vn.title_jp, title_romaji: b.vn.title_romaji }, titlePreference) : '';
           return aTitle.localeCompare(bTitle);
-        case 'date':
+        }
+        case 'date': {
           // Sort by release date descending
           const aDate = a.vn?.released || '0000';
           const bDate = b.vn?.released || '0000';
           return bDate.localeCompare(aDate);
+        }
         default:
           return 0;
       }
@@ -138,7 +145,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   if (prevFilters.statusFilter !== statusFilter || prevFilters.langFilter !== langFilter || prevFilters.sortBy !== sortBy || prevFilters.searchQuery !== searchQuery) {
     setCurrentPage(1);
     setPrevFilters({ statusFilter, langFilter, sortBy, searchQuery });
-    isPaginatingRef.current = false; // Filter change → use full preload buffer
+    setIsPaginating(false); // Filter change → use full preload buffer
   }
 
   // Pagination
@@ -167,12 +174,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   // List view disables preloading (no images to preload).
   const { displayItems: displayedItems, isSwapping: isPreloading } = usePreloadBuffer(
     paginatedItems, getPreloadUrls,
-    { isLoading, disabled: isPaginatingRef.current || viewMode === 'list' },
+    { isLoading, disabled: isPaginating || viewMode === 'list' },
   );
 
   // Handle page change — sets pagination flag so preload buffer kicks in
   const handlePageChange = useCallback((page: number) => {
-    isPaginatingRef.current = true;
+    setIsPaginating(true);
     setCurrentPage(page);
   }, []);
 
@@ -377,7 +384,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       {((isLoading && novels.length === 0) || (novels.length > 0 && displayedItems.length === 0 && filteredAndSorted.length > 0)) && (
         <>
           <PaginationSkeleton />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 my-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 my-4">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
               <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden">
                 <div className="aspect-3/4 image-placeholder" />
@@ -446,9 +453,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
             </div>
           )}
 
-          {/* Gallery View */}
+          {/* Gallery View. The column count is set by the width a title needs, not by how
+              many covers will fit: three columns on a phone leaves each card under a hundred
+              pixels, and the name under it clamps after a few characters, which turns a shelf
+              of covers into a shelf of prefixes. */}
           {viewMode === 'gallery' && filteredAndSorted.length > 0 && (
-            <div className={`grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 ${isBusy ? 'pointer-events-none' : ''}`}>
+            <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 ${isBusy ? 'pointer-events-none' : ''}`}>
               {displayedItems.map((novel) => (
                 <NovelCard key={novel.id} novel={novel} />
               ))}
@@ -497,7 +507,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
         {showImage ? (
           <NSFWImage
             src={imageUrl}
-            alt={typeof displayTitle === 'string' ? displayTitle : ''}
+            alt=""
             vnId={novel.id}
             imageSexual={novel.vn?.image?.sexual}
             className={`w-full h-full object-cover object-top ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -516,32 +526,38 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
         )}
       </div>
 
-      {/* Title and info */}
-      <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-900 dark:text-white truncate">
-          {displayTitle}
-        </h4>
-        <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
-          <span>{releaseYear}</span>
-          <span className={`px-1.5 py-0.5 text-xs rounded-sm ${statusColor}`}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </span>
-        </div>
-      </div>
-
-      {/* Scores */}
-      <div className="flex items-center gap-4 text-sm">
-        <div className="text-right">
-          <div className="text-xs text-gray-400 dark:text-gray-500">My Score</div>
-          <div className={`font-medium ${novel.vote ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'}`}>
-            {userScore}
+      {/* Title and scores share a column on a phone and a line on anything wider. Side by
+          side at phone width the two score blocks hold about a third of the row, leaving the
+          title a dozen characters, so a list of novels reads as a list of prefixes. Given its
+          own line the title takes the full width and the scores lose nothing. */}
+      <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
+        <div className="min-w-0 sm:flex-1">
+          <h4 className="font-medium text-gray-900 line-clamp-2 sm:block sm:truncate dark:text-white">
+            {displayTitle}
+          </h4>
+          <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <span>{releaseYear}</span>
+            <span className={`px-1.5 py-0.5 text-xs rounded-sm ${statusColor}`}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </span>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-xs text-gray-400 dark:text-gray-500">Global</div>
-          <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            {globalRating}
+
+        {/* Each score reads on one line where it sits under the title, and returns to a
+            label stacked over its value once there is room beside it. */}
+        <div className="mt-1.5 flex items-center gap-4 text-sm sm:mt-0 sm:shrink-0">
+          <div className="flex items-baseline gap-1.5 sm:block sm:text-right">
+            <div className="text-xs text-gray-400 dark:text-gray-500">My Score</div>
+            <div className={`font-medium ${novel.vote ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'}`}>
+              {userScore}
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5 sm:block sm:text-right">
+            <div className="text-xs text-gray-400 dark:text-gray-500">Global</div>
+            <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+              {globalRating}
+            </div>
           </div>
         </div>
       </div>

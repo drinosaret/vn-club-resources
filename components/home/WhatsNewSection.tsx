@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { changelogEntries, formatChangelogDay, PROJECT_META } from '@/lib/changelog-data';
+import { EntryLink } from '@/components/changelog/EntryLink';
 
 // Server component: renders the latest changelog entries statically. Covers every
 // project, not just the site, so each entry carries the badge that says which one
@@ -43,6 +44,13 @@ export function WhatsNewSection() {
                 </time>
               </div>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{entry.description}</p>
+              {entry.links && entry.links.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  {entry.links.map((link) => (
+                    <EntryLink key={link.href} label={link.label} href={link.href} />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

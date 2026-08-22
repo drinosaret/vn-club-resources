@@ -26,10 +26,14 @@ export function ScrollToTopButton() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  // The hidden state stays mounted so the fade and slide can play; while it is
+  // unclickable it is also kept out of the tab order and the accessibility tree.
   return (
     <button
       onClick={scrollToTop}
       aria-label="Scroll to top"
+      tabIndex={isVisible ? 0 : -1}
+      aria-hidden={!isVisible}
       className={`
         fixed bottom-6 right-6 z-50
         w-12 h-12 rounded-full

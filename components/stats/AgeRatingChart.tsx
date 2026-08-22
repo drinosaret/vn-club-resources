@@ -8,6 +8,15 @@ import { VNListDropdown } from './VNListDropdown';
 import { ChartHelpTooltip } from './ChartHelpTooltip';
 
 interface AgeRatingChartProps {
+  /**
+   * Heading level for this section's title.
+   *
+   * Defaults to a subsection, which is what it is on the global dashboard where these sit
+   * under a heading of their own. A page that renders this directly under its title passes
+   * 'h2', because jumping from the page heading straight to a third-level one leaves a gap
+   * in the outline a screen reader reads as a missing section.
+   */
+  headingLevel?: 'h2' | 'h3';
   distribution: Record<string, CategoryStats>;
   /** Entity ID for links (e.g., "g106" for tag, "s123" for staff) */
   entityId?: string;
@@ -27,7 +36,7 @@ const AGE_LABELS: Record<string, string> = {
 
 const AGE_ORDER = ['all_ages', 'teen', 'adult'];
 
-export function AgeRatingChart({ distribution, entityId, entityType, entityName, tooltip }: AgeRatingChartProps) {
+export function AgeRatingChart({ distribution, entityId, entityType, entityName, tooltip, headingLevel: Heading = 'h3' }: AgeRatingChartProps) {
   const data = useMemo(() => {
     return AGE_ORDER.map((key) => ({
       key,
@@ -47,9 +56,9 @@ export function AgeRatingChart({ distribution, entityId, entityType, entityName,
   if (total === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Age Rating Distribution
-        </h3>
+        </Heading>
         <p className="text-gray-500 dark:text-gray-400">
           Age rating data not available for these VNs.
         </p>
@@ -67,9 +76,9 @@ export function AgeRatingChart({ distribution, entityId, entityType, entityName,
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
             Age Rating
-          </h3>
+          </Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
         <div className="flex items-center gap-4 text-xs text-gray-400">

@@ -2,6 +2,7 @@
 
 import { BrowseFilters } from '@/lib/vndb-stats-api';
 import { RangeSlider } from './RangeSlider';
+import { DIFFICULTY_BANDS } from '@/lib/difficulty';
 
 interface InlineRangeSlidersProps {
   filters: BrowseFilters;
@@ -17,6 +18,11 @@ const MIN_RATING = 1;
 const MAX_RATING = 10;
 const MIN_VOTES = 0;
 const MAX_VOTES = 5000;
+// The difficulty bands run 0 to 5. Setting this range at all restricts the results to the
+// titles whose script has been analysed, which is a small fraction of the database, so the
+// slider says so rather than appearing to filter the whole catalogue.
+const MIN_DIFFICULTY = 0;
+const MAX_DIFFICULTY = 5;
 
 export function InlineRangeSliders({ filters, onChange, layout = 'horizontal', compact }: InlineRangeSlidersProps) {
   return (
@@ -55,6 +61,19 @@ export function InlineRangeSliders({ filters, onChange, layout = 'horizontal', c
         maxValue={filters.max_votecount}
         onChange={(minVal, maxVal) => onChange({ min_votecount: minVal, max_votecount: maxVal })}
         formatValue={(v) => v >= MAX_VOTES ? `${MAX_VOTES.toLocaleString()}+` : v.toLocaleString()}
+        compact={compact}
+      />
+
+      <RangeSlider
+        label="Japanese difficulty"
+        hint="Only titles whose script has been analysed"
+        min={MIN_DIFFICULTY}
+        max={MAX_DIFFICULTY}
+        step={1}
+        minValue={filters.min_difficulty}
+        maxValue={filters.max_difficulty}
+        onChange={(minVal, maxVal) => onChange({ min_difficulty: minVal, max_difficulty: maxVal })}
+        formatValue={(v) => DIFFICULTY_BANDS[v]?.label ?? String(v)}
         compact={compact}
       />
     </div>

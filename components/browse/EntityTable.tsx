@@ -14,6 +14,8 @@ interface EntityTableProps<T> {
   getLink?: (item: T) => string;
   isLoading?: boolean;
   emptyMessage?: string;
+  /** Set when the request did not come back, which is not the same as matching nothing. */
+  failed?: boolean;
 }
 
 // Pure component — no hooks. SWR's keepPreviousData handles stale data display.
@@ -24,7 +26,22 @@ export function EntityTable<T>({
   getLink,
   isLoading,
   emptyMessage = 'No results found.',
+  failed,
 }: EntityTableProps<T>) {
+  // Ahead of both the skeleton and the empty state: an unanswered request would otherwise
+  // wait for data that is not coming, or read as a confident "nothing matched".
+  if (failed) {
+    return (
+      <div
+        role="status"
+        className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400"
+      >
+        These results could not be loaded. The stats service did not answer, which is usually
+        brief.
+      </div>
+    );
+  }
+
   // Show skeleton only during true initial load (no items yet)
   if (isLoading && items.length === 0) {
     return (

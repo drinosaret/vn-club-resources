@@ -1808,13 +1808,14 @@ class StatsService:
         shared = vn_ids1 & vn_ids2
         shared_voted = set(votes1.keys()) & set(votes2.keys())
 
-        # Calculate score correlation for shared voted VNs
+        # Pearson correlation needs at least two shared rated titles and variance in both
+        # score series. None marks it as undefined, which is not the same as zero correlation.
+        correlation: float | None = None
         if len(shared_voted) >= 2:
             scores1 = [votes1[vid] for vid in shared_voted]
             scores2 = [votes2[vid] for vid in shared_voted]
-            correlation = float(np.corrcoef(scores1, scores2)[0, 1])
-        else:
-            correlation = 0.0
+            r = float(np.corrcoef(scores1, scores2)[0, 1])
+            correlation = None if math.isnan(r) else r
 
         # Rating agreement: how closely users rate shared VNs (MAE-based)
         if shared_voted and len(shared_voted) >= 2:
@@ -1845,17 +1846,30 @@ class StatsService:
         vn_details = {}
         if all_vn_ids:
             result = await self.db.execute(
-                select(VisualNovel.id, VisualNovel.title, VisualNovel.image_url)
+                select(
+                    VisualNovel.id,
+                    VisualNovel.title,
+                    VisualNovel.title_jp,
+                    VisualNovel.title_romaji,
+                    VisualNovel.image_url,
+                )
                 .where(VisualNovel.id.in_(all_vn_ids))
             )
             for row in result.all():
-                vn_details[row.id] = {"title": row.title, "image_url": row.image_url}
+                vn_details[row.id] = {
+                    "title": row.title,
+                    "title_jp": row.title_jp,
+                    "title_romaji": row.title_romaji,
+                    "image_url": row.image_url,
+                }
 
         # Build SharedVNScore objects for favorites
         shared_favorites = [
             SharedVNScore(
                 vn_id=vid,
                 title=vn_details.get(vid, {}).get("title", vid),
+                title_jp=vn_details.get(vid, {}).get("title_jp"),
+                title_romaji=vn_details.get(vid, {}).get("title_romaji"),
                 image_url=vn_details.get(vid, {}).get("image_url"),
                 user1_score=votes1[vid] / 10,
                 user2_score=votes2[vid] / 10,
@@ -1868,6 +1882,8 @@ class StatsService:
             SharedVNScore(
                 vn_id=vid,
                 title=vn_details.get(vid, {}).get("title", vid),
+                title_jp=vn_details.get(vid, {}).get("title_jp"),
+                title_romaji=vn_details.get(vid, {}).get("title_romaji"),
                 image_url=vn_details.get(vid, {}).get("image_url"),
                 user1_score=votes1[vid] / 10,
                 user2_score=votes2[vid] / 10,
@@ -1903,8 +1919,8 @@ class StatsService:
             tag_sim = self._tag_taste_similarity(tags1, tags2)
             common_tags, differing_tastes = self._analyze_tag_preferences(tags1, tags2)
 
-        # Normalize correlation to 0-1 range
-        normalized_correlation = max(0, (correlation + 1) / 2) if not math.isnan(correlation) else 0.0
+        # Normalize correlation to 0-1 range; an undefined correlation contributes nothing.
+        normalized_correlation = max(0, (correlation + 1) / 2) if correlation is not None else 0.0
 
         # Adaptive compatibility formula: weights depend on available shared data
         # Rating agreement and tag similarity are the strongest signals
@@ -1936,7 +1952,7 @@ class StatsService:
             user2=UserInfo(uid=uid2, username=data2.get("username", uid2)),
             compatibility_score=round(compatibility, 2),
             shared_vns=len(shared_voted),
-            score_correlation=round(correlation, 2) if not math.isnan(correlation) else 0.0,
+            score_correlation=round(correlation, 2) if correlation is not None else None,
             shared_favorites=shared_favorites,
             biggest_disagreements=biggest_disagreements,
             common_tags=common_tags,

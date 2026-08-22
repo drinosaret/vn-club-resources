@@ -1,50 +1,55 @@
 'use client';
 
-import { Grid3x3, LayoutGrid, Square } from 'lucide-react';
+import { Grid3x3, LayoutGrid, ListOrdered, Square } from 'lucide-react';
 
 export type GridSize = 'small' | 'medium' | 'large';
+
+/** How results are laid out. The ranked list is a presentation, not a fourth grid size. */
+export type BrowseView = 'grid' | 'ranked';
 
 interface ViewModeToggleProps {
   size: GridSize;
   onChange: (size: GridSize) => void;
+  view?: BrowseView;
+  onViewChange?: (view: BrowseView) => void;
 }
 
-export function ViewModeToggle({ size, onChange }: ViewModeToggleProps) {
+const BUTTON_BASE = 'p-2 rounded transition-colors';
+const SELECTED = 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs';
+const UNSELECTED = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300';
+
+export function ViewModeToggle({ size, onChange, view = 'grid', onViewChange }: ViewModeToggleProps) {
+  // The grid sizes only mean anything while the grid is showing, so selecting one also
+  // returns from the ranked list rather than changing a setting with no visible effect.
+  const gridButton = (value: GridSize, label: string, Icon: typeof Grid3x3) => (
+    <button
+      onClick={() => {
+        onChange(value);
+        onViewChange?.('grid');
+      }}
+      className={`${BUTTON_BASE} ${view === 'grid' && size === value ? SELECTED : UNSELECTED}`}
+      title={label}
+      aria-pressed={view === 'grid' && size === value}
+    >
+      <Icon className="w-4 h-4" />
+    </button>
+  );
+
   return (
     <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-      <button
-        onClick={() => onChange('small')}
-        className={`p-2 rounded transition-colors ${
-          size === 'small'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-        }`}
-        title="Small grid (7 per row)"
-      >
-        <Grid3x3 className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => onChange('medium')}
-        className={`p-2 rounded transition-colors ${
-          size === 'medium'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-        }`}
-        title="Medium grid (5 per row)"
-      >
-        <LayoutGrid className="w-4 h-4" />
-      </button>
-      <button
-        onClick={() => onChange('large')}
-        className={`p-2 rounded transition-colors ${
-          size === 'large'
-            ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-        }`}
-        title="Large grid (3 per row)"
-      >
-        <Square className="w-4 h-4" />
-      </button>
+      {gridButton('small', 'Small grid (7 per row)', Grid3x3)}
+      {gridButton('medium', 'Medium grid (5 per row)', LayoutGrid)}
+      {gridButton('large', 'Large grid (3 per row)', Square)}
+      {onViewChange && (
+        <button
+          onClick={() => onViewChange('ranked')}
+          className={`${BUTTON_BASE} ${view === 'ranked' ? SELECTED : UNSELECTED}`}
+          title="Ranked list"
+          aria-pressed={view === 'ranked'}
+        >
+          <ListOrdered className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 }

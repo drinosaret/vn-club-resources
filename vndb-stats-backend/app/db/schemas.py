@@ -166,7 +166,11 @@ class TagAnalyticsResponse(BaseModel):
 class SharedVNScore(BaseModel):
     """A VN with scores from two users."""
     vn_id: str
+    #: The database's own title, which for a Japanese work is the Japanese form. The other
+    #: two travel with it so the client can honour the reader's title setting.
     title: str
+    title_jp: str | None = None
+    title_romaji: str | None = None
     image_url: str | None
     user1_score: float
     user2_score: float
@@ -178,7 +182,7 @@ class UserComparisonResponse(BaseModel):
     user2: UserInfo
     compatibility_score: float
     shared_vns: int
-    score_correlation: float
+    score_correlation: float | None = None  # Undefined without enough shared rated titles
     shared_favorites: list[SharedVNScore]
     biggest_disagreements: list[SharedVNScore]
     common_tags: list[str]
@@ -254,6 +258,7 @@ class VNSummary(BaseModel):
     votecount: int
     olang: str | None = None  # Original language (e.g., "ja" for Japanese)
     description: str | None = None  # Truncated description snippet (for search results)
+    metric_value: float | None = None  # Value of the ranking metric, when sorting by one
 
 
 class TopVN(BaseModel):
@@ -261,6 +266,7 @@ class TopVN(BaseModel):
     id: str
     title: str
     alttitle: str | None = None      # Alternative title (usually Japanese)
+    title_romaji: str | None = None  # Romanized title
     image_url: str | None = None
     image_sexual: float | None = None
     released: str | None = None      # ISO date string
@@ -401,6 +407,13 @@ class VNSearchResponse(BaseModel):
     page: int
     pages: int
     query_time: float | None = None  # Query execution time in seconds
+    # Set when sorting by a ranking metric. The floor is part of the sort rather than a
+    # filter the reader chose, so the interface has to be able to state it.
+    metric: str | None = None
+    metric_label: str | None = None
+    metric_floor_note: str | None = None
+    metric_high_means: str | None = None
+    metric_low_means: str | None = None
 
 
 class VNListByCategoryResponse(BaseModel):

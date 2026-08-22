@@ -145,38 +145,41 @@ export const UserStatsTabs = memo(function UserStatsTabs({ activeTab, onTabChang
         </div>
       </nav>
 
-      {/* Mobile: Horizontal scrollable tabs */}
-      <div className="md:hidden overflow-hidden">
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto scrollbar-thin -mx-4 px-4">
-          <nav className="flex gap-1 pb-px" aria-label="Stats navigation">
+      {/* Mobile: every section visible at once.
+          A horizontal scroller fitted three of the nine and gave no sign the rest existed,
+          which made most of a reader's own stats unfindable on a phone. Wrapped pills cost a
+          second row and show all of them. */}
+      <nav className="md:hidden mb-4" aria-label="Stats navigation">
+        <ul className="flex flex-wrap gap-1.5">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
-              <button
-                key={tab.id}
-                onClick={() => onTabChange(tab.id)}
-                className={`
-                  inline-flex items-center gap-2 px-3 py-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors
-                  ${
-                    isActive
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
-                  }
-                `}
-              >
-                {tab.icon}
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className="py-0.5 px-1.5 rounded-full text-xs bg-gray-100 dark:bg-gray-800">
-                    {tab.count.toLocaleString()}
-                  </span>
-                )}
-              </button>
+              <li key={tab.id}>
+                <button
+                  onClick={() => onTabChange(tab.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`
+                    inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors
+                    ${
+                      isActive
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+                        : 'border-gray-200 text-gray-600 hover:border-primary-400 hover:text-primary-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-primary-300'
+                    }
+                  `}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span className="tabular-nums text-[11px] text-gray-400 dark:text-gray-500">
+                      {tab.count.toLocaleString()}
+                    </span>
+                  )}
+                </button>
+              </li>
             );
           })}
-          </nav>
-        </div>
-      </div>
+        </ul>
+      </nav>
     </>
   );
 });

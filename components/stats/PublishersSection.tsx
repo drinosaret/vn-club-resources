@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Newspaper, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
 import type { ProducerBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';
+import { RankNumber } from '@/components/stats/RankNumber';
 
 interface PublishersSectionProps {
   publishers: ProducerBreakdown[];
@@ -196,8 +197,8 @@ export function PublishersSection({ publishers }: PublishersSectionProps) {
       )}
 
       <div className="space-y-3" style={showAll ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 500px' } : undefined}>
-        {displayedPublishers.map((pub) => (
-          <PublisherBar key={pub.id} publisher={pub} maxValue={maxValue} sortMode={sortMode} preference={preference} />
+        {displayedPublishers.map((pub, index) => (
+          <PublisherBar key={pub.id} rank={index + 1} publisher={pub} maxValue={maxValue} sortMode={sortMode} preference={preference} />
         ))}
       </div>
 
@@ -268,7 +269,7 @@ export function PublishersSection({ publishers }: PublishersSectionProps) {
   );
 }
 
-function PublisherBar({ publisher, maxValue, sortMode, preference }: { publisher: PublisherWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
+function PublisherBar({ rank, publisher, maxValue, sortMode, preference }: { rank: number; publisher: PublisherWithNormalizedScores; maxValue: number; sortMode: SortMode; preference: 'romaji' | 'japanese' }) {
   const displayName = getEntityDisplayName(publisher, preference);
 
   // Calculate bar width based on sort mode
@@ -292,6 +293,7 @@ function PublisherBar({ publisher, maxValue, sortMode, preference }: { publisher
     <div className="group">
       <div className="flex items-center justify-between mb-1 gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          <RankNumber rank={rank} />
           <Link
             href={`/stats/producer/${publisher.id}`}
             className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"

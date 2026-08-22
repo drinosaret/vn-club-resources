@@ -5,7 +5,7 @@ import { generatePageMetadata, safeJsonLdStringify, SITE_URL, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'VNDB Stats - Visual Novel Reading Statistics',
   description:
-    'Look up any VNDB user to see their visual novel reading statistics, score distributions, and reading history. Track your Japanese reading progress.',
+    'Look up any VNDB user to see how they read: score distribution, release year trends, reading activity and list history. Compare two readers, or follow your own Japanese reading over time.',
   path: '/stats/',
 });
 
@@ -13,7 +13,7 @@ const statsJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: 'VNDB Stats',
-  description: 'Look up any VNDB user to see their visual novel reading statistics, score distributions, and reading history.',
+  description: 'Look up any VNDB user to see how they read: score distribution, release year trends, reading activity and list history.',
   url: `${SITE_URL}/stats/`,
   isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },
 };

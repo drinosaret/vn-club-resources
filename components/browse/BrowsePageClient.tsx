@@ -12,7 +12,8 @@ import { PRELOAD_COUNTS } from '@/lib/use-preload-buffer';
 import { prefetchVNImages } from '@/lib/prefetch-vn-images';
 import { Pagination, PaginationSkeleton } from './Pagination';
 import { TagFilter, SelectedTag, FilterEntityType } from './TagFilter';
-import { ViewModeToggle, GridSize } from './ViewModeToggle';
+import { ViewModeToggle, GridSize, BrowseView } from './ViewModeToggle';
+import { RankedResults } from './RankedResults';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { consumePendingScroll } from '@/components/ScrollToTop';
 import { CompactFilterBar } from './CompactFilterBar';
@@ -24,6 +25,8 @@ import { AlphabetFilter } from './AlphabetFilter';
 import { BrowseTabs, BrowseTab } from './BrowseTabs';
 import { SimpleSelect } from './SimpleSelect';
 import { RandomButton } from './RandomButton';
+import { BROWSE_METRICS, METRIC_DISPLAY, isBrowseMetric } from '@/lib/browse-metrics';
+import { JitenAttribution } from '@/components/JitenAttribution';
 
 // Skeleton fallback for entity tabs — matches the structure of the real tab content
 // (search bar + filter + alphabet row + results header + pagination + table + pagination)
@@ -113,6 +116,10 @@ function parseFiltersFromParams(params: URLSearchParams, limit: number): BrowseF
     max_rating: params.get('max_rating') ? Number(params.get('max_rating')) : undefined,
     min_votecount: params.get('min_votecount') ? Number(params.get('min_votecount')) : undefined,
     max_votecount: params.get('max_votecount') ? Number(params.get('max_votecount')) : undefined,
+    // Explicit null checks, not truthiness: difficulty band 0 is a real value that a
+    // truthy test would silently discard.
+    min_difficulty: params.get('min_difficulty') !== null ? Number(params.get('min_difficulty')) : undefined,
+    max_difficulty: params.get('max_difficulty') !== null ? Number(params.get('max_difficulty')) : undefined,
     length: params.get('length') || undefined,
     exclude_length: params.get('exclude_length') || undefined,
     minage: params.get('minage') || undefined,
@@ -153,6 +160,21 @@ function parseTagsFromUrl(param: string | null, mode: 'include' | 'exclude'): Se
     return [];
   }
 }
+
+// The four plain columns, then the ranking metrics. The metrics are grouped apart because
+// they are a different kind of answer: each carries a sample floor and orders titles by
+// something the catalogue's own boards measure rather than by a stored field.
+const SORT_OPTIONS = [
+  { value: 'rating', label: 'Rating' },
+  { value: 'released', label: 'Release Date' },
+  { value: 'votecount', label: 'Popularity' },
+  { value: 'title', label: 'Title' },
+  ...BROWSE_METRICS.map((metric) => ({
+    value: metric,
+    label: METRIC_DISPLAY[metric].label,
+    group: 'Rankings',
+  })),
+];
 
 const TAB_TITLES: Record<BrowseTab, string> = {
   novels: 'Browse Visual Novels',
@@ -228,6 +250,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const [results, setResults] = useState<VNSearchResult[]>(initialData?.results ?? []);
   const [total, setTotal] = useState(initialData?.total ?? 0);
   const [totalWithSpoilers, setTotalWithSpoilers] = useState<number | null>(initialData?.total_with_spoilers ?? null);
+  // The sample floor a ranking sort imposed, worded by the backend because the numbers in it
+  // are the boards' own. Null whenever the sort is one of the plain columns.
+  const [metricFloorNote, setMetricFloorNote] = useState<string | null>(initialData?.metric_floor_note ?? null);
   const [databaseTotal, setDatabaseTotal] = useState<number | null>(null); // Total VNs in database (doesn't change)
   const [tagsTotal, setTagsTotal] = useState<number | null>(null);
   const [traitsTotal, setTraitsTotal] = useState<number | null>(null);
@@ -273,7 +298,16 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
           setGridSizeState(stored);
         }
       }
-    } catch {}
+      // Read after paint rather than during render: the server cannot know what the URL
+      // asked for without a hydration mismatch. Only the URL is consulted, never a stored
+      // preference: browse is a grid of covers, and one visit through a ranked link should
+      // not quietly change what every later visit looks like.
+      if (new URLSearchParams(window.location.search).get('view') === 'ranked') {
+        setView('ranked');
+      }
+    } catch {
+      // Storage can be unavailable or refused, and none of this is load-bearing.
+    }
 
     // On back navigation, cached initialData is likely stale — restore or refetch.
     // Peek at the flag (nav detection effect will still consume it for scroll restoration).
@@ -305,6 +339,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             setResults(snapshot.results);
             setTotal(snapshot.total);
             setTotalWithSpoilers(snapshot.totalWithSpoilers);
+            setMetricFloorNote(snapshot.metricFloorNote);
             setPages(snapshot.pages);
             setQueryTime(snapshot.queryTime);
             setDisplayedQueryTime(snapshot.displayedQueryTime);
@@ -341,8 +376,15 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     try {
       document.cookie = `browse-grid-size=${size};path=/;max-age=31536000;SameSite=Lax`;
       localStorage.setItem('browse-grid-size', size);
-    } catch {}
+    } catch {
+      // Storage can be unavailable or refused, and none of this is load-bearing.
+    }
   }, []);
+  // Always a grid on arrival. Deliberately not remembered across visits, unlike the grid
+  // size: the ranked list is a way of reading one particular query, not a preference about
+  // browsing, and persisting it would make one visit through a ranked link the default for
+  // every visit afterwards.
+  const [view, setView] = useState<BrowseView>('grid');
   const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(false);
 
   // Ref for delayed loading overlay timer
@@ -382,6 +424,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     results: VNSearchResult[];
     total: number;
     totalWithSpoilers: number | null;
+    metricFloorNote: string | null;
     pages: number;
     queryTime: number | undefined;
     displayedQueryTime: number | undefined;
@@ -471,11 +514,11 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   useEffect(() => {
     if (!isLoading && results.length > 0) {
       browseSnapshotRef.current = {
-        results, total, totalWithSpoilers, pages, queryTime, displayedQueryTime,
+        results, total, totalWithSpoilers, metricFloorNote, pages, queryTime, displayedQueryTime,
         filters, selectedTags, searchInput,
       };
     }
-  }, [isLoading, results, total, totalWithSpoilers, pages, queryTime, displayedQueryTime, filters, selectedTags, searchInput]);
+  }, [isLoading, results, total, totalWithSpoilers, metricFloorNote, pages, queryTime, displayedQueryTime, filters, selectedTags, searchInput]);
 
   // Save browse state snapshot when clicking any link that navigates away from browse,
   // enabling instant back-navigation. Previously only saved for VN links — now covers
@@ -675,6 +718,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (newFilters.max_rating) params.set('max_rating', String(newFilters.max_rating));
     if (newFilters.min_votecount) params.set('min_votecount', String(newFilters.min_votecount));
     if (newFilters.max_votecount) params.set('max_votecount', String(newFilters.max_votecount));
+    if (newFilters.min_difficulty !== undefined) params.set('min_difficulty', String(newFilters.min_difficulty));
+    if (newFilters.max_difficulty !== undefined) params.set('max_difficulty', String(newFilters.max_difficulty));
     // Multi-select filters: when there's an exclude but no include, explicitly set empty string
     // to signal "no include filter" (prevents default from being applied on reload)
     if (newFilters.length) params.set('length', newFilters.length);
@@ -745,6 +790,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
         setResults(cachedResponse.results);
         setTotal(cachedResponse.total);
         setTotalWithSpoilers(cachedResponse.total_with_spoilers ?? null);
+        setMetricFloorNote(cachedResponse.metric_floor_note ?? null);
         setPages(cachedResponse.pages);
         setQueryTime(cachedResponse.query_time);
         setIsLoading(false);
@@ -771,6 +817,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
         setResults(response.results);
         setTotal(response.total);
         setTotalWithSpoilers(response.total_with_spoilers ?? null);
+        setMetricFloorNote(response.metric_floor_note ?? null);
         setPages(response.pages);
         setQueryTime(response.query_time);
         // Scroll restoration is handled by the dedicated effect that waits for content
@@ -784,6 +831,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       setResults([]);
       setTotal(0);
       setTotalWithSpoilers(null);
+      setMetricFloorNote(null);
       setPages(0);
     } finally {
       // Only set loading false if this request wasn't aborted
@@ -1176,6 +1224,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       setResults(cached.results);
       setTotal(cached.total);
       setTotalWithSpoilers(cached.total_with_spoilers ?? null);
+      setMetricFloorNote(cached.metric_floor_note ?? null);
       setPages(cached.pages);
       setQueryTime(cached.query_time);
       setIsLoading(false);
@@ -1230,6 +1279,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (f.max_rating) p.set('max_rating', String(f.max_rating));
     if (f.min_votecount) p.set('min_votecount', String(f.min_votecount));
     if (f.max_votecount) p.set('max_votecount', String(f.max_votecount));
+    if (f.min_difficulty !== undefined) p.set('min_difficulty', String(f.min_difficulty));
+    if (f.max_difficulty !== undefined) p.set('max_difficulty', String(f.max_difficulty));
     if (f.length) p.set('length', f.length);
     if (f.exclude_length) p.set('exclude_length', f.exclude_length);
     if (f.minage) p.set('minage', f.minage);
@@ -1317,6 +1368,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
         handleFilterChange({ min_rating: undefined, max_rating: undefined }); // Clear both ends of range
       } else if (filterKey === 'min_votecount' || filterKey === 'max_votecount') {
         handleFilterChange({ min_votecount: undefined, max_votecount: undefined }); // Clear both ends of range
+      } else if (filterKey === 'min_difficulty' || filterKey === 'max_difficulty') {
+        handleFilterChange({ min_difficulty: undefined, max_difficulty: undefined });
       } else {
         handleFilterChange({ [filterKey]: undefined });
       }
@@ -1328,6 +1381,16 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     const newTags = selectedTags.filter(t => !(t.id === tagId && t.type === tagType));
     handleTagsChange(newTags);
   }, [selectedTags, handleTagsChange]);
+
+  // The ranking metric currently ordering the results, if the sort is one of them.
+  const activeMetric = isBrowseMetric(filters.sort) ? filters.sort : null;
+
+  // Difficulty is the one figure here sourced from outside, so it is credited on the page
+  // whenever it is doing the work, whether the reader sorted or filtered by it.
+  const usesDifficulty =
+    activeMetric === 'difficulty' ||
+    filters.min_difficulty !== undefined ||
+    filters.max_difficulty !== undefined;
 
   // Check if any filters are active (defaults: olang='ja', include_children=true, devstatus='-1')
   const hasActiveFilters = useMemo(() => {
@@ -1345,6 +1408,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       filters.max_rating ||
       filters.min_votecount ||
       filters.max_votecount ||
+      filters.min_difficulty !== undefined ||
+      filters.max_difficulty !== undefined ||
       filters.length ||
       filters.exclude_length ||
       filters.minage ||
@@ -1392,6 +1457,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (filters.year_min || filters.year_max) count++;
     if (filters.min_rating || filters.max_rating) count++;
     if (filters.min_votecount || filters.max_votecount) count++;
+    if (filters.min_difficulty !== undefined || filters.max_difficulty !== undefined) count++;
 
     // Tags/traits/entities
     count += selectedTags.length;
@@ -1572,6 +1638,12 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                     </>
                   )}
                 </span>
+                {activeMetric && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {METRIC_DISPLAY[activeMetric].blurb}
+                    {metricFloorNote && ` ${metricFloorNote}`}
+                  </span>
+                )}
                 {hasActiveFilters && (
                   <button
                     onClick={handleClearFilters}
@@ -1586,14 +1658,10 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
               {/* Sort Options and View Toggle */}
               <div className="flex items-center gap-2 flex-wrap">
                 <SimpleSelect
-                  options={[
-                    { value: 'rating', label: 'Rating' },
-                    { value: 'released', label: 'Release Date' },
-                    { value: 'votecount', label: 'Popularity' },
-                    { value: 'title', label: 'Title' },
-                  ]}
+                  options={SORT_OPTIONS}
                   value={filters.sort || 'rating'}
                   onChange={(v) => handleFilterChange({ sort: v as BrowseFilters['sort'] })}
+                  className="min-w-[10rem]"
                 />
                 <button
                   onClick={() => handleFilterChange({
@@ -1613,7 +1681,12 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 >
                   <Dices className="w-4 h-4" />
                 </a>
-                <ViewModeToggle size={gridSize} onChange={setGridSize} />
+                <ViewModeToggle
+                  size={gridSize}
+                  onChange={setGridSize}
+                  view={view}
+                  onViewChange={setView}
+                />
               </div>
             </div>
 
@@ -1628,17 +1701,31 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
               />
             )}
 
-            {/* Results Grid */}
+            {usesDifficulty && (
+              <JitenAttribution className="mb-3" />
+            )}
+
+            {/* Results */}
             <div>
-              <VNGrid
-                key={gridKey}
-                results={results}
-                isLoading={isLoading}
-                showOverlay={showLoadingOverlay}
-                skipPreload={skipPreload}
-                preference={preference}
-                gridSize={gridSize}
-              />
+              {view === 'ranked' ? (
+                <RankedResults
+                  results={results}
+                  startRank={((filters.page || 1) - 1) * ITEMS_PER_PAGE[gridSize] + 1}
+                  metric={activeMetric}
+                  isLoading={isLoading}
+                />
+              ) : (
+                <VNGrid
+                  key={gridKey}
+                  results={results}
+                  isLoading={isLoading}
+                  showOverlay={showLoadingOverlay}
+                  skipPreload={skipPreload}
+                  preference={preference}
+                  gridSize={gridSize}
+                  metric={activeMetric}
+                />
+              )}
             </div>
 
             {/* Pagination Bottom - scrolls to results section on page change */}

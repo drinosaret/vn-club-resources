@@ -8,6 +8,15 @@ import { VNListDropdown } from './VNListDropdown';
 import { ChartHelpTooltip } from './ChartHelpTooltip';
 
 interface LengthChartProps {
+  /**
+   * Heading level for this section's title.
+   *
+   * Defaults to a subsection, which is what it is on the global dashboard where these sit
+   * under a heading of their own. A page that renders this directly under its title passes
+   * 'h2', because jumping from the page heading straight to a third-level one leaves a gap
+   * in the outline a screen reader reads as a missing section.
+   */
+  headingLevel?: 'h2' | 'h3';
   distribution: Record<string, CategoryStats>;
   /** Entity ID for links (e.g., "g106" for tag, "s123" for staff) */
   entityId?: string;
@@ -29,7 +38,7 @@ const LENGTH_LABELS: Record<string, string> = {
 
 const LENGTH_ORDER = ['very_short', 'short', 'medium', 'long', 'very_long'];
 
-export function LengthChart({ distribution, entityId, entityType, entityName, tooltip }: LengthChartProps) {
+export function LengthChart({ distribution, entityId, entityType, entityName, tooltip, headingLevel: Heading = 'h3' }: LengthChartProps) {
   const data = useMemo(() => {
     return LENGTH_ORDER.map((key) => ({
       key,
@@ -48,9 +57,9 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
   if (total === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Length Distribution
-        </h3>
+        </Heading>
         <p className="text-gray-500 dark:text-gray-400">No length data available</p>
       </div>
     );
@@ -63,9 +72,9 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
             Length
-          </h3>
+          </Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
         <div className="flex items-center gap-4 text-xs text-gray-400">
