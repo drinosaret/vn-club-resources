@@ -1,7 +1,7 @@
 'use client';
 
 import { useReducer, useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Dices, Users, User, RotateCcw, Trash2, Globe, Rows3, Grid3X3 } from 'lucide-react';
 import { useTitlePreference } from '@/lib/title-preference';
 import { useLocale } from '@/lib/i18n/locale-context';

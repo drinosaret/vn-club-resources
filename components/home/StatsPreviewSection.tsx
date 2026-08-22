@@ -11,7 +11,7 @@ import {
   sampleReleaseYearDistribution,
   sampleSummary,
 } from '@/lib/sample-stats-data';
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 export function StatsPreviewSection() {
   const router = useRouter();

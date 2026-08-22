@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Upload, Trash2, Loader2, Image as ImageIcon, AlignJustify, Grid3X3, Dices, Monitor, Users, Settings, ChevronDown, Square, RectangleVertical } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';

@@ -2,7 +2,7 @@
 
 import { Compass } from 'lucide-react';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 import { useReadingProfile } from '@/lib/use-reading-profile';
 import type { DriftHalf, MilestonePoint } from '@/lib/vndb-stats-api';

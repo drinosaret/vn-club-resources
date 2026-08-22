@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Pen, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
 import type { StaffBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';

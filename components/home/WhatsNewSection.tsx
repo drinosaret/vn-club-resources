@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ArrowRight } from 'lucide-react';
 import { changelogEntries, formatChangelogDay, PROJECT_META } from '@/lib/changelog-data';
 import { EntryLink } from '@/components/changelog/EntryLink';

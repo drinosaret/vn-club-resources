@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
 import { NSFWImage } from '@/components/NSFWImage';

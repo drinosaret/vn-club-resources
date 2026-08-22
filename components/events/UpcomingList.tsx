@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import type { EventItem } from '@/lib/events';
 import { eventMeta, formatTime } from './event-meta';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';

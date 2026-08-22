@@ -1,5 +1,5 @@
 import { getAllContent } from '@/lib/mdx';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { BookOpen } from 'lucide-react';
 import type { Metadata } from 'next';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';

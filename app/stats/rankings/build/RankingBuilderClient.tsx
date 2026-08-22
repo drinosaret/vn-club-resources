@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 

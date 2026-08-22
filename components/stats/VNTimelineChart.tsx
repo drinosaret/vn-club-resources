@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Calendar, Star, Search, ZoomIn, ZoomOut, X } from 'lucide-react';
 import { VNDBListItem } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';

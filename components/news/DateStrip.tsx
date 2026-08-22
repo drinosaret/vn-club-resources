@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { DateCalendar } from './DateCalendar';

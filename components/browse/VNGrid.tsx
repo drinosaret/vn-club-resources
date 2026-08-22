@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Star, Loader2, BookOpen } from 'lucide-react';
 import { VNSearchResult } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl, getTinySrc, ImageWidth } from '@/lib/vndb-image-cache';

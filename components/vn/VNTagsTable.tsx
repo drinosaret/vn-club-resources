@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Eye, EyeOff, ArrowUpDown, ArrowUp, ArrowDown, Tag } from 'lucide-react';
 import type { VNTag } from '@/lib/vndb-stats-api';
 

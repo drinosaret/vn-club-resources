@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use, Fragment, useRef, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import {
   ArrowLeft, ExternalLink, Heart, Star, Users,
   AlertCircle, RefreshCw, BookOpen, Tags, ChevronRight

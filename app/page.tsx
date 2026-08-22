@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Users, ArrowRight } from 'lucide-react';
 import { HeroSection } from '@/components/home/HeroSection';
 import { FeaturedVNs } from '@/components/home/FeaturedVNs';

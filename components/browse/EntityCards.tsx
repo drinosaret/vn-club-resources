@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 export interface EntityCardField {
   label: string;

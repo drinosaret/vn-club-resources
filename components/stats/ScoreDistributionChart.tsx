@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { getScoreFilterUrl, type EntityType } from '@/lib/vndb-url-helpers';
 import { VNListDropdown } from './VNListDropdown';
 import { ChartHelpTooltip } from './ChartHelpTooltip';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ArrowDown, ArrowUp, Minus, Sparkles } from 'lucide-react';
 
 import { NSFWImage } from '@/components/NSFWImage';

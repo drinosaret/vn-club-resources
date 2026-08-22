@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { TAB_LIST } from '@/lib/sample-news-data';
 import { skipNextScroll } from '@/components/ScrollToTop';
 

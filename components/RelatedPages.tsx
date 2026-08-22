@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ArrowRight, BookOpen, Link as LinkIcon } from 'lucide-react';
 import type { RelatedCategory } from '@/lib/resource-parser';
 

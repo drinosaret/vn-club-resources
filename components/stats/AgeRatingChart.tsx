@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import type { CategoryStats } from '@/lib/vndb-stats-api';
 import { getAgeRatingFilterUrl, type EntityType } from '@/lib/vndb-url-helpers';
 import { VNListDropdown } from './VNListDropdown';

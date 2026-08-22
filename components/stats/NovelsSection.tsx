@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } from 'lucide-react';
 import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { BookOpen, ExternalLink, ArrowRight } from 'lucide-react';
 import { getWordOfTheDay, getWordOfTheDayHistory } from '@/lib/word-of-the-day';
 import { generatePageMetadata, generateBreadcrumbJsonLd, safeJsonLdStringify } from '@/lib/metadata-utils';

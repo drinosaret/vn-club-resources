@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import type { ExampleSentence } from '@/lib/word-of-the-day';
 

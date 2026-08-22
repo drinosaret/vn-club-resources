@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef, useMemo, startTransition, memo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import {
   ArrowLeft, RefreshCw, ExternalLink, Clock,
   BookOpen, Star, Trophy, AlertCircle, Sparkles, UserCheck

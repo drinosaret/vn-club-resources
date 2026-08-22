@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { EventItem } from '@/lib/events';
 import { eventMeta, formatTime } from './event-meta';

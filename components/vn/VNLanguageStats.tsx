@@ -27,7 +27,7 @@ import {
   type TooltipProps,
 } from 'recharts';
 import { ExternalLink } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 
 // ──────────── Types ────────────

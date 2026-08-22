@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Trophy } from 'lucide-react';
 
 import { PreviewPanel, PreviewRow } from '@/components/stats/PreviewPanel';

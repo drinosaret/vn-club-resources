@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Star, ChevronRight } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWNextImage } from '@/components/NSFWImage';

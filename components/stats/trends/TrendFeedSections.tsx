@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { CalendarClock, CheckCircle2, Sparkles } from 'lucide-react';
 
 import { ChartFrame } from '@/components/charts/ChartFrame';

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Grid3X3, Globe } from 'lucide-react';
 import { GridBoard } from '@/components/grid-maker/GridBoard';
 import { useLocale } from '@/lib/i18n/locale-context';

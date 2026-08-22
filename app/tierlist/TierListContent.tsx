@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Rows3, Globe } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';

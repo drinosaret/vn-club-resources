@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Tag, ChevronDown, ChevronUp, ArrowUpDown, Info } from 'lucide-react';
 import type { TagAnalytics, TagStats } from '@/lib/vndb-stats-api';
 import { RankNumber } from '@/components/stats/RankNumber';

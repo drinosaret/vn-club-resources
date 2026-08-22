@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { FuriganaText, stripFurigana, toHiragana } from '@/lib/furigana';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';

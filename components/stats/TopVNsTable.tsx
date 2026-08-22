@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Star, TrendingUp } from 'lucide-react';
 import type { TopVN } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';

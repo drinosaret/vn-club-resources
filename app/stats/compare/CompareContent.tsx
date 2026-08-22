@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import {
   ArrowLeft, Users, Heart, AlertTriangle,
   TrendingUp, BookOpen, Star, Tag, Target, UserCheck

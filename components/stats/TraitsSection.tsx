@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useLayoutEffect } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Heart, ChevronDown, ChevronUp, ArrowUpDown, Info } from 'lucide-react';
 import type { TraitBreakdown } from '@/lib/vndb-stats-api';
 import { RankNumber } from '@/components/stats/RankNumber';

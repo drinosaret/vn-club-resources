@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, use, useCallback } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { useSearchParams, usePathname } from 'next/navigation';
 import {
   ArrowLeft, ExternalLink, Mic2, Star, BarChart3,

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 import { NSFWImage } from '@/components/NSFWImage';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';

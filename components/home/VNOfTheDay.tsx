@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Star, ArrowRight } from 'lucide-react';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';

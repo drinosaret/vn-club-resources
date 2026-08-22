@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useRef, useCallback } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import type { YearWithRating } from '@/lib/vndb-stats-api';
 import { getReleaseYearFilterUrl, type EntityType } from '@/lib/vndb-url-helpers';
 import { VNListDropdown } from './VNListDropdown';

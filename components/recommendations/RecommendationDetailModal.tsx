@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { X, ExternalLink, Tag, Users, BookOpen, ImageOff, Mic, Heart, Building2, Pen, Star, LucideIcon } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { SIGNAL_WEIGHTS } from '@/lib/recommendation-weights';

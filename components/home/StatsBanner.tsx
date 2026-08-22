@@ -1,7 +1,7 @@
 'use client';
 
 import { BookOpen, Sparkles, BarChart3 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 export function StatsBanner() {
   return (

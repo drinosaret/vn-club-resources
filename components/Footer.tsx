@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (

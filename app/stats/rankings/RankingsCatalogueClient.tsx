@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ArrowRight, Flame, Search, SlidersHorizontal, Trophy, X } from 'lucide-react';
 
 import { EMPTY_SLICE, PRESETS, toSearchParams } from './build/slice-options';

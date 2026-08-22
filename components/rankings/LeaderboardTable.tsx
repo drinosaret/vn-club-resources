@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Trophy, ExternalLink } from 'lucide-react';
 
 import { NSFWImage } from '@/components/NSFWImage';

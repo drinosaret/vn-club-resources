@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ArrowLeft, ArrowRight, Flame } from 'lucide-react';
 
 import { FadeIn } from '@/components/FadeIn';

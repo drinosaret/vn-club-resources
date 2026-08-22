@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ChevronDown, ChevronUp, Star, Loader2 } from 'lucide-react';
 import {
   vndbStatsApi,

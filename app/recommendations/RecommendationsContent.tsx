@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import dynamic from 'next/dynamic';
 import { Sparkles, Search, Star, ChevronDown, ChevronUp, X, TrendingUp, Users, BookOpen, Info } from 'lucide-react';
 import { vndbStatsApi } from '@/lib/vndb-stats-api';

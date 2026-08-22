@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Home, BookOpen, FolderOpen, Wrench, Users, ChevronDown } from 'lucide-react';
 import { navigation } from '@/lib/navigation';
 

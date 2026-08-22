@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { BookOpen, Star } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from './card-image-utils';

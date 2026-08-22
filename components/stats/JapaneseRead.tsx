@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ExternalLink, Languages } from 'lucide-react';
 
 import { useReadingProfile } from '@/lib/use-reading-profile';

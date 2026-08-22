@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
 function localDateStr(d: Date): string {

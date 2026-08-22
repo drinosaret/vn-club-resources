@@ -71,6 +71,26 @@ CACHE_GLOBAL_STATS = 3600  # 1 hour - global stats change infrequently
 CACHE_TAG_STATS = 3600  # 1 hour - tag stats are stable
 CACHE_USER_STATS = 1800  # 30 min - user stats based on their list
 
+#: How long a worked-out profile is kept, and how long the import stamp it is keyed by is
+#: trusted. The figures behind a profile only move when a dump lands, so the stamp retires
+#: the previous answers and nothing has to be cleared by hand.
+_USER_STATS_TTL = 60 * 60 * 26
+_IMPORT_STAMP_TTL = 300
+_IMPORT_STAMP_KEY = "stats:import-stamp:v1"
+
+#: Profiles worked out at once.
+#:
+#: Each one reads a reader's whole list and is the most expensive answer here. The per-caller
+#: limit does not bound this: many callers asking for one profile each stay under it while
+#: together saturating the machine, and every profile then takes long enough to be given up
+#: on. The ceiling trades a queue for that, which is slower for one caller and faster for
+#: everyone. A profile already worked out never reaches it.
+_PROFILE_SLOTS = asyncio.Semaphore(6)
+
+#: How long a request waits for a slot before it is turned away rather than left holding a
+#: connection while it queues.
+_PROFILE_SLOT_WAIT = 20.0
+
 
 def generate_etag(data: dict) -> str:
     """Generate an ETag from response data."""
@@ -1213,6 +1233,27 @@ async def get_last_import_date(
     return {"last_import": value}
 
 
+async def _import_stamp(db: AsyncSession) -> str:
+    """Which import the profiles in the cache were worked out from.
+
+    Held briefly in its own right: every profile read consults it, and reading it from the
+    row it lives in each time would trade the query a cache is meant to avoid for a smaller
+    one of the same shape.
+    """
+    from app.core.cache import get_cache
+
+    cache = get_cache()
+    stamp = await cache.get(_IMPORT_STAMP_KEY)
+    if stamp:
+        return str(stamp)
+    row = await db.execute(
+        select(SystemMetadata.value).where(SystemMetadata.key == "last_import")
+    )
+    stamp = str(row.scalar_one_or_none() or "none")
+    await cache.set(_IMPORT_STAMP_KEY, stamp, ttl=_IMPORT_STAMP_TTL)
+    return stamp
+
+
 @router.get("/{vndb_uid}", response_model=schemas.UserStatsResponse)
 @stats_limiter.limit("10/minute")  # Limit expensive stats calculations per user
 async def get_user_stats(
@@ -1240,11 +1281,31 @@ async def get_user_stats(
     # User stats are private (user-specific data)
     response.headers["Cache-Control"] = f"private, max-age={CACHE_USER_STATS}"
 
+    from app.core.cache import get_cache
+
     user_service = UserService(db)
     stats_service = StatsService(db)
 
     # Resolve username to UID if needed
     uid = await resolve_user_id(user_service, vndb_uid)
+
+    # A profile is derived from a dump that changes once a day, so it is worked out once per
+    # import and then read. Answered before the list is loaded rather than after: reading the
+    # list is most of the work, and doing it to reach a cached answer would spend what the
+    # cache exists to save. The limit above keys on the caller and the profile together, so it
+    # does nothing against many callers asking for many profiles once each.
+    cache = get_cache()
+    key = f"user:stats:v1:{await _import_stamp(db)}:{uid}"
+    if force_refresh:
+        await cache.delete(key)
+    else:
+        cached = await cache.get(key)
+        if cached is not None:
+            etag = generate_etag(cached)
+            response.headers["ETag"] = etag
+            if check_etag_match(request, etag):
+                return Response(status_code=304, headers={"ETag": etag})
+            return cached
 
     # Force refresh clears Redis cache and re-reads from local database
     if force_refresh:
@@ -1259,6 +1320,14 @@ async def get_user_stats(
     # Calculate stats with timeout to prevent blocking
     settings = get_settings()
     try:
+        await asyncio.wait_for(_PROFILE_SLOTS.acquire(), timeout=_PROFILE_SLOT_WAIT)
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=503,
+            detail="Too many profiles are being worked out at once. Try again shortly.",
+            headers={"Retry-After": "15"},
+        ) from None
+    try:
         async with asyncio.timeout(settings.user_stats_timeout):
             stats = await stats_service.calculate_user_stats(uid, user_data)
     except asyncio.TimeoutError:
@@ -1270,14 +1339,19 @@ async def get_user_stats(
     except Exception as e:
         logger.error(f"Failed to calculate stats for {uid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to calculate stats. Please try again later.")
+    finally:
+        _PROFILE_SLOTS.release()
+
+    payload = stats.model_dump(mode="json")
+    await cache.set(key, payload, ttl=_USER_STATS_TTL)
 
     # Generate and check ETag for 304 Not Modified
-    etag = generate_etag(stats.model_dump())
+    etag = generate_etag(payload)
     response.headers["ETag"] = etag
     if check_etag_match(request, etag):
         return Response(status_code=304, headers={"ETag": etag})
 
-    return stats
+    return payload
 
 
 @router.get("/{vndb_uid}/tags", response_model=schemas.TagAnalyticsResponse)

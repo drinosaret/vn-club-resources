@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Mic2, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
 import type { SeiyuuBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { ExternalLink } from 'lucide-react';
 import { getDisplayTitle, useTitlePreference } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';

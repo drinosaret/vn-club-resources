@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import { Search, BarChart3, Sparkles, Users, TrendingUp } from 'lucide-react';
 import { vndbStatsApi, DataStatus } from '@/lib/vndb-stats-api';
 import { DataFreshness } from '@/components/stats/DataFreshness';

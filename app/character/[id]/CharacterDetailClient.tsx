@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, use, useMemo } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 import {
   ArrowLeft, ExternalLink, AlertCircle, Eye, EyeOff,
   User, Heart, Calendar, Ruler, Scale, Droplet, Users

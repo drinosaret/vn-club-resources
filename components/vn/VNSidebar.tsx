@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/Link';
 
 import { useTitlePreference } from '@/lib/title-preference';
 import { lengthLabels, platformNames, formatReleaseDate, formatUpdatedAt } from './vn-utils';
