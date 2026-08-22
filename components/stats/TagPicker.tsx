@@ -38,6 +38,10 @@ interface TagResult {
   count: number;
 }
 
+// Shared so the absent case keeps one identity: a fresh empty array each render would
+// restart the search it takes part in.
+const NO_EXCLUSIONS: readonly string[] = [];
+
 /** Long enough that a single keystroke does not fire a request, short enough to feel direct. */
 const DEBOUNCE_MS = 200;
 
@@ -45,7 +49,7 @@ export function TagPicker({
   selected,
   onSelect,
   placeholder,
-  excludeCategories = [],
+  excludeCategories = NO_EXCLUSIONS,
 }: TagPickerProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<TagResult[]>([]);
@@ -53,6 +57,7 @@ export function TagPicker({
   const [searching, setSearching] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const excluded = excludeCategories.join(',');
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -99,7 +104,11 @@ export function TagPicker({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, excludeCategories]);
+    // Keyed on the contents rather than the array: a caller that leaves this out, or
+    // builds it inline, hands over a different array each render, and an identity in
+    // this list would restart the search on every one of them without end.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, excluded]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
