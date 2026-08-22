@@ -65,6 +65,11 @@ export default function TrendsClient() {
   // showing a loading shape for a request that already failed waits for nothing.
   const [feedFailed, setFeedFailed] = useState(false);
 
+  // The service answers a missing cache with the feed's empty shape rather than an
+  // error, and that shape carries no reference date. It is the only thing separating
+  // a section with nothing in it from one whose figures have not been derived yet.
+  const built = feed?.reference != null;
+
   useEffect(() => {
     let cancelled = false;
     setFeed(null);
@@ -144,13 +149,13 @@ export default function TrendsClient() {
         {feed ? (
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="min-w-0">
-              <NewReleasesList entries={feed.new_releases} />
+              <NewReleasesList entries={feed.new_releases} built={built} />
             </div>
             <div className="min-w-0">
-              <FinishingList entries={feed.finishing} />
+              <FinishingList entries={feed.finishing} built={built} />
             </div>
             <div className="min-w-0">
-              <AnticipatedList entries={feed.anticipated} />
+              <AnticipatedList entries={feed.anticipated} built={built} />
             </div>
           </div>
         ) : feedFailed ? (

@@ -1452,12 +1452,17 @@ async def load_being_finished(db, depth: int, japanese_only: bool = True) -> lis
 
 
 async def load_anticipated(db, depth: int) -> list[dict]:
-    """Japanese titles with a release date still ahead, by how many readers are waiting.
+    """Japanese titles not out in any form yet, by how many readers are waiting.
 
-    Restricted to Japanese releases of Japanese-original titles, which is what makes this a
-    list of work that does not exist yet rather than a schedule of editions of work that
-    does. Ordered by wishlist count, so it reports what readers are waiting for rather than
-    everything with a date.
+    A future release date is not enough on its own to make a title unreleased: ports,
+    remasters and new editions all carry one, and a long-finished title picking up a console
+    version would otherwise head this list on the strength of the wishlists its original
+    earned. The title has to have nothing non-trial released against it at all, which is what
+    makes this work that does not exist yet rather than a schedule of editions of work that
+    does. A demo does not disqualify one, since a title with only a trial out is still ahead.
+
+    Ordered by wishlist count, so it reports what readers are waiting for rather than
+    everything carrying a date.
     """
     rows = await db.execute(
         text("""
@@ -1476,8 +1481,18 @@ async def load_anticipated(db, depth: int) -> list[dict]:
             )
             SELECT u.vn_id, u.out_on, v.list_wishlist AS waiting
             FROM upcoming u
+            CROSS JOIN bounds b
             JOIN visual_novels v ON v.id = u.vn_id
             WHERE v.olang = 'ja' AND v.list_wishlist > 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM release_vn rv2
+                  JOIN releases r2 ON r2.id = rv2.release_id
+                  WHERE rv2.vn_id = u.vn_id
+                    AND r2.released <= b.latest
+                    AND rv2.rtype IS DISTINCT FROM 'trial'
+                    AND r2.patch IS NOT TRUE
+              )
             ORDER BY v.list_wishlist DESC
             LIMIT :limit
         """),
@@ -1529,7 +1544,7 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
             GROUP BY date_trunc('week', gv.date)
             ORDER BY week
         """),
-        {"days": weeks * 7},
+        {"days": (weeks + 2) * 7},
     )
 
     pulse = [
@@ -1541,9 +1556,12 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
         }
         for row in rows
     ]
-    # The dump lands mid-week, so the final bucket holds a few days and would read as a
-    # collapse against the full weeks before it.
-    return pulse[:-1]
+    # Neither end of the window lands on a week boundary: the dump arrives mid-week, and
+    # the far end is a fixed number of days back from it. Both outer buckets therefore hold
+    # part of a week and would read as a collapse against the full weeks between them, which
+    # is also what the period's own growth figure would be measured from. The window is
+    # widened by a week at each end so that dropping them still leaves the number asked for.
+    return pulse[1:-1][-weeks:]
 
 
 async def load_hot_now(

@@ -38,6 +38,7 @@ class DiscordWebhookLogHandler(logging.Handler):
         shutdown_timeout: float = 10.0,
         circuit_breaker_threshold: int = 5,
         circuit_breaker_cooldown: float = 60.0,
+        max_alert_lines: int = 6,
     ):
         super().__init__(level=logging.INFO)
         self.webhook_url = webhook_url
@@ -46,6 +47,7 @@ class DiscordWebhookLogHandler(logging.Handler):
         self.shutdown_timeout = shutdown_timeout
         self.circuit_breaker_threshold = circuit_breaker_threshold
         self.circuit_breaker_cooldown = circuit_breaker_cooldown
+        self.max_alert_lines = max_alert_lines
 
         self._queue: Queue = Queue()
         self._worker_thread: Optional[threading.Thread] = None
@@ -77,7 +79,7 @@ class DiscordWebhookLogHandler(logging.Handler):
             return
 
         try:
-            self._queue.put(self.format(record))
+            self._queue.put((record.levelno, self.format(record)))
         except Exception:
             pass
 
@@ -85,12 +87,13 @@ class DiscordWebhookLogHandler(logging.Handler):
         client = httpx.Client(timeout=10.0)
         buffer_lines: list[str] = []
         buffer_length = 0
+        alert_lines: list[str] = []
         last_flush = time.monotonic()
 
         try:
             while self._running or not self._queue.empty():
                 try:
-                    line = self._queue.get(timeout=1.0)
+                    levelno, line = self._queue.get(timeout=1.0)
                     line = line.replace("```", r"\`\`\`")
 
                     if len(line) > self.max_message_length:
@@ -105,23 +108,80 @@ class DiscordWebhookLogHandler(logging.Handler):
 
                     buffer_lines.append(line)
                     buffer_length += len(line) + 1
+                    # A run going wrong reads the same as one going well when both arrive
+                    # as grey lines in one block. Anything at this level is repeated in a
+                    # message of its own, so a failure is visible without reading the log.
+                    if levelno >= logging.WARNING:
+                        alert_lines.append(line)
                 except Empty:
                     pass
 
                 now = time.monotonic()
-                if buffer_lines and (
+                if (buffer_lines or alert_lines) and (
                     buffer_length >= self.max_message_length
                     or (now - last_flush) >= self.flush_interval
                 ):
                     self._flush(client, buffer_lines)
+                    self._flush_alerts(client, alert_lines)
                     buffer_lines = []
                     buffer_length = 0
+                    alert_lines = []
                     last_flush = now
 
-            if buffer_lines:
+            if buffer_lines or alert_lines:
                 self._flush(client, buffer_lines)
+                self._flush_alerts(client, alert_lines)
         finally:
             client.close()
+
+    def _flush_alerts(self, client: httpx.Client, lines: list[str]):
+        """Repeat the lines worth noticing as a message of their own.
+
+        Batched like the running log rather than sent one at a time: a failure that repeats
+        in a loop would otherwise post once per occurrence, and a channel nobody can keep up
+        with hides a problem as well as one that never mentions it.
+        """
+        if not lines:
+            return
+
+        # Held to the same ceiling as the running log: a webhook that is refusing
+        # traffic refuses this too, and retrying around it only lengthens the refusal.
+        if self._circuit_open and time.time() < self._circuit_open_until:
+            return
+
+        # Budgeted by characters as well as by line, because a single line is already
+        # allowed to reach the whole message length: a handful of lines carrying stack
+        # traces would otherwise build a body the service refuses outright, and the alert
+        # would be dropped in the case it exists to report.
+        header = "**Needs attention**\n"
+        budget = self.max_message_length - len(header) - len("```\n\n```") - 40
+        shown: list[str] = []
+        used = 0
+        for line in lines[: self.max_alert_lines]:
+            if shown and used + len(line) + 1 > budget:
+                break
+            shown.append(line[:budget])
+            used += len(shown[-1]) + 1
+        dropped = len(lines) - len(shown)
+        body = "```\n" + "\n".join(shown)
+        if dropped:
+            body += "\n" + f"... and {dropped} more"
+        body += "\n```"
+        try:
+            response = client.post(
+                self.webhook_url,
+                json={"content": header + body},
+                headers={"Content-Type": "application/json"},
+            )
+            # A refusal here is the one that must not pass unnoticed, so it is reported the
+            # way the running log reports its own rather than swallowed.
+            if response.status_code >= 400:
+                print(
+                    f"discord alert rejected: {response.status_code}",
+                    file=sys.stderr,
+                )
+        except Exception:
+            pass
 
     def _flush(self, client: httpx.Client, lines: list[str]):
         if not lines:

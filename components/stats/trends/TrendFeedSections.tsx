@@ -65,6 +65,14 @@ interface FeedListProps<T extends TitleIdentity> {
   entries: T[];
   detail: (entry: T) => string;
   figure: (entry: T) => string;
+  /**
+   * Whether the figures behind this section exist yet.
+   *
+   * A section with nothing in it and a section whose figures have not been worked out yet
+   * look identical, and telling a reader to wait for a rebuild that has already run leaves
+   * them waiting for something that is never going to change.
+   */
+  built?: boolean;
 }
 
 function FeedList<T extends TitleIdentity>({
@@ -74,6 +82,7 @@ function FeedList<T extends TitleIdentity>({
   entries,
   detail,
   figure,
+  built = true,
 }: FeedListProps<T>) {
   const { preference } = useTitlePreference();
 
@@ -86,11 +95,13 @@ function FeedList<T extends TitleIdentity>({
       <p className="mt-0.5 mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
         {blurb}
       </p>
-      {/* A section with nothing in it says so. Returning null here left the heading and its
-          blurb standing over a gap, which reads as a page that half loaded. */}
+      {/* An empty section says so rather than rendering nothing: a heading and a blurb
+          standing over a gap reads as a page that only half arrived. */}
       {!entries.length ? (
         <p className="py-4 text-center text-xs text-gray-500 dark:text-gray-400">
-          Not available until the nightly rebuild has run.
+          {built
+            ? 'Nothing here at the moment.'
+            : 'Not available until the nightly rebuild has run.'}
         </p>
       ) : null}
 
@@ -132,39 +143,42 @@ function FeedList<T extends TitleIdentity>({
   );
 }
 
-export function NewReleasesList({ entries }: { entries: NewReleaseTitle[] }) {
+export function NewReleasesList({ entries, built }: { entries: NewReleaseTitle[]; built?: boolean }) {
   return (
     <FeedList
       icon={<Sparkles className="w-4 h-4 text-violet-500" />}
       title="New and finding an audience"
       blurb="Out in the last six months, by the votes they have drawn in the last thirty days. Titles leave this list by ageing out of it."
       entries={entries}
+      built={built}
       detail={(entry) => `out ${formatDate(entry.released)}, rating ${entry.score.toFixed(2)}`}
       figure={(entry) => entry.votes.toLocaleString()}
     />
   );
 }
 
-export function FinishingList({ entries }: { entries: FinishedTitle[] }) {
+export function FinishingList({ entries, built }: { entries: FinishedTitle[]; built?: boolean }) {
   return (
     <FeedList
       icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
       title="Being finished right now"
       blurb="Reading lists marked finished in the last sixty days. Dated on the entry rather than on a vote, so this counts an event rather than an opinion, and only readers who fill the field in."
       entries={entries}
+      built={built}
       detail={() => 'finished recently'}
       figure={(entry) => entry.finishes.toLocaleString()}
     />
   );
 }
 
-export function AnticipatedList({ entries }: { entries: AnticipatedTitle[] }) {
+export function AnticipatedList({ entries, built }: { entries: AnticipatedTitle[]; built?: boolean }) {
   return (
     <FeedList
       icon={<CalendarClock className="w-4 h-4 text-sky-500" />}
       title="Still to come"
-      blurb="Japanese titles with a Japanese release still ahead, by how many readers are waiting. This is work that does not exist yet, so the figure is anticipation rather than reception."
+      blurb="Japanese titles with nothing released yet and a date ahead, by how many readers are waiting. A port or a remaster does not qualify a title, so the figure is anticipation rather than reception."
       entries={entries}
+      built={built}
       detail={(entry) => `out ${formatDate(entry.out_on)}`}
       figure={(entry) => `${entry.waiting.toLocaleString()} waiting`}
     />

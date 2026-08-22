@@ -34,12 +34,16 @@ const LANGUAGE_LABELS: Record<string, string> = {
 // code, so the shared map is extended rather than replaced.
 const PLATFORM_LABELS: Record<string, string> = { ...PLATFORM_SHORT_LABELS, other: 'Other' };
 
-// Ordered so adjacent bands stay distinguishable, and colour-blind safe at the top of the
-// list where the largest series sit.
+// Ordered so adjacent bands stay distinguishable, with the largest series first.
+//
+// Grey is reserved for the catch-all below and appears nowhere else: a named series in grey
+// reads as part of the leftovers. Hue alone does not carry a list this long, and no ordering
+// of twelve makes every pair safe under colour deficiency, so entries that share a hue are
+// separated by lightness instead and the legend stays the way a reader resolves the rest.
 const PALETTE = [
   '#4f46e5', '#06b6d4', '#f59e0b', '#ec4899',
-  '#10b981', '#8b5cf6', '#ef4444', '#64748b',
-  '#0ea5e9', '#a3a3a3', '#14b8a6', '#f97316',
+  '#10b981', '#8b5cf6', '#ef4444', '#4d7c0f',
+  '#60a5fa', '#a16207', '#0d9488', '#f97316',
 ];
 
 function paletteFor(keys: string[]): Record<string, string> {

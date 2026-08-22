@@ -107,6 +107,14 @@ CACHE_SECONDS = 3600
 #: answer cannot change until the next dump, and the key carries the dump date anyway.
 _LIVE_TTL = 60 * 60 * 26
 
+#: How long a slice that came back with nothing is kept.
+#:
+#: A slice can be narrow enough to hold nothing, and that answer is worth a moment so a
+#: reload does not recompute it. It is not worth a day: the same query also returns nothing
+#: while the figures behind it are still being derived, and holding that for the full window
+#: leaves a panel empty long after the data arrives.
+_EMPTY_SLICE_TTL = 60
+
 MAX_ROWS = 100
 
 
@@ -576,9 +584,15 @@ async def get_custom_ranking(
             if payload is None:
                 raise HTTPException(status_code=404, detail=f"No tag with id {tag}")
             payload["dump_date"] = str(dump_date)
-            await get_cache().set(key, payload, ttl=_LIVE_TTL)
+            await get_cache().set(
+                key, payload, ttl=_LIVE_TTL if payload.get("rows") else _EMPTY_SLICE_TTL
+            )
 
-    response.headers["Cache-Control"] = f"public, max-age={CACHE_SECONDS}"
+    # An empty slice is kept out of caches for the same reason it is barely kept in Redis.
+    if payload.get("rows"):
+        response.headers["Cache-Control"] = f"public, max-age={CACHE_SECONDS}"
+    else:
+        response.headers["Cache-Control"] = "no-store"
     payload = {**payload, "rows": payload.get("rows", [])[:limit]}
 
     etag = _etag(payload)

@@ -53,6 +53,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _keep_unbuilt_out_of_caches(response: Response, built: bool) -> None:
+    """Stop an answer given mid-rebuild from being held as though it were real.
+
+    These endpoints answer a missing cache key with an empty payload rather than an error, so
+    nothing between here and the reader can tell the two apart. Carrying the usual lifetime,
+    an empty answer outlives the job that fills it, and a reader who arrived during a rebuild
+    keeps being shown an empty page long after the figures exist.
+    """
+    if not built:
+        response.headers["Cache-Control"] = "no-store"
+
+
 # Cache durations in seconds
 CACHE_GLOBAL_STATS = 3600  # 1 hour - global stats change infrequently
 CACHE_TAG_STATS = 3600  # 1 hour - tag stats are stable
@@ -205,7 +218,9 @@ async def get_global_activity(request: Request, response: Response):
     from app.core.cache import get_cache
     from app.leaderboards.compute import VOTE_ACTIVITY_CACHE_KEY
 
-    result = await get_cache().get(VOTE_ACTIVITY_CACHE_KEY) or {
+    cached = await get_cache().get(VOTE_ACTIVITY_CACHE_KEY)
+    _keep_unbuilt_out_of_caches(response, cached is not None)
+    result = cached or {
         "by_year": [],
         "by_month": [],
         "by_weekday": [],
@@ -236,7 +251,9 @@ async def get_global_reading_trends(request: Request, response: Response):
     from app.core.cache import get_cache
     from app.leaderboards.compute import READING_TRENDS_CACHE_KEY
 
-    result = await get_cache().get(READING_TRENDS_CACHE_KEY) or {"years": [], "eras": []}
+    cached = await get_cache().get(READING_TRENDS_CACHE_KEY)
+    _keep_unbuilt_out_of_caches(response, cached is not None)
+    result = cached or {"years": [], "eras": []}
 
     etag = generate_etag(result)
     response.headers["ETag"] = etag
@@ -270,7 +287,9 @@ async def get_global_trend_feed(
     from app.core.cache import get_cache
     from app.leaderboards.compute import TREND_FEED_CACHE_KEY, trends_key
 
-    result = await get_cache().get(trends_key(TREND_FEED_CACHE_KEY, language)) or {
+    cached = await get_cache().get(trends_key(TREND_FEED_CACHE_KEY, language))
+    _keep_unbuilt_out_of_caches(response, cached is not None)
+    result = cached or {
         "reference": None,
         "shifting": {},
         "new_releases": [],
@@ -311,7 +330,9 @@ async def get_global_hot_now(
     from app.core.cache import get_cache
     from app.leaderboards.compute import HOT_NOW_CACHE_KEY, trends_key
 
-    result = await get_cache().get(trends_key(HOT_NOW_CACHE_KEY, language)) or {
+    cached = await get_cache().get(trends_key(HOT_NOW_CACHE_KEY, language))
+    _keep_unbuilt_out_of_caches(response, cached is not None)
+    result = cached or {
         "reference": None,
         "periods": [],
     }
@@ -347,7 +368,9 @@ async def get_global_year_explorer(
     from app.core.cache import get_cache
     from app.leaderboards.compute import YEAR_EXPLORER_CACHE_KEY, trends_key
 
-    result = await get_cache().get(trends_key(YEAR_EXPLORER_CACHE_KEY, language)) or {
+    cached = await get_cache().get(trends_key(YEAR_EXPLORER_CACHE_KEY, language))
+    _keep_unbuilt_out_of_caches(response, cached is not None)
+    result = cached or {
         "years": []
     }
 
@@ -397,6 +420,7 @@ async def get_global_month_explorer(
     wanted = month if month in months else (months[-1] if months else None)
     prefix = trends_key(MONTH_EXPLORER_KEY_PREFIX.rstrip(":"), language) + ":"
     payload = await cache.get(f"{prefix}{wanted}") if wanted else None
+    _keep_unbuilt_out_of_caches(response, payload is not None)
 
     result = {
         "months": months,
