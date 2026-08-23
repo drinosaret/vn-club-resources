@@ -51,6 +51,8 @@ from app.services.user_service import UserService
 
 logger = logging.getLogger(__name__)
 
+from app.core.concurrency import Ceiling
+
 router = APIRouter()
 
 
@@ -78,18 +80,9 @@ _USER_STATS_TTL = 60 * 60 * 26
 _IMPORT_STAMP_TTL = 300
 _IMPORT_STAMP_KEY = "stats:import-stamp:v1"
 
-#: Profiles worked out at once.
-#:
-#: Each one reads a reader's whole list and is the most expensive answer here. The per-caller
-#: limit does not bound this: many callers asking for one profile each stay under it while
-#: together saturating the machine, and every profile then takes long enough to be given up
-#: on. The ceiling trades a queue for that, which is slower for one caller and faster for
-#: everyone. A profile already worked out never reaches it.
-_PROFILE_SLOTS = asyncio.Semaphore(6)
-
-#: How long a request waits for a slot before it is turned away rather than left holding a
-#: connection while it queues.
-_PROFILE_SLOT_WAIT = 20.0
+#: Profiles worked out at once. Each one reads a reader's whole list and is the most
+#: expensive answer here; a profile already worked out never reaches this.
+_PROFILE_CEILING = Ceiling(slots=6, wait_seconds=20.0, what="profiles")
 
 
 def generate_etag(data: dict) -> str:
@@ -1320,27 +1313,23 @@ async def get_user_stats(
     # Calculate stats with timeout to prevent blocking
     settings = get_settings()
     try:
-        await asyncio.wait_for(_PROFILE_SLOTS.acquire(), timeout=_PROFILE_SLOT_WAIT)
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=503,
-            detail="Too many profiles are being worked out at once. Try again shortly.",
-            headers={"Retry-After": "15"},
-        ) from None
-    try:
-        async with asyncio.timeout(settings.user_stats_timeout):
-            stats = await stats_service.calculate_user_stats(uid, user_data)
+        async with _PROFILE_CEILING.hold():
+            async with asyncio.timeout(settings.user_stats_timeout):
+                stats = await stats_service.calculate_user_stats(uid, user_data)
     except asyncio.TimeoutError:
         logger.warning(f"Stats calculation timed out for {uid} after {settings.user_stats_timeout}s")
         raise HTTPException(
             status_code=504,
             detail=f"Stats calculation timed out. User may have too many VNs. Please try again."
         )
+    except HTTPException:
+        # The ceiling above turns a full queue into an answer of its own, and it is already
+        # the right one. Left to the catch-all below it would be reported as a failure to
+        # work the profile out, which is neither true nor something the caller can act on.
+        raise
     except Exception as e:
         logger.error(f"Failed to calculate stats for {uid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to calculate stats. Please try again later.")
-    finally:
-        _PROFILE_SLOTS.release()
 
     payload = stats.model_dump(mode="json")
     await cache.set(key, payload, ttl=_USER_STATS_TTL)

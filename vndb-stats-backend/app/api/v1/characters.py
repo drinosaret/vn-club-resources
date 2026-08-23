@@ -14,6 +14,7 @@ from app.db.models import (
     VisualNovel, VNSeiyuu, Staff
 )
 from app.core.cache import get_cache
+from app.core.concurrency import Ceiling
 from app.core.search_utils import relevance_rank
 
 logger = logging.getLogger(__name__)
@@ -302,6 +303,14 @@ async def get_character(
 
 SIMILAR_CHARS_CACHE_TTL = 86400  # 24 hours — data only changes on daily import
 
+#: Similarity searches run at once.
+#:
+#: The comparison is against every character sharing a trait, so it is one of the slower
+#: answers here, and the cache above only spares a repeat of the same one. A visitor working
+#: through the catalogue asks for a different character every time and so misses every time,
+#: which is the case this bounds.
+_SIMILAR_CEILING = Ceiling(slots=4, wait_seconds=15.0, what="similarity searches")
+
 
 @router.get("/{char_id}/similar", response_model=list[schemas.SimilarCharacterResponse])
 async def get_similar_characters(
@@ -383,18 +392,19 @@ async def get_similar_characters(
         target_count + total_counts.c.total_count - shared_counts.c.shared_count
     )
 
-    result = await db.execute(
-        select(
-            Character,
-            shared_counts.c.shared_count,
-            total_counts.c.total_count,
-            jaccard_expr.label("jaccard"),
+    async with _SIMILAR_CEILING.hold():
+        result = await db.execute(
+            select(
+                Character,
+                shared_counts.c.shared_count,
+                total_counts.c.total_count,
+                jaccard_expr.label("jaccard"),
+            )
+            .join(shared_counts, Character.id == shared_counts.c.candidate_id)
+            .join(total_counts, Character.id == total_counts.c.char_id)
+            .order_by(jaccard_expr.desc())
+            .limit(limit)
         )
-        .join(shared_counts, Character.id == shared_counts.c.candidate_id)
-        .join(total_counts, Character.id == total_counts.c.char_id)
-        .order_by(jaccard_expr.desc())
-        .limit(limit)
-    )
 
     candidates = result.all()
 

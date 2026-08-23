@@ -26,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cache
+from app.core.concurrency import Ceiling
 from app.db.database import get_db
 from app.db.models import Tag
 from app.leaderboards.aggregate import percentile_of, share_below
@@ -73,31 +74,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
-#: Slices computed at once. Each one is a scan against the pool the whole site shares, so
-#: this ceiling is what keeps a spread of distinct slices from holding connections the rest
-#: of the service needs. An answer already in the cache never reaches it.
-_LIVE_SLICE_SLOTS = asyncio.Semaphore(4)
-
-#: How long a request waits for a slot. Past this it is turned away rather than left
-#: holding a connection open while it queues.
-_SLOT_WAIT_SECONDS = 5.0
-
-
-@asynccontextmanager
-async def _live_slice_slot():
-    """Hold one of the concurrent-computation slots, or refuse."""
-    try:
-        await asyncio.wait_for(_LIVE_SLICE_SLOTS.acquire(), timeout=_SLOT_WAIT_SECONDS)
-    except asyncio.TimeoutError:
-        raise HTTPException(
-            status_code=503,
-            detail="Too many rankings are being worked out at once. Try again shortly.",
-            headers={"Retry-After": "10"},
-        ) from None
-    try:
-        yield
-    finally:
-        _LIVE_SLICE_SLOTS.release()
+#: Slices computed at once. Each is a scan against the pool the whole site shares, so this
+#: is what keeps a spread of distinct slices from holding connections the rest of the service
+#: needs. An answer already in the cache never reaches it.
+_SLICE_CEILING = Ceiling(slots=4, wait_seconds=5.0, what="rankings")
 
 #: Boards are rebuilt once a day. An hour of browser caching keeps repeat views free while
 #: still picking up a refresh within the same day.
@@ -561,7 +541,7 @@ async def get_custom_ranking(
 
     payload = await get_cache().get(key)
     if payload is None:
-        async with _live_slice_slot():
+        async with _SLICE_CEILING.hold():
             # The denominator behind a share does not depend on the slice, so it is cached in
             # its own right; without that, each first view would pay for it again.
             totals = None
