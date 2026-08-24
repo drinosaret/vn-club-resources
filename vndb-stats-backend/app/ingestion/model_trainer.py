@@ -185,6 +185,11 @@ async def train_collaborative_filter():
 
         logger.info(f"Loaded {len(votes)} votes")
 
+        # Matrix assembly and model fitting below run without issuing a
+        # statement. Ending the read transaction first leaves the session merely
+        # idle, which the server's idle-in-transaction limit does not apply to.
+        await db.commit()
+
         # Build mappings
         user_ids: dict[str, int] = {}
         vn_ids: dict[str, int] = {}
@@ -465,6 +470,11 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
 
         logger.info(f"Loaded {len(votes)} votes")
 
+        # The pair build below runs for minutes without issuing a statement.
+        # Ending the read transaction first leaves the session merely idle,
+        # which the server's idle-in-transaction limit does not apply to.
+        await db.commit()
+
         # Build VN -> set of users mapping
         vn_users: dict[str, set[str]] = defaultdict(set)
         # Build inverted index: user -> set of VNs they read
@@ -510,9 +520,6 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
         gc.collect()
         _log_memory("after freeing candidate_counts")
 
-        # Clear staging table (live table stays untouched until swap)
-        await db.execute(text("TRUNCATE TABLE vn_cooccurrence_staging"))
-
         # Compute PMI for valid pairs
         now = datetime.utcnow()
         total_inserted = 0
@@ -556,6 +563,11 @@ async def compute_item_item_similarity(top_k: int = 50, min_users: int = 20):
                     "user_count": user_count,
                     "computed_at": now,
                 })
+
+        # Clear staging table (live table stays untouched until swap). Kept in
+        # the same transaction as the inserts so staging is either fully replaced
+        # or left as it was.
+        await db.execute(text("TRUNCATE TABLE vn_cooccurrence_staging"))
 
         # Batch insert
         batch_size = 5000

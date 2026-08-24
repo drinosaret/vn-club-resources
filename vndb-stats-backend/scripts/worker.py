@@ -209,6 +209,10 @@ async def run_daily_update():
         logger.error(f"Failed to create ImportRun record: {e}")
         # Continue without tracking — import still works
 
+    # Stages that are allowed to fail without aborting the run record themselves
+    # here, so the run can report itself as degraded instead of reporting success.
+    degraded: list[str] = []
+
     try:
         async with asyncio.timeout(max_duration):
             # Phase 1: Import data
@@ -220,16 +224,25 @@ async def run_daily_update():
                 from app.ingestion.importer import run_full_import
                 await run_full_import(settings.dump_storage_path, max_age_hours=24, force=True)
 
-            # Phase 2: Compute models
-            logger.info("\n>>> PHASE 2/4: COMPUTING MODELS <<<")
-            await compute_tag_vectors()
-            await train_collaborative_filter()
+            # Phases 2 and 3 rebuild the recommendation model from the imported
+            # data. Failing here leaves the previous similarity tables live and
+            # must not stop the cache flush, leaderboards and difficulty refresh
+            # below, none of which depend on the model. Grouping the stages in one
+            # block also keeps the swap from running on a partial rebuild.
+            try:
+                # Phase 2: Compute models
+                logger.info("\n>>> PHASE 2/4: COMPUTING MODELS <<<")
+                await compute_tag_vectors()
+                await train_collaborative_filter()
 
-            # Phase 3: Compute similarity tables
-            logger.info("\n>>> PHASE 3/4: COMPUTING SIMILARITY TABLES <<<")
-            await compute_vn_similarities()
-            await compute_item_item_similarity()
-            await swap_similarity_tables()
+                # Phase 3: Compute similarity tables
+                logger.info("\n>>> PHASE 3/4: COMPUTING SIMILARITY TABLES <<<")
+                await compute_vn_similarities()
+                await compute_item_item_similarity()
+                await swap_similarity_tables()
+            except Exception as e:
+                degraded.append("model rebuild")
+                logger.error(f"Model rebuild failed: {e}", exc_info=True)
 
             # Flush stale caches so fresh data is served immediately. Entity, VN and
             # global caches are included: they have their own TTLs, but leaving them to
@@ -265,6 +278,7 @@ async def run_daily_update():
             except Exception as e:
                 # A failed rebuild leaves yesterday's boards in place until their TTL
                 # expires, which is preferable to failing the whole import over them.
+                degraded.append("leaderboards")
                 logger.error(f"Leaderboard refresh failed: {e}", exc_info=True)
 
             # Reading difficulty comes from a third party rather than the dump, so it is
@@ -274,21 +288,32 @@ async def run_daily_update():
                 from app.ingestion.jiten_difficulty import import_jiten_difficulty
                 logger.info(f"Difficulty: {await import_jiten_difficulty()}")
             except Exception as e:
+                degraded.append("difficulty")
                 logger.error(f"Difficulty refresh failed: {e}", exc_info=True)
 
-            # Update last import time
+            # last_import marks the data load. last_full_update only advances when
+            # every stage succeeded, so a degraded run stays visibly behind it.
+            now = datetime.utcnow().isoformat()
+            stamps = {"last_import": now}
+            if not degraded:
+                stamps["last_full_update"] = now
+
             async with async_session_maker() as session:
-                result = await session.execute(
-                    select(SystemMetadata).where(SystemMetadata.key == "last_import")
-                )
-                metadata = result.scalar_one_or_none()
-                now = datetime.utcnow().isoformat()
-                if metadata:
-                    metadata.value = now
-                else:
-                    metadata = SystemMetadata(key="last_import", value=now)
-                    session.add(metadata)
+                for key, value in stamps.items():
+                    result = await session.execute(
+                        select(SystemMetadata).where(SystemMetadata.key == key)
+                    )
+                    metadata = result.scalar_one_or_none()
+                    if metadata:
+                        metadata.value = value
+                    else:
+                        session.add(SystemMetadata(key=key, value=value))
                 await session.commit()
+
+            if degraded:
+                logger.error(
+                    "Daily update finished with failed stages: " + ", ".join(degraded)
+                )
 
             elapsed = time.time() - start_time
             logger.info("=" * 60)

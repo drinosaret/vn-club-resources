@@ -165,12 +165,15 @@ async def db_status(db: AsyncSession = Depends(get_db)):
         )
         with_length = result.scalar_one_or_none() or 0
 
-        # Get last import time
+        # Get last import time and the last fully clean run
         result = await db.execute(
-            select(SystemMetadata).where(SystemMetadata.key == "last_import")
+            select(SystemMetadata).where(
+                SystemMetadata.key.in_(("last_import", "last_full_update"))
+            )
         )
-        metadata = result.scalar_one_or_none()
-        last_import = metadata.value if metadata else None
+        stamps = {row.key: row.value for row in result.scalars().all()}
+        last_import = stamps.get("last_import")
+        last_full_update = stamps.get("last_full_update")
 
         # Next update is always 4:00 AM UTC (scheduled in worker container)
         from datetime import datetime, timezone, timedelta
@@ -180,6 +183,23 @@ async def db_status(db: AsyncSession = Depends(get_db)):
             next_4am += timedelta(days=1)
         next_update = next_4am.isoformat()
 
+        # last_full_update only advances when every stage of the nightly job
+        # succeeded. A value well behind the schedule means part of the pipeline is
+        # failing even though the imported data itself looks current.
+        def _age_hours(value: str | None) -> float | None:
+            if not value:
+                return None
+            try:
+                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return (datetime.utcnow() - parsed).total_seconds() / 3600
+
+        full_update_age_hours = _age_hours(last_full_update)
+        degraded = full_update_age_hours is None or full_update_age_hours > 26
+
         return {
             "status": "healthy",
             "has_data": vn_count > 0,
@@ -188,6 +208,8 @@ async def db_status(db: AsyncSession = Depends(get_db)):
             "with_minage": with_minage,
             "with_length": with_length,
             "last_import": last_import,
+            "last_full_update": last_full_update,
+            "degraded": degraded,
             "next_update": next_update,
         }
     except Exception as e:
