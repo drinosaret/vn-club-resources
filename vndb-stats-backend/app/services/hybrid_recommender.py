@@ -2888,8 +2888,17 @@ class HybridRecommender:
         The category records presentation and engine facts rather than subject matter, so a
         profile built from them describes the software a reader used rather than the stories
         they chose.
+
+        The set is read from the catalogue rather than passed in, so it is one of the few
+        things a profile needs that the caller cannot supply. A load that fails leaves the set
+        empty, which lets those tags into the profile rather than failing the request; it is
+        logged as an error and not cached, so the next request tries again.
         """
-        return await _TECHNICAL_TAGS.get()
+        try:
+            return await _TECHNICAL_TAGS.get()
+        except Exception as e:
+            logger.error(f"Failed to load technical tag ids: {e}, treating none as technical")
+            return set()
 
     async def _load_tag_idf_weights(self) -> dict[int, float]:
         """
