@@ -177,10 +177,12 @@ export default function RootLayout({
         {/* eslint-disable-next-line @next/next/no-sync-scripts -- it has to block: a deferred
             script applies the theme after the flash it exists to prevent */}
         <script src="/theme-init.js" />
+        {/* Loaded on the first sign of a person; see the file. */}
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script
             defer
-            src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
+            src="/analytics-init.js"
+            data-src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
             data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
           />
         )}

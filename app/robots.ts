@@ -8,7 +8,25 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/3x3-maker/s/', '/tierlist/s/'],
+        // The random page never answers the same way twice, so it is not for crawlers.
+        disallow: ['/api/', '/3x3-maker/s/', '/tierlist/s/', '/random/'],
+      },
+      // Search engines are not on this list.
+      {
+        userAgent: [
+          'TerraCotta',
+          'meta-externalagent',
+          'AhrefsBot',
+          'SemrushBot',
+          'Reflectionbot',
+          'Bytespider',
+          'DotBot',
+          'PetalBot',
+          'MJ12bot',
+          'ExaSearchBot',
+          'DataForSeoBot',
+        ],
+        disallow: '/',
       },
       // Explicitly allow crawlers to access all public content
       {
