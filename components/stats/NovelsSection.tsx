@@ -99,9 +99,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(novel => {
         if (!novel.vn) return false;
-        const title = novel.vn.title?.toLowerCase() || '';
-        const titleJp = novel.vn.title_jp?.toLowerCase() || '';
-        return title.includes(query) || titleJp.includes(query);
+        // Every script a row can be labelled with, including the romanisation. A title whose
+        // own name is Japanese is shown romanised to a reader who chose that, so a search of
+        // the Japanese fields alone cannot find a row by the name on it.
+        return [novel.vn.title, novel.vn.title_jp, novel.vn.title_romaji].some(
+          (name) => name?.toLowerCase().includes(query),
+        );
       });
     }
 

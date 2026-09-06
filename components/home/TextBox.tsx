@@ -159,7 +159,7 @@ export function TextBox({ pulse, fallbackCovers, advanceTo }: TextBoxProps) {
           <span className="tb-plates">
             <span className="nameplate">VN Club</span>
             {pulse?.reference && (
-              <span className="nameplate nameplate--quiet">to {referenceLabel(pulse.reference)}</span>
+              <span className="nameplate nameplate--quiet">{referenceLabel(pulse.reference)}</span>
             )}
           </span>
 
