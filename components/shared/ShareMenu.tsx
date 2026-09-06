@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Share2, Copy, Link2, Loader2, Smartphone, ExternalLink } from 'lucide-react';
+import { Share2, Copy, Link2, Smartphone, ExternalLink } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { sharedStrings } from '@/lib/i18n/translations/shared';
 
@@ -99,7 +99,7 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
     await onCreateLink?.();
   }, [onCreateLink]);
 
-  const itemClass = 'w-full px-3 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
+  const itemClass = 'sw-opt';
 
   return (
     <>
@@ -109,9 +109,9 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
         disabled={disabled || sharing}
         aria-expanded={isOpen}
         aria-haspopup="true"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+        className="sw-act"
       >
-        {sharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+        {sharing ? <span className="sw-spin w-3 h-3" /> : <Share2 className="w-3.5 h-3.5" />}
         <span className="hidden sm:inline">{s['share.share']}</span>
       </button>
 
@@ -120,57 +120,57 @@ export function ShareMenu({ onShare, sharing, canNativeShare, disabled = false, 
           ref={menuRef}
           style={menuStyle}
           role="menu"
-          className="z-50 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1 animate-slide-down"
+          className="sw-menu z-50 w-56 py-1 animate-slide-down"
         >
           {onCreateLink && (
             <button role="menuitem" onClick={handleLink} disabled={creatingLink} className={itemClass}>
-              {creatingLink ? <Loader2 className="w-4 h-4 text-gray-500 animate-spin" /> : <Link2 className="w-4 h-4 text-gray-500" />}
-              <div>
-                <div>{s['share.copyLink']}</div>
-                <div className="text-xs text-gray-400">{s['share.copyLinkDesc']}</div>
-              </div>
+              {creatingLink ? <span className="sw-spin w-3.5 h-3.5 shrink-0" /> : <Link2 className="w-4 h-4 shrink-0" />}
+              <span>
+                <span className="block">{s['share.copyLink']}</span>
+                <span className="sw-pick-desc block">{s['share.copyLinkDesc']}</span>
+              </span>
             </button>
           )}
 
           {!hidePlatforms.includes('open-tab') && (
             <button role="menuitem" onClick={() => handleAction('open-tab')} className={itemClass}>
-              <ExternalLink className="w-4 h-4 text-gray-500" />
+              <ExternalLink className="w-4 h-4 shrink-0" />
               <span>{s['share.openInTab']}</span>
             </button>
           )}
 
           {!hidePlatforms.includes('clipboard') && (
-            <button role="menuitem" onClick={() => handleAction('clipboard')} className={`${itemClass} hidden sm:flex`}>
-              <Copy className="w-4 h-4 text-gray-500" />
+            <button role="menuitem" onClick={() => handleAction('clipboard')} className={`${itemClass} sw-opt--wide-only`}>
+              <Copy className="w-4 h-4 shrink-0" />
               <span>{clipboardLabel || s['share.copyToClipboard']}</span>
             </button>
           )}
 
           {(onCreateLink || !hidePlatforms.includes('open-tab') || !hidePlatforms.includes('clipboard')) && (
-            <div className={`border-t border-gray-100 dark:border-gray-700 my-1 ${!onCreateLink && hidePlatforms.includes('open-tab') ? 'hidden sm:block' : ''}`} />
+            <div className={`sw-sep my-1 ${!onCreateLink && hidePlatforms.includes('open-tab') ? 'hidden sm:block' : ''}`} />
           )}
 
           <button role="menuitem" onClick={() => handleAction('twitter')} className={itemClass}>
-            <XIcon className="w-4 h-4 text-gray-500" />
-            <div>
-              <div>{s['share.toX']}</div>
-              <div className="text-xs text-gray-400">{platformSubtitle || s['share.copiesAndOpens']}</div>
-            </div>
+            <XIcon className="w-4 h-4 shrink-0" />
+            <span>
+              <span className="block">{s['share.toX']}</span>
+              <span className="sw-pick-desc block">{platformSubtitle || s['share.copiesAndOpens']}</span>
+            </span>
           </button>
 
           <button role="menuitem" onClick={() => handleAction('reddit')} className={itemClass}>
-            <RedditIcon className="w-4 h-4 text-gray-500" />
-            <div>
-              <div>{s['share.toReddit']}</div>
-              <div className="text-xs text-gray-400">{platformSubtitle || s['share.copiesAndOpens']}</div>
-            </div>
+            <RedditIcon className="w-4 h-4 shrink-0" />
+            <span>
+              <span className="block">{s['share.toReddit']}</span>
+              <span className="sw-pick-desc block">{platformSubtitle || s['share.copiesAndOpens']}</span>
+            </span>
           </button>
 
           {canNativeShare && (
             <>
-              <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+              <div className="sw-sep my-1" />
               <button role="menuitem" onClick={() => handleAction('native')} className={itemClass}>
-                <Smartphone className="w-4 h-4 text-gray-500" />
+                <Smartphone className="w-4 h-4 shrink-0" />
                 <span>{s['share.viaDevice']}</span>
               </button>
             </>

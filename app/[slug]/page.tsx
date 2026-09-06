@@ -5,6 +5,7 @@ import { PageNavigation } from '@/components/PageNavigation';
 import { PrevNextNavigation } from '@/components/PrevNextNavigation';
 import { CalendarPlus, History, Pencil } from 'lucide-react';
 import { ResourceMarkdownRenderer } from '@/components/ResourceMarkdownRenderer';
+import Link from '@/components/Link';
 import { RelativeTime } from '@/components/RelativeTime';
 import type { Metadata } from 'next';
 import { safeJsonLdStringify, SITE_URL } from '@/lib/metadata-utils';
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  const description = guide.description || `${guide.title} — a guide for Japanese visual novel readers.`;
+  const description = guide.description || `${guide.title}: a guide for Japanese visual novel readers.`;
   const path = `/${slug}/`;
   const heroImage = extractFirstImage(guide.content) || '/assets/hikaru-icon2.webp';
 
@@ -133,7 +134,7 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: guide.title,
-      description: guide.description || `${guide.title} — a guide for Japanese visual novel readers.`,
+      description: guide.description || `${guide.title}: a guide for Japanese visual novel readers.`,
       url: guideUrl,
       datePublished: guide.date,
       dateModified: guide.updated || guide.date,
@@ -185,7 +186,7 @@ function generateJsonLd(guide: NonNullable<ReturnType<typeof getContentBySlug>>,
     },
   ];
 
-  // Add FAQ schema — hardcoded for main guide, frontmatter-driven for others
+  // Add FAQ schema: hardcoded for main guide, frontmatter-driven for others
   if (slug === 'guide') {
     schemas.push(mainGuideFAQ);
   } else if (guide.faq && Array.isArray(guide.faq)) {
@@ -232,33 +233,53 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
 
           {/* Main Content */}
           <article className="flex-1 min-w-0 max-w-4xl">
-            <div className="text-gray-800 dark:text-gray-200">
+            <nav aria-label="Breadcrumb" className="mb-6">
+              <ol className="flex flex-wrap items-center gap-1.5 text-sm text-[color:var(--nezu)]">
+                <li>
+                  <Link href="/" className="hover:text-[color:var(--ai)] transition-colors">
+                    Home
+                  </Link>
+                </li>
+                <li aria-hidden="true">/</li>
+                <li>
+                  <Link href="/guides/" className="hover:text-[color:var(--ai)] transition-colors">
+                    Guides
+                  </Link>
+                </li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" className="text-[color:var(--ink)] truncate max-w-full">
+                  {guide.title}
+                </li>
+              </ol>
+            </nav>
+
+            <div className="text-[color:var(--text-secondary)]">
               <ResourceMarkdownRenderer content={guide.content} />
             </div>
 
-            <div className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-6 sm:gap-8 text-sm text-gray-600 dark:text-gray-300">
+            <div className="mt-12 pt-6 border-t border-[color:var(--rule)]">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-6 sm:gap-8 text-sm text-[color:var(--nezu)]">
                 <div className="flex flex-wrap items-center gap-6 sm:gap-8">
                   {guide.date && (
                     <div className="flex items-center gap-3">
-                      <CalendarPlus className="h-5 w-5 text-indigo-500" aria-hidden="true" />
+                      <CalendarPlus className="h-5 w-5 text-[color:var(--nezu)]" aria-hidden="true" />
                       <div className="flex flex-col">
-                        <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</span>
+                        <span className="font-mono text-xs uppercase tracking-wide text-[color:var(--nezu)]">Created</span>
                         <RelativeTime
                           dateString={guide.date}
-                          className="text-base font-medium text-gray-900 dark:text-gray-100"
+                          className="font-mono text-base font-medium text-[color:var(--ink)]"
                         />
                       </div>
                     </div>
                   )}
                   {guide.updated && (
                     <div className="flex items-center gap-3">
-                      <History className="h-5 w-5 text-indigo-500" aria-hidden="true" />
+                      <History className="h-5 w-5 text-[color:var(--nezu)]" aria-hidden="true" />
                       <div className="flex flex-col">
-                        <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Last updated</span>
+                        <span className="font-mono text-xs uppercase tracking-wide text-[color:var(--nezu)]">Last updated</span>
                         <RelativeTime
                           dateString={guide.updated}
-                          className="text-base font-medium text-gray-900 dark:text-gray-100"
+                          className="font-mono text-base font-medium text-[color:var(--ink)]"
                         />
                       </div>
                     </div>
@@ -268,7 +289,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
                   href={`https://github.com/drinosaret/vn-club-resources/edit/main/content/guides/${slug}.mdx`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 sm:ml-auto px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-300 dark:hover:border-indigo-600 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="inline-flex items-center gap-2 sm:ml-auto px-4 py-2 rounded-xs border border-[color:var(--rule)] hover:border-[color:var(--kohaku)] text-[color:var(--nezu)] hover:text-[color:var(--ink)] transition-colors"
                 >
                   <Pencil className="h-4 w-4" aria-hidden="true" />
                   <span className="font-medium">Edit on GitHub</span>

@@ -12,42 +12,35 @@ export function PaginationSkeleton() {
     <div className="flex flex-col items-center gap-2 my-4">
       <div className="flex items-center justify-center gap-1">
         {/* First page button */}
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg image-placeholder" />
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xs image-placeholder" />
         {/* Skip buttons -20, -10, -5 - hidden on mobile */}
         <div className="hidden sm:flex items-center gap-1">
-          <div className="w-8 h-8 rounded-md image-placeholder" />
-          <div className="w-8 h-8 rounded-md image-placeholder" />
-          <div className="w-8 h-8 rounded-md image-placeholder" />
+          <div className="w-8 h-8 rounded-xs image-placeholder" />
+          <div className="w-8 h-8 rounded-xs image-placeholder" />
+          <div className="w-8 h-8 rounded-xs image-placeholder" />
         </div>
         {/* Previous button */}
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg image-placeholder" />
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xs image-placeholder" />
         {/* Page indicator */}
-        <div className="w-24 h-8 sm:h-9 rounded-lg image-placeholder" />
+        <div className="w-24 h-8 sm:h-9 rounded-xs image-placeholder" />
         {/* Next button */}
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg image-placeholder" />
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xs image-placeholder" />
         {/* Skip buttons +5, +10, +20 - hidden on mobile */}
         <div className="hidden sm:flex items-center gap-1">
-          <div className="w-8 h-8 rounded-md image-placeholder" />
-          <div className="w-8 h-8 rounded-md image-placeholder" />
-          <div className="w-8 h-8 rounded-md image-placeholder" />
+          <div className="w-8 h-8 rounded-xs image-placeholder" />
+          <div className="w-8 h-8 rounded-xs image-placeholder" />
+          <div className="w-8 h-8 rounded-xs image-placeholder" />
         </div>
         {/* Last page button */}
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg image-placeholder" />
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xs image-placeholder" />
       </div>
       {/* "Showing X-Y of Z" skeleton */}
-      <div className="w-44 h-4 rounded-sm image-placeholder" />
+      <div className="w-44 h-4 rounded-xs image-placeholder" />
     </div>
   );
 }
 
-const skipButtonClass = `
-  inline-flex items-center justify-center
-  px-1.5 h-7 text-[11px] font-normal rounded-md tabular-nums
-  text-gray-400 dark:text-gray-500
-  hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300
-  active:bg-gray-200 dark:active:bg-gray-600
-  transition-colors duration-100
-`;
+const skipButtonClass = 'bw-page-skip px-1.5 h-7';
 
 const disabledClass = 'opacity-30 cursor-not-allowed pointer-events-none';
 
@@ -250,13 +243,7 @@ export const Pagination = memo(function Pagination({
   }, [isDropdownOpen, handleCloseDropdown]);
 
   // Navigation button styles
-  const navButtonClass = `
-    w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg
-    text-gray-500 dark:text-gray-400
-    hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200
-    active:bg-gray-200 dark:active:bg-gray-600
-    transition-colors duration-100
-  `;
+  const navButtonClass = 'bw-page w-8 h-8 sm:w-9 sm:h-9';
 
   const navButtonDisabledClass = `${navButtonClass} ${disabledClass}`;
 
@@ -305,21 +292,14 @@ export const Pagination = memo(function Pagination({
         <button
           ref={triggerRef}
           onClick={handleToggleDropdown}
-          className={`
-            px-3 h-8 flex items-center gap-1 rounded-lg
-            bg-gray-50 dark:bg-gray-800/50
-            text-sm font-medium text-gray-700 dark:text-gray-300
-            hover:bg-gray-100 dark:hover:bg-gray-700
-            active:bg-gray-200 dark:active:bg-gray-600
-            transition-colors duration-100
-          `}
+          className="bw-page-at px-3 h-8 gap-1"
           aria-expanded={isDropdownOpen}
           aria-haspopup="dialog"
           aria-label={`Page ${currentPage} of ${totalPages}. Click to jump to a specific page.`}
         >
-          <span className="tabular-nums">{currentPage.toLocaleString()}</span>
-          <span className="text-gray-400 dark:text-gray-500">/</span>
-          <span className="tabular-nums">{totalPages.toLocaleString()}</span>
+          <span>{currentPage.toLocaleString()}</span>
+          <span className="text-[color:var(--text-faint)]">/</span>
+          <span>{totalPages.toLocaleString()}</span>
         </button>
 
         {/* Dropdown - just the page jump input */}
@@ -334,14 +314,14 @@ export const Pagination = memo(function Pagination({
 
             {/* Dropdown menu */}
             <div
-              className={`absolute left-1/2 -translate-x-1/2 z-100 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${
+              className={`bw-menu absolute left-1/2 -translate-x-1/2 z-100 w-48 overflow-hidden ${
                 openUpward ? 'bottom-full mb-2' : 'top-full mt-2'
               }`}
               role="dialog"
             >
               <div className="p-3">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5">
-                  Go to page:
+                <label className="bw-label block mb-1.5">
+                  Go to page
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -355,15 +335,13 @@ export const Pagination = memo(function Pagination({
                       if (e.key === 'Enter') handleJump();
                     }}
                     placeholder={String(currentPage)}
-                    className={`flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded-lg focus:outline-hidden focus:ring-2 focus:border-transparent transition-colors ${
-                      jumpError
-                        ? 'border-red-500 dark:border-red-500 focus:ring-red-500'
-                        : 'border-gray-200 dark:border-gray-600 focus:ring-primary-500'
+                    className={`bw-field bw-num flex-1 px-3 py-2 text-sm ${
+                      jumpError ? 'bw-field--bad' : ''
                     }`}
                   />
                   <button
                     onClick={handleJump}
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+                    className="bw-action px-4 py-2"
                   >
                     Go
                   </button>
@@ -410,7 +388,7 @@ export const Pagination = memo(function Pagination({
 
       {/* Progress indicator */}
       {totalItems !== undefined && totalItems > 0 && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="bw-num text-xs text-[color:var(--nezu)]">
           Showing {startItem.toLocaleString()}–{endItem.toLocaleString()} of {totalItems.toLocaleString()}
         </span>
       )}

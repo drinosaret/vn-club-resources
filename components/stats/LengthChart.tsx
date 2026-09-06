@@ -56,11 +56,11 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
 
   if (total === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="st-card p-6">
+        <Heading className="st-card-title mb-4">
           Length Distribution
         </Heading>
-        <p className="text-gray-500 dark:text-gray-400">No length data available</p>
+        <p className="text-[color:var(--nezu)]">No length data available</p>
       </div>
     );
   }
@@ -69,21 +69,21 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
   const peakLength = data.reduce((max, d) => d.count > max.count ? d : max, data[0]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <div className="flex items-center justify-between mb-4">
+    <div className="st-card p-6">
+      <div className="st-card-head mb-4">
         <div className="flex items-center gap-2">
-          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Heading className="st-card-title">
             Length
           </Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
-        <div className="flex items-center gap-4 text-xs text-gray-400">
+        <div className="fig-chart-legend">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-linear-to-t from-gray-400 to-gray-300 dark:from-gray-600 dark:to-gray-500 rounded-xs" />
+            <div className="w-3 h-3 st-col" />
             <span># Novels</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full" />
+            <div className="w-2 h-2 bg-[color:var(--ai)] rounded-xs" />
             <span>Avg Rating</span>
           </div>
         </div>
@@ -91,14 +91,14 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
 
       <div className="relative h-48">
         {/* Y-axis labels (left - count) */}
-        <div className="absolute left-0 top-0 h-36 w-8 flex flex-col justify-between text-xs text-gray-400">
+        <div className="absolute left-0 top-0 h-36 w-8 flex flex-col justify-between font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
           <span>{maxCount}</span>
           <span>{Math.round(maxCount / 2)}</span>
           <span>0</span>
         </div>
 
         {/* Y-axis labels (right - rating) */}
-        <div className="absolute right-0 top-0 h-36 w-6 flex flex-col justify-between text-xs text-blue-400 text-right">
+        <div className="absolute right-0 top-0 h-36 w-6 flex flex-col justify-between text-right font-mono text-xs tabular-nums text-[color:var(--ai)]">
           <span>10</span>
           <span>5</span>
           <span>0</span>
@@ -117,32 +117,32 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
                 {/* Rating dot */}
                 {d.avgRating > 0 && (
                   <div
-                    className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white dark:border-gray-800 z-10"
+                    className="absolute z-10 h-3 w-3 rounded-xs border-2 border-[color:var(--surface)] bg-[color:var(--ai)]"
                     style={{ bottom: `${dotPosition}px` }}
                   />
                 )}
 
                 {/* Bar */}
                 <div
-                  className={`w-full rounded-t transition-colors relative ${
+                  className={`relative w-full ${
                     isPeak
-                      ? 'bg-linear-to-t from-primary-600 to-primary-400'
-                      : 'bg-linear-to-t from-gray-400 to-gray-300 dark:from-gray-600 dark:to-gray-500 group-hover:from-gray-500 group-hover:to-gray-400 dark:group-hover:from-gray-500 dark:group-hover:to-gray-400'
-                  } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
+                      ? 'st-col st-col--on'
+                      : 'st-col'
+                  } ${browseUrl ? 'st-col--pick' : ''}`}
                   style={{ height: `${Math.max(barHeight, d.count > 0 ? 4 : 0)}px` }}
                 >
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 st-tip on-box opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
                     <div className="flex flex-col items-center">
                       <span>
                         {d.label}: {d.count} VNs
-                        {d.avgRating > 0 && <span className="text-blue-300"> ({d.avgRating.toFixed(1)})</span>}
+                        {d.avgRating > 0 && <span className="text-[color:var(--ai)]"> ({d.avgRating.toFixed(1)})</span>}
                       </span>
                       {hasJpCounts && d.jpCount > 0 && (
-                        <span className="text-blue-300">{d.jpCount} Japanese-original</span>
+                        <span className="text-[color:var(--ai)]">{d.jpCount} Japanese-original</span>
                       )}
                     </div>
-                    {browseUrl && <div className="text-gray-400 text-[10px]">Click to browse</div>}
+                    {browseUrl && <div className="text-[color:var(--text-faint)] text-[10px]">Click to browse</div>}
                   </div>
                 </div>
               </>
@@ -170,7 +170,7 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
         </div>
 
         {/* X-axis labels */}
-        <div className="mx-4 sm:mx-10 mt-2 flex justify-around text-xs text-gray-400">
+        <div className="mx-4 sm:mx-10 mt-2 flex justify-around font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
           {data.map((d) => (
             <span key={d.key} className="text-center" style={{ width: '18%' }}>
               {d.label}
@@ -179,9 +179,9 @@ export function LengthChart({ distribution, entityId, entityType, entityName, to
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-          <span>Most common: <span className="font-semibold text-primary-600 dark:text-primary-400">{peakLength.label}</span></span>
+      <div className="mt-4 pt-4 border-t border-[color:var(--rule)]">
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-[color:var(--nezu)]">
+          <span>Most common: <span className="text-[color:var(--ink)]">{peakLength.label}</span></span>
           <span>VNs with length data: {total.toLocaleString()}</span>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { TrendingUp, BookOpen, Clock, Star, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { TrendLineChart } from './TrendLineChart';
 import { VNTimelineChart } from './VNTimelineChart';
 import { MonthlyActivity, VNDBListItem, formatScore } from '@/lib/vndb-stats-api';
@@ -96,9 +96,9 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
       <div className="space-y-6">
         {/* Loading skeleton */}
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-            <div className="h-4 w-48 rounded-sm mb-4 image-placeholder" />
-            <div className="h-48 rounded-sm image-placeholder" />
+          <div key={i} className="st-card p-5">
+            <div className="h-4 w-48 rounded-xs mb-4 image-placeholder" />
+            <div className="h-48 rounded-xs image-placeholder" />
           </div>
         ))}
       </div>
@@ -107,10 +107,9 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
 
   if (monthlyActivity.length === 0 && novels.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none text-center">
-        <TrendingUp className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Trend Data Yet</h3>
-        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+      <div className="st-card p-8 text-center">
+        <h3 className="st-card-title mb-2">No Trend Data Yet</h3>
+        <p className="st-card-sub mx-auto max-w-md">
           Trends are calculated from your reading history. Make sure your VNDB list has finish dates set for completed visual novels.
         </p>
       </div>
@@ -122,36 +121,29 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
       {/* Quick Stats */}
       {stats.activeMonths > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date Range</div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+          <div className="st-card p-4">
+            <span className="fig-label">Date range</span>
+            <span className="st-num mt-1.5 block text-sm text-[color:var(--ink)]">
               {stats.dateRange ? `${formatMonth(stats.dateRange.first)} - ${formatMonth(stats.dateRange.last)}` : '-'}
-            </div>
-            <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              {stats.activeMonths} months with activity
-            </div>
+            </span>
+            <span className="fig-delta">{stats.activeMonths} months with activity</span>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg per Month</div>
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">
-              {stats.avgPerMonth} {stats.avgPerMonth === 1 ? 'VN' : 'VNs'}
-            </div>
+          <div className="st-card p-4">
+            <span className="fig-label">Avg per month</span>
+            <span className="fig-value">{stats.avgPerMonth}</span>
+            <span className="fig-delta">{stats.avgPerMonth === 1 ? 'VN' : 'VNs'}</span>
           </div>
           {stats.peakMonth && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Peak Month</div>
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                {stats.peakMonth.completed} <span className="text-sm font-normal text-gray-500">({formatMonth(stats.peakMonth.month)})</span>
-              </div>
+            <div className="st-card p-4">
+              <span className="fig-label">Peak month</span>
+              <span className="fig-value">{stats.peakMonth.completed}</span>
+              <span className="fig-delta">{formatMonth(stats.peakMonth.month)}</span>
             </div>
           )}
           {stats.avgScore !== null && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Overall Avg Score</div>
-              <div className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                {formatScore(stats.avgScore)}
-              </div>
+            <div className="st-card p-4">
+              <span className="fig-label">Overall avg score</span>
+              <span className="fig-value">{formatScore(stats.avgScore)}</span>
             </div>
           )}
         </div>
@@ -164,7 +156,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
         xAxisKey="month"
         title="Visual Novels Read Over Time"
         subtitle="Only includes VNs with a finish date or vote timestamp"
-        color="#8b5cf6"
+        color="var(--kohaku)"
         areaFill={true}
         formatValue={(v) => `${v}`}
         formatXAxis={formatMonth}
@@ -172,7 +164,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
           <select
             value={vnsChartMode}
             onChange={(e) => setVnsChartMode(e.target.value as ChartMode)}
-            className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 shrink-0"
+            className="st-select shrink-0 px-2 py-1 text-xs"
           >
             <option value="cumulative">Cumulative</option>
             <option value="monthly">Monthly</option>
@@ -187,7 +179,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
         xAxisKey="month"
         title="Estimated Reading Hours Over Time"
         subtitle="Only includes VNs with a finish date or vote timestamp"
-        color="#06b6d4"
+        color="var(--ai)"
         areaFill={true}
         yAxisLabel="hours"
         formatValue={(v) => `${v.toLocaleString()}`}
@@ -196,7 +188,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
           <select
             value={hoursChartMode}
             onChange={(e) => setHoursChartMode(e.target.value as ChartMode)}
-            className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 shrink-0"
+            className="st-select shrink-0 px-2 py-1 text-xs"
           >
             <option value="cumulative">Cumulative</option>
             <option value="monthly">Monthly</option>
@@ -215,7 +207,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
           xAxisKey="month"
           title="Average Score Over Time"
           subtitle="Only includes VNs with a finish date or vote timestamp"
-          color="#f59e0b"
+          color="var(--kohaku)"
           areaFill={false}
           formatValue={(v) => v.toFixed(2)}
           formatXAxis={formatMonth}
@@ -223,7 +215,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
             <select
               value={scoreChartMode}
               onChange={(e) => setScoreChartMode(e.target.value as ChartMode)}
-              className="text-xs bg-gray-100 dark:bg-gray-700 border-0 rounded-md px-2 py-1 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-primary-500 shrink-0"
+              className="st-select shrink-0 px-2 py-1 text-xs"
             >
               <option value="monthly">Monthly</option>
               <option value="cumulative">Cumulative</option>
@@ -236,7 +228,7 @@ export function TrendsSection({ monthlyActivity, novels, isLoading }: TrendsSect
       <VNTimelineChart novels={novels} />
 
       {/* Info note */}
-      <div className="flex items-start gap-2 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex items-start gap-2 p-4 bg-[color:var(--surface-inset)] rounded-xs text-xs text-[color:var(--nezu)]">
         <Info className="w-4 h-4 shrink-0 mt-0.5" />
         <div>
           <p className="mb-1">

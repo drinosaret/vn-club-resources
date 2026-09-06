@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { Info } from 'lucide-react';
 
 interface StatsSummaryCardProps {
-  icon: React.ReactNode;
   label: string;
   value: string;
   subtext?: string;
@@ -53,7 +52,7 @@ function InfoTooltip({ text }: { text: string }) {
   }, [isOpen, updatePosition]);
 
   return (
-    <span className="inline-flex">
+    <span className="inline-flex align-middle ml-1.5">
       <button
         ref={buttonRef}
         type="button"
@@ -63,7 +62,7 @@ function InfoTooltip({ text }: { text: string }) {
         onFocus={() => setIsOpen(true)}
         onBlur={() => setIsOpen(false)}
         aria-describedby={tooltipId}
-        className="cursor-help rounded-sm text-gray-400 hover:text-gray-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 dark:hover:text-gray-300"
+        className="cursor-help rounded-xs text-[color:var(--text-faint)] hover:text-[color:var(--nezu)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus)]"
         aria-label="More info"
       >
         <Info className="w-3.5 h-3.5" />
@@ -73,7 +72,7 @@ function InfoTooltip({ text }: { text: string }) {
           ref={tooltipRef}
           id={tooltipId}
           role="tooltip"
-          className="fixed z-50 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg whitespace-normal max-w-[260px] text-center"
+          className="st-tip on-box fixed z-50 px-3 py-2 whitespace-normal max-w-[260px] text-center"
           style={{ top: pos.top, left: pos.left, visibility: positioned ? 'visible' : 'hidden' }}
         >
           {text}
@@ -84,35 +83,22 @@ function InfoTooltip({ text }: { text: string }) {
 }
 
 export function StatsSummaryCard({
-  icon,
   label,
   value,
   subtext,
   tooltip,
 }: StatsSummaryCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none hover:shadow-lg hover:shadow-gray-300/50 dark:hover:shadow-none transition-shadow duration-200">
-      {/* The icon sits with the figure rather than with the label. Beside the label it and
-          its gap take a third of a card's width in a four-up row, which leaves too little for
-          a two-word label: whichever card wraps then drops its figure and its subtext a line
-          below the card next to it, and only the boxes stay level. */}
-      <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-2 max-[359px]:min-h-10 max-[359px]:items-start">
+    <div className="st-card p-5">
+      {/* A label of two words wraps to a second line on a narrow screen. The floor keeps the
+          figures in a row level with each other rather than letting the card that wrapped
+          push its own figure a line below its neighbours. */}
+      <span className="fig-label max-[359px]:min-h-8">
         {label}
         {tooltip && <InfoTooltip text={tooltip} />}
       </span>
-      <div className="flex items-center gap-2">
-        <div className="text-primary-600 dark:text-primary-400">
-          {icon}
-        </div>
-        <div className="text-2xl font-bold text-gray-900 dark:text-white">
-          {value}
-        </div>
-      </div>
-      {subtext && (
-        <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {subtext}
-        </div>
-      )}
+      <span className="fig-value">{value}</span>
+      {subtext && <span className="fig-delta">{subtext}</span>}
     </div>
   );
 }

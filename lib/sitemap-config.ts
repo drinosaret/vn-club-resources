@@ -5,7 +5,7 @@
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://vnclub.org';
 export const URLS_PER_SITEMAP = 10000;
 
-// ID ranges for sitemap chunks — keeps generateSitemaps() and sitemap() in sync
+// ID ranges for sitemap chunks: keeps generateSitemaps() and sitemap() in sync
 export const VN_BASE_ID = 1000;
 export const CHAR_BASE_ID = 2000;
 export const TAG_BASE_ID = 3000;

@@ -93,11 +93,11 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
 
   if (data.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="st-card p-6">
+        <Heading className="st-card-title mb-4">
           Release Years
         </Heading>
-        <p className="text-gray-500 dark:text-gray-400">No release year data available</p>
+        <p className="text-[color:var(--nezu)]">No release year data available</p>
       </div>
     );
   }
@@ -109,37 +109,37 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
   const hoveredData = hoveredYear !== null ? data.find(d => d.year === hoveredYear) : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <div className="st-card p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Heading className="st-card-title">
             Release Year
           </Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
         <div className="flex items-center flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm">
           {hasRatings && (
-            <div className="flex items-center gap-3 sm:gap-4 text-gray-400">
+            <div className="fig-chart-legend">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 rounded-xs" />
+                <div className="w-3 h-3 st-col" />
                 <span># Novels</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                <div className="w-2 h-2 bg-[color:var(--ai)] rounded-xs" />
                 <span>Avg Rating</span>
               </div>
             </div>
           )}
-          <div className="text-gray-500 dark:text-gray-400 transition-colors duration-100 whitespace-nowrap">
+          <div className="text-[color:var(--nezu)] transition-colors duration-100 whitespace-nowrap">
             {hoveredData ? (
-              <span className="font-semibold text-primary-600 dark:text-primary-400">
+              <span className="text-[color:var(--ink)]">
                 {hoveredData.year}: {hoveredData.count} VNs
-                {hoveredData.jp_count > 0 && <span className="text-gray-500 dark:text-gray-400 font-normal"> ({hoveredData.jp_count} JP)</span>}
-                {hoveredData.avg_rating > 0 && <span className="text-blue-500"> ({hoveredData.avg_rating.toFixed(1)})</span>}
+                {hoveredData.jp_count > 0 && <span className="text-[color:var(--nezu)] font-normal"> ({hoveredData.jp_count} JP)</span>}
+                {hoveredData.avg_rating > 0 && <span className="text-[color:var(--ai)]"> ({hoveredData.avg_rating.toFixed(1)})</span>}
               </span>
             ) : (
-              <span className="text-gray-400 dark:text-gray-500">
-                Peak: <span className="font-semibold text-primary-600 dark:text-primary-400">{peakYear.year}</span>
+              <span className="text-[color:var(--text-faint)]">
+                Peak: <span className="text-[color:var(--ink)]">{peakYear.year}</span>
               </span>
             )}
           </div>
@@ -148,7 +148,7 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
 
       <div className="relative h-48">
         {/* Y-axis labels (left - count) */}
-        <div className="absolute left-0 top-0 h-[168px] w-8 flex flex-col justify-between text-xs text-gray-400 z-10 bg-white dark:bg-gray-800">
+        <div className="absolute left-0 top-0 h-[168px] w-8 flex flex-col justify-between font-mono text-xs tabular-nums text-[color:var(--text-faint)] z-10 bg-[color:var(--surface)]">
           <span>{maxCount}</span>
           <span>{Math.round(maxCount / 2)}</span>
           <span>0</span>
@@ -156,7 +156,7 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
 
         {/* Y-axis labels (right - rating) - only show if we have ratings, hidden on mobile */}
         {hasRatings && (
-          <div className="hidden sm:flex absolute right-0 top-0 h-[168px] w-6 flex-col justify-between text-xs text-blue-400 text-right z-10 bg-white dark:bg-gray-800">
+          <div className="hidden sm:flex absolute right-0 top-0 h-[168px] w-6 flex-col justify-between text-right font-mono text-xs tabular-nums text-[color:var(--ai)] z-10 bg-[color:var(--surface)]">
             <span>10</span>
             <span>5</span>
             <span>0</span>
@@ -177,20 +177,16 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
                   {/* Rating dot */}
                   {d.avg_rating > 0 && (
                     <div
-                      className="absolute w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white dark:border-gray-800 z-10"
+                      className="absolute z-10 h-2.5 w-2.5 rounded-xs border-2 border-[color:var(--surface)] bg-[color:var(--ai)]"
                       style={{ bottom: `${dotPosition}px` }}
                     />
                   )}
 
                   {/* Bar */}
                   <div
-                    className={`w-full rounded-t transition-colors duration-75 relative ${
-                      isPeak
-                        ? 'bg-linear-to-t from-primary-600 to-primary-400'
-                        : hoveredYear === d.year
-                          ? 'bg-linear-to-t from-primary-500 to-primary-300 dark:from-primary-600 dark:to-primary-400'
-                          : 'bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
-                    } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
+                    className={`relative w-full st-col ${
+                      isPeak || hoveredYear === d.year ? 'st-col--on' : ''
+                    } ${browseUrl ? 'st-col--pick' : ''}`}
                     style={{ height: `${Math.max(heightPx, d.count > 0 ? 4 : 0)}px` }}
                   />
                 </>
@@ -233,14 +229,14 @@ export function ReleaseYearChart({ distribution, distributionWithRatings, entity
         </div>
 
         {/* X-axis labels */}
-        <div className={`${hasRatings ? 'ml-8 mr-2 sm:ml-10 sm:mr-6' : 'ml-8 sm:ml-10 mr-2'} mt-2 flex justify-between text-xs text-gray-400`}>
+        <div className={`${hasRatings ? 'ml-8 mr-2 sm:ml-10 sm:mr-6' : 'ml-8 sm:ml-10 mr-2'} mt-2 flex justify-between text-xs text-[color:var(--text-faint)]`}>
           <span>{data[0]?.year}</span>
           <span>{data[data.length - 1]?.year}</span>
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+      <div className="mt-4 pt-4 border-t border-[color:var(--rule)]">
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-[color:var(--nezu)]">
           <span>Range: {data[0]?.year} - {data[data.length - 1]?.year}</span>
           <span>VNs with release date: {total.toLocaleString()}</span>
         </div>

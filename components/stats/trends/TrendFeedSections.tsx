@@ -1,7 +1,6 @@
 'use client';
 
 import Link from '@/components/Link';
-import { CalendarClock, CheckCircle2, Sparkles } from 'lucide-react';
 
 import { ChartFrame } from '@/components/charts/ChartFrame';
 import { LineChart } from '@/components/charts/LineChart';
@@ -59,7 +58,6 @@ function formatDate(value: string | null): string {
 }
 
 interface FeedListProps<T extends TitleIdentity> {
-  icon: React.ReactNode;
   title: string;
   blurb: string;
   entries: T[];
@@ -76,7 +74,6 @@ interface FeedListProps<T extends TitleIdentity> {
 }
 
 function FeedList<T extends TitleIdentity>({
-  icon,
   title,
   blurb,
   entries,
@@ -87,18 +84,13 @@ function FeedList<T extends TitleIdentity>({
   const { preference } = useTitlePreference();
 
   return (
-    <div className="rounded-xl border border-gray-200/60 dark:border-gray-700/80 bg-white dark:bg-gray-800 p-4 sm:p-5">
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
-        {icon}
-        {title}
-      </h3>
-      <p className="mt-0.5 mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-        {blurb}
-      </p>
+    <div className="st-card p-4 sm:p-5">
+      <h3 className="st-card-title">{title}</h3>
+      <p className="st-card-sub mb-3 mt-0.5">{blurb}</p>
       {/* An empty section says so rather than rendering nothing: a heading and a blurb
           standing over a gap reads as a page that only half arrived. */}
       {!entries.length ? (
-        <p className="py-4 text-center text-xs text-gray-500 dark:text-gray-400">
+        <p className="st-card-sub py-4 text-center">
           {built
             ? 'Nothing here at the moment.'
             : 'Not available until the nightly rebuild has run.'}
@@ -110,9 +102,9 @@ function FeedList<T extends TitleIdentity>({
           <li key={entry.id}>
             <Link
               href={entry.href}
-              className="group flex items-center gap-3 rounded-lg p-1.5 -m-0.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+              className="dg-row st-mid group"
             >
-              <span className="relative w-8 h-11 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-700">
+              <span className="relative h-11 w-8 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
                 {entry.image_url ? (
                   <NSFWImage
                     src={getProxiedImageUrl(entry.image_url, 128)}
@@ -125,14 +117,14 @@ function FeedList<T extends TitleIdentity>({
                 ) : null}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                <span className="dg-name block">
                   {name(entry, preference)}
                 </span>
-                <span className="block text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                <span className="block truncate font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
                   {detail(entry)}
                 </span>
               </span>
-              <span className="shrink-0 text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-300">
+              <span className="st-num shrink-0 text-sm text-[color:var(--ink)]">
                 {figure(entry)}
               </span>
             </Link>
@@ -146,7 +138,6 @@ function FeedList<T extends TitleIdentity>({
 export function NewReleasesList({ entries, built }: { entries: NewReleaseTitle[]; built?: boolean }) {
   return (
     <FeedList
-      icon={<Sparkles className="w-4 h-4 text-violet-500" />}
       title="New and finding an audience"
       blurb="Out in the last six months, by the votes they have drawn in the last thirty days. Titles leave this list by ageing out of it."
       entries={entries}
@@ -160,7 +151,6 @@ export function NewReleasesList({ entries, built }: { entries: NewReleaseTitle[]
 export function FinishingList({ entries, built }: { entries: FinishedTitle[]; built?: boolean }) {
   return (
     <FeedList
-      icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
       title="Being finished right now"
       blurb="Reading lists marked finished in the last sixty days. Dated on the entry rather than on a vote, so this counts an event rather than an opinion, and only readers who fill the field in."
       entries={entries}
@@ -174,7 +164,6 @@ export function FinishingList({ entries, built }: { entries: FinishedTitle[]; bu
 export function AnticipatedList({ entries, built }: { entries: AnticipatedTitle[]; built?: boolean }) {
   return (
     <FeedList
-      icon={<CalendarClock className="w-4 h-4 text-sky-500" />}
       title="Still to come"
       blurb="Japanese titles with nothing released yet and a date ahead, by how many readers are waiting. A port or a remaster does not qualify a title, so the figure is anticipation rather than reception."
       entries={entries}
@@ -206,7 +195,7 @@ export function CommunityPulse({ weeks }: { weeks: PulseWeek[] }) {
           rows: weeks.map((week) => [shortWeek(week.week), week.votes.toLocaleString()]),
         }}
         footer={
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="st-card-sub">
             {change >= 0 ? 'Up' : 'Down'} {Math.abs(change)}% across the period shown. The
             current week is left out until it is complete.
           </p>
@@ -214,7 +203,7 @@ export function CommunityPulse({ weeks }: { weeks: PulseWeek[] }) {
       >
         <LineChart
           points={weeks.map((week) => ({ x: week.week, y: week.votes }))}
-          color="#f97316"
+          color="var(--kohaku)"
           area
           formatX={shortWeek}
           formatValue={(value) => value.toLocaleString()}
@@ -235,7 +224,7 @@ export function CommunityPulse({ weeks }: { weeks: PulseWeek[] }) {
           ]),
         }}
         footer={
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="st-card-sub">
             {last.new_readers.toLocaleString()} of {last.readers.toLocaleString()} readers in
             the latest week were casting their first vote.
           </p>
@@ -243,7 +232,7 @@ export function CommunityPulse({ weeks }: { weeks: PulseWeek[] }) {
       >
         <LineChart
           points={weeks.map((week) => ({ x: week.week, y: week.readers }))}
-          color="#0891b2"
+          color="var(--ai)"
           area
           formatX={shortWeek}
           formatValue={(value) => value.toLocaleString()}

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from '@/components/Link';
-import { Medal } from 'lucide-react';
 
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { LeaderboardStanding, LeaderboardStandings } from '@/lib/vndb-stats-api';
@@ -22,12 +21,9 @@ interface YourStandingsProps {
   uid: string;
 }
 
-/** Medal colouring for podium places; everything else stays plain. */
+/** A podium place is filled; everything below it keeps the plain outlined mark. */
 function rankClasses(rank: number): string {
-  if (rank === 1) return 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200';
-  if (rank <= 3) return 'bg-gray-200 text-gray-700 dark:bg-gray-600/40 dark:text-gray-200';
-  if (rank <= 100) return 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300';
-  return 'bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400';
+  return rank <= 3 ? 'st-badge st-badge--top' : 'st-badge';
 }
 
 function StandingRow({ standing }: { standing: LeaderboardStanding }) {
@@ -35,19 +31,13 @@ function StandingRow({ standing }: { standing: LeaderboardStanding }) {
     <li>
       <Link
         href={`/stats/rankings/${standing.slug}/`}
-        className="flex items-center gap-3 px-2 py-1.5 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        className="dg-row st-mid group"
       >
-        <span
-          className={`shrink-0 px-2 py-0.5 rounded-md text-xs font-bold tabular-nums ${rankClasses(standing.rank)}`}
-        >
+        <span className={`shrink-0 ${rankClasses(standing.rank)}`}>
           #{standing.rank.toLocaleString()}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-gray-700 dark:text-gray-300">
-          {standing.title}
-        </span>
-        <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500 tabular-nums">
-          of {standing.total_ranked.toLocaleString()}
-        </span>
+        <span className="dg-name">{standing.title}</span>
+        <span className="dg-num">of {standing.total_ranked.toLocaleString()}</span>
       </Link>
     </li>
   );
@@ -89,18 +79,15 @@ export function YourStandings({ uid }: YourStandingsProps) {
   const shown = expanded ? data.standings : data.standings.slice(0, SHOWN_BY_DEFAULT);
 
   return (
-    <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none p-5">
-      <h2 className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-1">
-        <Medal className="w-4 h-4 text-gray-400" />
-        Where you rank
-      </h2>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+    <div className="st-card p-5">
+      <h2 className="st-card-title mb-1">Where you rank</h2>
+      <p className="st-card-sub mb-3">
         {data.standings.length === 1
           ? 'You place on one community leaderboard.'
           : `You place on ${data.standings.length} community leaderboards, best at #${best.rank.toLocaleString()}.`}
       </p>
 
-      <ul className="space-y-0.5">
+      <ul>
         {shown.map((standing) => (
           <StandingRow key={standing.slug} standing={standing} />
         ))}
@@ -111,16 +98,14 @@ export function YourStandings({ uid }: YourStandingsProps) {
           <button
             type="button"
             onClick={() => setExpanded((open) => !open)}
-            className="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+            className="sec-more"
           >
             {expanded ? 'Show fewer' : `Show all ${data.standings.length.toLocaleString()}`}
           </button>
         ) : null}
-        <Link
-          href="/stats/rankings/"
-          className="text-xs font-medium text-gray-500 hover:underline dark:text-gray-400"
-        >
+        <Link href="/stats/rankings/" className="sec-more">
           Browse all rankings
+          <span aria-hidden>&rarr;</span>
         </Link>
       </div>
     </div>

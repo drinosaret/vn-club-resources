@@ -4,7 +4,7 @@ import ChangelogList from '@/components/changelog/ChangelogList';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Changelog',
-  description: 'Every major VN Club update in one place: new features on vnclub.org and our Discord bots Hikaru, Muramasa, and Ichijou, all built for learning Japanese with visual novels.',
+  description: 'Every notable change to VN Club in one place: what is new on the site for readers of Japanese visual novels, and what has changed in the Discord bots Hikaru, Muramasa and Ichijou.',
   path: '/changelog/',
 });
 
@@ -30,10 +30,10 @@ export default function ChangelogPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(changelogJsonLd) }}
       />
-      <div className="container mx-auto px-4 py-12 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Changelog</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Major updates across VN Club, from the website to our Discord bots, all in one place.
+      <div className="container mx-auto max-w-3xl px-4 py-12">
+        <h1 className="sec-title">Changelog</h1>
+        <p className="sec-sub mb-8">
+          Notable changes across VN Club, from the site to the Discord bots, all in one place.
         </p>
         <ChangelogList />
       </div>

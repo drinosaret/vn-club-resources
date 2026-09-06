@@ -32,7 +32,7 @@ export function LinkifiedText({ text }: { text: string }) {
     parts.push(text.slice(lastIndex));
   }
 
-  // No URLs found — return plain text
+  // No URLs found: return plain text
   if (parts.length === 1 && typeof parts[0] === 'string') {
     return <>{text}</>;
   }
@@ -48,7 +48,7 @@ export function LinkifiedText({ text }: { text: string }) {
             href={part.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-[color:var(--ai)] hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
             {part.display}

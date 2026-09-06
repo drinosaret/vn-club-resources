@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from '@/components/Link';
-import { Pen, ChevronDown, ChevronUp, ArrowUpDown, Info, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 import type { StaffBreakdown } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getEntityDisplayName } from '@/lib/title-preference';
 import { RankNumber } from '@/components/stats/RankNumber';
@@ -137,14 +137,13 @@ export function StaffSection({ staff }: StaffSectionProps) {
 
   if (staff.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <div className="flex items-center gap-2 mb-4">
-          <Pen className="w-5 h-5 text-primary-500" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="st-card p-6">
+        <div className="mb-4">
+          <h3 className="st-card-title">
             Staff
           </h3>
         </div>
-        <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+        <p className="st-card-sub py-8 text-center">
           No staff credits found for your VNs.
         </p>
       </div>
@@ -152,22 +151,20 @@ export function StaffSection({ staff }: StaffSectionProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <div className="flex items-center justify-between mb-4">
+    <div className="st-card p-6">
+      <div className="st-card-head mb-4">
         <div className="flex items-center gap-2">
-          <Pen className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="st-card-title">
             Top Staff
           </h3>
         </div>
 
         {/* Sort toggle */}
         <div className="flex items-center gap-1 text-sm">
-          <ArrowUpDown className="w-4 h-4 text-gray-400" />
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
-            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-sm px-2 py-1 text-gray-700 dark:text-gray-300 text-sm focus:outline-hidden focus:ring-1 focus:ring-primary-500"
+            className="st-select px-2 py-1 text-xs"
           >
             <option value="weighted">Weighted</option>
             <option value="count">Count</option>
@@ -175,9 +172,9 @@ export function StaffSection({ staff }: StaffSectionProps) {
           </select>
           {sortMode === 'weighted' && (
             <div className="relative group" tabIndex={0} role="button" aria-label="Weighted score info">
-              <Info className="w-4 h-4 text-gray-400 cursor-help" />
-              <div className="absolute right-0 top-6 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all z-50">
-                <p className="font-medium mb-1">Weighted Score</p>
+              <Info className="w-4 h-4 text-[color:var(--text-faint)] cursor-help" />
+              <div className="absolute right-0 top-6 w-64 p-2 st-tip on-box opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all z-50">
+                <p className="fig-label mb-1">Weighted Score</p>
                 <p>Ranks by your ratings, with low-count entries pulled toward your personal average to prevent single-VN flukes from dominating.</p>
               </div>
             </div>
@@ -190,11 +187,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-none">
           <button
             onClick={() => setRoleFilter('all')}
-            className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap shrink-0 ${
-              roleFilter === 'all'
-                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+            className={`tab shrink-0 ${roleFilter === 'all' ? 'tab--on' : ''}`}
           >
             All
           </button>
@@ -202,11 +195,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
             <button
               key={role}
               onClick={() => setRoleFilter(role)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors whitespace-nowrap shrink-0 ${
-                roleFilter === role
-                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`tab shrink-0 ${roleFilter === role ? 'tab--on' : ''}`}
             >
               {ROLE_LABELS[role] || role}
             </button>
@@ -223,7 +212,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
       {sortedStaff.length > 10 && (
         <button
           onClick={() => setShowAll(!showAll)}
-          className="mt-4 w-full py-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center justify-center gap-1 transition-colors"
+          className="st-act mt-4 w-full"
         >
           {showAll ? (
             <>
@@ -239,14 +228,14 @@ export function StaffSection({ staff }: StaffSectionProps) {
 
       {/* Taste Analysis */}
       {(preferences.loved.length > 0 || preferences.avoided.length > 0) && (
-        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        <div className="mt-6 pt-6 border-t border-[color:var(--rule)]">
+          <h4 className="fig-label mb-3">
             Taste Analysis
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {preferences.loved.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                <p className="st-card-sub mb-2">
                   You rate higher than average:
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -254,7 +243,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
                     <Link
                       key={pref.id}
                       href={`/stats/staff/${pref.id}`}
-                      className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-sm hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors"
+                      className="st-chip"
                     >
                       {getEntityDisplayName(pref, preference)}
                     </Link>
@@ -264,7 +253,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
             )}
             {preferences.avoided.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                <p className="st-card-sub mb-2">
                   You rate lower than average:
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -272,7 +261,7 @@ export function StaffSection({ staff }: StaffSectionProps) {
                     <Link
                       key={pref.id}
                       href={`/stats/staff/${pref.id}`}
-                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-sm hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors"
+                      className="st-chip st-chip--low"
                     >
                       {getEntityDisplayName(pref, preference)}
                     </Link>
@@ -314,32 +303,32 @@ function StaffBar({ rank, staff, maxValue, sortMode, preference }: { rank: numbe
           <RankNumber rank={rank} />
           <Link
             href={`/stats/staff/${staff.id}`}
-            className="text-sm text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+            className="dg-name"
           >
             {displayName}
           </Link>
           {/* Hide role badge on mobile */}
-          <span className="hidden sm:inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 shrink-0">
+          <span className="st-badge st-badge--wide-only shrink-0">
             {formatRoles(staff.role)}
           </span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 text-sm shrink-0">
+        <div className="flex shrink-0 items-center gap-2 text-xs sm:gap-3">
           {/* On mobile: only show primary metric. On desktop: show all */}
           <Link
             href={`/browse?staff=${encodeURIComponent(staff.id)}&tag_names=${encodeURIComponent(`staff:${staff.id}:${displayName}`)}`}
-            className={`${sortMode === 'count' ? '' : 'hidden sm:inline-flex'} hover:text-primary-600 dark:hover:text-primary-400 transition-colors inline-flex items-center gap-1 ${sortMode === 'count'
-              ? 'text-primary-600 dark:text-primary-400 font-medium'
-              : 'text-gray-500 dark:text-gray-400'}`}
+            className={`${sortMode === 'count' ? '' : 'hidden sm:inline-flex'} hover:text-[color:var(--ai)] transition-colors inline-flex items-center gap-1 ${sortMode === 'count'
+              ? 'st-num text-[color:var(--ink)]'
+              : 'st-num text-[color:var(--text-faint)]'}`}
             title={`Browse all VNs with ${displayName}`}
           >
             {staff.count} VNs
-            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+
           </Link>
           {staff.avg_rating > 0 && (
             <span
               className={`${sortMode === 'rating' ? '' : 'hidden sm:inline'} ${sortMode === 'rating'
-                ? 'text-primary-600 dark:text-primary-400 font-medium'
-                : 'text-gray-500 dark:text-gray-400'}`}
+                ? 'st-num text-[color:var(--ink)]'
+                : 'st-num text-[color:var(--text-faint)]'}`}
               title="Your average rating"
             >
               {staff.avg_rating.toFixed(1)}
@@ -347,7 +336,7 @@ function StaffBar({ rank, staff, maxValue, sortMode, preference }: { rank: numbe
           )}
           {sortMode === 'weighted' && (
             <span
-              className="text-primary-600 dark:text-primary-400 font-medium"
+              className="st-num text-[color:var(--ink)]"
               title="Weighted score"
             >
               {staff.normalized_score.toFixed(1)}
@@ -355,9 +344,9 @@ function StaffBar({ rank, staff, maxValue, sortMode, preference }: { rank: numbe
           )}
         </div>
       </div>
-      <div className="h-2.5 bg-gray-100 dark:bg-gray-700/60 rounded-full overflow-hidden">
+      <div className="st-bar h-2">
         <div
-          className="h-full bg-linear-to-r from-primary-500 to-primary-400 dark:from-primary-600 dark:to-primary-400 rounded-full transition-all duration-300"
+          className="st-bar-fill st-bar-fill--quiet"
           style={{ width: `${Math.min(100, width)}%` }}
         />
       </div>

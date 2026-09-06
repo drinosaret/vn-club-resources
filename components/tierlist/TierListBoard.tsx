@@ -71,12 +71,8 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
     saveStatus,
   } = useTierListState(shareId);
 
-  // Display mode (lazy init from localStorage — no effect needed)
-  const [displayMode, setDisplayMode] = useState<DisplayMode>(() => {
-    if (typeof window === 'undefined') return 'covers';
-    const stored = localStorage.getItem('tierlist-display-mode');
-    return stored === 'covers' || stored === 'titles' ? stored : 'covers';
-  });
+  // Display mode
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('covers');
   const toggleDisplayMode = useCallback(() => {
     setDisplayMode(prev => {
       const next = prev === 'covers' ? 'titles' : 'covers';
@@ -86,17 +82,10 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
   }, []);
 
   // Thumbnail size
-  const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>(() => {
-    if (typeof window === 'undefined') return 'md';
-    const stored = localStorage.getItem('tierlist-thumbnail-size');
-    return stored === 'sm' || stored === 'md' || stored === 'lg' ? stored : 'md';
-  });
+  const [thumbnailSize, setThumbnailSize] = useState<ThumbnailSize>('md');
 
   // Cover aspect ratio
-  const [cropSquare, setCropSquare] = useState(() => {
-    try { return localStorage.getItem('tierlist-crop-square') === 'true'; }
-    catch { return false; }
-  });
+  const [cropSquare, setCropSquare] = useState(false);
   const sizeConfig = getSizeConfig(thumbnailSize, cropSquare);
 
   // Title / score overlays
@@ -105,10 +94,20 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
   const [titleMaxH, setTitleMaxH] = useState(40);
 
   // Direct-add: skip pool, add to last tier
-  const [directAdd, setDirectAdd] = useState(() => {
-    try { return localStorage.getItem('tierlist-direct-add') === 'true'; }
-    catch { return false; }
-  });
+  const [directAdd, setDirectAdd] = useState(false);
+
+  // The toolbar is server-rendered from the defaults above, and display mode decides which of its
+  // groups exist at all, so stored settings are applied after mount rather than in the initialisers.
+  useEffect(() => {
+    try {
+      const storedDisplay = localStorage.getItem('tierlist-display-mode');
+      if (storedDisplay === 'covers' || storedDisplay === 'titles') setDisplayMode(storedDisplay);
+      const storedSize = localStorage.getItem('tierlist-thumbnail-size');
+      if (storedSize === 'sm' || storedSize === 'md' || storedSize === 'lg') setThumbnailSize(storedSize);
+      setCropSquare(localStorage.getItem('tierlist-crop-square') === 'true');
+      setDirectAdd(localStorage.getItem('tierlist-direct-add') === 'true');
+    } catch { /* storage unavailable: keep the defaults */ }
+  }, []);
 
   // Settings dropdown
   const { preference, setPreference } = useTitlePreference();
@@ -149,7 +148,7 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
     setMode(newMode);
   }, [mode, vnCount, setMode, s]);
 
-  // Drop settle micro-interaction — applied via DOM to avoid re-rendering all rows
+  // Drop settle micro-interaction: applied via DOM to avoid re-rendering all rows
   const dropTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const applyDropFlash = useCallback((itemId: string) => {
@@ -241,7 +240,9 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
       if (typeof settings.showScores === 'boolean') setShowScores(settings.showScores);
       if (typeof settings.titleMaxH === 'number') setTitleMaxH(settings.titleMaxH);
       if (typeof settings.cropSquare === 'boolean') setCropSquare(settings.cropSquare);
-      if (settings.titlePreference) setPreference(settings.titlePreference);
+      // The payload also records the language its author read in, which is deliberately not
+      // applied: the title language is a site-wide setting the visitor owns, and the export and
+      // any onward share read it back from there rather than from this board.
     });
   }, [shareId, loadFromShare]);
 
@@ -271,17 +272,19 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
     movePoolItemToTier(vnId, addToTierId);
   }, [movePoolItemToTier, addToTierId]);
 
+  const currentPresetId = getCurrentPresetId(tierDefs);
+
   return (
     <div>
       {/* Share loading banner */}
       {shareLoading && (
-        <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+        <div className="toy-panel mb-3 flex items-center gap-2 p-3 text-sm text-[color:var(--nezu)]">
           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-          Loading shared tier list&hellip;
+          {s['share.loading']}
         </div>
       )}
       {shareError && (
-        <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+        <div className="bw-alert mb-3 p-3 text-sm">
           {shareError}
         </div>
       )}
@@ -294,14 +297,10 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
       {/* Toolbar */}
       <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
         {/* Content: Mode toggle */}
-        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="rc-seg">
           <button
             onClick={() => handleModeSwitch('vns')}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              mode === 'vns'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item gap-1 ${mode === 'vns' ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.vnMode']}
           >
             <Monitor className="w-3.5 h-3.5" />
@@ -309,11 +308,7 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
           </button>
           <button
             onClick={() => handleModeSwitch('characters')}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              mode === 'characters'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item gap-1 ${mode === 'characters' ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.charMode']}
           >
             <Users className="w-3.5 h-3.5" />
@@ -324,46 +319,42 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
         {/* Tiers: Preset selector */}
         <div className="relative inline-flex items-center">
           <select
-            value={getCurrentPresetId(tierDefs) ?? ''}
+            value={currentPresetId ?? ''}
             onChange={e => {
               const preset = getPresetById(e.target.value);
               if (preset) applyPreset(preset);
             }}
-            className="appearance-none pl-2.5 pr-7 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="st-select appearance-none pl-2.5 pr-7 py-1.5 text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus)]"
           >
+            {/* Once the rows have been edited the board matches no preset. An option carrying
+                the empty value is needed for that state: without one the control falls back to
+                showing the first preset as selected, which then cannot be chosen again. */}
+            {currentPresetId === null && <option value="" disabled>{s['toolbar.customPreset']}</option>}
             {TIER_PRESETS.map(preset => (
               <option key={preset.id} value={preset.id}>{preset.label}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-1.5 w-3 h-3 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute right-1.5 w-3 h-3 text-[color:var(--nezu)] pointer-events-none" />
         </div>
         {/* Display: Covers/Text + Size */}
-        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="rc-seg">
           <button
             onClick={displayMode === 'covers' ? undefined : toggleDisplayMode}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              displayMode === 'covers'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item rc-seg-item--icon ${displayMode === 'covers' ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.coverImages']}
           >
             <ImageIcon className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={displayMode === 'titles' ? undefined : toggleDisplayMode}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              displayMode === 'titles'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item rc-seg-item--icon ${displayMode === 'titles' ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.titleNames']}
           >
             <AlignJustify className="w-3.5 h-3.5" />
           </button>
         </div>
         {displayMode === 'covers' && (<>
-          <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="rc-seg">
             {(['sm', 'md', 'lg'] as const).map(size => (
               <button
                 key={size}
@@ -371,36 +362,24 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
                   setThumbnailSize(size);
                   localStorage.setItem('tierlist-thumbnail-size', size);
                 }}
-                className={`px-2 py-1.5 text-xs font-medium transition-colors ${
-                  thumbnailSize === size
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
+                className={`rc-seg-item ${thumbnailSize === size ? 'rc-seg-item--on' : ''}`}
                 title={size === 'sm' ? s['toolbar.smallThumbnails'] : size === 'md' ? s['toolbar.mediumThumbnails'] : s['toolbar.largeThumbnails']}
               >
                 {size.toUpperCase()}
               </button>
             ))}
           </div>
-          <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="rc-seg">
             <button
               onClick={() => { setCropSquare(false); localStorage.setItem('tierlist-crop-square', 'false'); }}
-              className={`px-2 py-1.5 text-xs font-medium transition-colors ${
-                !cropSquare
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
+              className={`rc-seg-item rc-seg-item--icon ${!cropSquare ? 'rc-seg-item--on' : ''}`}
               title={s['toolbar.coverAspect']}
             >
               <RectangleVertical className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => { setCropSquare(true); localStorage.setItem('tierlist-crop-square', 'true'); }}
-              className={`px-2 py-1.5 text-xs font-medium transition-colors ${
-                cropSquare
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
+              className={`rc-seg-item rc-seg-item--icon ${cropSquare ? 'rc-seg-item--on' : ''}`}
               title={s['toolbar.squareCrop']}
             >
               <Square className="w-3.5 h-3.5" />
@@ -410,68 +389,54 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
         <div ref={settingsRef} className="relative">
           <button
             onClick={() => setSettingsOpen(!settingsOpen)}
-            className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              settingsOpen
-                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`toy-btn ${settingsOpen ? 'toy-btn--on' : ''}`}
             title={s['controls.displaySettings']}
           >
             <Settings className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{s['controls.displaySettings']}</span>
           </button>
           {settingsOpen && (
-            <div
-              className="absolute right-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-2"
-            >
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={showScores} onChange={e => setShowScores(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+            <div className="toy-menu absolute right-0 top-full mt-1 z-50 w-52 p-3 space-y-2">
+              <label className="toy-check-row">
+                <input type="checkbox" checked={showScores} onChange={e => setShowScores(e.target.checked)} className="bw-check" />
                 {s['controls.scores']}
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={nsfwContext?.allRevealed ?? false} onChange={e => nsfwContext?.setAllRevealed(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+              <label className="toy-check-row">
+                <input type="checkbox" checked={nsfwContext?.allRevealed ?? false} onChange={e => nsfwContext?.setAllRevealed(e.target.checked)} className="bw-check" />
                 {s['controls.nsfw']}
               </label>
               {displayMode === 'covers' && (
-                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                  <input type="checkbox" checked={showTitles} onChange={e => setShowTitles(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+                <label className="toy-check-row">
+                  <input type="checkbox" checked={showTitles} onChange={e => setShowTitles(e.target.checked)} className="bw-check" />
                   {s['controls.titles']}
                 </label>
               )}
-              <div className="border-t border-gray-100 dark:border-gray-700" />
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={directAdd} onChange={e => { setDirectAdd(e.target.checked); localStorage.setItem('tierlist-direct-add', String(e.target.checked)); }} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+              <div className="border-t border-[color:var(--rule)]" />
+              <label className="toy-check-row">
+                <input type="checkbox" checked={directAdd} onChange={e => { setDirectAdd(e.target.checked); localStorage.setItem('tierlist-direct-add', String(e.target.checked)); }} className="bw-check" />
                 {s['controls.directAdd']}
               </label>
-              <div className="border-t border-gray-100 dark:border-gray-700" />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-300">{s['controls.language']}</span>
-                <div className="inline-flex items-center rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="border-t border-[color:var(--rule)]" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="toy-label">{s['controls.language']}</span>
+                <div className="rc-seg">
                   <button
                     onClick={() => setPreference('romaji')}
-                    className={`px-2 py-1 text-xs font-medium transition-colors ${
-                      preference === 'romaji'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`rc-seg-item ${preference === 'romaji' ? 'rc-seg-item--on' : ''}`}
                   >
                     EN
                   </button>
                   <button
                     onClick={() => setPreference('japanese')}
-                    className={`px-2 py-1 text-xs font-medium transition-colors ${
-                      preference === 'japanese'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`rc-seg-item ${preference === 'japanese' ? 'rc-seg-item--on' : ''}`}
                   >
                     JP
                   </button>
                 </div>
               </div>
-              <div className="border-t border-gray-100 dark:border-gray-700" />
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <span className="whitespace-nowrap">{s['controls.titleHeight']}</span>
+              <div className="border-t border-[color:var(--rule)]" />
+              <label className="toy-check-row">
+                <span className="toy-label whitespace-nowrap">{s['controls.titleHeight']}</span>
                 <input
                   type="number"
                   min={10}
@@ -483,21 +448,21 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
                     setTitleMaxH(v);
                   }}
                   onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                  className="w-12 px-1 py-0.5 text-xs text-center rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="toy-field toy-field--num w-12 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span>%</span>
+                <span className="toy-label">%</span>
               </label>
             </div>
           )}
         </div>
 
-        <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="toy-divider hidden sm:block" />
 
         {/* Data: Import + Clear */}
         {mode === 'vns' && (
           <button
             onClick={() => setShowImport(!showImport)}
-            className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className={`toy-btn ${showImport ? 'toy-btn--on' : ''}`}
           >
             <Upload className="w-3.5 h-3.5" />
             {s['toolbar.import']}
@@ -512,14 +477,14 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
             }
           }}
           disabled={vnCount === 0}
-          className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="toy-btn toy-btn--drop"
           title={s['toolbar.clear']}
         >
           <Trash2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{s['toolbar.clear']}</span>
         </button>
 
-        <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="toy-divider hidden sm:block" />
 
         {/* Export: Share + Copy + Export */}
         <TierListControls
@@ -545,7 +510,7 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
 
       {/* VNDB import form */}
       {mode === 'vns' && showImport && (
-        <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="toy-panel mb-3 p-3">
           <form onSubmit={handleImport} className="flex gap-2">
             <input
               type="text"
@@ -553,48 +518,48 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
               onChange={e => setImportInput(e.target.value)}
               placeholder={s['import.placeholder']}
               disabled={importing}
-              className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 focus:ring-blue-500"
+              className="toy-field flex-1 min-w-0"
             />
             <button
               type="submit"
               disabled={importing || !importInput.trim()}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+              className="toy-btn toy-btn--go"
             >
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : s['import.button']}
             </button>
           </form>
           <div className="mt-2 flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+            <label className="toy-check-row">
               <input
                 type="radio"
                 name="import-dest"
                 checked={!importToPool}
                 onChange={() => setImportToPool(false)}
-                className="text-blue-600 focus:ring-blue-500"
+                className="bw-check"
               />
               {s['import.autoSort']}
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+            <label className="toy-check-row">
               <input
                 type="radio"
                 name="import-dest"
                 checked={importToPool}
                 onChange={() => setImportToPool(true)}
-                className="text-blue-600 focus:ring-blue-500"
+                className="bw-check"
               />
               {s['import.toPool']}
             </label>
           </div>
           {importing && importProgress && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{importProgress}</p>
+            <p className="mt-2 text-xs text-[color:var(--nezu)]">{importProgress}</p>
           )}
           {importError && (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{importError}</p>
+            <p className="mt-2 text-xs text-[color:var(--beni-text)]">{importError}</p>
           )}
         </div>
       )}
 
-      {/* Title header — always visible, editable inline */}
+      {/* Title header: always visible, editable inline */}
       <div className="py-2.5">
         <input
           type="text"
@@ -602,14 +567,14 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
           onChange={e => setListTitle(e.target.value)}
           placeholder={s['controls.titlePlaceholder']}
           maxLength={60}
-          className="w-full text-base font-bold text-center bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 outline-none"
+          className="toy-title-field"
         />
       </div>
 
       {/* Tier list board */}
       <VnMapProvider value={vnMap}>
         <div ref={boardRef}>
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
+          <div className="toy-panel">
             {tierDefs.map((tier, index) => (
               <TierRow
                 key={tier.id}
@@ -653,33 +618,35 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
         </div>
       </VnMapProvider>
 
-      <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+      <p className="mt-2 text-center font-mono text-xs tabular-nums text-[color:var(--nezu)]">
         {vnCount !== 1
           ? s[mode === 'characters' ? 'controls.charCountPlural' : 'controls.vnCountPlural'].replace('{count}', String(vnCount))
           : s[mode === 'characters' ? 'controls.charCount' : 'controls.vnCount'].replace('{count}', String(vnCount))}
       </p>
-      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 text-center">
+      <p className="mt-1 text-center text-xs text-[color:var(--text-faint)]">
         {s[mode === 'characters' ? 'hint.textChars' : 'hint.text']}
       </p>
       {saveStatus && (
-        <p className="mt-1 text-center text-[10px] text-gray-300 dark:text-gray-600">
+        <p className="mt-1 text-center font-mono text-[10px] text-[color:var(--text-faint)]">
           {saveStatus.type === 'saved'
-            ? `Last autosaved: ${new Date(saveStatus.time).toLocaleTimeString()}`
-            : 'Draft cleared'}
+            ? t(s, 'status.lastSaved', {
+                time: new Date(saveStatus.time).toLocaleTimeString(locale === 'ja' ? 'ja-JP' : undefined),
+              })
+            : s['status.draftCleared']}
         </p>
       )}
 
       <div className="mt-6 flex justify-center gap-4">
         <Link
           href={locale === 'en' ? '/3x3-maker/' : '/ja/3x3-maker/'}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          className="toy-btn"
         >
           <Grid3X3 className="w-4 h-4" />
           {s['hint.try3x3']}
         </Link>
         <Link
           href={locale === 'en' ? '/roulette/' : '/ja/roulette/'}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+          className="toy-btn"
         >
           <Dices className="w-4 h-4" />
           {s['hint.tryRoulette']}
@@ -710,9 +677,9 @@ export function TierListBoard({ shareId }: TierListBoardProps) {
       )}
 
       {storageWarning && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 rounded-lg bg-amber-100 dark:bg-amber-900/80 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-sm shadow-lg flex items-center gap-2">
+        <div className="toy-toast">
           <span className="flex-1">{s['storage.warning']}</span>
-          <button onClick={dismissStorageWarning} className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium shrink-0">OK</button>
+          <button onClick={dismissStorageWarning} className="toy-btn shrink-0">OK</button>
         </div>
       )}
     </div>

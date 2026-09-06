@@ -47,16 +47,6 @@ export function extractFirstImage(content: string): string | null {
   return imgPath.replace(/^assets\//, '/assets/');
 }
 
-/**
- * Get the hero image for a guide by its slug.
- * Reads the guide content and extracts the first image.
- */
-export function getGuideHeroImage(slug: string): string | null {
-  const post = getContentBySlug('guides', slug);
-  if (!post) return null;
-  return extractFirstImage(post.content);
-}
-
 export function getContentBySlug(type: 'guides', slug: string): Post | null {
   const cacheKey = `${type}:${slug}`;
 

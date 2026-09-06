@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Loader2, AlertCircle, RefreshCw, Dices, X, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, RefreshCw, Dices, X, Eye, EyeOff } from 'lucide-react';
 import { vndbStatsApi, VNSearchResult, BrowseFilters } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
 import { VNGrid, GRID_IMAGE_WIDTHS } from '../browse/VNGrid';
@@ -56,17 +56,37 @@ function parseFiltersFromParams(params: URLSearchParams): BrowseFilters {
   };
 }
 
-/** Parse tag/trait/entity names from URL (stored as "type:id:name,type:id:name"). */
+const FILTER_ENTITY_TYPES: readonly string[] = ['tag', 'trait', 'staff', 'seiyuu', 'developer', 'publisher'];
+
+// The name is the last field of an entry, so a colon inside one is harmless. Only the entry
+// separator and the escape marker itself have to be escaped for the value to survive the
+// round trip; leaving everything else alone keeps the parameter readable.
+function encodeTagName(name: string): string {
+  return name.replace(/%/g, '%25').replace(/,/g, '%2C');
+}
+
+function decodeTagName(name: string): string {
+  return name.replace(/%2C/gi, ',').replace(/%25/gi, '%');
+}
+
+/**
+ * Parse tag/trait/entity names from URL (stored as "type:id:name,type:id:name").
+ * Entries with an unknown type or no id are dropped rather than passed on: they are display
+ * chips only, the ids that actually filter travel in their own parameters, and the chip
+ * renderer looks its icon up by type.
+ */
 function parseTagsFromUrl(param: string | null, mode: 'include' | 'exclude'): SelectedTag[] {
   if (!param) return [];
-  try {
-    return param.split(',').map((item) => {
-      const [type, id, ...nameParts] = item.split(':');
-      return { id, name: nameParts.join(':'), mode, type: type as FilterEntityType };
-    });
-  } catch {
-    return [];
-  }
+  return param.split(',').flatMap((item) => {
+    const [type, id, ...nameParts] = item.split(':');
+    if (!id || !FILTER_ENTITY_TYPES.includes(type)) return [];
+    return [{
+      id,
+      name: decodeTagName(nameParts.join(':')),
+      mode,
+      type: type as FilterEntityType,
+    }];
+  });
 }
 
 interface RandomPageClientProps {
@@ -118,7 +138,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
   useEffect(() => {
     async function resolveTagsFromIds() {
       if (initialTags.length > 0) {
-        // Tags from URL already have names — use as-is
+        // Tags from URL already have names; use as-is
         setSelectedTags(initialTags);
         return;
       }
@@ -145,7 +165,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
         } catch { /* use ID as fallback */ }
       }
 
-      // Entity IDs — use ID as name fallback
+      // Entity IDs: use ID as name fallback
       const entityParams: { param: string | undefined; type: FilterEntityType }[] = [
         { param: initialFilters.staff, type: 'staff' },
         { param: initialFilters.seiyuu, type: 'seiyuu' },
@@ -208,10 +228,10 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
     const includeTags = tags.filter(t => t.mode === 'include');
     const excludeTags = tags.filter(t => t.mode === 'exclude');
     if (includeTags.length > 0) {
-      params.set('tag_names', includeTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+      params.set('tag_names', includeTags.map(t => `${t.type}:${t.id}:${encodeTagName(t.name)}`).join(','));
     }
     if (excludeTags.length > 0) {
-      params.set('exclude_tag_names', excludeTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+      params.set('exclude_tag_names', excludeTags.map(t => `${t.type}:${t.id}:${encodeTagName(t.name)}`).join(','));
     }
 
     const queryString = params.toString();
@@ -274,7 +294,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
     }
   }, []);
 
-  // Initial fetch on mount — restore from snapshot on back-nav for instant display
+  // Initial fetch on mount: restore from snapshot on back-nav for instant display
   useEffect(() => {
     const isBackNav = sessionStorage.getItem('is-popstate-navigation') === 'true';
     if (isBackNav) {
@@ -416,7 +436,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
     fetchResults(pendingFiltersRef.current, count, true);
   }, [updateURL, fetchResults]);
 
-  // Randomize button — re-fetch with same filters, skip preload for snappy re-rolls
+  // Randomize button: re-fetch with same filters, skip preload for snappy re-rolls
   const handleRandomize = useCallback(() => {
     fetchResults(pendingFiltersRef.current, resultCountRef.current, true);
   }, [fetchResults]);
@@ -466,14 +486,14 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
   }, [filters, selectedTags]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[color:var(--ground)]">
       <div className="max-w-[1400px] mx-auto px-4 pt-6 pb-8">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="sec-title mb-2">
             Random Visual Novel
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="sec-sub">
             Discover your next read. Apply filters and roll for random picks.
           </p>
         </div>
@@ -493,20 +513,20 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
             onModeChange={(mode) => handleFilterChange({ tag_mode: mode })}
           />
           <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex min-h-6 items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={filters.include_children ?? true}
                 onChange={(e) => handleFilterChange({ include_children: e.target.checked })}
-                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-sm focus:ring-primary-500"
+                className="sw-check w-4 h-4"
               />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Include child tags</span>
+              <span className="text-xs text-[color:var(--nezu)]">Include child tags</span>
             </label>
             <div className="flex items-center gap-2">
               {(filters.spoiler_level ?? 0) === 0 ? (
-                <EyeOff className="w-4 h-4 text-gray-400" />
+                <EyeOff className="w-4 h-4 text-[color:var(--text-faint)]" />
               ) : (
-                <Eye className="w-4 h-4 text-amber-500" />
+                <Eye className="w-4 h-4 text-[color:var(--kohaku-text)]" />
               )}
               <SimpleSelect
                 options={[
@@ -550,15 +570,15 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
 
             {/* Error Banner */}
             {fetchError && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-6 mb-4">
+              <div className="sw-aside sw-aside--alert mt-6 mb-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="sw-aside-mark w-5 h-5 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-red-800 dark:text-red-200">{fetchError}</p>
+                    <p className="text-sm font-medium">{fetchError}</p>
                   </div>
                   <button
                     onClick={handleRandomize}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors shrink-0"
+                    className="sw-act shrink-0"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Retry
@@ -570,7 +590,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
             {/* Random Controls Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3 mt-3">
               <div className="flex items-center gap-4 min-w-0">
-                <span className="text-sm text-gray-500 dark:text-gray-400 relative">
+                <span className="text-sm text-[color:var(--nezu)] relative">
                   {/* Invisible placeholder keeps width stable during loading to prevent flex reflow on mobile.
                      Uses a fixed wide string so initial load (total=0) doesn't start narrow then shift. */}
                   <span className="invisible" aria-hidden="true">
@@ -579,12 +599,12 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
                   <span className="absolute inset-0 items-center inline-flex whitespace-nowrap">
                     {isLoading ? (
                       <span className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                        <span className="sw-spin w-3.5 h-3.5 shrink-0" />
                         Rolling...
                       </span>
                     ) : (
                       <span>
-                        <span className="text-gray-700 dark:text-gray-200">{total.toLocaleString()}</span>
+                        <span className="sw-num">{total.toLocaleString()}</span>
                         {' '}matching VNs
                       </span>
                     )}
@@ -593,7 +613,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
                 {hasActiveFilters && (
                   <button
                     onClick={handleClearFilters}
-                    className="flex items-center gap-1 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 lg:hidden"
+                    className="sw-act sw-act--narrow-only"
                   >
                     <X className="w-4 h-4" />
                     Clear filters
@@ -617,7 +637,7 @@ export default function RandomPageClient({ initialSearchParams }: RandomPageClie
                 <button
                   onClick={handleRandomize}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg text-sm transition-colors"
+                  className="sw-act sw-act--go"
                 >
                   <Dices className="w-4 h-4" />
                   Randomize

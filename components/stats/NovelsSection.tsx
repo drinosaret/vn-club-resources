@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
 import Link from '@/components/Link';
-import { List, Grid, Star, ChevronDown, BookOpen, Search, X, Loader2, Info } from 'lucide-react';
+import { List, Grid, ChevronDown, Search, X, Loader2, Info } from 'lucide-react';
 import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
 import type { VNDBListItem } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl, getTinySrc, type ImageWidth } from '@/lib/vndb-image-cache';
@@ -35,11 +35,11 @@ const LABEL_IDS: Record<StatusFilter, number | null> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  playing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  stalled: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  dropped: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  wishlist: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  playing: 'st-badge',
+  completed: 'st-badge',
+  stalled: 'st-badge',
+  dropped: 'st-badge st-badge--off',
+  wishlist: 'st-badge',
 };
 
 function getStatusFromLabels(labels?: Array<{ id: number; label?: string }>): string {
@@ -168,7 +168,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     return urls;
   }, []);
 
-  // Preload buffer — old gallery items stay visible while new page images load.
+  // Preload buffer: old gallery items stay visible while new page images load.
   // Pagination uses a lighter config (lower threshold + shorter timeout) since adjacent
   // page images are pre-decoded by the auto-prefetch effect.
   // List view disables preloading (no images to preload).
@@ -177,7 +177,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
     { isLoading, disabled: isPaginating || viewMode === 'list' },
   );
 
-  // Handle page change — sets pagination flag so preload buffer kicks in
+  // Handle page change: sets pagination flag so preload buffer kicks in
   const handlePageChange = useCallback((page: number) => {
     setIsPaginating(true);
     setCurrentPage(page);
@@ -244,19 +244,19 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
   const isBusy = isLoading || isPreloading;
 
   return (
-    <div ref={sectionRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none scroll-mt-20">
+    <div ref={sectionRef} className="st-card p-6 scroll-mt-20">
       {/* Header with title and filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Visual Novels ({filteredAndSorted.length}{langFilter === 'ja' ? ' JP' : ''})
+          <h3 className="st-card-title">
+            Visual Novels <span className="st-num">{filteredAndSorted.length}</span>
+            {langFilter === 'ja' ? ' JP' : ''}
           </h3>
           <span
             className="cursor-help"
             title={`Count based on VNDB database dump (updated daily). May differ slightly from live VNDB.${langFilter === 'ja' ? ' Filtered to Japanese language VNs only.' : ''}`}
           >
-            <Info className="w-4 h-4 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300" />
+            <Info className="w-4 h-4 text-[color:var(--text-faint)] hover:text-[color:var(--nezu)]" />
           </span>
         </div>
 
@@ -271,13 +271,13 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
                 setFilterDropdownOpen(!filterDropdownOpen);
                 setSortDropdownOpen(false);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="st-act"
             >
               <span>{filterLabels[statusFilter]}</span>
               <ChevronDown className="w-4 h-4" />
             </button>
             {filterDropdownOpen && (
-              <div className="absolute right-0 mt-1 py-1 w-40 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-20">
+              <div className="st-card absolute right-0 z-20 mt-1 w-40 py-1">
                 {(Object.keys(filterLabels) as StatusFilter[]).map((status) => (
                   <button
                     key={status}
@@ -285,12 +285,12 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
                       setStatusFilter(status);
                       setFilterDropdownOpen(false);
                     }}
-                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 flex justify-between ${
-                      statusFilter === status ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                    className={`st-opt justify-between ${
+                      statusFilter === status ? 'st-opt--on' : ''
                     }`}
                   >
                     <span>{filterLabels[status]}</span>
-                    <span className="text-gray-400">{statusCounts[status]}</span>
+                    <span className="st-num">{statusCounts[status]}</span>
                   </button>
                 ))}
               </div>
@@ -304,13 +304,13 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
                 setSortDropdownOpen(!sortDropdownOpen);
                 setFilterDropdownOpen(false);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="st-act"
             >
               <span>Sort: {sortLabels[sortBy]}</span>
               <ChevronDown className="w-4 h-4" />
             </button>
             {sortDropdownOpen && (
-              <div className="absolute right-0 mt-1 py-1 w-40 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-20">
+              <div className="st-card absolute right-0 z-20 mt-1 w-40 py-1">
                 {(Object.keys(sortLabels) as SortOption[]).map((option) => (
                   <button
                     key={option}
@@ -318,9 +318,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
                       setSortBy(option);
                       setSortDropdownOpen(false);
                     }}
-                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 ${
-                      sortBy === option ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-300'
-                    }`}
+                    className={`st-opt ${sortBy === option ? 'st-opt--on' : ''}`}
                   >
                     {sortLabels[option]}
                   </button>
@@ -330,28 +328,22 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
           </div>
 
           {/* View Toggle */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+          <div className="tabs" role="group" aria-label="Layout">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-white dark:bg-gray-600 shadow-xs'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              aria-pressed={viewMode === 'list'}
+              className={`st-act st-act--icon ${viewMode === 'list' ? 'st-act--go' : ''}`}
               title="List view"
             >
-              <List className="w-4 h-4" />
+              <List className="w-4 h-4" aria-hidden="true" />
             </button>
             <button
               onClick={() => setViewMode('gallery')}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === 'gallery'
-                  ? 'bg-white dark:bg-gray-600 shadow-xs'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              aria-pressed={viewMode === 'gallery'}
+              className={`st-act st-act--icon ${viewMode === 'gallery' ? 'st-act--go' : ''}`}
               title="Gallery view"
             >
-              <Grid className="w-4 h-4" />
+              <Grid className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -360,21 +352,22 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
       {/* Search Bar - right aligned */}
       <div className="flex justify-end mb-5">
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--text-faint)]" />
           <input
             type="search"
             autoComplete="off"
             placeholder="Search by title, Japanese name, or alias..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500"
+            className="st-field w-full py-2 pl-10 pr-10 text-sm"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
+              className="st-act st-act--icon absolute right-2 top-1/2 -translate-y-1/2"
+              aria-label="Clear search"
             >
-              <X className="w-4 h-4 text-gray-400" />
+              <X className="w-4 h-4 text-[color:var(--text-faint)]" />
             </button>
           )}
         </div>
@@ -386,11 +379,11 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
           <PaginationSkeleton />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 my-4">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-              <div key={i} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden">
+              <div key={i} className="bg-[color:var(--surface-inset)] rounded-xs overflow-hidden">
                 <div className="aspect-3/4 image-placeholder" />
                 <div className="p-3 space-y-2">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
-                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-600 rounded-sm image-placeholder" />
+                  <div className="h-4 rounded-xs image-placeholder" />
+                  <div className="h-3 w-16 rounded-xs image-placeholder" />
                 </div>
               </div>
             ))}
@@ -399,17 +392,17 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
         </>
       )}
 
-      {/* Content with loading overlay — hidden during initial preload (skeleton covers it) */}
+      {/* Content with loading overlay: hidden during initial preload (skeleton covers it) */}
       {novels.length > 0 && (displayedItems.length > 0 || filteredAndSorted.length === 0) && (
         <div className="relative">
           {/* Loading overlay - only during initial data refresh, NOT during pagination */}
           <div
             className={`absolute inset-0 z-10 flex items-center justify-center
-              bg-gray-50/70 dark:bg-gray-900/70 backdrop-blur-[1px]
+              bg-[color:var(--surface-inset)] backdrop-blur-[1px]
               transition-opacity duration-200 ease-out
               ${isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           >
-            <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+            <Loader2 className="w-8 h-8 text-[color:var(--ai)] animate-spin" />
           </div>
 
           {/* Pagination Top */}
@@ -427,8 +420,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
           {/* Empty state */}
           {filteredAndSorted.length === 0 && !isLoading && (
             <div className="text-center py-12">
-              <BookOpen className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-[color:var(--nezu)]">
                 {searchQuery
                   ? `No visual novels found matching "${searchQuery}".`
                   : 'No visual novels found with this filter.'}
@@ -436,7 +428,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="mt-2 text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                  className="sec-more mt-2"
                 >
                   Clear search
                 </button>
@@ -446,7 +438,7 @@ export function NovelsSection({ novels, isLoading = false }: NovelsSectionProps)
 
           {/* List View */}
           {viewMode === 'list' && filteredAndSorted.length > 0 && (
-            <div className={`divide-y divide-gray-100 dark:divide-gray-700 ${isBusy ? 'pointer-events-none' : ''}`}>
+            <div className={`divide-y divide-[color:var(--rule)] ${isBusy ? 'pointer-events-none' : ''}`}>
               {displayedItems.map((novel) => (
                 <NovelRow key={novel.id} novel={novel} />
               ))}
@@ -490,7 +482,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   const globalRating = novel.vn?.rating ? novel.vn.rating.toFixed(1) : '-';
   const releaseYear = novel.vn?.released?.substring(0, 4) || '-';
   const status = getStatusFromLabels(novel.labels);
-  const statusColor = STATUS_COLORS[status] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+  const statusColor = STATUS_COLORS[status] || 'bg-[color:var(--surface-inset)] text-[color:var(--text-secondary)]';
   const displayTitle = novel.vn ? getDisplayTitle({ title: novel.vn.title, title_jp: novel.vn.title_jp, title_romaji: novel.vn.title_romaji }) : novel.id;
 
   const baseImageUrl = novel.vn?.image?.url ? getProxiedImageUrl(novel.vn.image.url, { width: 128, vnId: novel.id }) : null;
@@ -500,10 +492,10 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
   return (
     <Link
       href={`/vn/${novel.id}`}
-      className="flex items-center gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors -mx-2 px-2 rounded-lg"
+      className="st-row flex items-center gap-4 py-3"
     >
       {/* Thumbnail */}
-      <div className="shrink-0 w-12 h-16 relative rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700">
+      <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
         {showImage ? (
           <NSFWImage
             src={imageUrl}
@@ -517,8 +509,7 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
             compact
           />
         ) : !imageError ? (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-            <BookOpen className="w-5 h-5" />
+          <div className="absolute inset-0 flex items-center justify-center text-[color:var(--text-faint)]">
           </div>
         ) : null}
         {showImage && !imageLoaded && (
@@ -532,12 +523,12 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
           own line the title takes the full width and the scores lose nothing. */}
       <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
         <div className="min-w-0 sm:flex-1">
-          <h4 className="font-medium text-gray-900 line-clamp-2 sm:block sm:truncate dark:text-white">
+          <h4 className="dg-name line-clamp-2 dg-name--wrap sm:block sm:truncate">
             {displayTitle}
           </h4>
-          <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 mt-1 text-sm text-[color:var(--nezu)]">
             <span>{releaseYear}</span>
-            <span className={`px-1.5 py-0.5 text-xs rounded-sm ${statusColor}`}>
+            <span className={`px-1.5 py-0.5 text-xs rounded-xs ${statusColor}`}>
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
           </div>
@@ -547,15 +538,14 @@ const NovelRow = memo(function NovelRow({ novel }: { novel: VNDBListItem }) {
             label stacked over its value once there is room beside it. */}
         <div className="mt-1.5 flex items-center gap-4 text-sm sm:mt-0 sm:shrink-0">
           <div className="flex items-baseline gap-1.5 sm:block sm:text-right">
-            <div className="text-xs text-gray-400 dark:text-gray-500">My Score</div>
-            <div className={`font-medium ${novel.vote ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'}`}>
+            <div className="text-xs text-[color:var(--text-faint)]">My Score</div>
+            <div className={`font-medium ${novel.vote ? 'text-[color:var(--ai)]' : 'text-[color:var(--text-faint)]'}`}>
               {userScore}
             </div>
           </div>
           <div className="flex items-baseline gap-1.5 sm:block sm:text-right">
-            <div className="text-xs text-gray-400 dark:text-gray-500">Global</div>
-            <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
-              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+            <div className="text-xs text-[color:var(--text-faint)]">Global</div>
+            <div className="flex items-center gap-1 text-[color:var(--text-secondary)]">
               {globalRating}
             </div>
           </div>
@@ -589,7 +579,7 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
 
   return (
     <div
-      className="group bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden sm:shadow-xs sm:hover:shadow-md sm:transition-shadow"
+      className="group bg-[color:var(--surface-inset)] rounded-xs overflow-hidden sm:transition-shadow"
     >
       {/* Image */}
       <Link href={`/vn/${novel.id}`} className="block relative aspect-3/4">
@@ -607,26 +597,24 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
             onError={handleImageError}
           />
         ) : !imageError ? (
-          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
-            <BookOpen className="w-6 h-6" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--surface-inset)] text-[color:var(--text-faint)]">
           </div>
         ) : null}
-        {/* Shimmer — rendered after NSFWImage so it stacks on top of NSFW overlay */}
+        {/* Shimmer: rendered after NSFWImage so it stacks on top of NSFW overlay */}
         {showImage && !imageLoaded && (
           <div className="absolute inset-0 image-placeholder" />
         )}
 
         {/* User score badge */}
         {userScore && (
-          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-primary-600 text-white text-[11px] font-semibold rounded-sm z-10">
+          <div className="st-mark st-mark--mine left-1.5 top-1.5">
             {userScore}
           </div>
         )}
 
         {/* Global rating badge */}
         {globalRating && (
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/70 text-white text-[11px] font-medium rounded-sm z-10">
-            <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+          <div className="st-mark right-1.5 top-1.5">
             {globalRating}
           </div>
         )}
@@ -635,12 +623,12 @@ const NovelCard = memo(function NovelCard({ novel }: { novel: VNDBListItem }) {
       {/* Title */}
       <div className="p-2">
         <Link href={`/vn/${novel.id}`}>
-          <h4 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          <h4 className="font-medium text-xs text-[color:var(--ink)] line-clamp-2 leading-tight group-hover:text-[color:var(--ai)] transition-colors">
             {displayTitle}
           </h4>
         </Link>
         {novel.vn?.released && (
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-[11px] text-[color:var(--nezu)] mt-0.5">
             {novel.vn.released.substring(0, 4)}
           </p>
         )}

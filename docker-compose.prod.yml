@@ -91,7 +91,9 @@ services:
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in deploy/.env.prod}@redis:6379
       - DEBUG=false
       - ENABLE_API_DOCS=true
-      - CORS_ORIGINS=["https://vnclub.org","https://api.vnclub.org","https://beta.vnclub.org"]
+      # The origins the browser is allowed to call the API from. Overridable in
+      # deploy/.env.prod, which is where a new front end origin is added.
+      - CORS_ORIGINS=${CORS_ORIGINS:-["https://vnclub.org","https://api.vnclub.org","https://beta.vnclub.org"]}
       - VNDB_API_URL=https://api.vndb.org/kana
       - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
       - DUMP_STORAGE_PATH=/app/data
@@ -105,6 +107,10 @@ services:
       - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}
       - TURNSTILE_FAIL_OPEN=${TURNSTILE_FAIL_OPEN:-false}
       - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
+      # Engine switch for the predicted rating the recommendations page describes.
+      # It defaults to off, and the worker sets it too so the nightly cached pages
+      # carry the same figure as a freshly computed one.
+      - REC_PREDICTED_RATING=1
       - PYTHONUNBUFFERED=1
     depends_on:
       db:
@@ -312,6 +318,8 @@ services:
       # VNCR_GUILD_ID overrides only if the source guild differs.
       - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
       - VNCR_GUILD_ID=${VNCR_GUILD_ID:-}
+      # Pairs with the api service, which the nightly cached pages written here must match.
+      - REC_PREDICTED_RATING=1
       - PYTHONUNBUFFERED=1
     depends_on:
       db:

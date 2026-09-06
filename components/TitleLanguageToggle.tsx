@@ -146,77 +146,66 @@ export function TitleLanguageToggle() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm"
+        className="sw-icon gap-0.5 sm:gap-1"
         aria-label="Open settings"
         title="Display settings"
       >
-        <Settings2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        <span className="title-language-label font-medium text-gray-700 dark:text-gray-300 w-5 text-center">{mounted ? currentOption.label : ''}</span>
-        <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
+        <Settings2 className="w-4 h-4" />
+        <span className="title-language-label font-mono w-5 text-center">{mounted ? currentOption.label : ''}</span>
+        <ChevronDown className={`w-3 h-3 transition-transform hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1.5 z-50">
-          <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <div className="sw-menu absolute right-0 mt-1 w-64 py-1.5 z-50">
+          <div className="sw-plate px-3 pt-1 pb-1.5">
             Title Language
           </div>
           {OPTIONS.map((option) => (
             <button
               key={option.value}
               onClick={() => setPreference(option.value)}
-              className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-                preference === option.value ? 'bg-gray-50 dark:bg-gray-700/50' : ''
-              }`}
+              className={`sw-opt justify-between ${preference === option.value ? 'sw-opt--on' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                <Languages className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {option.description}
-                </div>
-              </div>
+              <span className="flex items-center gap-2">
+                <Languages className="w-3.5 h-3.5 shrink-0" />
+                {option.description}
+              </span>
               {preference === option.value && (
-                <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                <Check className="w-4 h-4 shrink-0 sw-tick" />
               )}
             </button>
           ))}
 
-          <div className="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div className="sw-sep mx-3 my-1" />
 
-          <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <div className="sw-plate px-3 pt-1 pb-1.5">
             Content
           </div>
           <button
             onClick={() => nsfwContext?.setAllRevealed(!nsfwContext.allRevealed)}
-            className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-              nsfwContext?.allRevealed ? 'bg-gray-50 dark:bg-gray-700/50' : ''
-            }`}
+            className={`sw-opt justify-between ${nsfwContext?.allRevealed ? 'sw-opt--on' : ''}`}
           >
-            <div className="flex items-center gap-2">
-              <Eye className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                Show NSFW uncensored
-              </div>
-            </div>
+            <span className="flex items-center gap-2">
+              <Eye className="w-3.5 h-3.5 shrink-0" />
+              Show NSFW uncensored
+            </span>
             {nsfwContext?.allRevealed && (
-              <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              <Check className="w-4 h-4 shrink-0 sw-tick" />
             )}
           </button>
 
           {process.env.NODE_ENV === 'development' && (
             <>
-              <div className="mx-3 my-1 h-px bg-gray-200 dark:bg-gray-700" />
+              <div className="sw-sep mx-3 my-1" />
 
-              <div className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 flex items-center justify-between">
+              <div className="sw-plate px-3 pt-1 pb-1.5 flex items-center justify-between">
                 <span>Debug Settings</span>
                 {isFirefox ? (
-                  <button
-                    onClick={() => writeDebugFlags([])}
-                    className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  >
+                  <button onClick={() => writeDebugFlags([])} className="sw-act">
                     Clear
                   </button>
                 ) : (
-                  <span className="text-[10px] normal-case tracking-normal text-gray-400 dark:text-gray-500">Firefox only</span>
+                  <span className="normal-case tracking-normal text-[color:var(--text-faint)]">Firefox only</span>
                 )}
               </div>
 
@@ -227,20 +216,16 @@ export function TitleLanguageToggle() {
                     key={option.key}
                     onClick={() => toggleDebugFlag(option.key)}
                     disabled={!isFirefox}
-                    className={`w-full px-3 py-2 text-left flex items-center justify-between transition-colors ${
-                      isFirefox
-                        ? 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                        : 'opacity-50 cursor-not-allowed'
-                    } ${active ? 'bg-gray-50 dark:bg-gray-700/50' : ''}`}
+                    className={`sw-opt justify-between ${active ? 'sw-opt--on' : ''}`}
                   >
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{option.label}</div>
-                    {active && <Check className="w-4 h-4 text-primary-600 dark:text-primary-400" />}
+                    <span>{option.label}</span>
+                    {active && <Check className="w-4 h-4 shrink-0 sw-tick" />}
                   </button>
                 );
               })}
 
               {isFirefox && debugValue && (
-                <div className="px-3 pt-1 pb-1 text-[11px] text-gray-500 dark:text-gray-400 truncate" title={debugValue}>
+                <div className="px-3 pt-1 pb-1 text-[11px] text-[color:var(--nezu)] truncate" title={debugValue}>
                   Active: {debugValue}
                 </div>
               )}

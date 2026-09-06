@@ -40,23 +40,23 @@ export function TitleList({ heading, note, titles, emptyNote, limit = 5 }: Title
 
   return (
     <div>
-      <h3 className="font-semibold text-gray-900 dark:text-white">{heading}</h3>
-      <p className="mt-0.5 mb-3 text-xs text-gray-500 dark:text-gray-400">{note}</p>
+      <h3 className="st-card-title">{heading}</h3>
+      <p className="st-card-sub mb-3 mt-0.5">{note}</p>
 
       {titles.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 italic">{emptyNote}</p>
+        <p className="st-card-sub italic">{emptyNote}</p>
       ) : (
         <ol className="space-y-2">
           {titles.slice(0, limit).map((entry, index) => (
             <li key={entry.id}>
               <Link
                 href={entry.href}
-                className="group flex items-center gap-3 rounded-lg p-1.5 -m-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                className="dg-row st-mid group"
               >
-                <span className="w-4 shrink-0 text-right text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">
+                <span className="dg-rank">
                   {index + 1}
                 </span>
-                <span className="relative w-8 h-11 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-700">
+                <span className="relative h-11 w-8 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
                   {entry.image_url ? (
                     <NSFWImage
                       src={getProxiedImageUrl(entry.image_url, 128)}
@@ -69,10 +69,10 @@ export function TitleList({ heading, note, titles, emptyNote, limit = 5 }: Title
                   ) : null}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                  <span className="dg-name block">
                     {displayName(entry, preference)}
                   </span>
-                  <span className="block text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                  <span className="block truncate font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
                     {entry.value_label}
                   </span>
                 </span>

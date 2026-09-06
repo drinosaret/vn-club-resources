@@ -1,21 +1,15 @@
 import type { Metadata } from 'next';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
+import { generatePageMetadata, localizedAlternates, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 import RoulettePageClient from '@/components/roulette/RoulettePageClient';
 
 export const metadata: Metadata = {
   ...generatePageMetadata({
     title: '\u30a8\u30ed\u30b2\u30eb\u30fc\u30ec\u30c3\u30c8 - \u30db\u30a4\u30fc\u30eb\u3092\u56de\u3057\u3066\u6b21\u306e\u4e00\u4f5c\u3092\u9078\u307c\u3046',
-    description: '\u30a8\u30ed\u30b2\u3092\u30eb\u30fc\u30ec\u30c3\u30c8\u30db\u30a4\u30fc\u30eb\u306b\u8ffd\u52a0\u3057\u3066\u30b9\u30d4\u30f3\u3002\u30b0\u30eb\u30fc\u30d7\u30e2\u30fc\u30c9\u306a\u3089\u53cb\u9054\u540c\u58eb\u3067\u30a8\u30ed\u30b2\u3092\u632f\u308a\u5206\u3051\u3066\u8aad\u66f8\u4f1a\u306b\u3082\u4f7f\u3048\u308b\u3002',
+    description: '\u30a8\u30ed\u30b2\u3092\u30eb\u30fc\u30ec\u30c3\u30c8\u30db\u30a4\u30fc\u30eb\u306b\u8ffd\u52a0\u3057\u3066\u30b9\u30d4\u30f3\u3057\u3001\u6b21\u306b\u8aad\u3080\u4e00\u4f5c\u3092\u6c7a\u5b9a\u3002VNDB\u304b\u3089\u691c\u7d22\u3057\u3066\u5019\u88dc\u3092\u8ffd\u52a0\u3067\u304d\u3001\u30b0\u30eb\u30fc\u30d7\u30e2\u30fc\u30c9\u306a\u3089\u53cb\u9054\u540c\u58eb\u3067\u30a8\u30ed\u30b2\u3092\u632f\u308a\u5206\u3051\u3066\u8aad\u66f8\u4f1a\u3084\u4f01\u753b\u306b\u3082\u4f7f\u3048\u308b\u3002',
     path: '/ja/roulette/',
   }),
-  alternates: {
-    canonical: `${SITE_URL}/ja/roulette/`,
-    languages: {
-      'en': `${SITE_URL}/roulette/`,
-      'ja': `${SITE_URL}/ja/roulette/`,
-    },
-  },
+  alternates: localizedAlternates('roulette', 'ja'),
 };
 
 const jsonLd = [
@@ -67,17 +61,17 @@ export default function Page() {
       />
       <RoulettePageClient />
 
-      <section className="max-w-2xl mx-auto px-4 py-12 text-sm text-gray-600 dark:text-gray-400">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">使い方</h2>
+      <section className="mx-auto max-w-2xl px-4 py-12 font-jp text-sm text-[color:var(--nezu)]">
+        <h2 className="rel-group-title">使い方</h2>
 
-        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">エロゲの追加</h3>
-        <p className="mb-3">タイトルかVNDB IDで検索して、クリックでホイールに追加。2〜15作品まで入れられる。ゴミ箱アイコンで個別に消すか、全部クリアしてやり直せる。</p>
+        <h3 className="mt-4 mb-1 font-display font-bold text-[color:var(--ink)]">エロゲの追加</h3>
+        <p className="mb-3">タイトルかVNDB IDで検索して、クリックでホイールに追加します。2〜15作品まで追加できます。ゴミ箱アイコンで個別に削除するか、全部クリアしてやり直せます。</p>
 
-        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">ホイールを回す</h3>
-        <p className="mb-3">スピンボタンを押すとホイールが回って、止まったところのエロゲが選ばれる。結果から作品ページに飛べる。何度でも回せるし、ホイールの中身はブラウザに自動保存。</p>
+        <h3 className="mt-4 mb-1 font-display font-bold text-[color:var(--ink)]">ホイールを回す</h3>
+        <p className="mb-3">スピンボタンを押すとホイールが回り、止まったところのエロゲが選ばれます。結果から作品ページに移動できます。何度でも回せますし、ホイールの中身はブラウザに自動保存されます。</p>
 
-        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">グループモード</h3>
-        <p className="mb-3">読書会やみんなで遊ぶときに。プレイヤー名を追加してスピンすると、ランダムに一人選ばれてエロゲが割り当てられる。当たったプレイヤーはリストから外れて、エロゲはそのまま残る。誰に何が当たったかは履歴テーブルで確認できる。</p>
+        <h3 className="mt-4 mb-1 font-display font-bold text-[color:var(--ink)]">グループモード</h3>
+        <p className="mb-3">読書会やみんなで遊ぶときに。プレイヤー名を追加してスピンすると、ランダムに一人選ばれてエロゲが割り当てられます。当たったプレイヤーはリストから外れ、エロゲはそのまま残ります。誰に何が当たったかは履歴テーブルで確認できます。</p>
       </section>
 
       <VNDBAttribution />

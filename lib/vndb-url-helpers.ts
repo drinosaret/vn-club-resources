@@ -33,7 +33,7 @@ function buildEntityParams(entityType: EntityType, entityId: string, entityName?
     // Use the 'producer' param which does OR logic in the browse API.
     params.set('producer', entityId);
   } else {
-    // Staff, seiyuu — set the entity filter param
+    // Staff, seiyuu: set the entity filter param
     params.set(entityType, entityId);
   }
 

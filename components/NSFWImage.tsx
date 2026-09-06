@@ -39,7 +39,7 @@ function useNSFWReveal(vnId?: string, imageSexual?: number | null) {
   // the same root listener). A native capture handler on the wrapper fires before
   // the bubble phase, stopping the event before it reaches the Link.
   useEffect(() => {
-    // When all NSFW is globally revealed, no blur is possible — skip listener setup
+    // When all NSFW is globally revealed, no blur is possible; skip listener setup
     if (stateRef.current.context?.allRevealed) return;
     const el = wrapperRef.current;
     if (!el) return;
@@ -108,11 +108,13 @@ function NSFWOverlay({ src, overlaySrc, compact, objectPosition }: { src: string
         loading="lazy"
         decoding="async"
       />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
+      <div className="sw-veil pointer-events-none">
         {compact ? (
-          <Eye className="w-3.5 h-3.5 text-white drop-shadow-lg" />
+          <span className="sw-reveal">
+            <Eye className="w-3.5 h-3.5" />
+          </span>
         ) : (
-          <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+          <div className="sw-reveal px-2">
             <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
             <span className="sm:hidden">Tap to reveal</span>
             <span className="hidden sm:inline">Click to reveal</span>
@@ -179,7 +181,7 @@ export function NSFWImage({ src, alt, imageSexual, vnId, className = '', loading
   return (
     <div
       ref={wrapperRef}
-      className={`relative w-full h-full overflow-hidden ${shouldBlur ? 'cursor-pointer group/nsfw' : ''}`}
+      className={`relative w-full h-full overflow-hidden ${shouldBlur ? 'sw-hold cursor-pointer group/nsfw' : ''}`}
       onClick={shouldBlur ? handleReveal : undefined}
       onKeyDown={shouldBlur ? handleKeyDown : undefined}
       tabIndex={shouldBlur ? 0 : -1}
@@ -215,7 +217,7 @@ export function NSFWNextImage({ src, alt, imageSexual, vnId, className = '', fil
   return (
     <div
       ref={wrapperRef}
-      className={`relative overflow-hidden ${shouldBlur ? 'cursor-pointer group/nsfw' : ''} ${fill ? 'w-full h-full' : ''}`}
+      className={`relative overflow-hidden ${shouldBlur ? 'sw-hold cursor-pointer group/nsfw' : ''} ${fill ? 'w-full h-full' : ''}`}
       onClick={shouldBlur ? handleReveal : undefined}
       onKeyDown={shouldBlur ? handleKeyDown : undefined}
       tabIndex={shouldBlur ? 0 : -1}

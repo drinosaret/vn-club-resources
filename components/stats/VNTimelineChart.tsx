@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import Link from '@/components/Link';
-import { Calendar, Star, Search, ZoomIn, ZoomOut, X } from 'lucide-react';
+import { Search, ZoomIn, ZoomOut, X } from 'lucide-react';
 import { VNDBListItem } from '@/lib/vndb-stats-api';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 
@@ -67,22 +67,25 @@ function allocateTracks(items: GanttItem[]): TrackItem[] {
   });
 }
 
-// Get color based on score (red → yellow → green gradient)
+// The score band a bar falls in. Five bands have to be told apart at a few pixels across, and
+// steps of one hue do not survive that: each band takes a hue of its own, ordered the way a
+// score is read. These sit outside the site palette because the palette holds two hues, and a
+// scale built from two hues cannot separate five bands.
 function getScoreColor(score: number | null): string {
-  if (score === null) return '#6b7280'; // gray
-  if (score >= 8) return '#22c55e'; // green
-  if (score >= 6) return '#eab308'; // yellow
-  if (score >= 4) return '#f97316'; // orange
-  return '#ef4444'; // red
+  if (score === null) return '#6b7280';
+  if (score >= 8) return '#22c55e';
+  if (score >= 6) return '#eab308';
+  if (score >= 4) return '#f97316';
+  return '#ef4444';
 }
 
-// Get darker border color based on score
+// The edge that keeps two adjacent bars of the same band apart: each band's own hue, darker.
 function getBorderColor(score: number | null): string {
-  if (score === null) return '#4b5563'; // darker gray
-  if (score >= 8) return '#16a34a'; // darker green
-  if (score >= 6) return '#ca8a04'; // darker yellow
-  if (score >= 4) return '#ea580c'; // darker orange
-  return '#dc2626'; // darker red
+  if (score === null) return '#4b5563';
+  if (score >= 8) return '#16a34a';
+  if (score >= 6) return '#ca8a04';
+  if (score >= 4) return '#ea580c';
+  return '#dc2626';
 }
 
 // Get score category for filtering
@@ -356,12 +359,11 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
 
   if (ganttData.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-4 h-4" />
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Reading Timeline</h3>
+      <div className="st-card p-5">
+        <div className="mb-4">
+          <h3 className="st-card-title">Reading Timeline</h3>
         </div>
-        <div className="h-32 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
+        <div className="st-card-sub flex h-32 items-center justify-center">
           No timeline data available. Add started/finished dates to your VNs on VNDB to see them here.
         </div>
       </div>
@@ -369,14 +371,13 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <div className="st-card p-5">
       {/* Header */}
       <div className="flex flex-col gap-3 mb-4">
         {/* Top row: Title */}
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-gray-500" />
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Reading Timeline</h3>
-          <span className="text-xs text-gray-400">({filteredTrackData.length}/{ganttData.length} VNs)</span>
+          <h3 className="st-card-title">Reading Timeline</h3>
+          <span className="st-num text-xs text-[color:var(--text-faint)]">{filteredTrackData.length}/{ganttData.length} VNs</span>
         </div>
 
         {/* Controls row */}
@@ -385,7 +386,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
-                className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                className="st-act st-act--icon"
                 title="Zoom out"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
@@ -397,60 +398,44 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                 step="0.25"
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                className="w-16 h-1 accent-primary-500"
+                className="w-16 h-1 accent-[color:var(--ai)]"
               />
               <button
                 onClick={() => setZoom(z => Math.min(3, z + 0.25))}
-                className="p-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                className="st-act st-act--icon"
                 title="Zoom in"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
               </button>
-              <span className="text-[10px] text-gray-400 w-7">{zoom}x</span>
+              <span className="st-num w-7 text-[10px] text-[color:var(--text-faint)]">{zoom}x</span>
             </div>
 
             {/* Score filter toggles */}
-            <div className="flex items-center gap-1">
+            <div className="tabs" role="group" aria-label="Score bands">
               <button
                 onClick={() => toggleScoreFilter('high')}
-                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
-                  scoreFilter.has('high')
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                }`}
+                className={`tab ${scoreFilter.has('high') ? 'tab--on' : ''}`}
                 title="8+ rated"
               >
                 8+
               </button>
               <button
                 onClick={() => toggleScoreFilter('medium')}
-                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
-                  scoreFilter.has('medium')
-                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                }`}
+                className={`tab ${scoreFilter.has('medium') ? 'tab--on' : ''}`}
                 title="6-8 rated"
               >
                 6-8
               </button>
               <button
                 onClick={() => toggleScoreFilter('low')}
-                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
-                  scoreFilter.has('low')
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                }`}
+                className={`tab ${scoreFilter.has('low') ? 'tab--on' : ''}`}
                 title="<6 rated"
               >
                 &lt;6
               </button>
               <button
                 onClick={() => toggleScoreFilter('unrated')}
-                className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
-                  scoreFilter.has('unrated')
-                    ? 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                }`}
+                className={`tab ${scoreFilter.has('unrated') ? 'tab--on' : ''}`}
                 title="Unrated"
               >
                 ?
@@ -459,21 +444,21 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
 
             {/* Search input */}
             <div className="relative flex items-center">
-              <Search className="w-3 h-3 absolute left-2 text-gray-400" />
+              <Search className="w-3 h-3 absolute left-2 text-[color:var(--text-faint)]" />
               <input
                 type="search"
                 autoComplete="off"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-28 pl-6 pr-6 py-1 text-xs bg-gray-100 dark:bg-gray-700 border-none rounded-md text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-hidden focus:ring-1 focus:ring-primary-500"
+                className="st-field w-28 py-1 pl-6 pr-6 text-xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-1.5 p-0.5 rounded-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+                  className="st-act st-act--icon absolute right-1.5"
                 >
-                  <X className="w-3 h-3 text-gray-400" />
+                  <X className="w-3 h-3 text-[color:var(--text-faint)]" />
                 </button>
               )}
             </div>
@@ -485,7 +470,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                   <button
                     key={year}
                     onClick={() => scrollToYear(year)}
-                    className="px-1.5 py-0.5 text-[10px] rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-primary-900/30 dark:hover:text-primary-400 transition-colors"
+                    className="st-chip"
                   >
                     {year}
                   </button>
@@ -504,14 +489,14 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
               style={{ width: `${gridDimensions.gridWidth}px` }}
             >
               {/* Time axis - pixel-based positioning (virtualized) */}
-              <div className="relative h-6 border-b border-gray-200 dark:border-gray-700 mb-2">
+              <div className="relative h-6 border-b border-[color:var(--rule)] mb-2">
                 {visibleMonthMarkers.map((marker, i) => {
                   const dayOffset = Math.floor((marker.date.getTime() - minDate.getTime()) / MS_PER_DAY);
                   const pixelPos = dayOffset * CELL_SIZE * zoom;
                   return (
                     <div
                       key={i}
-                      className="absolute text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap"
+                      className="st-num absolute whitespace-nowrap text-[10px] text-[color:var(--text-faint)]"
                       style={{ left: `${pixelPos}px`, transform: 'translateX(-50%)' }}
                     >
                       {marker.label}
@@ -523,7 +508,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
               {/* Timeline tracks - pixel-based grid (virtualized) */}
               <div
                 ref={verticalScrollRef}
-                className="relative overflow-y-auto"
+                className="relative overflow-y-auto pt-1"
                 style={{ maxHeight: '600px' }}
                 onScroll={updateViewport}
               >
@@ -536,7 +521,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                     <div
                       key={`track-bg-${i}`}
                       className={`absolute w-full ${
-                        i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700/30' : 'bg-white dark:bg-gray-800'
+                        i % 2 === 0 ? 'bg-[color:var(--surface-inset)]' : 'bg-[color:var(--surface)]'
                       }`}
                       style={{
                         top: `${i * TRACK_HEIGHT}px`,
@@ -550,7 +535,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                     {visibleGridLines.map(i => (
                       <div
                         key={i}
-                        className="absolute h-full border-l border-gray-100 dark:border-gray-700/30"
+                        className="absolute h-full border-l border-[color:var(--rule)]"
                         style={{ left: `${i * 7 * CELL_SIZE * zoom}px` }}
                       />
                     ))}
@@ -578,8 +563,8 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                       <Link
                         key={item.vnId}
                         href={`/vn/${item.vnId}`}
-                        className={`absolute rounded-xs shadow-xs transition-all hover:ring-2 hover:ring-primary-400 hover:brightness-110 ${
-                          highlighted ? 'ring-2 ring-primary-500 z-10' : ''
+                        className={`absolute rounded-xs transition-all hover:ring-2 hover:ring-[color:var(--focus)] hover:brightness-110 ${
+                          highlighted ? 'ring-2 ring-[color:var(--focus)] z-10' : ''
                         }`}
                         style={{
                           top: `${barTop}px`,
@@ -598,8 +583,8 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
                       <Link
                         key={item.vnId}
                         href={`/vn/${item.vnId}`}
-                        className={`absolute rounded-xs shadow-xs transition-all hover:ring-2 hover:ring-primary-400 hover:brightness-110 ${
-                          highlighted ? 'ring-2 ring-primary-500 z-10' : ''
+                        className={`absolute rounded-xs transition-all hover:ring-2 hover:ring-[color:var(--focus)] hover:brightness-110 ${
+                          highlighted ? 'ring-2 ring-[color:var(--focus)] z-10' : ''
                         }`}
                         style={{
                           top: `${barTop}px`,
@@ -624,16 +609,16 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
       {/* Tooltip */}
       {hoveredItem && (
         <div
-          className="fixed z-50 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 pointer-events-none max-w-xs"
+          className="st-tip on-box pointer-events-none fixed z-50 max-w-xs px-3 py-2"
           style={{
             left: tooltipPos.x + 12,
             top: tooltipPos.y + 12,
           }}
         >
-          <p className="text-sm font-medium text-gray-900 dark:text-white mb-1 line-clamp-2">
+          <p className="mb-1 line-clamp-2 text-sm">
             {hoveredItem.title}
           </p>
-          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+          <div className="text-xs text-[color:var(--nezu)] space-y-0.5">
             {hoveredItem.startDate && (
               <p>Started: {formatDate(hoveredItem.startDate)}</p>
             )}
@@ -647,8 +632,7 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
             )}
           </div>
           {hoveredItem.score !== null && (
-            <div className="flex items-center gap-1 mt-1 text-xs font-medium" style={{ color: getScoreColor(hoveredItem.score) }}>
-              <Star className="w-3 h-3 fill-current" />
+            <div className="st-num mt-1 flex items-center gap-1 text-xs" style={{ color: getScoreColor(hoveredItem.score) }}>
               {hoveredItem.score.toFixed(1)}
             </div>
           )}
@@ -656,25 +640,25 @@ export function VNTimelineChart({ novels }: VNTimelineChartProps) {
       )}
 
       {/* Legend */}
-      <div className="flex justify-center gap-4 mt-4 text-[10px] text-gray-400 dark:text-gray-500">
+      <div className="flex justify-center gap-4 mt-4 text-[10px] text-[color:var(--text-faint)]">
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#22c55e', border: '1px solid #16a34a' }} />
+          <div className="h-2 w-6 rounded-xs" style={{ backgroundColor: getScoreColor(9), border: `1px solid ${getBorderColor(9)}` }} />
           <span>8-10</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#eab308', border: '1px solid #ca8a04' }} />
+          <div className="h-2 w-6 rounded-xs" style={{ backgroundColor: getScoreColor(7), border: `1px solid ${getBorderColor(7)}` }} />
           <span>6-8</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#f97316', border: '1px solid #ea580c' }} />
+          <div className="h-2 w-6 rounded-xs" style={{ backgroundColor: getScoreColor(5), border: `1px solid ${getBorderColor(5)}` }} />
           <span>4-6</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#ef4444', border: '1px solid #dc2626' }} />
+          <div className="h-2 w-6 rounded-xs" style={{ backgroundColor: getScoreColor(2), border: `1px solid ${getBorderColor(2)}` }} />
           <span>&lt;4</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: '#6b7280', border: '1px solid #4b5563' }} />
+          <div className="h-2 w-6 rounded-xs" style={{ backgroundColor: getScoreColor(null), border: `1px solid ${getBorderColor(null)}` }} />
           <span>Unrated</span>
         </div>
       </div>

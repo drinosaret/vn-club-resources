@@ -121,7 +121,9 @@ async function generateStaticEntries(): Promise<UrlEntry[]> {
     { loc: `${SITE_URL}/join/`, changefreq: 'monthly', priority: 0.9 },
     { loc: `${SITE_URL}/browse/`, changefreq: 'daily', priority: 0.8 },
     { loc: `${SITE_URL}/random/`, changefreq: 'monthly', priority: 0.6 },
-    { loc: `${SITE_URL}/guides/`, changefreq: 'weekly', priority: 0.8 },
+    // The guide index is the parent every guide page's breadcrumb names, so it sits above
+    // the individual guides and below the walkthrough it opens with.
+    { loc: `${SITE_URL}/guides/`, changefreq: 'weekly', priority: 0.9 },
     { loc: `${SITE_URL}/stats/`, changefreq: 'daily', priority: 0.8 },
     { loc: `${SITE_URL}/stats/global/`, changefreq: 'daily', priority: 0.8 },
     { loc: `${SITE_URL}/stats/compare/`, changefreq: 'monthly', priority: 0.6 },
@@ -134,6 +136,7 @@ async function generateStaticEntries(): Promise<UrlEntry[]> {
     { loc: `${SITE_URL}/roulette/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/higher-or-lower/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/events/`, changefreq: 'daily', priority: 0.7 },
+    { loc: `${SITE_URL}/events/history/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/changelog/`, changefreq: 'weekly', priority: 0.5 },
     // /news/ redirects to /news/all/, so the destination stands in for the news landing page.
     { loc: `${SITE_URL}/news/all/`, changefreq: 'daily', priority: 0.6 },
@@ -142,21 +145,36 @@ async function generateStaticEntries(): Promise<UrlEntry[]> {
       changefreq: 'daily',
       priority: 0.5,
     })),
+    // The forward-looking half of the news section. It is listed apart from the tabs above
+    // because it is not a dated archive, and it outranks them because it is the one news
+    // page whose content is worth reading before the day it covers.
+    { loc: `${SITE_URL}/news/upcoming/`, changefreq: 'daily', priority: 0.7 },
     { loc: `${SITE_URL}/ja/3x3-maker/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/ja/tierlist/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/ja/roulette/`, changefreq: 'monthly', priority: 0.5 },
     { loc: `${SITE_URL}/beginner-vns/`, changefreq: 'monthly', priority: 0.8 },
     { loc: `${SITE_URL}/quiz/`, changefreq: 'monthly', priority: 0.6 },
+    // Selected on read rather than on a schedule, so the page carries a different word
+    // every day and is worth recrawling at that rate.
+    { loc: `${SITE_URL}/word-of-the-day/`, changefreq: 'daily', priority: 0.7 },
     { loc: `${SITE_URL}/level1/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/tools/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/sources/`, changefreq: 'weekly', priority: 0.8 },
     { loc: `${SITE_URL}/find/`, changefreq: 'weekly', priority: 0.8 },
+    // The policy pages are indexable and linked from the footer of every page, so they are
+    // crawled either way and belong here for consistency. They sit at the bottom of the
+    // priority range because nothing on the site competes for them, and they only change
+    // when the policy does.
+    { loc: `${SITE_URL}/privacy/`, changefreq: 'yearly', priority: 0.3 },
+    { loc: `${SITE_URL}/terms/`, changefreq: 'yearly', priority: 0.3 },
   ];
 
   try {
     const guides = getAllContent('guides');
     for (const guide of guides) {
-      if (['guide', 'join', 'tools', 'sources', 'find'].includes(guide.slug)) continue;
+      // These slugs are already listed above with their own priority, so the loop skips them
+      // rather than emitting a second entry for the same URL.
+      if (['guide', 'tools', 'sources', 'find'].includes(guide.slug)) continue;
 
       const sitemapMeta = (guide as Record<string, unknown>).sitemap as
         | { priority?: number; changefreq?: string }

@@ -3,10 +3,7 @@
 import { useEffect, useState, use, Fragment, useRef, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import Link from '@/components/Link';
-import {
-  ArrowLeft, ExternalLink, Tag, Star, Users, BarChart3,
-  AlertCircle, RefreshCw, ChevronRight
-} from 'lucide-react';
+import { ArrowLeft, ExternalLink, Tag, RefreshCw, ChevronRight } from 'lucide-react';
 import { parseBBCode } from '@/lib/bbcode';
 import { Pagination, PaginationSkeleton } from '@/components/browse/Pagination';
 import {
@@ -45,6 +42,7 @@ import { LastUpdated } from '@/components/stats/LastUpdated';
 import { NSFWImage } from '@/components/NSFWImage';
 import { useImageRetry } from '@/hooks/useImageRetry';
 import { preloadVNImages, addRetryKey } from '@/lib/preload-images';
+import { ADULT_SCENE_TAG_CATEGORIES } from '@/app/stats/rankings/build/slice-options';
 
 interface PageProps {
   params: Promise<{ tagId: string }>;
@@ -129,7 +127,7 @@ export default function TagDetailPage({ params }: PageProps) {
     updateUrl(activeTab, newPage);
   }, [activeTab, spoilerFilter, languageFilter, updateUrl]);
 
-  // Prefetch page on hover — preload images from cached response or trigger API fetch
+  // Prefetch page on hover: preload images from cached response or trigger API fetch
   const handlePrefetchPage = useCallback((page: number) => {
     const cacheKey = `${page}-${spoilerFilter}-${languageFilter}`;
     if (prefetchCacheRef.current.has(cacheKey)) {
@@ -355,10 +353,10 @@ export default function TagDetailPage({ params }: PageProps) {
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-clip">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
-            <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing…</span>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[color:var(--surface)] backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xs bg-[color:var(--surface)] border border-[color:var(--rule)]">
+            <RefreshCw className="w-4 h-4 animate-spin text-[color:var(--ai)]" />
+            <span className="text-sm text-[color:var(--text-secondary)]">Refreshing…</span>
           </div>
         </div>
       )}
@@ -368,37 +366,36 @@ export default function TagDetailPage({ params }: PageProps) {
           <button
             onClick={() => window.history.back()}
             aria-label="Go back"
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mt-1"
+            className="st-act st-act--icon mt-1"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ArrowLeft className="w-5 h-5 text-[color:var(--nezu)]" />
           </button>
           <div>
             {/* Breadcrumb */}
             {parents.length > 0 && (
-              <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-2 flex-wrap">
-                <Link href="/browse?tab=tags" className="hover:text-primary-600 dark:hover:text-primary-400">Tags</Link>
+              <div className="flex items-center gap-1 text-sm text-[color:var(--nezu)] mb-2 flex-wrap">
+                <Link href="/browse?tab=tags" className="hover:text-[color:var(--ai)]">Tags</Link>
                 {parents.map((p) => (
                   <Fragment key={p.id}>
                     <ChevronRight className="w-3 h-3 shrink-0" />
                     <Link
                       href={`/stats/tag/${p.id}`}
-                      className="hover:text-primary-600 dark:hover:text-primary-400"
+                      className="hover:text-[color:var(--ai)]"
                     >
                       {p.name}
                     </Link>
                   </Fragment>
                 ))}
                 <ChevronRight className="w-3 h-3 shrink-0" />
-                <span className="text-gray-700 dark:text-gray-300">{tag.name}</span>
+                <span className="text-[color:var(--text-secondary)]">{tag.name}</span>
               </div>
             )}
             <div className="flex items-center gap-2 mb-1">
-              <Tag className="w-5 h-5 text-primary-500" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="sec-title">
                 {tag.name}
               </h1>
               {tag.category && (
-                <span className="px-2 py-0.5 text-xs rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                <span className="st-badge">
                   {categoryLabels[tag.category] || tag.category}
                 </span>
               )}
@@ -408,22 +405,28 @@ export default function TagDetailPage({ params }: PageProps) {
                 href={`https://vndb.org/${tag.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1"
+                className="sec-more"
               >
-                View on VNDB <ExternalLink className="w-3 h-3" />
+                View on VNDB <span aria-hidden>&rarr;</span>
               </a>
               {/* Anyone reading a tag's page is the person most likely to want its readers
                   ranked, and the ranking is reachable from nowhere else nearby. The id is
-                  carried in VNDB's prefixed form here and bare in the ranking's URL. */}
-              <Link
-                href={`/stats/rankings/build/?subject=readers&question=read-most&tag=${tag.id.replace(/^g/, '')}&name=${encodeURIComponent(tag.name)}`}
-                className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
-              >
-                See who reads it
-              </Link>
+                  carried in VNDB's prefixed form here and bare in the ranking's URL. A tag
+                  describing an adult scene cannot narrow a ranking of readers: the builder
+                  refuses to offer it and the backend refuses to answer it, so the link is
+                  left off rather than pointing at a page that says no. */}
+              {!ADULT_SCENE_TAG_CATEGORIES.includes(tag.category ?? '') && (
+                <Link
+                  href={`/stats/rankings/build/?subject=readers&question=read-most&tag=${tag.id.replace(/^g/, '')}&name=${encodeURIComponent(tag.name)}`}
+                  className="sec-more"
+                >
+                  See who reads it
+                  <span aria-hidden>&rarr;</span>
+                </Link>
+              )}
             </div>
             {tag.description && (
-              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl wrap-break-word">
+              <div className="mt-3 text-sm text-[color:var(--nezu)] max-w-2xl wrap-break-word">
                 <p>
                   {parseBBCode(
                     !showFullDescription && tag.description.length > 300
@@ -434,7 +437,7 @@ export default function TagDetailPage({ params }: PageProps) {
                 {tag.description.length > 300 && (
                   <button
                     onClick={() => setShowFullDescription(!showFullDescription)}
-                    className="mt-1 text-primary-600 dark:text-primary-400 hover:underline text-sm"
+                    className="sec-more mt-1"
                   >
                     {showFullDescription ? 'Show less' : 'Show more'}
                   </button>
@@ -449,7 +452,7 @@ export default function TagDetailPage({ params }: PageProps) {
             <button
               onClick={handleRefresh}
               disabled={isRefreshing || Date.now() < refreshBlockedUntil}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="st-act disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? 'Refreshing…' : 'Refresh data'}
@@ -461,18 +464,11 @@ export default function TagDetailPage({ params }: PageProps) {
 
       {/* Fallback Mode Warning - only for tags with actual VNs */}
       {usingFallback && (tag.vn_count ?? 0) > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Limited Data Mode
-              </p>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                Showing partial data. Statistics may be less accurate than usual. Please try again later for full results.
-              </p>
-            </div>
-          </div>
+        <div className="st-note st-note--mild mb-6 p-4">
+          <p className="fig-label">Limited Data Mode</p>
+          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+            Showing partial data. Statistics may be less accurate than usual. Please try again later for full results.
+          </p>
         </div>
       )}
 
@@ -491,8 +487,8 @@ export default function TagDetailPage({ params }: PageProps) {
         <>
           {/* Child Tags */}
           {children.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none mb-8">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            <div className="st-card p-4 mb-8">
+              <h2 className="fig-label mb-3">
                 Child Tags ({children.length})
               </h2>
               <div className="flex flex-wrap gap-2">
@@ -500,11 +496,11 @@ export default function TagDetailPage({ params }: PageProps) {
                   <Link
                     key={child.id}
                     href={`/stats/tag/${child.id}`}
-                    className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+                    className="st-chip"
                   >
                     {child.name}
                     {child.vn_count != null && (
-                      <span className="text-gray-400 dark:text-gray-500 ml-1.5">
+                      <span className="text-[color:var(--text-faint)] ml-1.5">
                         ({child.vn_count.toLocaleString()})
                       </span>
                     )}
@@ -516,8 +512,8 @@ export default function TagDetailPage({ params }: PageProps) {
 
           {/* Meta-tag notice when no direct VNs */}
           {(tag.vn_count ?? 0) === 0 && children.length > 0 && (
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
+            <div className="st-card p-6 text-center">
+              <p className="text-[color:var(--nezu)]">
                 This is a meta-tag used for categorization. Browse the child tags above to find visual novels.
               </p>
             </div>
@@ -529,19 +525,16 @@ export default function TagDetailPage({ params }: PageProps) {
               {/* Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
                 <StatsSummaryCard
-                  icon={<Star className="w-5 h-5" />}
                   label="Average Rating"
                   value={stats.average_rating > 0 ? stats.average_rating.toFixed(2) : 'N/A'}
                   subtext={`from ${stats.total_users.toLocaleString()} rated VNs`}
                 />
                 <StatsSummaryCard
-                  icon={<BarChart3 className="w-5 h-5" />}
                   label="Total Votes"
                   value={stats.total_votes.toLocaleString()}
                   subtext="cumulative votes on all VNs"
                 />
                 <StatsSummaryCard
-                  icon={<Users className="w-5 h-5" />}
                   label="VNs with Tag"
                   value={tag.vn_count?.toLocaleString() || 'N/A'}
                   subtext="visual novels"
@@ -583,9 +576,9 @@ export default function TagDetailPage({ params }: PageProps) {
 
       {/* Novels Tab */}
       {activeTab === 'novels' && (
-        <div ref={resultsRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div ref={resultsRef} className="st-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[color:var(--nezu)]">
               {totalVns > 0 && `${totalVns.toLocaleString()} visual novels`}
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -639,7 +632,7 @@ export default function TagDetailPage({ params }: PageProps) {
                   )}
                 </div>
               ) : hasAttemptedVnsRef.current && (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                <p className="st-card-sub py-8 text-center">
                   No visual novels found with this tag{languageFilter === 'ja' ? ' (Japanese only)' : ''}.
                 </p>
               )}
@@ -650,7 +643,7 @@ export default function TagDetailPage({ params }: PageProps) {
 
       {/* Similar Tags Tab */}
       {activeTab === 'similar-tags' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div className="st-card p-6">
           {isLoadingTab ? (
             <LoadingTabContent message="Loading similar tags..." />
           ) : similarTags.length > 0 ? (
@@ -660,7 +653,7 @@ export default function TagDetailPage({ params }: PageProps) {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+            <p className="st-card-sub py-8 text-center">
               No similar tags found.
             </p>
           )}
@@ -669,7 +662,7 @@ export default function TagDetailPage({ params }: PageProps) {
 
       {/* Similar Traits Tab */}
       {activeTab === 'similar-traits' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div className="st-card p-6">
           {isLoadingTab ? (
             <LoadingTabContent message="Loading character traits..." />
           ) : traits.length > 0 ? (
@@ -679,7 +672,7 @@ export default function TagDetailPage({ params }: PageProps) {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+            <p className="st-card-sub py-8 text-center">
               No character traits data available.
             </p>
           )}
@@ -698,9 +691,9 @@ function VNCard({ vn }: { vn: TagVN }) {
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="st-card st-card--pick flex gap-3 p-3"
     >
-      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-xs">
         {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
         {showImage ? (
           <NSFWImage
@@ -714,28 +707,26 @@ function VNCard({ vn }: { vn: TagVN }) {
             compact
           />
         ) : (
-          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-            <Tag className="w-6 h-6 text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--surface-inset)]">
           </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+        <h4 className="dg-name block">
           {displayTitle}
         </h4>
         {vn.released && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-[color:var(--nezu)] mt-0.5">
             {vn.released.substring(0, 4)}
           </p>
         )}
         {vn.rating && (
           <div className="flex items-center gap-1 mt-1">
-            <Star className="w-3 h-3 text-yellow-500" />
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-xs font-medium text-[color:var(--text-secondary)]">
               {vn.rating.toFixed(2)}
             </span>
             {vn.votecount && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-[color:var(--nezu)]">
                 ({vn.votecount.toLocaleString()})
               </span>
             )}
@@ -746,7 +737,7 @@ function VNCard({ vn }: { vn: TagVN }) {
             {sortTagsByWeight(vn.tags).slice(0, 3).map((t) => (
               <span
                 key={t.id}
-                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm"
+                className="st-badge"
               >
                 {t.name}
               </span>
@@ -764,24 +755,23 @@ function SimilarTagRow({ tag }: { tag: SimilarTag }) {
   return (
     <Link
       href={`/stats/tag/${tag.id}`}
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      className="st-row flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Tag className="w-4 h-4 text-primary-500 shrink-0" />
-        <span className="font-medium text-gray-900 dark:text-white truncate">{tag.name}</span>
+        <span className="dg-name">{tag.name}</span>
       </div>
       <div className="flex items-center justify-between sm:justify-end gap-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+        <span className="st-num text-xs text-[color:var(--text-faint)]">
           {tag.shared_vn_count} shared VNs
         </span>
         <div className="w-24 flex items-center gap-2">
-          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+          <div className="st-bar h-2 flex-1">
             <div
-              className="h-full bg-primary-500 rounded-full"
+              className="st-bar-fill"
               style={{ width: `${percentage}%` }}
             />
           </div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-10 text-right">
+          <span className="st-num w-10 text-right text-xs text-[color:var(--ink)]">
             {percentage}%
           </span>
         </div>
@@ -796,31 +786,30 @@ function TraitRow({ trait }: { trait: SimilarTrait }) {
   return (
     <Link
       href={`/stats/trait/${trait.id}`}
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      className="st-row flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Users className="w-4 h-4 text-purple-500 shrink-0" />
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-medium text-gray-900 dark:text-white truncate">{trait.name}</span>
+          <span className="dg-name">{trait.name}</span>
           {trait.group_name && (
-            <span className="inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 shrink-0">
+            <span className="st-badge shrink-0">
               {trait.group_name}
             </span>
           )}
         </div>
       </div>
       <div className="flex items-center justify-between sm:justify-end gap-4">
-        <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        <span className="text-sm text-[color:var(--nezu)] whitespace-nowrap">
           {trait.character_count} characters
         </span>
         <div className="w-24 flex items-center gap-2">
-          <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+          <div className="st-bar h-2 flex-1">
             <div
-              className="h-full bg-purple-500 rounded-full"
+              className="st-bar-fill"
               style={{ width: `${Math.min(100, percentage)}%` }}
             />
           </div>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-10 text-right">
+          <span className="st-num w-10 text-right text-xs text-[color:var(--ink)]">
             {percentage}%
           </span>
         </div>
@@ -832,8 +821,8 @@ function TraitRow({ trait }: { trait: SimilarTrait }) {
 function LoadingTabContent({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center py-12">
-      <RefreshCw className="w-6 h-6 animate-spin text-primary-500" />
-      <span className="ml-2 text-gray-500 dark:text-gray-400">{message}</span>
+      <RefreshCw className="w-6 h-6 animate-spin text-[color:var(--ai)]" />
+      <span className="ml-2 text-[color:var(--nezu)]">{message}</span>
     </div>
   );
 }
@@ -841,19 +830,16 @@ function LoadingTabContent({ message }: { message: string }) {
 function ErrorState({ error, tagId }: { error: string | null; tagId: string }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-        <AlertCircle className="w-8 h-8 text-red-500" />
-      </div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <h1 className="sec-title mb-2">
         Unable to Load Tag
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-[color:var(--nezu)] mb-6">
         {error || 'Something went wrong while loading the tag data.'}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <button
           onClick={() => window.history.back()}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          className="st-act st-act--go"
         >
           <ArrowLeft className="w-4 h-4" />
           Go Back
@@ -862,7 +848,7 @@ function ErrorState({ error, tagId }: { error: string | null; tagId: string }) {
           href={`https://vndb.org/g${tagId.replace(/\D/g, '')}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="st-act"
         >
           Check on VNDB
           <ExternalLink className="w-4 h-4" />
@@ -874,21 +860,21 @@ function ErrorState({ error, tagId }: { error: string | null; tagId: string }) {
 
 function VNCardSkeleton() {
   return (
-    <div className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+    <div className="st-card flex gap-3 p-3">
       {/* Image placeholder */}
-      <div className="w-16 h-20 shrink-0 rounded-sm image-placeholder" />
+      <div className="w-16 h-20 shrink-0 rounded-xs image-placeholder" />
       <div className="flex-1 min-w-0 space-y-2">
         {/* Title */}
-        <div className="h-4 w-4/5 rounded-sm image-placeholder" />
+        <div className="h-4 w-4/5 rounded-xs image-placeholder" />
         {/* Year */}
-        <div className="h-3 w-12 rounded-sm image-placeholder" />
+        <div className="h-3 w-12 rounded-xs image-placeholder" />
         {/* Rating */}
-        <div className="h-3 w-20 rounded-sm image-placeholder" />
+        <div className="h-3 w-20 rounded-xs image-placeholder" />
         {/* Tags */}
         <div className="flex gap-1 mt-2">
-          <div className="h-4 w-14 rounded-sm image-placeholder" />
-          <div className="h-4 w-12 rounded-sm image-placeholder" />
-          <div className="h-4 w-16 rounded-sm image-placeholder" />
+          <div className="h-4 w-14 rounded-xs image-placeholder" />
+          <div className="h-4 w-12 rounded-xs image-placeholder" />
+          <div className="h-4 w-16 rounded-xs image-placeholder" />
         </div>
       </div>
     </div>

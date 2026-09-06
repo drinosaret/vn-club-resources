@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Fingerprint } from 'lucide-react';
 
 import { RadarChart } from '@/components/charts/RadarChart';
 import { computeFingerprint, describeFingerprint } from '@/lib/taste-fingerprint';
@@ -64,12 +63,11 @@ export function TasteFingerprint({
   if (available.length < 3) return null;
 
   return (
-    <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none p-5">
-      <h2 className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-1">
-        <Fingerprint className="w-4 h-4 text-gray-400" />
+    <div className="st-card p-5">
+      <h2 className="st-card-title mb-1">
         Your taste fingerprint
       </h2>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+      <p className="st-card-sub mb-3">
         {describeFingerprint(available) ||
           'Six readings of your list, each on its own scale.'}
       </p>
@@ -91,15 +89,15 @@ export function TasteFingerprint({
                   bar under it for exactly that reason. Untinted, because these axes have no
                   better and worse end: a low adult-content score is not a poor result. */}
               <dt className="flex items-baseline gap-3">
-                <span className="w-11 shrink-0 rounded-md bg-gray-100 px-2 py-0.5 text-center text-sm font-semibold tabular-nums text-gray-700 dark:bg-gray-700/50 dark:text-gray-200">
+                <span className="st-num w-11 shrink-0 text-right text-sm text-[color:var(--ink)]">
                   {Math.round(axis.value)}
                 </span>
-                <span className="min-w-0 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="min-w-0 text-sm font-medium text-[color:var(--text-secondary)]">
                   {axis.label}
                 </span>
               </dt>
               {/* Indented past the badge so the sentence lines up under its own label. */}
-              <dd className="mt-0.5 pl-14 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              <dd className="mt-0.5 pl-14 text-xs leading-relaxed text-[color:var(--nezu)]">
                 {axis.detail}
               </dd>
             </div>
@@ -108,20 +106,20 @@ export function TasteFingerprint({
       </div>
 
       <details className="mt-4 group">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1 py-1.5 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1 py-1.5 text-[11px] font-medium text-[color:var(--text-faint)] transition-colors hover:text-[color:var(--nezu)]">
           <span className="transition-transform group-open:rotate-90">&rsaquo;</span>
           How each score is worked out
         </summary>
-        <dl className="mt-1 space-y-1.5 border-t border-gray-200/70 pt-2 dark:border-gray-700/70">
+        <dl className="mt-1 space-y-1.5 border-t border-[color:var(--rule)] pt-2">
           {available.map((axis) => (
             <div key={axis.key} className="flex flex-wrap gap-x-2 text-[11px]">
-              <dt className="font-medium text-gray-600 dark:text-gray-300">{axis.label}</dt>
-              <dd className="min-w-0 flex-1 text-gray-500 dark:text-gray-400">
+              <dt className="font-medium text-[color:var(--nezu)]">{axis.label}</dt>
+              <dd className="min-w-0 flex-1 text-[color:var(--nezu)]">
                 {axis.formula}
                 {axis.working ? (
                   <>
                     {' '}
-                    <span className="whitespace-nowrap font-mono text-gray-400 dark:text-gray-500">
+                    <span className="whitespace-nowrap font-mono text-[color:var(--text-faint)]">
                       {axis.working}
                     </span>
                   </>
@@ -130,7 +128,7 @@ export function TasteFingerprint({
             </div>
           ))}
         </dl>
-        <p className="mt-2 text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+        <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--text-faint)]">
           Each score stands on its own scale rather than against other readers, so a 40 means
           the same thing on your list next year as it does today.
         </p>

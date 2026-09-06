@@ -46,7 +46,7 @@ interface SimpleBarChartProps {
 export function SimpleBarChart({
   data,
   height = 160,
-  color = 'var(--color-primary-500, #6366f1)',
+  color = 'var(--ai)',
   formatValue = compactNumber,
   highlightMax = false,
   baseline,
@@ -86,12 +86,12 @@ export function SimpleBarChart({
       >
         {baseline && baseline.value > 0 && (
           <div
-            className="absolute inset-x-0 z-10 pointer-events-none border-t border-dashed border-gray-400/70 dark:border-gray-500/70"
+            className="absolute inset-x-0 z-10 pointer-events-none border-t border-dashed /70 /70"
             style={{ bottom: `${(baseline.value / max) * 100}%` }}
             title={`${baseline.label}: ${formatValue(baseline.value)}`}
           >
             <span
-              className={`absolute ${labelSide} -top-1.5 text-[10px] leading-none text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-1 rounded-sm`}
+              className={`absolute ${labelSide} -top-1.5 text-[10px] leading-none text-[color:var(--nezu)] bg-[color:var(--surface)] px-1 rounded-sm`}
             >
               {baseline.label}
             </span>
@@ -116,7 +116,7 @@ export function SimpleBarChart({
               <span
                 className={`block text-[10px] leading-none text-center mb-1 tabular-nums transition-opacity ${
                   active ? 'opacity-100' : 'opacity-0'
-                } text-gray-600 dark:text-gray-300`}
+                } text-[color:var(--nezu)] `}
               >
                 {formatValue(datum.value)}
               </span>
@@ -137,7 +137,7 @@ export function SimpleBarChart({
         {data.map((datum) => (
           <span
             key={datum.key}
-            className="flex-1 text-[10px] leading-none text-center text-gray-400 dark:text-gray-500 truncate"
+            className="flex-1 text-[10px] leading-none text-center text-[color:var(--text-faint)] truncate"
           >
             {datum.label}
           </span>

@@ -42,8 +42,11 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
 
   const srcSet = useMemo(() => {
     if (!vn?.imageUrl || isNsfw) return undefined;
-    const sep = vn.imageUrl.includes('?') ? '&' : '?';
-    return [128, 256].map(w => `${vn.imageUrl}${sep}w=${w} ${w}w`).join(', ');
+    // A stored cover URL can already carry a width, and both the route and the cache in front
+    // of it read the first w= in the query, so an appended one would never take effect.
+    const base = vn.imageUrl.replace(/([?&])w=\d+(&|$)/, '$1').replace(/[?&]$/, '');
+    const sep = base.includes('?') ? '&' : '?';
+    return [128, 256].map(w => `${base}${sep}w=${w} ${w}w`).join(', ');
   }, [vn?.imageUrl, isNsfw]);
 
   if (displayMode === 'titles') {
@@ -51,19 +54,19 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
       <div
         data-item-id={id}
         style={ITEM_STYLE}
-        className={`relative flex items-center gap-1 px-1.5 py-0.5 shrink-0 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item`}
+        className="toy-tag cursor-grab active:cursor-grabbing select-none group/tier-item"
         title={title}
       >
-        <span className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        <span className="truncate">
           {title}
           {showScores && vn?.vote && (
-            <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium">{vn.vote}</span>
+            <span className="ml-1 font-mono text-[10px] tabular-nums text-[color:var(--nezu)]">{vn.vote}</span>
           )}
         </span>
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onEdit(id); }}
-          className="touch-action-btn shrink-0 w-3.5 h-3.5 rounded-full bg-black/60 text-white items-center justify-center hidden group-hover/tier-item:flex hover:bg-black/80"
+          className="toy-act toy-act--inline touch-action-btn shrink-0 w-3.5 h-3.5 toy-act--reveal"
           title={s['tierItem.edit']}
           aria-label={s['tierItem.edit']}
         >
@@ -72,7 +75,7 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onRemove(id); }}
-          className="touch-action-btn shrink-0 w-3.5 h-3.5 rounded-full bg-red-500/80 text-white items-center justify-center hidden group-hover/tier-item:flex hover:bg-red-600"
+          className="toy-act toy-act--drop toy-act--inline touch-action-btn shrink-0 w-3.5 h-3.5 toy-act--reveal"
           title={s['tierItem.remove']}
           aria-label={s['tierItem.remove']}
         >
@@ -86,7 +89,7 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
     <div
       data-item-id={id}
       style={ITEM_STYLE}
-      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700`}
+      className={`toy-tile ${sizeConfig.coverClass} shrink-0 cursor-grab active:cursor-grabbing select-none group/tier-item`}
       title={title}
     >
       {vn?.imageUrl ? (
@@ -111,14 +114,14 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
           />
         )
       ) : (
-        <div className={`w-full h-full flex items-center justify-center ${sizeConfig.noImageFontClass} text-gray-500 dark:text-gray-400 text-center p-0.5 leading-tight`}>
+        <div className={`w-full h-full flex items-center justify-center ${sizeConfig.noImageFontClass} text-[color:var(--nezu)] text-center p-0.5 leading-tight`}>
           {title.slice(0, 20)}
         </div>
       )}
 
       {/* Score badge */}
       {showScores && vn?.vote && (
-        <div className={`absolute top-0.5 left-0.5 bg-black/70 text-white ${sizeConfig.scoreFontClass} font-bold px-1 py-px rounded-full pointer-events-none ${sizeConfig.scoreMinW} text-center leading-tight`}>
+        <div className={`toy-mark top-0.5 left-0.5 ${sizeConfig.scoreFontClass} px-1 py-px ${sizeConfig.scoreMinW}`}>
           {vn.vote}
         </div>
       )}
@@ -127,9 +130,9 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
       {showTitles && title && (() => {
         const maxLines = Math.max(1, Math.floor(titleMaxH / 10));
         return (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-0.5 py-0.5 pointer-events-none">
+          <div className="toy-cap">
             <p
-              className={`${sizeConfig.titleFontClass} font-bold text-white text-center leading-tight`}
+              className={sizeConfig.titleFontClass}
               style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: maxLines, overflow: 'hidden' }}
             >
               {title}
@@ -142,7 +145,7 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onEdit(id); }}
-        className={`touch-action-btn absolute ${sizeConfig.editBtnTopClass} right-0.5 ${sizeConfig.actionBtnClass} rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover/tier-item:opacity-100 transition-opacity z-10 hover:bg-black/80`}
+        className={`toy-act touch-action-btn ${sizeConfig.editBtnTopClass} right-0.5 ${sizeConfig.actionBtnClass} toy-act--reveal`}
         title={s['tierItem.edit']}
         aria-label={s['tierItem.edit']}
       >
@@ -153,7 +156,7 @@ export const TierPoolItem = memo(function TierPoolItem({ id, vn, displayMode, si
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onRemove(id); }}
-        className={`touch-action-btn absolute top-0.5 right-0.5 ${sizeConfig.actionBtnClass} rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/tier-item:opacity-100 transition-opacity z-10 hover:bg-red-600`}
+        className={`toy-act toy-act--drop touch-action-btn top-0.5 right-0.5 ${sizeConfig.actionBtnClass} toy-act--reveal`}
         title={s['tierItem.remove']}
         aria-label={s['tierItem.remove']}
       >

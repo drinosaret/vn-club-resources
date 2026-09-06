@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 
 EVENTS_UPCOMING_KEY = "events:upcoming"
 
+# Event types the public history listing covers: every stored row that names a pick
+# the club actually made. Recurring placeholders are computed rather than stored and
+# name no title, so they have no place in a history.
+HISTORY_TYPES = ("vn_of_month", "vn_of_season", "roudoku", "movie_night")
+
 # Event types that have a weekly placeholder to suppress in recurring_events.
 _SESSION_TYPES = ("movie_night", "roudoku")
 # A session can sit this far from its usual weekday and still own the slot, so the
@@ -36,6 +41,24 @@ _UPCOMING_SESSION_WINDOW = timedelta(
 
 def events_month_key(year: int, month: int) -> str:
     return f"events:month:{year}:{month:02d}"
+
+
+def events_history_key(types: list[str], limit: int, offset: int) -> str:
+    return f"events:history:{'+'.join(types)}:{limit}:{offset}"
+
+
+def parse_history_types(raw: str | None) -> list[str]:
+    """Comma-separated type filter for the history listing, in HISTORY_TYPES order.
+
+    Anything outside the allowlist is dropped, and a filter that names nothing
+    recognised falls back to every pick type: a listing narrowed to nothing by a
+    misspelled name reads as "the club has no history", which is never true.
+    """
+    if not raw:
+        return list(HISTORY_TYPES)
+    wanted = {t.strip() for t in raw.split(",") if t.strip()}
+    picked = [t for t in HISTORY_TYPES if t in wanted]
+    return picked or list(HISTORY_TYPES)
 
 
 def _month_window(year: int, month: int) -> tuple[datetime, datetime]:
@@ -201,6 +224,35 @@ async def get_upcoming_merged(db: AsyncSession, now: datetime) -> list[dict]:
     return items
 
 
+async def get_past(
+    db: AsyncSession,
+    now: datetime,
+    types: list[str],
+    limit: int = 60,
+    offset: int = 0,
+) -> tuple[list[Event], int]:
+    """Picks whose session has already been and gone, newest first, plus the total.
+
+    A row is past once it has started: a monthly pick is dated to the month it
+    covers, so waiting for end_at would hold the current month's winner out of a
+    listing that is meant to include it the moment the next one lands.
+    """
+    where = and_(
+        Event.is_active.is_(True),
+        Event.event_type.in_(types),
+        Event.start_at < now,
+    )
+    total = await db.scalar(select(func.count()).select_from(Event).where(where))
+    result = await db.execute(
+        select(Event)
+        .where(where)
+        .order_by(Event.start_at.desc(), Event.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.scalars().all()), int(total or 0)
+
+
 async def create_event(
     db: AsyncSession,
     *,
@@ -330,7 +382,8 @@ async def reconcile_external(db: AsyncSession, source_prefix: str, keep_keys: se
 
 
 async def invalidate_events_cache() -> None:
-    """Flush cached month and upcoming reads after any write."""
+    """Flush cached month, upcoming and history reads after any write."""
     cache = get_cache()
     await cache.flush_pattern("events:month:*")
+    await cache.flush_pattern("events:history:*")
     await cache.delete(EVENTS_UPCOMING_KEY)

@@ -29,7 +29,7 @@ if docker compose -f docker-compose.prod.yml --profile tools run --rm sync; then
 else
   EXIT_CODE=$?
   log "WARNING: Sync exited with code $EXIT_CODE"
-  # Don't fail hard — partial syncs are acceptable
+  # Don't fail hard; partial syncs are acceptable
 fi
 
 log "Sync complete!"

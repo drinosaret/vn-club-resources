@@ -15,6 +15,9 @@ import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
 import { ChartHelpTooltip } from '@/components/stats/ChartHelpTooltip';
 import { difficultyColor, difficultyLabel } from '@/lib/difficulty';
+// Shared with the server-rendered summary above the tabs, so one title cannot be described
+// one way in the delivered markup and another way once the charts mount.
+import { classifyReadingStyle, formatCount } from '@/lib/reading-style';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -26,7 +29,6 @@ import {
   ReferenceLine,
   type TooltipProps,
 } from 'recharts';
-import { ExternalLink } from 'lucide-react';
 import Link from '@/components/Link';
 
 
@@ -66,18 +68,19 @@ const getDifficultyColor = difficultyColor;
 const getDifficultyLabel = (difficulty: number): string =>
   difficultyLabel(difficulty) ?? 'Unrated';
 
+/* Recharts takes a colour string rather than a class, so the two the charts draw with are
+   named here as the palette's own values. */
+const CHART_INK = '#35808C';
+const CHART_INK_LIGHT = '#8DBEC5';
+const CHART_LIVE = '#E8A317';
+const CHART_LIVE_LIGHT = '#F2D49B';
+
 function getLengthColor(chars: number): string {
   if (chars <= 100_000) return '#22c55e';
   if (chars <= 300_000) return '#3b82f6';
   if (chars <= 600_000) return '#f59e0b';
   if (chars <= 1_000_000) return '#f97316';
   return '#ef4444';
-}
-
-function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-  return n.toLocaleString();
 }
 
 function interpolateCoverage(curve: JitenCoveragePoint[], wordCount: number): number | null {
@@ -93,69 +96,6 @@ function interpolateCoverage(curve: JitenCoveragePoint[], wordCount: number): nu
   return null;
 }
 
-
-// ──────────── Reading Style Classification ────────────
-
-interface ReadingStyle {
-  label: string;
-  description: string;
-  criteria: string;
-  color: string;
-  bgClass: string;
-}
-
-function classifyReadingStyle(deck: JitenDeckDto): ReadingStyle {
-  const hasDialogue = !deck.hideDialoguePercentage && deck.dialoguePercentage > 0;
-  const isConversational = hasDialogue && deck.dialoguePercentage > 50;
-  const isDense = deck.difficultyRaw > 3 || deck.averageSentenceLength > 20;
-
-  // When dialogue data is unavailable, classify on difficulty/sentence length only
-  if (!hasDialogue) {
-    if (!isDense) return {
-      label: 'Approachable',
-      description: 'Short sentences with accessible vocabulary',
-      criteria: 'Difficulty ≤ 3.0 · Sentence length ≤ 20',
-      color: '#3b82f6',
-      bgClass: 'from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/20 border-blue-200/50 dark:border-blue-800/40',
-    };
-    return {
-      label: 'Demanding',
-      description: 'Long sentences with complex vocabulary',
-      criteria: 'Difficulty > 3.0 or Sentence length > 20',
-      color: '#a855f7',
-      bgClass: 'from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/20 border-purple-200/50 dark:border-purple-800/40',
-    };
-  }
-
-  if (isConversational && !isDense) return {
-    label: 'Conversational',
-    description: 'Dialogue-driven with everyday language',
-    criteria: 'Dialogue > 50% · Difficulty ≤ 3.0 · Sentence length ≤ 20',
-    color: '#22c55e',
-    bgClass: 'from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20 border-green-200/50 dark:border-green-800/40',
-  };
-  if (isConversational && isDense) return {
-    label: 'Elaborate',
-    description: 'Dialogue-driven with complex vocabulary and long sentences',
-    criteria: 'Dialogue > 50% · Difficulty > 3.0 or Sentence length > 20',
-    color: '#f59e0b',
-    bgClass: 'from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 border-amber-200/50 dark:border-amber-800/40',
-  };
-  if (!isConversational && !isDense) return {
-    label: 'Flowing',
-    description: 'Narration-driven with approachable language',
-    criteria: 'Dialogue ≤ 50% · Difficulty ≤ 3.0 · Sentence length ≤ 20',
-    color: '#3b82f6',
-    bgClass: 'from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/20 border-blue-200/50 dark:border-blue-800/40',
-  };
-  return {
-    label: 'Literary',
-    description: 'Narration-driven with complex vocabulary or lengthy prose',
-    criteria: 'Dialogue ≤ 50% · Difficulty > 3.0 or Sentence length > 20',
-    color: '#a855f7',
-    bgClass: 'from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/20 border-purple-200/50 dark:border-purple-800/40',
-  };
-}
 
 // ──────────── Radar Normalization ────────────
 
@@ -193,20 +133,20 @@ function SimpleRadar({ data }: { data: Array<{ axis: string; value: number }> })
           key={level}
           points={polygonPoints(RADAR_CX, RADAR_CY, RADAR_R * level, n)}
           fill="none"
-          className="stroke-gray-200 dark:stroke-gray-700"
+          className="stroke-[color:var(--rule)]"
           strokeWidth={1}
         />
       ))}
       {/* Axis lines */}
       {data.map((_, i) => {
         const [x, y] = vertex(RADAR_CX, RADAR_CY, RADAR_R, i, n);
-        return <line key={i} x1={RADAR_CX} y1={RADAR_CY} x2={x} y2={y} className="stroke-gray-200 dark:stroke-gray-700" strokeWidth={1} />;
+        return <line key={i} x1={RADAR_CX} y1={RADAR_CY} x2={x} y2={y} className="stroke-[color:var(--rule)]" strokeWidth={1} />;
       })}
       {/* Data polygon */}
       <polygon
         points={dataPoints}
-        stroke="#6366f1"
-        fill="#6366f1"
+        stroke={CHART_INK}
+        fill={CHART_INK}
         fillOpacity={0.15}
         strokeWidth={2}
         strokeLinejoin="round"
@@ -222,7 +162,7 @@ function SimpleRadar({ data }: { data: Array<{ axis: string; value: number }> })
             y={y}
             textAnchor="middle"
             dominantBaseline="central"
-            className="fill-gray-500 dark:fill-gray-400"
+            className="fill-[color:var(--nezu)]"
             fontSize={11}
           >
             {lines.length > 1
@@ -282,36 +222,32 @@ export function VNLanguageStats({ vnId, deckId }: VNLanguageStatsProps) {
   // Error: detail failed with no cached data
   if (allError && !allData) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-12 text-[color:var(--nezu)]">
         Language analysis data could not be loaded.
       </div>
     );
   }
 
-  // Detail still loading — show full skeleton
+  // Detail still loading: show full skeleton
   if (allLoading) return <LanguageStatsSkeleton />;
 
   // Detail loaded but no deck data
   if (!deck) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4">
-        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-          <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-          </svg>
-        </div>
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No language data yet</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-5 text-center max-w-xs">
+        <span className="nameplate--plain nameplate">Not measured</span>
+        <p className="text-sm text-[color:var(--ink)] mt-4 mb-1">No language data yet</p>
+        <p className="text-xs text-[color:var(--nezu)] mb-5 text-center max-w-xs">
           This visual novel hasn&apos;t been analyzed on jiten.moe yet.
         </p>
         <a
           href="https://jiten.moe/decks/media?mediaType=7"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="tab"
         >
           Browse jiten.moe
-          <ExternalLink className="w-3.5 h-3.5" />
+          <span aria-hidden>&#8599;</span>
         </a>
       </div>
     );
@@ -331,37 +267,37 @@ export function VNLanguageStats({ vnId, deckId }: VNLanguageStatsProps) {
         {/* Vocabulary Depth */}
         <VocabularyDepth deck={deck} />
 
-        {/* Difficulty Progression — deferred to avoid Firefox text flicker */}
+        {/* Difficulty Progression: deferred to avoid Firefox text flicker */}
         {deferredReady && diff?.progression && diff.progression.length > 1 && (
           <DifficultyFlow segments={diff.progression} average={diff.difficulty} />
         )}
 
-        {/* Coverage Curve — deferred */}
+        {/* Coverage Curve: deferred */}
         {deferredReady && cov && cov.length > 2 && (
           <CoverageCurveChart data={cov} />
         )}
 
-        {/* Similar Difficulty — deferred */}
+        {/* Similar Difficulty: deferred */}
         {deferredReady && similar.length > 0 && (
           <SimilarDifficultySection vns={similar} currentDifficulty={deck.difficultyRaw} />
         )}
 
-        {/* Similar Length — deferred */}
+        {/* Similar Length: deferred */}
         {deferredReady && similarLength.length > 0 && (
           <SimilarLengthSection vns={similarLength} currentCharCount={deck.characterCount} />
         )}
 
         {/* Attribution */}
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-gray-200/60 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Language data provided by</span>
+        <div className="vn-sec flex items-center justify-center gap-2 px-4 py-3">
+          <span className="text-xs text-[color:var(--nezu)]">Language data provided by</span>
           <a
             href={attributionHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+            className="sec-more"
           >
             jiten.moe
-            <ExternalLink className="w-3.5 h-3.5" />
+            <span aria-hidden>&#8599;</span>
           </a>
         </div>
     </div>
@@ -376,30 +312,26 @@ function TextProfile({ deck }: { deck: JitenDeckDto }) {
   const radarData = useMemo(() => buildRadarData(deck), [deck]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <section className="vn-sec">
       {/* Reading style header */}
-      <div className={`px-4 sm:px-5 py-4 border-b bg-linear-to-r ${style.bgClass}`}>
+      <div className="px-4 sm:px-5 py-4 border-b border-[color:var(--rule)]">
         <div className="flex items-center gap-2.5 mb-1">
-          <span
-            className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ backgroundColor: style.color }}
-          />
-          <h3 className="text-base font-bold text-gray-900 dark:text-white">
+          <h2 className="vn-sec-title">
             {style.label}
-          </h3>
+          </h2>
           <ChartHelpTooltip text={`Classification criteria: ${style.criteria}`} />
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
+        <p className="text-sm text-[color:var(--nezu)]">
           {style.description}
         </p>
       </div>
 
       <div className="p-4 sm:p-5">
-        {/* Radar chart — lightweight custom SVG (replaces Recharts RadarChart) */}
+        {/* Radar chart: lightweight custom SVG (replaces Recharts RadarChart) */}
         <SimpleRadar data={radarData} />
 
-        {/* Raw values — labels match radar axes */}
-        <div className={`grid ${(deck.hideDialoguePercentage || deck.dialoguePercentage === 0) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3 sm:grid-cols-5'} gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60`}>
+        {/* Raw values: labels match radar axes */}
+        <div className={`grid ${(deck.hideDialoguePercentage || deck.dialoguePercentage === 0) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3 sm:grid-cols-5'} gap-2 mt-4 pt-4 border-t border-[color:var(--rule)]`}>
           {[
             { label: 'Difficulty', value: `${deck.difficultyRaw.toFixed(1)}/5` },
             { label: 'Unique Words', value: formatCount(deck.uniqueWordCount) },
@@ -408,13 +340,13 @@ function TextProfile({ deck }: { deck: JitenDeckDto }) {
             { label: 'Volume', value: `${formatCount(deck.characterCount)} chars` },
           ].map(stat => (
             <div key={stat.label} className="text-center">
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">{stat.label}</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{stat.value}</p>
+              <p className="fig-label mb-0.5">{stat.label}</p>
+              <p className="vn-num text-sm text-[color:var(--ink)]">{stat.value}</p>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -426,19 +358,19 @@ function DifficultyTooltip(props: TooltipProps<number, string>) {
   const avg = payload.find(p => p.dataKey === 'difficulty')?.value;
   const peak = payload.find(p => p.dataKey === 'peak')?.value;
   return (
-    <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-      <p className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">
+    <div className="vn-sec px-3 py-2">
+      <p className="vn-num text-xs text-[color:var(--ink)] mb-0.5">
         Progress: {label}
       </p>
       {avg != null && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="vn-num text-xs text-[color:var(--nezu)]">
           Avg: <span className="font-medium" style={{ color: getDifficultyColor(avg) }}>{avg.toFixed(2)}</span>
           {' · '}
           {getDifficultyLabel(avg)}
         </p>
       )}
       {peak != null && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="vn-num text-xs text-[color:var(--nezu)]">
           Peak: <span className="font-medium" style={{ color: getDifficultyColor(peak) }}>{peak.toFixed(2)}</span>
         </p>
       )}
@@ -457,10 +389,10 @@ function DifficultyFlow({ segments, average }: { segments: Array<{ segment: numb
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <section className="vn-sec p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Difficulty Progression</h3>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        <h2 className="vn-sec-title">Difficulty Progression</h2>
+        <p className="text-xs text-[color:var(--nezu)] mt-0.5">
           Average and peak difficulty across sections of the game
         </p>
       </div>
@@ -469,49 +401,49 @@ function DifficultyFlow({ segments, average }: { segments: Array<{ segment: numb
         <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="peakRangeGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
-              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
+              <stop offset="5%" stopColor={CHART_LIVE} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={CHART_LIVE} stopOpacity={0.05} />
             </linearGradient>
             <linearGradient id="avgDiffGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
-              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+              <stop offset="5%" stopColor={CHART_INK} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={CHART_INK} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-[color:var(--rule)]" />
           <XAxis
             dataKey="label"
             tick={{ fontSize: 10 }}
-            className="text-gray-500 dark:text-gray-400"
-            axisLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
+            className="fill-[color:var(--nezu)]"
+            axisLine={{ className: 'stroke-[color:var(--rule)]' }}
+            tickLine={{ className: 'stroke-[color:var(--rule)]' }}
           />
           <YAxis
             domain={[0, 5]}
             ticks={[1, 2, 3, 4, 5]}
             tick={{ fontSize: 10 }}
-            className="text-gray-500 dark:text-gray-400"
-            axisLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
+            className="fill-[color:var(--nezu)]"
+            axisLine={{ className: 'stroke-[color:var(--rule)]' }}
+            tickLine={{ className: 'stroke-[color:var(--rule)]' }}
             width={30}
           />
           <Tooltip content={<DifficultyTooltip />} />
           <ReferenceLine
             y={average}
-            stroke="#6366f1"
+            stroke={CHART_INK}
             strokeDasharray="6 3"
             strokeOpacity={0.5}
             label={{
               value: `Avg ${average.toFixed(1)}`,
               position: 'insideTopRight',
               fontSize: 9,
-              className: 'fill-indigo-400 dark:fill-indigo-500',
+              className: 'fill-[color:var(--nezu)]',
             }}
           />
           {/* Peak range band */}
           <Area
             type="monotone"
             dataKey="peak"
-            stroke="#f59e0b"
+            stroke={CHART_LIVE}
             strokeWidth={1}
             strokeOpacity={0.4}
             strokeDasharray="4 3"
@@ -524,29 +456,23 @@ function DifficultyFlow({ segments, average }: { segments: Array<{ segment: numb
           <Area
             type="monotone"
             dataKey="difficulty"
-            stroke="#6366f1"
+            stroke={CHART_INK}
             strokeWidth={2}
             fill="url(#avgDiffGrad)"
-            dot={{ r: 3, fill: '#6366f1', strokeWidth: 0 }}
-            activeDot={{ r: 5, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }}
+            dot={{ r: 3, fill: CHART_INK, strokeWidth: 0 }}
+            activeDot={{ r: 5, fill: CHART_INK, strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 rounded-full bg-indigo-500" />
-          Average
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 rounded-full bg-amber-500 opacity-60" style={{ borderTop: '1px dashed' }} />
-          Peak
-        </span>
+      <div className="fig-chart-legend justify-center mt-2">
+        <span className="fig-key fig-key--readers">Average</span>
+        <span className="fig-key fig-key--votes">Peak</span>
       </div>
 
-    </div>
+    </section>
   );
 }
 
@@ -559,11 +485,11 @@ function CoverageTooltip(props: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+    <div className="vn-sec px-3 py-2">
+      <p className="vn-num text-sm text-[color:var(--ink)]">
         {point.coverage}% coverage
       </p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="vn-num text-xs text-[color:var(--nezu)]">
         with {point.rank.toLocaleString()} words
       </p>
     </div>
@@ -583,10 +509,10 @@ function CoverageCurveChart({ data }: { data: JitenCoveragePoint[] }) {
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <section className="vn-sec p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Coverage Curve</h3>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        <h2 className="vn-sec-title">Coverage Curve</h2>
+        <p className="text-xs text-[color:var(--nezu)] mt-0.5">
           How much of the text you&apos;ll understand based on vocabulary size
         </p>
       </div>
@@ -594,29 +520,29 @@ function CoverageCurveChart({ data }: { data: JitenCoveragePoint[] }) {
         <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <defs>
             <linearGradient id="coverageGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+              <stop offset="5%" stopColor={CHART_INK} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={CHART_INK} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-[color:var(--rule)]" />
           <XAxis
             dataKey="rank"
             type="number"
             scale="log"
             domain={['dataMin', 'dataMax']}
             tick={{ fontSize: 11 }}
-            className="text-gray-500 dark:text-gray-400"
-            axisLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
+            className="fill-[color:var(--nezu)]"
+            axisLine={{ className: 'stroke-[color:var(--rule)]' }}
+            tickLine={{ className: 'stroke-[color:var(--rule)]' }}
             tickFormatter={(v) => formatCount(v)}
             ticks={[1, 10, 100, 1000, 10000]}
-            label={{ value: 'Words known', position: 'insideBottom', offset: -2, fontSize: 10, className: 'fill-gray-400 dark:fill-gray-500' }}
+            label={{ value: 'Words known', position: 'insideBottom', offset: -2, fontSize: 10, className: 'fill-[color:var(--nezu)]' }}
           />
           <YAxis
             tick={{ fontSize: 11 }}
-            className="text-gray-500 dark:text-gray-400"
-            axisLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
-            tickLine={{ className: 'stroke-gray-200 dark:stroke-gray-700' }}
+            className="fill-[color:var(--nezu)]"
+            axisLine={{ className: 'stroke-[color:var(--rule)]' }}
+            tickLine={{ className: 'stroke-[color:var(--rule)]' }}
             tickFormatter={(v) => `${v}%`}
             width={45}
             domain={[0, 100]}
@@ -627,7 +553,7 @@ function CoverageCurveChart({ data }: { data: JitenCoveragePoint[] }) {
             <ReferenceLine
               key={m.words}
               x={m.words}
-              stroke="#a78bfa"
+              stroke={CHART_INK_LIGHT}
               strokeDasharray="4 3"
               strokeOpacity={0.6}
               label={{
@@ -635,23 +561,23 @@ function CoverageCurveChart({ data }: { data: JitenCoveragePoint[] }) {
                 position: 'insideTopRight',
                 fontSize: 9,
                 dy: i * 14,
-                className: 'fill-violet-400 dark:fill-violet-500',
+                className: 'fill-[color:var(--nezu)]',
               }}
             />
           ))}
           <Area
             type="monotone"
             dataKey="coverage"
-            stroke="#6366f1"
+            stroke={CHART_INK}
             strokeWidth={2}
             fill="url(#coverageGrad)"
             dot={false}
-            activeDot={{ r: 4, fill: '#6366f1' }}
+            activeDot={{ r: 4, fill: CHART_INK }}
             isAnimationActive={false}
           />
         </AreaChart>
       </ResponsiveContainer>
-    </div>
+    </section>
   );
 }
 
@@ -671,10 +597,10 @@ function VocabularyDepth({ deck }: { deck: JitenDeckDto }) {
   const rareKanjiPct = 100 - coreKanjiPct;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <section className="vn-sec p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Vocabulary Depth</h3>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        <h2 className="vn-sec-title">Vocabulary Depth</h2>
+        <p className="text-xs text-[color:var(--nezu)] mt-0.5">
           How vocabulary and kanji are distributed across the text
         </p>
       </div>
@@ -683,26 +609,26 @@ function VocabularyDepth({ deck }: { deck: JitenDeckDto }) {
         {/* Words bar */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Words</span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            <span className="fig-label">Words</span>
+            <span className="vn-num text-[10px] text-[color:var(--text-faint)]">
               {formatCount(deck.uniqueWordCount)} distinct
             </span>
           </div>
-          <div className="flex rounded-lg overflow-hidden h-6">
+          <div className="flex rounded-xs overflow-hidden h-6 border border-[color:var(--rule)]">
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white transition-all overflow-hidden truncate px-1"
-              style={{ width: `${coreWordsPct}%`, backgroundColor: '#6366f1' }}
+              className="vn-num flex items-center justify-center text-[10px] overflow-hidden truncate px-1"
+              style={{ width: `${coreWordsPct}%`, backgroundColor: CHART_INK, color: '#FFFFFF' }}
             >
               {coreWordsPct > 20 && `${formatCount(coreWords)} recurring`}
             </div>
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white/90 transition-all overflow-hidden truncate px-1"
-              style={{ width: `${rareWordsPct}%`, backgroundColor: '#a78bfa' }}
+              className="vn-num flex items-center justify-center text-[10px] overflow-hidden truncate px-1"
+              style={{ width: `${rareWordsPct}%`, backgroundColor: CHART_INK_LIGHT, color: '#17181A' }}
             >
               {rareWordsPct > 20 && `${formatCount(deck.uniqueWordUsedOnceCount)} one-off`}
             </div>
           </div>
-          <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+          <div className="vn-num flex items-center justify-between mt-1 text-[10px] text-[color:var(--text-faint)]">
             <span>Recurring<span className="hidden sm:inline"> (2+ times)</span> · {coreWordsPct}%</span>
             <span>One-off<span className="hidden sm:inline"> (once)</span> · {rareWordsPct}%</span>
           </div>
@@ -711,44 +637,44 @@ function VocabularyDepth({ deck }: { deck: JitenDeckDto }) {
         {/* Kanji bar */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Kanji</span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            <span className="fig-label">Kanji</span>
+            <span className="vn-num text-[10px] text-[color:var(--text-faint)]">
               {formatCount(deck.uniqueKanjiCount)} distinct
             </span>
           </div>
-          <div className="flex rounded-lg overflow-hidden h-6">
+          <div className="flex rounded-xs overflow-hidden h-6 border border-[color:var(--rule)]">
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white transition-all overflow-hidden truncate px-1"
-              style={{ width: `${coreKanjiPct}%`, backgroundColor: '#14b8a6' }}
+              className="vn-num flex items-center justify-center text-[10px] overflow-hidden truncate px-1"
+              style={{ width: `${coreKanjiPct}%`, backgroundColor: CHART_LIVE, color: '#17181A' }}
             >
               {coreKanjiPct > 20 && `${formatCount(coreKanji)} recurring`}
             </div>
             <div
-              className="flex items-center justify-center text-[10px] font-medium text-white/90 transition-all overflow-hidden truncate px-1"
-              style={{ width: `${rareKanjiPct}%`, backgroundColor: '#5eead4' }}
+              className="vn-num flex items-center justify-center text-[10px] overflow-hidden truncate px-1"
+              style={{ width: `${rareKanjiPct}%`, backgroundColor: CHART_LIVE_LIGHT, color: '#17181A' }}
             >
               {rareKanjiPct > 20 && `${formatCount(deck.uniqueKanjiUsedOnceCount)} one-off`}
             </div>
           </div>
-          <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+          <div className="vn-num flex items-center justify-between mt-1 text-[10px] text-[color:var(--text-faint)]">
             <span>Recurring<span className="hidden sm:inline"> (2+ times)</span> · {coreKanjiPct}%</span>
             <span>One-off<span className="hidden sm:inline"> (once)</span> · {rareKanjiPct}%</span>
           </div>
         </div>
 
         {/* Repetition stat */}
-        <div className="flex items-center justify-center gap-6 pt-3 border-t border-gray-100 dark:border-gray-700/60">
+        <div className="flex items-center justify-center gap-6 pt-3 border-t border-[color:var(--rule)]">
           <div className="text-center">
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Total Words</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCount(deck.wordCount)}</p>
+            <p className="fig-label mb-0.5">Total Words</p>
+            <p className="vn-num text-sm text-[color:var(--ink)]">{formatCount(deck.wordCount)}</p>
           </div>
           <div className="text-center">
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">Sentences</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCount(deck.sentenceCount)}</p>
+            <p className="fig-label mb-0.5">Sentences</p>
+            <p className="vn-num text-sm text-[color:var(--ink)]">{formatCount(deck.sentenceCount)}</p>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -804,9 +730,9 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
     <Link
       key={vnId}
       href={`/vn/${vnId}/`}
-      className="group block rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 bg-gray-50 dark:bg-gray-700/50 transition-shadow"
+      className="shelf-item block"
     >
-      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
+      <div className="shelf-art">
         {showImage && !imageLoaded && (
           <div className="absolute inset-0 image-placeholder" />
         )}
@@ -822,21 +748,21 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
             onError={handleImageError}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-faint)]">
             No cover
           </div>
         )}
+        {/* The measured band keeps its own colour: it is the one thing on the card that reports
+            a scale rather than a state. */}
         <div
-          className="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-white text-[10px] font-medium rounded-sm z-10"
-          style={{ backgroundColor: badgeColor }}
+          className="vn-mark top-1.5 right-1.5"
+          style={{ backgroundColor: badgeColor, color: '#17181A' }}
         >
           {badgeLabel}
         </div>
       </div>
-      <div className="p-1.5">
-        <p className="text-[11px] font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400">
-          {displayTitle}
-        </p>
+      <div className="shelf-name">
+        {displayTitle}
       </div>
     </Link>
   );
@@ -846,14 +772,14 @@ function SimilarVNCard({ vnId, title, titleJp, coverUrl, imageSexual, badgeLabel
 
 function SimilarDifficultySection({ vns, currentDifficulty }: { vns: SimilarDifficultyVN[]; currentDifficulty: number }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <section className="vn-sec p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Similar Difficulty</h3>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        <h2 className="vn-sec-title">Similar Difficulty</h2>
+        <p className="text-xs text-[color:var(--nezu)] mt-0.5">
           Other visual novels with a similar reading difficulty ({getDifficultyLabel(currentDifficulty)}, {currentDifficulty.toFixed(1)}/5)
         </p>
       </div>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+      <div className="vn-shelf">
         {vns.map(vn => (
           <SimilarVNCard
             key={vn.vnId}
@@ -867,7 +793,7 @@ function SimilarDifficultySection({ vns, currentDifficulty }: { vns: SimilarDiff
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -875,14 +801,14 @@ function SimilarDifficultySection({ vns, currentDifficulty }: { vns: SimilarDiff
 
 function SimilarLengthSection({ vns, currentCharCount }: { vns: SimilarLengthVN[]; currentCharCount: number }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <section className="vn-sec p-4 sm:p-5">
       <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Similar Length</h3>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+        <h2 className="vn-sec-title">Similar Length</h2>
+        <p className="text-xs text-[color:var(--nezu)] mt-0.5">
           Other visual novels with a similar character count ({formatCount(currentCharCount)} chars)
         </p>
       </div>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+      <div className="vn-shelf">
         {vns.map(vn => (
           <SimilarVNCard
             key={vn.vnId}
@@ -896,7 +822,7 @@ function SimilarLengthSection({ vns, currentCharCount }: { vns: SimilarLengthVN[
           />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -906,19 +832,19 @@ function LanguageStatsSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
       {/* Reading style hero */}
-      <div className="h-28 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80" />
+      <div className="vn-sec h-28" />
       {/* Radar chart */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80">
-        <div className="h-4 w-24 rounded-sm bg-gray-200 dark:bg-gray-700 mb-4" />
-        <div className="h-64 rounded-sm bg-gray-100 dark:bg-gray-700/40" />
+      <div className="vn-sec p-5">
+        <div className="h-4 w-24 rounded-xs bg-[color:var(--surface-inset)] mb-4" />
+        <div className="h-64 rounded-xs bg-[color:var(--surface-inset)]" />
       </div>
       {/* Heatmap */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80">
-        <div className="h-4 w-36 rounded-sm bg-gray-200 dark:bg-gray-700 mb-4" />
-        <div className="h-10 rounded-lg bg-gray-100 dark:bg-gray-700/40" />
+      <div className="vn-sec p-5">
+        <div className="h-4 w-36 rounded-xs bg-[color:var(--surface-inset)] mb-4" />
+        <div className="h-10 rounded-xs bg-[color:var(--surface-inset)]" />
       </div>
       {/* Coverage curve */}
-      <div className="h-64 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80" />
+      <div className="vn-sec h-64" />
     </div>
   );
 }

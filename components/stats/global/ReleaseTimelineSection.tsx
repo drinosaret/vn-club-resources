@@ -41,9 +41,18 @@ const PLATFORM_LABELS: Record<string, string> = { ...PLATFORM_SHORT_LABELS, othe
 // of twelve makes every pair safe under colour deficiency, so entries that share a hue are
 // separated by lightness instead and the legend stays the way a reader resolves the rest.
 const PALETTE = [
-  '#4f46e5', '#06b6d4', '#f59e0b', '#ec4899',
-  '#10b981', '#8b5cf6', '#ef4444', '#4d7c0f',
-  '#60a5fa', '#a16207', '#0d9488', '#f97316',
+  'var(--kohaku)',
+  'var(--ai)',
+  'color-mix(in oklab, var(--kohaku) 55%, var(--nezu))',
+  'color-mix(in oklab, var(--ai) 55%, var(--nezu))',
+  'color-mix(in oklab, var(--kohaku) 78%, var(--ink))',
+  'color-mix(in oklab, var(--ai) 78%, var(--ink))',
+  'color-mix(in oklab, var(--kohaku) 34%, var(--nezu))',
+  'color-mix(in oklab, var(--ai) 34%, var(--nezu))',
+  'color-mix(in oklab, var(--kohaku) 62%, var(--ground))',
+  'color-mix(in oklab, var(--ai) 62%, var(--ground))',
+  'color-mix(in oklab, var(--beni) 60%, var(--nezu))',
+  'var(--beni)',
 ];
 
 function paletteFor(keys: string[]): Record<string, string> {
@@ -51,8 +60,8 @@ function paletteFor(keys: string[]): Record<string, string> {
   keys.forEach((key, i) => {
     colors[key] = PALETTE[i % PALETTE.length];
   });
-  colors.other = '#94a3b8';
-  colors.unknown = '#cbd5e1';
+  colors.other = 'var(--nezu)';
+  colors.unknown = 'color-mix(in oklab, var(--nezu) 45%, var(--ground))';
   return colors;
 }
 
@@ -78,7 +87,7 @@ function ModeToggle({
     <select
       value={normalized ? 'share' : 'count'}
       onChange={(event) => onChange(event.target.value === 'share')}
-      className="text-xs rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-1"
+      className="text-xs rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface)] text-[color:var(--nezu)] px-2 py-1"
       aria-label="Chart mode"
     >
       <option value="count">Count</option>
@@ -131,7 +140,7 @@ export function ReleaseTimelineSection() {
     return (
       <div className="grid gap-6 lg:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-80 rounded-xl image-placeholder" />
+          <div key={i} className="h-80 rounded-xs image-placeholder" />
         ))}
       </div>
     );
@@ -139,7 +148,7 @@ export function ReleaseTimelineSection() {
 
   if (!timeline) {
     return (
-      <p className="py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+      <p className="py-10 text-center text-sm text-[color:var(--nezu)]">
         Release trends are unavailable right now.
       </p>
     );
@@ -190,7 +199,7 @@ export function ReleaseTimelineSection() {
             x: String(row.year),
             y: Math.round((row.median_minutes / 60) * 10) / 10,
           }))}
-          color="#06b6d4"
+          color="var(--ai)"
           formatValue={(value) => `${value}h`}
           valueSuffix="median"
         />
@@ -207,7 +216,7 @@ export function ReleaseTimelineSection() {
             x: String(row.year),
             y: row.average,
           }))}
-          color="#f59e0b"
+          color="var(--kohaku)"
           area={false}
           formatValue={(value) => value.toFixed(2)}
         />

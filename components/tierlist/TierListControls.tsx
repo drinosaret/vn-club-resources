@@ -76,7 +76,7 @@ export function TierListControls({
     return shareData;
   }, [mode, tierDefs, tiers, pool, listTitle, displayMode, thumbnailSize, showTitles, showScores, titleMaxH, cropSquare, vnMap]);
 
-  // Cached share URL — reuses existing link if data hasn't changed
+  // Cached share URL: reuses existing link if data hasn't changed
   const lastShareRef = useRef<{ hash: string; url: string } | null>(null);
   const getShareUrl = useCallback(async () => {
     const data = buildShareData();
@@ -99,7 +99,7 @@ export function TierListControls({
     exportFormat,
   });
 
-  // Share link — "Copy Link" button handler
+  // Share link: "Copy Link" button handler
   const [creatingLink, setCreatingLink] = useState(false);
   const [linkToast, setLinkToast] = useState<string | null>(null);
   const [linkToastIsError, setLinkToastIsError] = useState(false);
@@ -149,11 +149,10 @@ export function TierListControls({
         creatingLink={creatingLink}
         onOpen={imageShare.prepareBlob}
       />
-      <div className="inline-flex items-stretch">
+      <div className="toy-split">
         <button
           onClick={() => exportAsImage(exportFormat)}
           disabled={exportDisabled}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg transition-colors"
         >
           {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
           <span className="hidden sm:inline">{s['controls.export']}</span>
@@ -161,7 +160,6 @@ export function TierListControls({
         <button
           onClick={() => setExportScale(exportScale === 1 ? 1.5 : exportScale === 1.5 ? 2 : 1)}
           disabled={exportDisabled}
-          className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-blue-500 px-2 cursor-pointer transition-colors"
           title={s['controls.exportScale']}
         >
           {exportScale}x
@@ -169,8 +167,7 @@ export function TierListControls({
         <button
           onClick={() => setExportFormat(exportFormat === 'jpeg' ? 'png' : exportFormat === 'png' ? 'webp' : 'jpeg')}
           disabled={exportDisabled}
-          className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-blue-500 rounded-r-lg px-2 cursor-pointer transition-colors"
-          title="Export format"
+          title={s['controls.exportFormat']}
         >
           {FORMAT_LABELS[exportFormat]}
         </button>

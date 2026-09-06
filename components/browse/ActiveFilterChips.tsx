@@ -23,22 +23,14 @@ interface ChipProps {
 
 function Chip({ label, onRemove, isExclude, icon }: ChipProps) {
   return (
-    <span
-      className={`
-        inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap shrink-0
-        ${isExclude
-          ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
-          : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
-        }
-      `}
-    >
+    <span className={`bw-chip whitespace-nowrap shrink-0 ${isExclude ? 'bw-chip--off' : 'bw-chip--on'}`}>
       {icon}
       {isExclude && <Minus className="w-3 h-3" />}
       <span className={isExclude ? 'line-through' : ''}>{label}</span>
       <button
         type="button"
         onClick={onRemove}
-        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors"
+        className="bw-chip-btn p-0.5 hit-24"
         aria-label={`Remove ${label} filter`}
       >
         <X className="w-3 h-3" />
@@ -300,13 +292,13 @@ export function ActiveFilterChips({
   return (
     <div className="py-2">
       {/* Mobile: horizontal scroll, Desktop: wrap */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:overflow-visible lg:flex-wrap lg:pb-0 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:overflow-visible lg:flex-wrap lg:pb-0 scrollbar-thin">
         {chips}
         {chips.length > 1 && (
           <button
             type="button"
             onClick={onClearAll}
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline whitespace-nowrap shrink-0"
+            className="sec-more whitespace-nowrap shrink-0"
           >
             Clear all
           </button>

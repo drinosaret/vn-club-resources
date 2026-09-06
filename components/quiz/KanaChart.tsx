@@ -64,36 +64,34 @@ export function KanaChart({ settings, onSettingsChange }: KanaChartProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface)]">
       {/* Header - clickable to expand/collapse */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-[color:var(--surface-inset)]"
       >
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          Select Rows & Reference Chart
-        </h3>
+        <h2 className="font-display text-sm font-bold uppercase tracking-[0.08em] text-[color:var(--ink)]">
+          Select Rows &amp; Reference Chart
+        </h2>
         {isOpen ? (
-          <ChevronUp className="w-5 h-5 text-gray-400" />
+          <ChevronUp className="h-5 w-5 text-[color:var(--nezu)]" />
         ) : (
-          <ChevronDown className="w-5 h-5 text-gray-400" />
+          <ChevronDown className="h-5 w-5 text-[color:var(--nezu)]" />
         )}
       </button>
 
       {/* Content */}
       {isOpen && (
-        <div className="px-5 pb-5 border-t border-gray-200 dark:border-gray-700">
+        <div className="border-t border-[color:var(--rule)] px-5 pb-5">
           {/* Warning when no rows selected */}
           {noRowsSelected && (
-            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                No kana selected. Please select at least one row to start the quiz.
-              </p>
-            </div>
+            <p className="mt-4 rounded-xs border border-[color:var(--rule)] p-3 text-sm text-[color:var(--beni-text)]">
+              No kana selected. Please select at least one row to start the quiz.
+            </p>
           )}
 
           {/* Two columns: Hiragana and Katakana */}
-          <div className="grid md:grid-cols-2 gap-6 mt-4">
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
             {/* Hiragana Column */}
             <KanaSection
               title="Hiragana"
@@ -133,34 +131,22 @@ function KanaSection({ title, selectedRows, basicGroups, dakutenGroups, onRowTog
   return (
     <div>
       {/* Section Header with Quick Buttons */}
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h4>
-        <div className="flex gap-2 text-xs">
-          <button
-            onClick={() => onSetRows([...allRows])}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h3 className="font-display text-sm font-bold text-[color:var(--ink)]">{title}</h3>
+        <div className="flex gap-2">
+          <button onClick={() => onSetRows([...allRows])} className="kana-act">
             All
           </button>
-          <span className="text-gray-400">·</span>
-          <button
-            onClick={() => onSetRows([])}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
+          <span className="kana-act">·</span>
+          <button onClick={() => onSetRows([])} className="kana-act">
             None
           </button>
-          <span className="text-gray-400">·</span>
-          <button
-            onClick={() => onSetRows([...basicRows])}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
+          <span className="kana-act">·</span>
+          <button onClick={() => onSetRows([...basicRows])} className="kana-act">
             Basic
           </button>
-          <span className="text-gray-400">·</span>
-          <button
-            onClick={() => onSetRows([...dakutenRows])}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
+          <span className="kana-act">·</span>
+          <button onClick={() => onSetRows([...dakutenRows])} className="kana-act">
             Dakuten
           </button>
         </div>
@@ -181,10 +167,8 @@ function KanaSection({ title, selectedRows, basicGroups, dakutenGroups, onRowTog
         </div>
 
         {/* Dakuten separator */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-          <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-            Dakuten
-          </span>
+        <div className="border-t border-[color:var(--rule)] pt-2">
+          <span className="fig-label">Dakuten</span>
         </div>
 
         {/* Dakuten rows */}
@@ -217,49 +201,20 @@ function KanaRowDisplay({ kana, isSelected, onToggle }: KanaRowDisplayProps) {
       onClick={onToggle}
       aria-pressed={isSelected}
       aria-label={`Toggle ${kana[0]?.row || 'kana'} row`}
-      className={`w-full flex items-center gap-2 p-1.5 rounded-lg transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
-        isSelected
-          ? 'bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-500/50'
-          : 'bg-gray-50 dark:bg-gray-700/30 opacity-50 hover:opacity-75'
-      }`}
+      className={`kana-row ${isSelected ? 'kana-row--on' : ''}`}
     >
-      {/* Checkbox */}
-      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
-        isSelected
-          ? 'bg-emerald-500 border-emerald-500'
-          : 'border-gray-300 dark:border-gray-600'
-      }`}>
-        {isSelected && (
-          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-        )}
-      </div>
+      <span className="kana-tick" aria-hidden>
+        ✓
+      </span>
 
-      {/* Kana characters */}
-      <div className="flex gap-0.5 flex-wrap">
+      <span className="flex flex-wrap gap-0.5">
         {kana.map((char) => (
-          <div
-            key={char.kana}
-            className={`w-7 h-7 sm:w-8 sm:h-8 flex flex-col items-center justify-center rounded transition-colors ${
-              isSelected
-                ? 'bg-white dark:bg-gray-800'
-                : 'bg-gray-100 dark:bg-gray-700'
-            }`}
-          >
-            <span className={`text-xs sm:text-sm font-medium leading-none ${
-              isSelected
-                ? 'text-gray-900 dark:text-white'
-                : 'text-gray-400 dark:text-gray-500'
-            }`}>
-              {char.kana}
-            </span>
-            <span className="text-[6px] sm:text-[7px] text-gray-400 dark:text-gray-500 leading-none">
-              {char.romaji}
-            </span>
-          </div>
+          <span key={char.kana} className="kana-cell">
+            <span className="kana-char">{char.kana}</span>
+            <span className="kana-romaji">{char.romaji}</span>
+          </span>
         ))}
-      </div>
+      </span>
     </button>
   );
 }

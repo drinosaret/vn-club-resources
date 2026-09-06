@@ -3,6 +3,7 @@
  * Uses Next.js ISR for automatic revalidation.
  */
 
+import { pickPeriodLabel } from './club-history';
 import { getBackendUrlOptional } from './config';
 import { getVNForMetadata } from './vndb-server';
 import type { VNDetail } from './vndb-stats-api';
@@ -56,8 +57,6 @@ export async function getEventsForMonth(
   }
 }
 
-const SEASON_BY_MONTH: Record<number, string> = { 0: 'Winter', 3: 'Spring', 6: 'Summer', 9: 'Fall' };
-
 export interface ClubPick {
   vn: VNDetail; // full VN data so the card can show score/developer/tags
   period: string; // e.g. "May 2026" or "Spring 2026"
@@ -90,11 +89,9 @@ export async function getRecentClubPicks(): Promise<{
     if (!e || !id) return null;
     const vn = await getVNForMetadata(id);
     if (!vn) return null;
-    const start = new Date(e.start_at);
-    const period =
-      kind === 'season'
-        ? `${SEASON_BY_MONTH[start.getUTCMonth()] ?? ''} ${start.getUTCFullYear()}`.trim()
-        : start.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    // The archive labels the same rows, and a seasonal pick can start in a month that is not
+    // a season's first, so both pages read the period off one helper.
+    const period = pickPeriodLabel(kind === 'season' ? 'vn_of_season' : 'vn_of_month', e.start_at);
     return { vn, period };
   };
 
@@ -103,6 +100,39 @@ export async function getRecentClubPicks(): Promise<{
     resolve(latest('vn_of_season'), 'season'),
   ]);
   return { month, season };
+}
+
+export interface ClubPickHistory {
+  events: EventItem[];
+  total: number; // matching rows in the archive, not just the page returned
+}
+
+/**
+ * Past club picks, newest first. Returns an empty archive if the backend is
+ * unavailable, so the page renders its explanation rather than an error.
+ *
+ * revalidate: the archive only changes when a pick is announced, so it is cached
+ * for an hour rather than fetched per request.
+ */
+export async function getClubPickHistory(
+  limit = 120,
+  offset = 0,
+  revalidate = 3600,
+): Promise<ClubPickHistory> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return { events: [], total: 0 };
+
+  try {
+    const res = await fetch(
+      `${backendUrl}/api/v1/events/history?limit=${limit}&offset=${offset}`,
+      { next: { revalidate }, signal: AbortSignal.timeout(10000) },
+    );
+    if (!res.ok) return { events: [], total: 0 };
+    const data = await res.json();
+    return { events: data?.events ?? [], total: data?.total ?? 0 };
+  } catch {
+    return { events: [], total: 0 };
+  }
 }
 
 /**

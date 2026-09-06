@@ -18,9 +18,8 @@ scipy>=1.14.0
 scikit-learn>=1.5.0
 implicit>=0.7.0
 
-# LightFM is NOT required - we use a pure NumPy/SciPy hybrid CF implementation
-# that works on all Python versions. The train_lightfm() function uses sklearn's
-# TruncatedSVD to combine CF embeddings with tag features.
+# Collaborative filtering is trained with implicit (ALS); scikit-learn serves the
+# similarity arithmetic in the recommender.
 
 # RecBole for recommendation benchmarking (optional - install separately for GPU support)
 # pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
@@ -63,3 +62,11 @@ slowapi>=0.1.9
 
 # Process monitoring
 psutil>=5.9.0
+
+# Description embeddings, nightly worker job only. Inference runs on the ONNX runtime so
+# no deep learning framework is installed: these three add roughly 75 MB, where a torch
+# based stack adds well over a gigabyte. Serving reads a prebuilt matrix with numpy and
+# imports none of them.
+onnxruntime>=1.20.0
+tokenizers>=0.20.0
+huggingface-hub>=0.26.0

@@ -98,7 +98,7 @@ export function StackedAreaChart({
             {ticks.map((tick) => (
               <span
                 key={tick}
-                className="absolute right-1.5 text-[10px] leading-none text-gray-400 dark:text-gray-500 tabular-nums -translate-y-1/2"
+                className="absolute right-1.5 text-[10px] leading-none text-[color:var(--text-faint)] tabular-nums -translate-y-1/2"
                 style={{ top: `${(1 - tick / max) * 100}%` }}
               >
                 {normalized ? `${Math.round(tick * 100)}%` : compactNumber(tick)}
@@ -142,7 +142,7 @@ export function StackedAreaChart({
                           className="block w-full"
                           style={{
                             height: `${(value / scale) * 100}%`,
-                            backgroundColor: colors[key] ?? '#94a3b8',
+                            backgroundColor: colors[key] ?? 'var(--nezu)',
                           }}
                         />
                       );
@@ -157,7 +157,7 @@ export function StackedAreaChart({
             {xLabels.map(({ item, index }) => (
               <span
                 key={`${item.x}-${index}`}
-                className="absolute text-[10px] leading-none text-gray-400 dark:text-gray-500 whitespace-nowrap"
+                className="absolute text-[10px] leading-none text-[color:var(--text-faint)] whitespace-nowrap"
                 style={{
                   left: `${xs[index]}%`,
                   transform:
@@ -175,13 +175,13 @@ export function StackedAreaChart({
 
           {hover !== null ? (
             <div
-              className="absolute top-0 z-10 pointer-events-none bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-full overflow-hidden"
+              className="absolute top-0 z-10 pointer-events-none bg-[color:var(--surface)] px-3 py-2 rounded-xs border border-[color:var(--rule)] max-h-full overflow-hidden"
               style={{
                 left: `${xs[hover]}%`,
                 transform: xs[hover] > 60 ? 'translateX(-100%)' : 'none',
               }}
             >
-              <p className="text-xs font-medium text-gray-900 dark:text-white mb-1 whitespace-nowrap">
+              <p className="text-xs font-medium text-[color:var(--ink)] mb-1 whitespace-nowrap">
                 {formatX(String(points[hover].x))}
               </p>
               {series
@@ -192,11 +192,11 @@ export function StackedAreaChart({
                 .map(({ key, value }) => (
                   <p
                     key={key}
-                    className="text-[11px] text-gray-600 dark:text-gray-300 flex items-center gap-1.5 whitespace-nowrap"
+                    className="text-[11px] text-[color:var(--nezu)]  flex items-center gap-1.5 whitespace-nowrap"
                   >
                     <span
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: colors[key] ?? '#94a3b8' }}
+                      style={{ backgroundColor: colors[key] ?? 'var(--nezu)' }}
                     />
                     {labels[key] ?? key}
                     <span className="ml-auto tabular-nums font-medium">
@@ -213,11 +213,11 @@ export function StackedAreaChart({
         {series.map((key) => (
           <span
             key={key}
-            className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400"
+            className="inline-flex items-center gap-1.5 text-[11px] text-[color:var(--nezu)]"
           >
             <span
               className="w-2.5 h-2.5 rounded-sm"
-              style={{ backgroundColor: colors[key] ?? '#94a3b8' }}
+              style={{ backgroundColor: colors[key] ?? 'var(--nezu)' }}
             />
             {labels[key] ?? key}
           </span>

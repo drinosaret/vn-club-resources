@@ -57,14 +57,12 @@ export function StatsLoadingScreen({
   return (
     <div className="flex flex-col items-center justify-start min-h-[calc(100vh+8rem)] p-8 pt-[12vh]">
       {/* Title */}
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <h2 className="sec-title mb-2">
         {displayTitle}
       </h2>
 
       {/* Subtitle with elapsed time */}
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-        Elapsed: {formatElapsedTime(elapsedTime)}
-      </p>
+      <p className="fig-label mb-8">Elapsed {formatElapsedTime(elapsedTime)}</p>
 
       {/* Progress stages */}
       <div className="w-full max-w-md space-y-1 mb-8">
@@ -78,22 +76,22 @@ export function StatsLoadingScreen({
             <div
               key={stage.id}
               className={`
-                flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all
-                ${isActive ? 'bg-primary-50 dark:bg-primary-900/20' : ''}
-                ${isError ? 'bg-red-50 dark:bg-red-900/20' : ''}
+                flex items-center gap-3 px-4 py-2.5 rounded-xs transition-all
+                ${isActive ? 'bg-[color:var(--surface-inset)]' : ''}
+                ${isError ? 'bg-[color:var(--surface-inset)]' : ''}
                 ${isCompleted ? 'opacity-60' : ''}
               `}
             >
               {/* Status icon */}
               <div className="shrink-0">
                 {isCompleted ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  <CheckCircle2 className="w-5 h-5 text-[color:var(--ai)]" />
                 ) : isActive ? (
-                  <Loader2 className="w-5 h-5 text-primary-500 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-[color:var(--ai)] animate-spin" />
                 ) : isError ? (
-                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <AlertCircle className="w-5 h-5 text-[color:var(--beni-text)]" />
                 ) : (
-                  <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600" />
+                  <Circle className="w-5 h-5 text-[color:var(--text-faint)]" />
                 )}
               </div>
 
@@ -102,21 +100,21 @@ export function StatsLoadingScreen({
                 <span
                   className={`
                     text-sm font-medium
-                    ${isActive ? 'text-primary-700 dark:text-primary-300' : ''}
-                    ${isError ? 'text-red-700 dark:text-red-300' : ''}
-                    ${isCompleted ? 'text-gray-500 dark:text-gray-400' : ''}
-                    ${isPending ? 'text-gray-400 dark:text-gray-500' : ''}
+                    ${isActive ? 'text-[color:var(--ai)]' : ''}
+                    ${isError ? 'text-[color:var(--beni-text)]' : ''}
+                    ${isCompleted ? 'text-[color:var(--nezu)]' : ''}
+                    ${isPending ? 'text-[color:var(--text-faint)]' : ''}
                   `}
                 >
                   {stage.name}
                 </span>
                 {stage.detail && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                  <span className="text-xs text-[color:var(--text-faint)] ml-2">
                     {stage.detail}
                   </span>
                 )}
                 {stage.error && (
-                  <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
+                  <p className="text-xs text-[color:var(--beni-text)] mt-0.5">
                     {stage.error}
                   </p>
                 )}
@@ -124,7 +122,7 @@ export function StatsLoadingScreen({
 
               {/* Step counter */}
               <div className="shrink-0">
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="st-num text-xs text-[color:var(--text-faint)]">
                   {index + 1}/{stages.length}
                 </span>
               </div>
@@ -135,14 +133,14 @@ export function StatsLoadingScreen({
 
       {/* Help text */}
       {!hasError && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 text-center max-w-sm">
+        <p className="text-xs text-[color:var(--text-faint)] text-center max-w-sm">
           {helpText}
         </p>
       )}
 
       {/* Error retry hint */}
       {hasError && (
-        <p className="text-sm text-red-500 dark:text-red-400 text-center max-w-sm">
+        <p className="text-sm text-[color:var(--beni-text)] text-center max-w-sm">
           An error occurred. Please try refreshing the page.
         </p>
       )}
@@ -181,19 +179,15 @@ export function SimpleLoadingScreen({
 
   return (
     <div className="flex flex-col items-center justify-start min-h-[calc(100vh+8rem)] p-8 pt-[12vh]">
-      <Loader2 className="w-10 h-10 text-primary-500 animate-spin mb-4" />
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <Loader2 className="w-10 h-10 text-[color:var(--ai)] animate-spin mb-4" />
+      <h2 className="sec-title mb-2">
         {title}
       </h2>
       {subtitle && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {subtitle}
-        </p>
+        <p className="sec-sub mb-4">{subtitle}</p>
       )}
       {showElapsedTime && (
-        <p className="text-xs text-gray-400 dark:text-gray-500">
-          Elapsed: {formatElapsedTime(elapsedTime)}
-        </p>
+        <p className="fig-label">Elapsed {formatElapsedTime(elapsedTime)}</p>
       )}
     </div>
   );

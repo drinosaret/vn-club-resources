@@ -42,21 +42,21 @@ export function GameOverCard({ streak, best, isBest, mode, onRestart }: GameOver
   };
 
   return (
-    <div className="mx-auto mt-5 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-lg dark:border-gray-700 dark:bg-gray-800">
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Game over</p>
-      <p className="mt-1 text-4xl font-extrabold tabular-nums text-gray-900 dark:text-white">{streak}</p>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{streak === 1 ? 'correct guess' : 'correct guesses'}</p>
+    <div className="toy-panel mx-auto mt-5 w-full max-w-sm p-5 text-center">
+      <p className="toy-label">Game over</p>
+      <p className="mt-2 font-mono text-4xl font-medium tabular-nums text-[color:var(--ink)]">{streak}</p>
+      <p className="text-sm text-[color:var(--nezu)]">{streak === 1 ? 'correct guess' : 'correct guesses'}</p>
       {isBest && streak > 0 ? (
-        <p className="mt-2 text-sm font-semibold text-amber-600 dark:text-amber-400">New best!</p>
+        <p className="mt-2 text-sm font-medium text-[color:var(--kohaku-text)]">New best!</p>
       ) : (
-        <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">Best: {best}</p>
+        <p className="mt-2 text-sm text-[color:var(--nezu)]">Best: {best}</p>
       )}
 
       <div className="mt-4 flex flex-col gap-2">
         <button
           type="button"
           onClick={onRestart}
-          className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700"
+          className="toy-btn toy-btn--go toy-btn--wide"
         >
           <RotateCcw className="h-4 w-4" /> Play again
         </button>
@@ -64,16 +64,16 @@ export function GameOverCard({ streak, best, isBest, mode, onRestart }: GameOver
           <button
             type="button"
             onClick={share}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700/50"
+            className="toy-btn flex-1"
           >
             <Share2 className="h-4 w-4" /> Share
           </button>
           <button
             type="button"
             onClick={copy}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700/50"
+            className="toy-btn flex-1"
           >
-            {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>

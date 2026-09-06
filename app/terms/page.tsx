@@ -1,14 +1,23 @@
 import type { Metadata } from 'next';
-import { generatePageMetadata, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
+import Link from '@/components/Link';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Terms of Use',
   description:
-    'VN Club terms of use. How shared layouts work, content ownership, acceptable use, and liability for this free community site.',
+    'The terms of use for VN Club, a free open source site about Japanese visual novels: how shared tier lists and collages work, where the catalogue data comes from, acceptable use, and liability.',
   path: '/terms/',
 });
 
 const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Terms of Use',
+    description:
+      'How shared tier lists and collages work, where the catalogue data comes from, acceptable use, and liability.',
+    url: `${SITE_URL}/terms/`,
+  },
   generateBreadcrumbJsonLd([
     { name: 'Home', path: '/' },
     { name: 'Terms of Use', path: '/terms/' },
@@ -22,18 +31,18 @@ export default function TermsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
-      <div className="container mx-auto px-4 py-12 max-w-3xl">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="container mx-auto max-w-3xl px-4 py-12">
+        <h1 className="sec-title">
           Terms of Use
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-          Last updated: April 9, 2026
+        <p className="op-label mt-3">
+          Last updated: September 5, 2026
         </p>
 
-        <div className="prose dark:prose-invert max-w-none prose-headings:text-xl prose-headings:font-semibold prose-headings:mt-8 prose-headings:mb-3 prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-li:text-gray-600 dark:prose-li:text-gray-300">
+        <div className="prose op-doc mt-8">
           <p>
-            VN Club (vnclub.org) is a free, open source site for learning Japanese through visual
-            novels. By using it, you agree to these terms.
+            VN Club (vnclub.org) is a free, open source site about Japanese visual novels. By
+            using it, you agree to these terms.
           </p>
 
           <h2>Content on the site</h2>
@@ -93,7 +102,7 @@ export default function TermsPage() {
           <h2>Privacy</h2>
           <p>
             Your use of the site is also subject to our{' '}
-            <a href="/privacy/">Privacy Policy</a>.
+            <Link href="/privacy/">Privacy Policy</Link>.
           </p>
 
           <h2>Shared layouts</h2>

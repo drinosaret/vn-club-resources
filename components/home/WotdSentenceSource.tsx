@@ -4,7 +4,13 @@ import Link from '@/components/Link';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import type { ExampleSentence } from '@/lib/word-of-the-day';
 
-export function WotdSentenceSource({ sentence }: { sentence: ExampleSentence }) {
+export function WotdSentenceSource({
+  sentence,
+  className = 'text-xs text-[color:var(--text-faint)] mt-1',
+}: {
+  sentence: ExampleSentence;
+  className?: string;
+}) {
   const { preference } = useTitlePreference();
 
   const sourceName = sentence.source_title || sentence.source_english;
@@ -19,12 +25,12 @@ export function WotdSentenceSource({ sentence }: { sentence: ExampleSentence }) 
     : sourceName;
 
   return (
-    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+    <p className={className}>
       Source:{' '}
       {sentence.vn_id ? (
         <Link
           href={`/vn/${sentence.vn_id}/`}
-          className="underline hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+          className="underline underline-offset-2 transition-colors hover:text-[color:var(--ai)] dark:hover:text-[color:var(--kohaku)]"
         >
           {displayName}
         </Link>

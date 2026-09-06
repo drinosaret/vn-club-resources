@@ -2673,6 +2673,11 @@ async def refresh_leaderboards(dry_run: bool = False) -> dict:
                 facet_kind=describe_kind(spec.facet),
                 total_ranked=response.total_ranked,
                 generated_at=generated_at,
+                attribution=(
+                    {"label": spec.attribution[0], "href": spec.attribution[1]}
+                    if spec.attribution
+                    else None
+                ),
             )
         )
 

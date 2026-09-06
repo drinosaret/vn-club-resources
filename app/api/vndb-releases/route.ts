@@ -22,6 +22,25 @@ interface CachedResult {
 
 const cache = new Map<string, CachedResult>();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_MAX = 500;
+// A stalled upstream would otherwise hold a handler for the fetch default of several minutes.
+const UPSTREAM_TIMEOUT_MS = 10000;
+
+// The key space is every VN id, so the map is swept and then capped rather than left to grow
+// with whatever asks for a cover.
+function cacheSet(vnId: string, covers: CachedResult['covers']) {
+  const now = Date.now();
+  if (cache.size >= CACHE_MAX * 0.8) {
+    for (const [key, entry] of cache) {
+      if (now - entry.timestamp > CACHE_TTL_MS) cache.delete(key);
+    }
+  }
+  cache.set(vnId, { covers, timestamp: now });
+  if (cache.size > CACHE_MAX) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) cache.delete(oldestKey);
+  }
+}
 
 export async function GET(request: NextRequest) {
   const vnId = request.nextUrl.searchParams.get('vnId');
@@ -52,6 +71,7 @@ export async function GET(request: NextRequest) {
         sort: 'released',
         results: 25,
       }),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -82,7 +102,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache result
-    cache.set(vnId, { covers, timestamp: Date.now() });
+    cacheSet(vnId, covers);
 
     return NextResponse.json({ covers });
   } catch {

@@ -47,6 +47,7 @@ from .thresholds import (
 )
 from .spec import (
     ADULT_SCENE_TAG_CATEGORIES,
+    JITEN_ATTRIBUTION,
     BoardSpec,
     Disclosure,
     Facet,
@@ -754,7 +755,7 @@ _MIN_VOTES_FOR_ERA_WINDOW = 150
 _MIN_ENTRIES_FOR_SPAN = 5
 
 #: Difficulty is jiten.moe's measurement, and every board resting on it credits the source.
-JITEN_ATTRIBUTION = ("jiten.moe", "https://jiten.moe/decks/media?mediaType=7")
+
 
 _DIFFICULTY_SOURCE_NOTE = (
     "Difficulty comes from jiten.moe's analysis of the script and covers only the titles it "

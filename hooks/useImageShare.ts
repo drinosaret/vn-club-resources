@@ -130,7 +130,7 @@ export function useImageShare({
             // User cancelled or share with files not supported — no toast
           }
         } else {
-          showToast('Clipboard not supported — use the download button instead', 4000, true);
+          showToast('Clipboard not supported. Use the download button instead.', 4000, true);
         }
         return;
       }
@@ -157,7 +157,7 @@ export function useImageShare({
         const params = new URLSearchParams({ text: fullText });
         window.open(`https://x.com/intent/tweet?${params.toString()}`, '_blank', 'noopener');
         showToast(
-          copied ? 'Image copied — paste it in your tweet!' : 'Image downloaded — upload it to your tweet!',
+          copied ? 'Image copied. Paste it in your tweet.' : 'Image downloaded. Upload it to your tweet.',
           5000,
           !copied,
         );
@@ -179,7 +179,7 @@ export function useImageShare({
         if (shareUrl) params.set('url', shareUrl);
         window.open(`https://www.reddit.com/submit?${params.toString()}`, '_blank', 'noopener');
         showToast(
-          copied ? 'Image copied — paste it in your post!' : 'Image downloaded — upload it to your post!',
+          copied ? 'Image copied. Paste it in your post.' : 'Image downloaded. Upload it to your post.',
           5000,
           !copied,
         );
@@ -198,7 +198,7 @@ export function useImageShare({
       }
     } catch (err) {
       console.error('Share failed:', err);
-      showToast('Share failed — try downloading the image instead', 3000, true);
+      showToast('Share failed. Try downloading the image instead.', 3000, true);
     } finally {
       setSharing(false);
     }

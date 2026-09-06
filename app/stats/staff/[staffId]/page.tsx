@@ -15,13 +15,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: `Staff ${staffId} Stats`,
       description: 'Visual novel staff statistics and credited works on VN Club.',
+      // Nothing was found under this id. The page still renders, because the id may be
+      // real and the lookup merely unavailable, but a placeholder describing nothing is
+      // not worth indexing and the id space is unbounded.
+      robots: { index: false, follow: true },
     };
   }
 
   const displayName = staff.original || staff.name;
   const description = staff.description
     ? truncateDescription(staff.description)
-    : `${displayName} — visual novel staff statistics, credited works, and career analysis on VN Club.`;
+    : `${displayName}: visual novel staff statistics, credited works, and career analysis on VN Club.`;
 
   return generatePageMetadata({
     title: `${displayName} - Staff Stats`,

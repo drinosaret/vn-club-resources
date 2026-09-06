@@ -60,8 +60,28 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
     try {
       let searchResults: SearchResult[];
       if (mode === 'characters') {
-        const res = await vndbStatsApi.searchCharacters(q, 10, controller.signal);
-        searchResults = res.results;
+        // A VNDB character id ("c123", or the bare number) reaches the one character it
+        // names even when its name is shared by dozens and the list is cut short.
+        const charIdMatch = q.trim().match(/^c?(\d+)$/i);
+        const [charRes, charById] = await Promise.all([
+          vndbStatsApi.searchCharacters(q, 10, controller.signal),
+          charIdMatch ? vndbStatsApi.getCharacter(`c${charIdMatch[1]}`) : null,
+        ]);
+        searchResults = charRes.results;
+        if (charById && !searchResults.some((r) => r.id === charById.id)) {
+          const shown = charById.vns?.find((vn) => vn.role === 'main') ?? charById.vns?.[0];
+          searchResults = [{
+            id: charById.id,
+            name: charById.name,
+            original: charById.original ?? undefined,
+            image_url: charById.image_url ?? undefined,
+            image_sexual: charById.image_sexual ?? undefined,
+            vn_id: shown?.id ?? undefined,
+            vn_name: shown?.title ?? undefined,
+            vn_title_jp: shown?.title_jp ?? undefined,
+            vn_title_romaji: shown?.title_romaji ?? undefined,
+          }, ...searchResults];
+        }
       } else {
         // If query looks like a VNDB ID (e.g. "v123" or "123"), also try direct lookup
         const idMatch = q.trim().match(/^v?(\d+)$/i);
@@ -197,7 +217,7 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
   return (
     <div className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[color:var(--nezu)] pointer-events-none" />
         <input
           ref={inputRef}
           type="search"
@@ -214,10 +234,10 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
           aria-controls={isOpen ? 'grid-search-listbox' : undefined}
           aria-activedescendant={selectedIndex >= 0 ? `grid-search-option-${selectedIndex}` : undefined}
           aria-label={placeholder}
-          className="w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+          className="toy-field toy-field--search w-full"
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 animate-spin" />
+          <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[color:var(--nezu)] animate-spin" />
         )}
       </div>
 
@@ -226,7 +246,7 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
           ref={dropdownRef}
           id="grid-search-listbox"
           role="listbox"
-          className="absolute z-50 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg"
+          className="toy-menu absolute z-50 mt-1 w-full max-h-64 overflow-y-auto"
         >
           {results.map((result, i) => {
             const alreadyAdded = isItemAdded(result.id);
@@ -244,11 +264,9 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
                 aria-selected={i === selectedIndex}
                 onClick={() => !alreadyAdded && handleSelect(result)}
                 disabled={alreadyAdded}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
-                  i === selectedIndex ? 'bg-purple-50 dark:bg-purple-900/30' : ''
-                } ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer'}`}
+                className={`toy-opt ${i === selectedIndex ? 'toy-opt--focus' : ''}`}
               >
-                <div className="w-8 h-11 shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                <div className="toy-thumb w-8 h-11">
                   {imageUrl ? (
                     <img src={imageUrl} alt="" className="w-full h-full object-cover" style={isNsfw ? { imageRendering: 'pixelated' } : undefined} />
                   ) : (
@@ -259,26 +277,26 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
                 <div className="flex-1 min-w-0">
                   {isVNResult(result) ? (
                     <>
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="font-medium truncate">
                         {displayTitle(result)}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="font-mono text-xs tabular-nums text-[color:var(--nezu)]">
                         {result.released?.slice(0, 4) ?? 'TBA'}
                         {result.rating ? ` · ${result.rating.toFixed(2)}` : ''}
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="font-medium truncate">
                         {preference === 'romaji' && result.original ? result.original : result.name}
                         {result.original && result.name !== result.original && (
-                          <span className="ml-1.5 text-gray-500 dark:text-gray-400 font-normal">
+                          <span className="ml-1.5 font-normal text-[color:var(--nezu)]">
                             {preference === 'romaji' ? result.name : result.original}
                           </span>
                         )}
                       </div>
                       {result.vn_name && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <div className="truncate text-xs text-[color:var(--nezu)]">
                           {getDisplayTitle({ title: result.vn_name, title_jp: result.vn_title_jp, title_romaji: result.vn_title_romaji }, preference)}
                         </div>
                       )}
@@ -287,9 +305,9 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
                 </div>
 
                 {alreadyAdded ? (
-                  <span className="text-xs text-gray-400 shrink-0">{s['search.added']}</span>
+                  <span className="toy-label shrink-0">{s['search.added']}</span>
                 ) : (
-                  <Plus className="w-4 h-4 text-gray-400 shrink-0" />
+                  <Plus className="w-4 h-4 shrink-0 text-[color:var(--nezu)]" />
                 )}
               </button>
             );
@@ -298,8 +316,8 @@ export function GridSearch({ mode, onAdd, isItemAdded, isAtCapacity, inputRef }:
       )}
 
       {isError && !isLoading && results.length === 0 && query.length >= 2 && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg px-3 py-2">
-          <p className="text-sm text-red-400">{s['search.error']}</p>
+        <div className="bw-alert absolute z-50 mt-1 w-full px-3 py-2">
+          <p className="text-sm">{s['search.error']}</p>
         </div>
       )}
     </div>

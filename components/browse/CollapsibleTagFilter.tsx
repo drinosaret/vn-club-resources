@@ -52,7 +52,7 @@ export function CollapsibleTagFilter({
   };
 
   return (
-    <div className={isSidebar ? '' : 'border border-gray-200 dark:border-gray-700 rounded-lg'}>
+    <div className={isSidebar ? '' : 'bw-panel'}>
       {/* Collapsible Header */}
       <button
         type="button"
@@ -60,40 +60,36 @@ export function CollapsibleTagFilter({
         className={`w-full flex items-center justify-between transition-colors ${
           isSidebar
             ? 'px-0 py-1.5 hover:opacity-80'
-            : 'px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800'
+            : 'px-4 py-3 border-b border-[color:var(--rule)] hover:bg-[color:var(--surface-inset)]'
         }`}
       >
         <div className="flex items-center gap-2">
           <ChevronRight
-            className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            className={`w-4 h-4 text-[color:var(--nezu)] transition-transform ${isExpanded ? 'rotate-90' : ''}`}
           />
-          <span className={`font-medium text-gray-700 dark:text-gray-300 ${isSidebar ? 'text-xs' : 'text-sm'}`}>
+          <span className="bw-label">
             {isSidebar ? 'Tags & Options' : 'Advanced Filters'}
           </span>
           {selectedTags.length > 0 && (
-            <span className="text-xs text-primary-600 dark:text-primary-400">
+            <span className="text-xs text-[color:var(--ai)]">
               {getSummaryText()}
             </span>
           )}
         </div>
 
         {/* Quick spoiler indicator */}
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-[color:var(--nezu)]">
           {(filters.spoiler_level ?? 0) === 0 ? (
             <EyeOff className="w-4 h-4" />
           ) : (
-            <Eye className="w-4 h-4 text-amber-500" />
+            <Eye className="w-4 h-4 text-[color:var(--kohaku)]" />
           )}
         </div>
       </button>
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className={`space-y-4 ${
-          isSidebar
-            ? 'pt-2'
-            : 'p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700'
-        }`}>
+        <div className={`space-y-4 ${isSidebar ? 'pt-2' : 'p-4'}`}>
           {/* Tag Search */}
           <TagFilter
             selectedTags={selectedTags}
@@ -103,16 +99,16 @@ export function CollapsibleTagFilter({
           />
 
           {/* Options Row */}
-          <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-[color:var(--rule)]">
             {/* Include Child Tags Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 py-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={filters.include_children ?? true}
                 onChange={(e) => onChange({ include_children: e.target.checked })}
-                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-sm focus:ring-primary-500"
+                className="bw-check"
               />
-              <span className="text-xs text-gray-600 dark:text-gray-400">
+              <span className="text-xs text-[color:var(--nezu)]">
                 Include child tags
               </span>
             </label>
@@ -120,14 +116,14 @@ export function CollapsibleTagFilter({
             {/* Spoiler Level Selector */}
             <div className="flex items-center gap-2">
               {(filters.spoiler_level ?? 0) === 0 ? (
-                <EyeOff className="w-4 h-4 text-gray-400" />
+                <EyeOff className="w-4 h-4 text-[color:var(--text-faint)]" />
               ) : (
-                <Eye className="w-4 h-4 text-amber-500" />
+                <Eye className="w-4 h-4 text-[color:var(--kohaku)]" />
               )}
               <select
                 value={filters.spoiler_level ?? 0}
                 onChange={(e) => onChange({ spoiler_level: Number(e.target.value) })}
-                className="text-xs px-2 py-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500"
+                className="bw-field text-xs px-2 py-1"
               >
                 {SPOILER_LEVELS.map((level) => (
                   <option key={level.value} value={level.value}>

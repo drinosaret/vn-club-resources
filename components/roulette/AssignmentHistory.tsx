@@ -22,25 +22,23 @@ export function AssignmentHistory({ assignments, onReset, titlePreference }: Ass
   return (
     <div className="mt-10 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {s['assignments.title']}
-        </h2>
+        <h2 className="toy-label">{s['assignments.title']}</h2>
         <button
           onClick={onReset}
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400 transition-colors"
+          className="toy-btn"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           {s['assignments.reset']}
         </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="toy-panel overflow-hidden">
+        <table className="toy-table">
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
-              <th className="px-4 py-2.5 text-left font-medium text-gray-500 dark:text-gray-400 w-12">{s['assignments.colRound']}</th>
-              <th className="px-4 py-2.5 text-left font-medium text-gray-500 dark:text-gray-400">{s['assignments.colPlayer']}</th>
-              <th className="px-4 py-2.5 text-left font-medium text-gray-500 dark:text-gray-400">{s['assignments.colVN']}</th>
+            <tr>
+              <th className="w-12">{s['assignments.colRound']}</th>
+              <th>{s['assignments.colPlayer']}</th>
+              <th>{s['assignments.colVN']}</th>
             </tr>
           </thead>
           <tbody>
@@ -51,16 +49,16 @@ export function AssignmentHistory({ assignments, onReset, titlePreference }: Ass
                 ? (isNsfw ? getTinySrc(a.vn.imageUrl) : a.vn.imageUrl)
                 : null;
               return (
-                <tr key={i} className="border-b border-gray-100 dark:border-gray-700/50 last:border-0">
-                  <td className="px-4 py-2.5 text-gray-400 dark:text-gray-500">{a.round}</td>
-                  <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{a.player}</td>
-                  <td className="px-4 py-2.5">
+                <tr key={i}>
+                  <td className="toy-num">{a.round}</td>
+                  <td className="font-medium">{a.player}</td>
+                  <td>
                     <Link
                       href={`/vn/${a.vn.id}/`}
-                      className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                      className="flex items-center gap-2 text-[color:var(--ink)] hover:text-[color:var(--ai)] transition-colors"
                     >
                       {coverSrc && (
-                        <div className="w-5 h-7 shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                        <div className="toy-thumb w-5 h-7">
                           <img src={coverSrc} alt="" className="w-full h-full object-cover" style={isNsfw ? { imageRendering: 'pixelated' } : undefined} />
                         </div>
                       )}

@@ -3,7 +3,7 @@
  * Uses Next.js fetch caching for performance.
  */
 
-import { VNDetail, VNCharacter, SimilarVNsResponse, BrowseResponse, BrowseFilters } from './vndb-stats-api';
+import { VNDetail, VNCharacter, VNCredits, CharacterDetail, SimilarVNsResponse, BrowseResponse, BrowseFilters } from './vndb-stats-api';
 import type { Leaderboard, LeaderboardCatalogue } from '@/lib/vndb-stats-api';
 import { getBackendUrlOptional } from './config';
 
@@ -334,11 +334,13 @@ export async function getStaffForMetadata(
 }
 
 /**
- * Fetch character data server-side for metadata generation.
+ * Fetch a character server-side, for metadata and for the initial render.
+ * The whole record is returned so the page can hand it to the client component
+ * and have the appearances, voice actors and traits reach the delivered HTML.
  */
-export async function getCharacterForMetadata(
+export async function getCharacterServer(
   charId: string
-): Promise<{ name: string; original?: string; description?: string; image_url?: string; image_sexual?: number } | null> {
+): Promise<CharacterDetail | null> {
   const backendUrl = getBackendUrlOptional();
   if (!backendUrl) return null;
 
@@ -351,14 +353,7 @@ export async function getCharacterForMetadata(
     });
 
     if (!res.ok) return null;
-    const data = await res.json();
-    return {
-      name: data.name,
-      original: data.original,
-      description: data.description,
-      image_url: data.image_url,
-      image_sexual: data.image_sexual,
-    };
+    return (await res.json()) as CharacterDetail;
   } catch {
     return null;
   }
@@ -376,6 +371,28 @@ export async function getVNCharactersServer(vnId: string): Promise<VNCharacter[]
 
   try {
     const res = await fetch(`${backendUrl}/api/v1/vn/${normalizedId}/characters`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch a VN's staff and voice actor credits server-side.
+ */
+export async function getVNCreditsServer(vnId: string): Promise<VNCredits | null> {
+  const backendUrl = getBackendUrlOptional();
+  if (!backendUrl) return null;
+
+  const normalizedId = vnId.startsWith('v') ? vnId : `v${vnId}`;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/vn/${normalizedId}/credits`, {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(3000),
     });

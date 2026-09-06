@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Languages } from 'lucide-react';
+import Link from '@/components/Link';
 import { QuizGame } from '@/components/quiz';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
@@ -38,50 +38,47 @@ export default function QuizPage() {
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(quizJsonLd) }}
       />
       <div className="min-h-[80vh] px-4 py-12">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 mb-4">
-            <Languages className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+        <div className="mx-auto max-w-5xl">
+          {/* Header */}
+          <div className="mb-10 text-center">
+            <h1 className="sec-title">Kana Quiz</h1>
+            <p className="sec-sub mx-auto max-w-xl">
+              Practice hiragana and katakana recognition. Type the romaji reading for each character.
+            </p>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-            Kana Quiz
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Practice hiragana and katakana recognition. Type the romaji reading for each character.
-          </p>
-        </div>
 
-        {/* Quiz Game */}
-        <QuizGame />
+          {/* Quiz Game */}
+          <QuizGame />
 
-        {/* Tips */}
-        <div className="mt-8 p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Tips</h2>
-          <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <li>
-              <strong className="text-gray-900 dark:text-white">Multiple romanizations:</strong> Both &quot;shi&quot; and &quot;si&quot; are accepted for し, &quot;chi&quot; and &quot;ti&quot; for ち, etc.
-            </li>
-            <li>
-              <strong className="text-gray-900 dark:text-white">Press Enter:</strong> Submit your answer quickly by pressing Enter.
-            </li>
-            <li>
-              <strong className="text-gray-900 dark:text-white">Build streaks:</strong> Consecutive correct answers increase your streak counter!
-            </li>
-            <li>
-              <strong className="text-gray-900 dark:text-white">Start simple:</strong> Begin with basic characters, then add dakuten and combinations as you improve.
-            </li>
-          </ul>
-        </div>
+          {/* Tips */}
+          <div className="panel mt-8 p-5 pt-7">
+            <h2 className="nameplate dg-plate">Tips</h2>
+            <ul className="space-y-2 text-sm text-[color:var(--nezu)]">
+              <li>
+                <strong className="font-medium text-[color:var(--ink)]">Multiple romanizations:</strong> Both &quot;shi&quot; and &quot;si&quot; are accepted for し, &quot;chi&quot; and &quot;ti&quot; for ち, etc.
+              </li>
+              <li>
+                <strong className="font-medium text-[color:var(--ink)]">Press Enter:</strong> Submit your answer quickly by pressing Enter.
+              </li>
+              <li>
+                <strong className="font-medium text-[color:var(--ink)]">Build streaks:</strong> Consecutive correct answers increase your streak counter!
+              </li>
+              <li>
+                <strong className="font-medium text-[color:var(--ink)]">Start simple:</strong> Begin with basic characters, then add dakuten and combinations as you improve.
+              </li>
+            </ul>
+          </div>
 
-        {/* Level 1 link */}
-        <div className="mt-4 p-5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            Looking to join the Discord server? Study the <a href="/level1/" className="text-primary-600 dark:text-primary-400 font-medium hover:underline">100 most common Japanese words</a> for the VNCR Level 1 quiz.
+          {/* Level 1 link */}
+          <p className="mt-4 rounded-xs border border-[color:var(--rule)] p-5 text-sm text-[color:var(--text-secondary)]">
+            Looking to join the Discord server? Study the{' '}
+            <Link href="/level1/" className="text-[color:var(--ai)] underline underline-offset-2">
+              100 most common Japanese words
+            </Link>{' '}
+            for the VNCR Level 1 quiz.
           </p>
         </div>
       </div>
-    </div>
     </>
   );
 }

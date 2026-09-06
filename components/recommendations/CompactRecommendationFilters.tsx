@@ -1,429 +1,523 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Tag, Heart, Plus, Minus } from 'lucide-react';
+import { useState } from 'react';
+import { X, Plus, Minus, ChevronDown } from 'lucide-react';
 import { DropdownSelect, SelectedValue } from '../browse/DropdownSelect';
+import { RangeSlider } from '../browse/RangeSlider';
+import {
+  PLATFORMS,
+  LANGUAGES,
+  LENGTHS,
+  AGE_RATINGS,
+  DEV_STATUS,
+  PLATFORM_LABELS,
+  LANGUAGE_LABELS,
+  LENGTH_LABELS,
+  AGE_LABELS,
+  STATUS_LABELS,
+  YEAR_RANGE,
+  RATING_RANGE,
+  VOTES_RANGE,
+  DIFFICULTY_RANGE,
+  parseSelected,
+  toFilterStrings,
+} from '../browse/filter-constants';
+import { JitenAttribution } from '@/components/JitenAttribution';
+import { getEntityDisplayName, useTitlePreference } from '@/lib/title-preference';
+import { DIFFICULTY_BANDS } from '@/lib/difficulty';
 import { SelectedItem } from './TagTraitAutocomplete';
-
-interface RecommendationFilters {
-  minRating: string;
-  length: string[];  // Now an array for multi-select
-  japaneseOnly: boolean;
-  excludeBlacklist: boolean;
-  spoilerLevel: number;  // 0=none, 1=minor, 2=major
-}
+import { EntityFilterAutocomplete } from './EntityFilterAutocomplete';
+import {
+  RecommendationEntity,
+  RecommendationFilters,
+  RecommendationFilterState,
+  countFilterGroups,
+  countActiveFilters,
+} from '@/lib/recommendation-filters';
 
 interface CompactRecommendationFiltersProps {
-  filters: RecommendationFilters;
-  onFilterChange: (filters: Partial<RecommendationFilters>) => void;
-  tagTraitFilters: SelectedItem[];
+  state: RecommendationFilterState;
+  onFilterChange: (changes: Partial<RecommendationFilters>) => void;
+  onEntitiesChange: (entities: RecommendationEntity[]) => void;
   onRemoveTagTrait: (index: number) => void;
   onToggleTagTraitMode: (index: number) => void;
   onClearAll: () => void;
+  /**
+   * Whether the summary of what is in force is drawn here. A caller keeping the controls
+   * behind a disclosure renders it outside them instead, where it is visible with the
+   * disclosure shut.
+   */
+  showChips?: boolean;
 }
 
-const LENGTH_OPTIONS = [
-  { value: '1', label: 'Very Short (<2h)' },
-  { value: '2', label: 'Short (2-10h)' },
-  { value: '3', label: 'Medium (10-30h)' },
-  { value: '4', label: 'Long (30-50h)' },
-  { value: '5', label: 'Very Long (50h+)' },
-];
+const RATING_STEP = 0.5;
+const VOTES_STEP = 10;
 
-const LENGTH_LABELS: Record<string, string> = {
-  '1': 'Very Short',
-  '2': 'Short',
-  '3': 'Medium',
-  '4': 'Long',
-  '5': 'Very Long',
-};
+function formatVotes(value: number): string {
+  return value >= VOTES_RANGE.max
+    ? `${VOTES_RANGE.max.toLocaleString()}+`
+    : value.toLocaleString();
+}
 
+function difficultyName(band: number): string {
+  return DIFFICULTY_BANDS[band]?.label ?? String(band);
+}
+
+/**
+ * The filter bar above the recommendation grid.
+ *
+ * The controls people reach for stay on the face of it, with the long tail behind one
+ * disclosure that opens by itself when a link arrives carrying any of them. Nothing here
+ * requests anything: the page fetches on Apply, because a request is rate limited and can
+ * take seconds.
+ */
 export function CompactRecommendationFilters({
-  filters,
+  state,
   onFilterChange,
-  tagTraitFilters,
+  onEntitiesChange,
   onRemoveTagTrait,
   onToggleTagTraitMode,
   onClearAll,
+  showChips = true,
 }: CompactRecommendationFiltersProps) {
-  // Convert length array to SelectedValue format (include mode only for recommendations)
-  const lengthSelected: SelectedValue[] = filters.length.map((v) => ({
-    value: v,
-    mode: 'include',
-  }));
+  const { filters, entities } = state;
+  const groups = countFilterGroups(state);
 
-  const handleLengthChange = (selected: SelectedValue[]) => {
-    const values = selected.filter((s) => s.mode === 'include').map((s) => s.value);
-    onFilterChange({ length: values });
+  const handlePlatformChange = (selected: SelectedValue[]) => {
+    const { include, exclude } = toFilterStrings(selected);
+    onFilterChange({ platform: include, exclude_platform: exclude });
   };
 
-  // Check if any filters are active (non-default)
-  const hasActiveFilters =
-    filters.minRating !== '' ||
-    filters.length.length > 0 ||
-    !filters.japaneseOnly ||
-    !filters.excludeBlacklist ||
-    filters.spoilerLevel > 0 ||
-    tagTraitFilters.length > 0;
+  const handleLengthChange = (selected: SelectedValue[]) => {
+    const { include, exclude } = toFilterStrings(selected);
+    onFilterChange({ length: include, exclude_length: exclude });
+  };
+
+  const handleAgeChange = (selected: SelectedValue[]) => {
+    const { include, exclude } = toFilterStrings(selected);
+    onFilterChange({ minage: include, exclude_minage: exclude });
+  };
+
+  const handleStatusChange = (selected: SelectedValue[]) => {
+    const { include, exclude } = toFilterStrings(selected);
+    onFilterChange({ devstatus: include, exclude_devstatus: exclude });
+  };
+
+  // Picking languages here is the narrower request, so it takes the language axis over from
+  // the Japanese-only toggle. That handover happens where the change is normalized.
+  const handleLanguageChange = (selected: SelectedValue[]) => {
+    const { include, exclude } = toFilterStrings(selected);
+    onFilterChange({ olang: include, exclude_olang: exclude });
+  };
+
+  const handleJapaneseOnly = (japaneseOnly: boolean) => {
+    onFilterChange(
+      japaneseOnly
+        ? { japanese_only: true, olang: undefined, exclude_olang: undefined }
+        : { japanese_only: false },
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Compact Filter Row: Dropdowns + Rating Slider */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-        <DropdownSelect
-          label="Length"
-          options={LENGTH_OPTIONS}
-          selected={lengthSelected}
-          onChange={handleLengthChange}
-          placeholder="Any"
-          allowExclude={false}
-        />
-
-        {/* Original Language Toggle */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Original Language
-          </label>
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-[38px]">
-            <button
-              type="button"
-              onClick={() => onFilterChange({ japaneseOnly: true })}
-              className={`flex-1 px-3 text-sm font-medium transition-colors ${
-                filters.japaneseOnly
-                  ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              Japanese
-            </button>
-            <button
-              type="button"
-              onClick={() => onFilterChange({ japaneseOnly: false })}
-              className={`flex-1 px-3 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
-                !filters.japaneseOnly
-                  ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              Any
-            </button>
-          </div>
-        </div>
-
-        {/* Blacklist Toggle */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Blacklist
-          </label>
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-[38px]">
-            <button
-              type="button"
-              onClick={() => onFilterChange({ excludeBlacklist: true })}
-              className={`flex-1 px-3 text-sm font-medium transition-colors ${
-                filters.excludeBlacklist
-                  ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              Hidden
-            </button>
-            <button
-              type="button"
-              onClick={() => onFilterChange({ excludeBlacklist: false })}
-              className={`flex-1 px-3 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
-                !filters.excludeBlacklist
-                  ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              Shown
-            </button>
-          </div>
-        </div>
-
-        {/* Spoiler Level Toggle */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Spoiler Level
-          </label>
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-[38px]">
-            {([0, 1, 2] as const).map((level) => {
-              const labels = ['None', 'Minor', 'Major'];
-              const isActive = filters.spoilerLevel === level;
-              return (
-                <button
-                  key={level}
-                  type="button"
-                  onClick={() => onFilterChange({ spoilerLevel: level })}
-                  className={`flex-1 px-2 text-sm font-medium transition-colors ${
-                    level > 0 ? 'border-l border-gray-200 dark:border-gray-700' : ''
-                  } ${
-                    isActive
-                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                      : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {labels[level]}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Min Rating Slider: full-width on its own row so it isn't stranded beside the toggles */}
-        <div className="sm:col-span-2 lg:col-span-4">
-          <MinRatingSlider
-            value={filters.minRating ? parseFloat(filters.minRating) : undefined}
-            onChange={(value) => onFilterChange({ minRating: value ? String(value) : '' })}
+    <div className="space-y-2">
+      <FilterGroup title="Basics" count={groups.basics} defaultOpen>
+        <div className="grid grid-cols-2 gap-3 items-end">
+          <DropdownSelect
+            label="Platform"
+            options={PLATFORMS}
+            selected={parseSelected(filters.platform, filters.exclude_platform)}
+            onChange={handlePlatformChange}
           />
+          <DropdownSelect
+            label="Length"
+            options={LENGTHS}
+            selected={parseSelected(filters.length, filters.exclude_length)}
+            onChange={handleLengthChange}
+          />
+          <ToggleGroup
+            label="Japanese only"
+            options={[
+              { label: 'Yes', isActive: filters.japanese_only, onSelect: () => handleJapaneseOnly(true) },
+              { label: 'No', isActive: !filters.japanese_only, onSelect: () => handleJapaneseOnly(false) },
+            ]}
+          />
+          <ToggleGroup
+            label="Blacklist"
+            options={[
+              { label: 'Hidden', isActive: filters.exclude_blacklist, onSelect: () => onFilterChange({ exclude_blacklist: true }) },
+              { label: 'Shown', isActive: !filters.exclude_blacklist, onSelect: () => onFilterChange({ exclude_blacklist: false }) },
+            ]}
+          />
+          <div className="col-span-2">
+            <ToggleGroup
+              label="Spoiler Level"
+              options={['None', 'Minor', 'Major'].map((label, level) => ({
+                label,
+                isActive: filters.spoiler_level === level,
+                onSelect: () => onFilterChange({ spoiler_level: level }),
+              }))}
+            />
+          </div>
+          <div className="col-span-2">
+            <RangeSlider
+              label="Rating"
+              min={RATING_RANGE.min}
+              max={RATING_RANGE.max}
+              step={RATING_STEP}
+              minValue={filters.min_rating}
+              maxValue={filters.max_rating}
+              onChange={(min, max) => onFilterChange({ min_rating: min, max_rating: max })}
+              formatValue={(value) => value.toFixed(1)}
+            />
+          </div>
         </div>
-      </div>
+      </FilterGroup>
 
-      {/* Active Filter Chips */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Tag/Trait chips */}
-          {tagTraitFilters.map((item, index) => (
-            <TagTraitChip
-              key={`${item.type}-${item.id}`}
-              item={item}
-              onRemove={() => onRemoveTagTrait(index)}
-              onToggleMode={() => onToggleTagTraitMode(index)}
+      <FilterGroup title="Release" count={groups.release}>
+        <div className="grid grid-cols-2 gap-3 items-end">
+          <DropdownSelect
+            label="Age Rating"
+            options={AGE_RATINGS}
+            selected={parseSelected(filters.minage, filters.exclude_minage)}
+            onChange={handleAgeChange}
+          />
+          <DropdownSelect
+            label="Status"
+            options={DEV_STATUS}
+            selected={parseSelected(filters.devstatus, filters.exclude_devstatus)}
+            onChange={handleStatusChange}
+          />
+          <div className="col-span-2">
+            <DropdownSelect
+              label="Original languages"
+              options={LANGUAGES}
+              selected={parseSelected(filters.olang, filters.exclude_olang)}
+              onChange={handleLanguageChange}
             />
-          ))}
-
-          {/* Min Rating chip */}
-          {filters.minRating && (
-            <FilterChip
-              label={`Rating ≥${filters.minRating}`}
-              onRemove={() => onFilterChange({ minRating: '' })}
+          </div>
+          <div className="col-span-2">
+            <RangeSlider
+              label="Year"
+              min={YEAR_RANGE.min}
+              max={YEAR_RANGE.max}
+              step={1}
+              minValue={filters.year_min}
+              maxValue={filters.year_max}
+              onChange={(min, max) => onFilterChange({ year_min: min, year_max: max })}
             />
-          )}
-
-          {/* Length chips */}
-          {filters.length.map((len) => (
-            <FilterChip
-              key={`length-${len}`}
-              label={LENGTH_LABELS[len] || len}
-              onRemove={() =>
-                onFilterChange({ length: filters.length.filter((l) => l !== len) })
-              }
-            />
-          ))}
-
-          {/* Non-Japanese chip (shows when "Any Language" is selected) */}
-          {!filters.japaneseOnly && (
-            <FilterChip
-              label="Any Language"
-              onRemove={() => onFilterChange({ japaneseOnly: true })}
-            />
-          )}
-
-          {/* Blacklist shown chip (shows when blacklisted VNs are not hidden) */}
-          {!filters.excludeBlacklist && (
-            <FilterChip
-              label="Blacklist Shown"
-              onRemove={() => onFilterChange({ excludeBlacklist: true })}
-            />
-          )}
-
-          {/* Spoiler level chip (shows when not default) */}
-          {filters.spoilerLevel > 0 && (
-            <FilterChip
-              label={filters.spoilerLevel === 1 ? 'Minor Spoilers' : 'Major Spoilers'}
-              onRemove={() => onFilterChange({ spoilerLevel: 0 })}
-            />
-          )}
-
-          {/* Clear all link */}
-          {(tagTraitFilters.length > 0 ||
-            filters.minRating ||
-            filters.length.length > 0 ||
-            !filters.japaneseOnly ||
-            !filters.excludeBlacklist ||
-            filters.spoilerLevel > 0) && (
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
-            >
-              Clear all
-            </button>
-          )}
+          </div>
         </div>
+        {/* Stated with the control rather than with its result, so the handover is known
+            before a language is picked. */}
+        <p className="rc-why mt-2">
+          A language selection replaces the Japanese-only setting under Basics.
+        </p>
+      </FilterGroup>
+
+      <FilterGroup title="Reading & difficulty" count={groups.reading}>
+        <div className="space-y-5">
+          <RangeSlider
+            label="Votes"
+            min={VOTES_RANGE.min}
+            max={VOTES_RANGE.max}
+            step={VOTES_STEP}
+            minValue={filters.min_votecount}
+            maxValue={filters.max_votecount}
+            onChange={(min, max) => onFilterChange({ min_votecount: min, max_votecount: max })}
+            formatValue={formatVotes}
+          />
+          <div>
+            <RangeSlider
+              label="Japanese difficulty"
+              hint="Only titles whose script has been analysed"
+              min={DIFFICULTY_RANGE.min}
+              max={DIFFICULTY_RANGE.max}
+              step={1}
+              minValue={filters.min_difficulty}
+              maxValue={filters.max_difficulty}
+              onChange={(min, max) => onFilterChange({ min_difficulty: min, max_difficulty: max })}
+              formatValue={difficultyName}
+            />
+            <JitenAttribution describes="This difficulty scale" className="mt-2" />
+          </div>
+        </div>
+      </FilterGroup>
+
+      <FilterGroup title="People & studios" count={groups.people}>
+        <EntityFilterAutocomplete selected={entities} onChange={onEntitiesChange} />
+      </FilterGroup>
+
+      <FilterGroup title="Content" count={groups.content}>
+        <ToggleGroup
+          label="Adult (18+)"
+          options={[
+            { label: 'Shown', isActive: filters.nsfw, onSelect: () => onFilterChange({ nsfw: true }) },
+            { label: 'Hidden', isActive: !filters.nsfw, onSelect: () => onFilterChange({ nsfw: false }) },
+          ]}
+        />
+      </FilterGroup>
+
+      {showChips && (
+      <ActiveRecommendationChips
+        state={state}
+        onFilterChange={onFilterChange}
+        onEntitiesChange={onEntitiesChange}
+        onRemoveTagTrait={onRemoveTagTrait}
+        onToggleTagTraitMode={onToggleTagTraitMode}
+        onClearAll={onClearAll}
+      />
       )}
     </div>
   );
 }
 
-// Simple min-only rating slider
-function MinRatingSlider({
-  value,
-  onChange,
+/**
+ * One group of controls behind a header that opens and closes it.
+ *
+ * Opens itself where something inside is already in force, so a link that carried a
+ * filter shows the control that set it. The count on the header is what keeps a shut
+ * group honest: it says whether the group is doing anything without being opened.
+ */
+export function FilterGroup({
+  title,
+  count = 0,
+  defaultOpen = false,
+  children,
 }: {
-  value: number | undefined;
-  onChange: (value: number | undefined) => void;
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
 }) {
-  const min = 1;
-  const max = 10;
-  const step = 0.5;
-  const [localValue, setLocalValue] = useState(value ?? min);
-  const [isDragging, setIsDragging] = useState(false);
-  const trackRef = useRef<HTMLDivElement>(null);
-  // Cache getBoundingClientRect on drag start to avoid layout thrashing on every move
-  const cachedRectRef = useRef<DOMRect | null>(null);
-
-  // Sync with external value
-  useEffect(() => {
-    setLocalValue(value ?? min);
-  }, [value]);
-
-  const getPercentage = (val: number) => ((val - min) / (max - min)) * 100;
-
-  const getValueFromPosition = useCallback(
-    (clientX: number) => {
-      const rect = cachedRectRef.current;
-      if (!rect) return min;
-      const percentage = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const rawValue = min + percentage * (max - min);
-      return Math.round(rawValue / step) * step;
-    },
-    [min, max, step]
+  const [open, setOpen] = useState(() => defaultOpen || count > 0);
+  const id = `rc-group-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  return (
+    <section className="rc-group">
+      <h3 className="m-0">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls={id}
+          className="rc-disclose"
+        >
+          <span className="inline-flex items-center gap-2">
+            {title}
+            {count > 0 && <span className="rc-badge">{count}</span>}
+          </span>
+          <ChevronDown aria-hidden className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </h3>
+      <div id={id} hidden={!open} className="pt-2 pb-3">
+        {children}
+      </div>
+    </section>
   );
+}
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
-    setIsDragging(true);
-    const val = getValueFromPosition(e.clientX);
-    setLocalValue(val);
-  };
+interface ToggleOption {
+  label: string;
+  isActive: boolean;
+  onSelect: () => void;
+}
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging) return;
-      const val = getValueFromPosition(e.clientX);
-      setLocalValue(Math.max(min, Math.min(max, val)));
-    },
-    [isDragging, getValueFromPosition, min, max]
+function ToggleGroup({ label, options }: { label: string; options: ToggleOption[] }) {
+  return (
+    <div>
+      <label className="rc-label block mb-1">{label}</label>
+      <div className="rc-seg rc-seg--wide h-[38px]">
+        {options.map((option) => (
+          <button
+            key={option.label}
+            type="button"
+            onClick={option.onSelect}
+            aria-pressed={option.isActive}
+            className={`rc-seg-item ${option.isActive ? 'rc-seg-item--on' : ''}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
+}
 
-  const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      const newValue = localValue === min ? undefined : localValue;
-      onChange(newValue);
+/** Removing a value from a comma-separated list, or the whole filter when it was the last. */
+function withoutValue(current: string | undefined, value: string): string | undefined {
+  const remaining = (current ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry && entry !== value);
+  return remaining.length > 0 ? remaining.join(',') : undefined;
+}
+
+function rangeLabel(
+  name: string,
+  min: number | undefined,
+  max: number | undefined,
+  format: (value: number) => string,
+): string {
+  if (min !== undefined && max !== undefined) {
+    return min === max ? `${name}: ${format(min)}` : `${name}: ${format(min)} - ${format(max)}`;
+  }
+  if (min !== undefined) return `${name}: ${format(min)}+`;
+  return `${name}: up to ${format(max as number)}`;
+}
+
+export function ActiveRecommendationChips({
+  state,
+  onFilterChange,
+  onEntitiesChange,
+  onRemoveTagTrait,
+  onToggleTagTraitMode,
+  onClearAll,
+}: CompactRecommendationFiltersProps) {
+  const { preference } = useTitlePreference();
+  const { filters, tagTraits, entities } = state;
+  if (countActiveFilters(state) === 0) return null;
+
+  const chips: React.ReactNode[] = [];
+
+  tagTraits.forEach((item, index) => {
+    chips.push(
+      <TagTraitChip
+        key={`${item.type}-${item.id}`}
+        item={item}
+        onRemove={() => onRemoveTagTrait(index)}
+        onToggleMode={() => onToggleTagTraitMode(index)}
+      />,
+    );
+  });
+
+  const listChips: {
+    key: keyof RecommendationFilters;
+    value: string | undefined;
+    labels: Record<string, string>;
+    isExclude?: boolean;
+  }[] = [
+    { key: 'platform', value: filters.platform, labels: PLATFORM_LABELS },
+    { key: 'exclude_platform', value: filters.exclude_platform, labels: PLATFORM_LABELS, isExclude: true },
+    { key: 'length', value: filters.length, labels: LENGTH_LABELS },
+    { key: 'exclude_length', value: filters.exclude_length, labels: LENGTH_LABELS, isExclude: true },
+    { key: 'minage', value: filters.minage, labels: AGE_LABELS },
+    { key: 'exclude_minage', value: filters.exclude_minage, labels: AGE_LABELS, isExclude: true },
+    { key: 'devstatus', value: filters.devstatus, labels: STATUS_LABELS },
+    { key: 'exclude_devstatus', value: filters.exclude_devstatus, labels: STATUS_LABELS, isExclude: true },
+    { key: 'olang', value: filters.olang, labels: LANGUAGE_LABELS },
+    { key: 'exclude_olang', value: filters.exclude_olang, labels: LANGUAGE_LABELS, isExclude: true },
+  ];
+
+  for (const { key, value, labels, isExclude } of listChips) {
+    if (!value) continue;
+    for (const entry of value.split(',').map((v) => v.trim()).filter(Boolean)) {
+      chips.push(
+        <FilterChip
+          key={`${key}-${entry}`}
+          label={labels[entry] ?? entry}
+          isExclude={isExclude}
+          onRemove={() => onFilterChange({ [key]: withoutValue(value, entry) } as Partial<RecommendationFilters>)}
+        />,
+      );
     }
-    setIsDragging(false);
-  }, [isDragging, localValue, min, onChange]);
+  }
 
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  if (filters.min_rating !== undefined || filters.max_rating !== undefined) {
+    chips.push(
+      <FilterChip
+        key="rating"
+        label={rangeLabel('Rating', filters.min_rating, filters.max_rating, (v) => v.toFixed(1))}
+        onRemove={() => onFilterChange({ min_rating: undefined, max_rating: undefined })}
+      />,
+    );
+  }
 
-  // Touch support
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (trackRef.current) cachedRectRef.current = trackRef.current.getBoundingClientRect();
-    setIsDragging(true);
-    if (e.touches[0]) {
-      const val = getValueFromPosition(e.touches[0].clientX);
-      setLocalValue(val);
-    }
-  };
+  if (filters.year_min !== undefined || filters.year_max !== undefined) {
+    chips.push(
+      <FilterChip
+        key="year"
+        label={rangeLabel('Year', filters.year_min, filters.year_max, String)}
+        onRemove={() => onFilterChange({ year_min: undefined, year_max: undefined })}
+      />,
+    );
+  }
 
-  const handleTouchMove = useCallback(
-    (e: TouchEvent) => {
-      if (!isDragging || !e.touches[0]) return;
-      const val = getValueFromPosition(e.touches[0].clientX);
-      setLocalValue(Math.max(min, Math.min(max, val)));
-    },
-    [isDragging, getValueFromPosition, min, max]
-  );
+  if (filters.min_votecount !== undefined || filters.max_votecount !== undefined) {
+    chips.push(
+      <FilterChip
+        key="votes"
+        label={rangeLabel('Votes', filters.min_votecount, filters.max_votecount, formatVotes)}
+        onRemove={() => onFilterChange({ min_votecount: undefined, max_votecount: undefined })}
+      />,
+    );
+  }
 
-  const handleTouchEnd = useCallback(() => {
-    if (isDragging) {
-      const newValue = localValue === min ? undefined : localValue;
-      onChange(newValue);
-    }
-    setIsDragging(false);
-  }, [isDragging, localValue, min, onChange]);
+  // Tested against undefined rather than truthiness: band 0 is the easiest band, not "unset".
+  if (filters.min_difficulty !== undefined || filters.max_difficulty !== undefined) {
+    chips.push(
+      <FilterChip
+        key="difficulty"
+        label={rangeLabel('Difficulty', filters.min_difficulty, filters.max_difficulty, difficultyName)}
+        onRemove={() => onFilterChange({ min_difficulty: undefined, max_difficulty: undefined })}
+      />,
+    );
+  }
 
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('touchmove', handleTouchMove, { passive: true });
-      window.addEventListener('touchend', handleTouchEnd, { passive: true });
-      return () => {
-        window.removeEventListener('touchmove', handleTouchMove);
-        window.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [isDragging, handleTouchMove, handleTouchEnd]);
+  entities.forEach((entity) => {
+    chips.push(
+      <FilterChip
+        key={`${entity.type}-${entity.id}`}
+        label={getEntityDisplayName(entity, preference)}
+        onRemove={() =>
+          onEntitiesChange(
+            entities.filter((item) => !(item.type === entity.type && item.id === entity.id)),
+          )
+        }
+      />,
+    );
+  });
 
-  const handleReset = () => {
-    setLocalValue(min);
-    onChange(undefined);
-  };
+  if (!filters.japanese_only) {
+    chips.push(
+      <FilterChip
+        key="japanese_only"
+        label="Any Language"
+        onRemove={() => onFilterChange({ japanese_only: true })}
+      />,
+    );
+  }
 
-  const percent = getPercentage(localValue);
-  const isFiltered = localValue !== min;
+  if (!filters.exclude_blacklist) {
+    chips.push(
+      <FilterChip
+        key="blacklist"
+        label="Blacklist Shown"
+        onRemove={() => onFilterChange({ exclude_blacklist: true })}
+      />,
+    );
+  }
+
+  if (!filters.nsfw) {
+    chips.push(
+      <FilterChip key="nsfw" label="Adult Hidden" onRemove={() => onFilterChange({ nsfw: true })} />,
+    );
+  }
+
+  if (filters.spoiler_level > 0) {
+    chips.push(
+      <FilterChip
+        key="spoiler"
+        label={filters.spoiler_level === 1 ? 'Minor Spoilers' : 'Major Spoilers'}
+        onRemove={() => onFilterChange({ spoiler_level: 0 })}
+      />,
+    );
+  }
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
-          Min Rating
-        </label>
-        {isFiltered && (
-          <button
-            onClick={handleReset}
-            className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
-          >
-            Reset
-          </button>
-        )}
-      </div>
-
-      {/* Value display */}
-      <div className="text-sm font-medium text-center">
-        <span className={isFiltered ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 dark:text-gray-400'}>
-          {localValue === min ? 'Any' : `≥${localValue.toFixed(1)}`}
-        </span>
-      </div>
-
-      {/* Slider track */}
-      <div
-        ref={trackRef}
-        className="relative h-2 bg-gray-200 dark:bg-gray-600 rounded-full cursor-pointer"
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-      >
-        {/* Filled portion */}
-        <div
-          className="absolute h-full bg-violet-500 rounded-full"
-          style={{ width: `${percent}%` }}
-        />
-
-        {/* Thumb */}
-        <div
-          className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white dark:bg-gray-200 border-2 border-violet-500 rounded-full cursor-grab shadow-md transition-transform hover:scale-110 ${
-            isDragging ? 'scale-125 cursor-grabbing' : ''
-          }`}
-          style={{ left: `${percent}%`, marginLeft: '-8px' }}
-        />
-      </div>
-
-      {/* Scale markers */}
-      <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 px-1">
-        <span>1</span>
-        <span>5</span>
-        <span>10</span>
-      </div>
+    <div className="flex flex-wrap items-center gap-2">
+      {chips}
+      <button type="button" onClick={onClearAll} className="rc-btn">
+        Clear filters
+      </button>
     </div>
   );
 }
@@ -431,20 +525,23 @@ function MinRatingSlider({
 function FilterChip({
   label,
   onRemove,
+  isExclude,
 }: {
   label: string;
   onRemove: () => void;
+  isExclude?: boolean;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-700">
-      <span>{label}</span>
+    <span className={`rc-chip ${isExclude ? 'rc-chip--off' : 'rc-chip--on'}`}>
+      {isExclude && <Minus aria-hidden className="w-3 h-3" />}
+      <span className={isExclude ? 'line-through' : ''}>{label}</span>
       <button
         type="button"
         onClick={onRemove}
-        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors"
+        className="rc-chip-btn"
         aria-label={`Remove ${label} filter`}
       >
-        <X className="w-3 h-3" />
+        <X aria-hidden className="w-3 h-3" />
       </button>
     </span>
   );
@@ -460,41 +557,32 @@ function TagTraitChip({
   onToggleMode: () => void;
 }) {
   const isExclude = item.mode === 'exclude';
-  const isTag = item.type === 'tag';
 
   return (
-    <span
-      className={`
-        inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
-        ${
-          isExclude
-            ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
-            : isTag
-            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
-            : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
-        }
-      `}
-    >
-      {/* Toggle mode button */}
+    <span className={`rc-chip ${isExclude ? 'rc-chip--off' : 'rc-chip--on'}`}>
       <button
+        type="button"
         onClick={onToggleMode}
-        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors"
+        className="rc-chip-btn"
+        aria-label={isExclude ? `Include ${item.name}` : `Exclude ${item.name}`}
         title={isExclude ? 'Click to include' : 'Click to exclude'}
       >
-        {isExclude ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+        {isExclude ? <Minus aria-hidden className="w-3 h-3" /> : <Plus aria-hidden className="w-3 h-3" />}
       </button>
 
-      {/* Type icon */}
-      {isTag ? <Tag className="w-3 h-3" /> : <Heart className="w-3 h-3" />}
-
+      {/* Which kind of thing is being filtered on, said rather than coded into a colour:
+          the two lists are searched together and a name alone does not say which it came
+          from. */}
+      <span className="rc-kind">{item.type}</span>
       <span className={isExclude ? 'line-through' : ''}>{item.name}</span>
 
       <button
+        type="button"
         onClick={onRemove}
-        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors"
-        title="Remove"
+        className="rc-chip-btn"
+        aria-label={`Remove ${item.name} filter`}
       >
-        <X className="w-3 h-3" />
+        <X aria-hidden className="w-3 h-3" />
       </button>
     </span>
   );

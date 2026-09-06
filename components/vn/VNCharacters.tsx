@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from '@/components/Link';
 import Image from 'next/image';
-import { Eye, EyeOff, Users, User } from 'lucide-react';
 import { VNCharacter } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -115,15 +114,14 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
 
   if (isEmpty) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xs p-6 transition-opacity duration-200 ease-out ${isReady ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-gray-400" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Characters</h2>
+      <section className={`vn-sec p-4 sm:p-6 transition-opacity duration-200 ease-out ${isReady ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="vn-sec-head">
+          <h2 className="vn-sec-title">Characters</h2>
         </div>
-        <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+        <p className="text-[color:var(--nezu)] text-center py-4">
           No character data available.
         </p>
-      </div>
+      </section>
     );
   }
 
@@ -131,39 +129,29 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
     <div className="space-y-6">
       {/* Header with spoiler toggle */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Users className="w-5 h-5 text-primary-500" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Characters ({visibleCharacterCount})
-          </h2>
+        <div className="flex items-baseline gap-2 w-full sm:w-auto">
+          <h2 className="vn-sec-title">Characters</h2>
+          <span className="vn-num text-sm text-[color:var(--text-faint)]">{visibleCharacterCount}</span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {sexualTraitCount > 0 && (
             <button
               onClick={() => onShowSexualChange(!showSexual)}
               aria-pressed={showSexual}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors ${
-                showSexual
-                  ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}
+              className={`tab${showSexual ? ' tab--on' : ''}`}
             >
-              {showSexual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              <span><span className="hidden sm:inline">{showSexual ? 'Hide' : 'Show'} </span>sexual ({sexualTraitCount})</span>
+              <span><span className="hidden sm:inline">{showSexual ? 'Hide' : 'Show'} </span>sexual</span>
+              <span className="tab-count">{sexualTraitCount}</span>
             </button>
           )}
           {hasSpoilers && (
             <button
               onClick={() => onShowSpoilersChange(!showSpoilers)}
               aria-pressed={showSpoilers}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors ${
-                showSpoilers
-                  ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}
+              className={`tab${showSpoilers ? ' tab--on' : ''}`}
             >
-              {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              <span><span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers ({spoilerCount})</span>
+              <span><span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers</span>
+              <span className="tab-count">{spoilerCount}</span>
             </button>
           )}
         </div>
@@ -179,7 +167,7 @@ export function VNCharacters({ characters, isLoading, showSpoilers, onShowSpoile
 
           return (
             <div key={role} className="space-y-3">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <h3 className="fig-label">
                 {roleLabels[role] || role}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,17 +242,15 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
   const isSpoilerCharacter = (character.spoiler ?? 0) > 0;
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg border p-3 sm:p-4 flex gap-3 sm:gap-4 ${
-      isSpoilerCharacter
-        ? 'border-red-300 dark:border-red-700 ring-1 ring-red-200 dark:ring-red-800'
-        : 'border-gray-200 dark:border-gray-700'
+    <div className={`vn-sec p-3 sm:p-4 flex gap-3 sm:gap-4 ${
+      isSpoilerCharacter ? 'vn-sec--held' : ''
     }`}>
       {/* Character image */}
       <Link
         href={`/character/${character.id}`}
         className="shrink-0 group"
       >
-        <div className="w-20 h-28 rounded-sm overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
+        <div className="w-20 h-28 rounded-[1px] overflow-hidden bg-[color:var(--surface-inset)] relative">
           {imageUrl && !imageError ? (
             <>
               <div className={shimmerClass} />
@@ -281,8 +267,8 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
               />
             </>
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <User className="w-8 h-8 text-gray-400" />
+            <div className="w-full h-full flex items-center justify-center font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-faint)]">
+              No art
             </div>
           )}
         </div>
@@ -295,14 +281,14 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
           href={`/character/${character.id}`}
           className="flex items-center gap-1.5 group"
         >
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate">
+          <h4 className="text-sm font-semibold text-[color:var(--ink)] group-hover:text-[color:var(--ai)] transition-colors truncate">
             {displayName}
           </h4>
         </Link>
 
         {/* Alternate name */}
         {alternateName && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <p className="text-xs text-[color:var(--nezu)] truncate">
             {alternateName}
           </p>
         )}
@@ -312,35 +298,31 @@ function CharacterCard({ character, preference, showSpoilers, showSexual, eager 
           <div className="mt-2 space-y-1.5">
             {Object.entries(traitsByGroup).slice(0, 4).map(([group, traits]) => (
               <div key={group} className="flex flex-wrap items-center gap-1">
-                <span className="text-[11px] text-gray-400 dark:text-gray-500 w-14 shrink-0 truncate">
+                <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-faint)] w-14 shrink-0 truncate">
                   {group}:
                 </span>
                 {traits.slice(0, 4).map((trait) => (
                   <Link
                     key={trait.id}
                     href={`/stats/trait/${trait.id}`}
-                    className={`text-xs px-2 py-1 rounded transition-colors ${
-                      trait.spoiler > 0
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
+                    className={`vn-chip${trait.spoiler > 0 ? ' vn-chip--held' : ''}`}
                   >
                     {trait.name}
                   </Link>
                 ))}
                 {traits.length > 4 && (
-                  <span className="text-[11px] text-gray-400">+{traits.length - 4}</span>
+                  <span className="vn-num text-[11px] text-[color:var(--text-faint)]">+{traits.length - 4}</span>
                 )}
               </div>
             ))}
             {Object.keys(traitsByGroup).length > 4 && (
-              <p className="text-[11px] text-gray-400 dark:text-gray-500">
+              <p className="text-[11px] text-[color:var(--text-faint)]">
                 +{Object.keys(traitsByGroup).length - 4} more categories
               </p>
             )}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 italic">
+          <p className="mt-2 text-xs text-[color:var(--text-faint)]">
             No traits listed
           </p>
         )}

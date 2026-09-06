@@ -5,6 +5,7 @@ import {
   safeJsonLdStringify,
   generateBreadcrumbJsonLd,
 } from '@/lib/metadata-utils';
+import Link from '@/components/Link';
 import { getEventsForMonth, getUpcomingEvents, type EventItem } from '@/lib/events';
 import EventsCalendar from '@/components/events/EventsCalendar';
 import UpcomingList from '@/components/events/UpcomingList';
@@ -15,9 +16,9 @@ import { DiscordCTA } from '@/components/shared/DiscordCTA';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Events & Calendar - VN Club',
+  title: 'Visual Novel Club Events and Calendar',
   description:
-    'Community calendar for the VN Club: VN of the Month, VN of the Season, weekly Movie Night and Roudoku, and special events for learning Japanese with visual novels.',
+    'Community calendar for the VN Club: VN of the Month, VN of the Season, the weekly Movie Night, and the roudoku session where the club reads a very short visual novel aloud together.',
   path: '/events/',
 });
 
@@ -98,12 +99,20 @@ export default async function EventsPage({
       />
       <main className="mx-auto max-w-6xl px-4 py-10">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Events &amp; Calendar
-          </h1>
-          <p className="mt-2 max-w-2xl text-gray-600 dark:text-gray-400">
+          <h1 className="sec-title">Events &amp; Calendar</h1>
+          <p className="mt-3 max-w-2xl text-sm text-[color:var(--text-secondary)]">
             VN of the Month, VN of the Season, weekly Movie Night and Roudoku, and special events
             for the VN Club community. All times shown in your local timezone.
+          </p>
+          <p className="mt-2 text-sm text-[color:var(--nezu)]">
+            Everything the club has already read is in the{' '}
+            <Link
+              href="/events/history/"
+              className="text-[color:var(--ai)] underline underline-offset-2"
+            >
+              archive of past picks
+            </Link>
+            .
           </p>
         </header>
 
@@ -117,7 +126,7 @@ export default async function EventsPage({
             />
           </div>
           <aside className="lg:col-span-1">
-            <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">Upcoming</h2>
+            <h2 className="rel-group-title">Upcoming</h2>
             <UpcomingList events={upcoming} />
           </aside>
         </div>

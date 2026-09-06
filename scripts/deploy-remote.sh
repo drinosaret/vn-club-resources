@@ -12,7 +12,7 @@ set -euo pipefail
 ENV_TMP=/home/deploy/.deploy-secrets.env
 
 if [ ! -f "$ENV_TMP" ]; then
-  echo "ERROR: $ENV_TMP not found — did the upload step run?" >&2
+  echo "ERROR: $ENV_TMP not found; did the upload step run?" >&2
   exit 1
 fi
 
@@ -87,7 +87,7 @@ fi
 node scripts/generate-git-dates.js
 
 docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
-# Recreate nginx — git pull creates new file inodes, but Docker bind mounts
+# Recreate nginx: git pull creates new file inodes, but Docker bind mounts
 # track the old inode. `nginx -s reload` reads the stale mount. Recreating
 # the container rebinds to the current inode. --no-deps prevents cascading.
 docker compose -f docker-compose.prod.yml --env-file deploy/.env.prod up -d --force-recreate --no-deps nginx

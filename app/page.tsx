@@ -1,17 +1,22 @@
 import Link from '@/components/Link';
-import { Users, ArrowRight } from 'lucide-react';
-import { HeroSection } from '@/components/home/HeroSection';
+import { Users } from 'lucide-react';
+import { TextBox } from '@/components/home/TextBox';
+import { TheWeek } from '@/components/home/TheWeek';
+import { DailyDigest } from '@/components/home/DailyDigest';
+import { Directory } from '@/components/home/Directory';
+import { FunFeatures } from '@/components/home/FunFeatures';
 import { FeaturedVNs } from '@/components/home/FeaturedVNs';
-import { VNOfTheDay } from '@/components/home/VNOfTheDay';
 import { ClubPickCard } from '@/components/home/ClubPickCard';
-import { WordOfTheDay } from '@/components/home/WordOfTheDay';
-import { ExploreSection } from '@/components/home/ExploreSection';
 import { WhatsNewSection } from '@/components/home/WhatsNewSection';
-import { getGuidesWithImages } from '@/lib/navigation-server';
-import { getFeaturedVNsData } from '@/lib/featured-vns';
 import { getVNOfTheDay } from '@/lib/vn-of-the-day';
 import { getWordOfTheDay } from '@/lib/word-of-the-day';
 import { getRecentClubPicks } from '@/lib/events';
+import { getFeaturedVNsData } from '@/lib/featured-vns';
+import { getCommunityPulse } from '@/lib/community-pulse';
+import { getHomeNews } from '@/lib/home-news';
+import { getHotNow } from '@/lib/hot-now';
+import { getUpcomingReleases, UPCOMING_LIMIT_PREVIEW } from '@/lib/upcoming-releases';
+import { getSiteDirectorySections } from '@/lib/navigation';
 import { safeHomepageCover } from '@/lib/safe-cover';
 import type { Metadata } from 'next';
 import { safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
@@ -27,14 +32,14 @@ function GitHubIcon({ className }: { className?: string }) {
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'VN Club | Learn Japanese with Visual Novels',
+  title: 'VN Club | Japanese Visual Novels, Untranslated',
   alternates: {
     canonical: '/',
   },
-  description: 'Learn Japanese with visual novels. Free guides for Textractor, Yomitan, Anki, and OCR setup. Browse VNDB, get personalized VN recommendations, and join a community of readers learning Japanese through immersion.',
+  description: 'The hub for people who read Japanese visual novels in the original, untranslated form. What is being read this week, where it ranks, what is coming next, and the club reading it.',
   openGraph: {
-    title: 'VN Club | Learn Japanese with Visual Novels',
-    description: 'Free guides, tools, and community for learning Japanese through visual novels. Text hooking, dictionary setup, Anki mining, and VN recommendations.',
+    title: 'VN Club | Japanese Visual Novels, Untranslated',
+    description: 'For readers of untranslated Japanese visual novels: what is being read now, the rankings, the trends, and the club.',
     url: '/',
     type: 'website',
     images: [
@@ -42,14 +47,14 @@ export const metadata: Metadata = {
         url: '/assets/hikaru-icon2.webp',
         width: 512,
         height: 512,
-        alt: 'VN Club - Learn Japanese with Visual Novels',
+        alt: 'VN Club, a site about Japanese visual novels',
       },
     ],
   },
   twitter: {
     card: 'summary',
-    title: 'VN Club | Learn Japanese with Visual Novels',
-    description: 'Free guides, tools, and community for learning Japanese through visual novels. Text hooking, dictionary setup, Anki mining, and VN recommendations.',
+    title: 'VN Club | Japanese Visual Novels, Untranslated',
+    description: 'For readers of untranslated Japanese visual novels: what is being read now, the rankings, the trends, and the club.',
     images: ['/assets/hikaru-icon2.webp'],
   },
 };
@@ -61,11 +66,29 @@ const websiteSchema = {
   name: 'VN Club',
   alternateName: ['Visual Novel Club Resources', 'VNClub'],
   url: 'https://vnclub.org',
-  description: 'Learn Japanese with visual novels. The definitive resource for immersion-based Japanese learning through VNs. Guides, tools, and VNDB integration to find your next read.',
-  inLanguage: 'en',
-  about: {
-    '@type': 'Thing',
-    name: 'Learning Japanese through Visual Novels',
+  description: 'The hub for people who read Japanese visual novels in the original, untranslated form. What is being read this week, where it ranks, what is coming next, and the club reading it.',
+  inLanguage: ['en', 'ja'],
+  isAccessibleForFree: true,
+  // The medium first, the stance toward it second. The external identifier matters more than
+  // the name does: "visual novel" is a loose phrase in English and an exact entity in the
+  // knowledge graph, and only the identifier says which one this site is about.
+  about: [
+    {
+      '@type': 'Thing',
+      name: 'Japanese visual novels',
+      sameAs: [
+        'https://en.wikipedia.org/wiki/Visual_novel',
+        'https://www.wikidata.org/wiki/Q689445',
+      ],
+    },
+    {
+      '@type': 'Thing',
+      name: 'Reading Japanese through immersion',
+    },
+  ],
+  audience: {
+    '@type': 'Audience',
+    audienceType: 'Readers of Japanese visual novels',
   },
   potentialAction: {
     '@type': 'SearchAction',
@@ -85,22 +108,32 @@ function prioritizeContentTags<T extends { category?: string | null }>(tags: T[]
 }
 
 export default async function Home() {
-  // Get guides with images for the visual showcase
-  const guides = getGuidesWithImages();
   // Fetch featured VNs and VN of the Day server-side with ISR caching
-  const [featuredVNs, vnOfTheDay, wordOfTheDay, clubPicks] = await Promise.all([
-    getFeaturedVNsData(),
-    getVNOfTheDay(),
-    getWordOfTheDay(),
-    getRecentClubPicks(),
-  ]);
+  const [featuredVNs, vnOfTheDay, wordOfTheDay, clubPicks, pulse, hot, upcoming, news] =
+    await Promise.all([
+      getFeaturedVNsData(),
+      getVNOfTheDay(),
+      getWordOfTheDay(),
+      getRecentClubPicks(),
+      getCommunityPulse(),
+      getHotNow(),
+      // The digest lists five dated titles, so the rest of the announced set is not fetched.
+      getUpcomingReleases(UPCOMING_LIMIT_PREVIEW),
+      getHomeNews(),
+    ]);
+  const directory = getSiteDirectorySections();
 
   // Home-page covers are held to a stricter NSFW bar: a cover at/over the threshold
   // is swapped for jiten's SFW cover (or blurred when the VN isn't on jiten).
-  const [vnotdCover, monthCover, seasonCover] = await Promise.all([
+  const [vnotdCover, monthCover, seasonCover, upcomingCovers] = await Promise.all([
     vnOfTheDay ? safeHomepageCover(vnOfTheDay.vn_id, vnOfTheDay.image_url, vnOfTheDay.image_sexual) : null,
     clubPicks.month ? safeHomepageCover(clubPicks.month.vn.id, clubPicks.month.vn.image_url, clubPicks.month.vn.image_sexual) : null,
     clubPicks.season ? safeHomepageCover(clubPicks.season.vn.id, clubPicks.season.vn.image_url, clubPicks.season.vn.image_sexual) : null,
+    // Every announced row, not only the handful the digest currently draws, so which of them
+    // the panel picks cannot leave a cover unchecked. A row under the bar costs no lookup.
+    Promise.all(
+      upcoming.items.map((item) => safeHomepageCover(item.id, item.image_url, item.image_sexual)),
+    ),
   ]);
   const vnOfTheDaySafe = vnOfTheDay
     ? {
@@ -129,6 +162,18 @@ export default async function Home() {
         },
       }
     : clubPicks.season;
+  const upcomingSafe = {
+    ...upcoming,
+    items: upcoming.items.map((item, i) => ({
+      ...item,
+      image_url: upcomingCovers[i].imageUrl,
+      image_sexual: upcomingCovers[i].imageSexual,
+    })),
+  };
+
+  // A fixed six, in the order the list defines them. The shelf is a set of starting points
+  // rather than a sample, so it has no reason to differ between two people looking at it.
+  const shelfVNs = featuredVNs.slice(0, 6);
 
   return (
     <>
@@ -140,60 +185,74 @@ export default async function Home() {
         ]) }}
       />
       <div className="w-full">
-        {/* 1. Hero Section with Stats Banner */}
-        <HeroSection />
+        <TextBox pulse={pulse} fallbackCovers={featuredVNs} advanceTo="club" />
 
-        {/* 2. Featured VNs Section */}
-        <FeaturedVNs vns={featuredVNs} />
+        {/* The band's heading and its label live inside the shelf, so with nothing to shelve
+            the whole band goes rather than leaving a tinted strip with no accessible name. */}
+        {shelfVNs.length > 0 && (
+          <section aria-labelledby="starting-points" className="band band--quiet">
+            <div className="container mx-auto px-4 max-w-6xl">
+              <FeaturedVNs vns={shelfVNs} />
+            </div>
+          </section>
+        )}
 
-        {/* 3. Explore Section - Site Directory */}
-        <ExploreSection guides={guides} />
-
-        {/* 4. From the VN Club: daily/seasonal picks + calendar */}
-        <section className="pt-4 pb-10 md:pb-14 bg-gray-50 dark:bg-gray-900/50">
+        {/* What the club is reading. Dated, named and public, which is the part of the site no
+            catalogue can copy. */}
+        <section id="club" aria-labelledby="from-the-club" className="band scroll-mt-20">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="mb-4 flex items-end justify-between gap-4">
+            <div className="sec-head">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                  From the VN Club
+                <h2 id="from-the-club" className="sec-title">
+                  From the club
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Daily and seasonal picks, plus the community calendar.
+                <p className="sec-sub">
+                  A title every month, one a season, and a session every week.
                 </p>
               </div>
-              <Link
-                href="/events"
-                className="shrink-0 inline-flex items-center gap-1 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
-              >
+              <Link href="/events/" className="sec-more">
                 Events calendar
-                <ArrowRight className="w-4 h-4" />
+                <span aria-hidden>&rarr;</span>
               </Link>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <VNOfTheDay data={vnOfTheDaySafe} compact />
-              <WordOfTheDay data={wordOfTheDay} compact />
               <ClubPickCard pick={monthSafe} kind="month" />
               <ClubPickCard pick={seasonSafe} kind="season" />
             </div>
           </div>
         </section>
 
-        {/* 5. What's new: latest site updates */}
+        <DailyDigest
+          hot={hot}
+          newReleases={pulse?.newReleases ?? []}
+          news={news}
+          upcoming={upcomingSafe}
+          vnOfTheDay={vnOfTheDaySafe}
+          wordOfTheDay={wordOfTheDay}
+        />
+
+        {pulse && <TheWeek pulse={pulse} />}
+
+        <FunFeatures fallbackCovers={featuredVNs} pulse={pulse} />
+
+        <Directory directory={directory} />
+
         <WhatsNewSection />
 
         {/* 6. Community CTA */}
-        <section className="bg-linear-to-br from-primary-600 to-primary-700 text-white py-12 md:py-20">
+        <section className="join-band on-box">
           <div className="container mx-auto px-4 max-w-4xl text-center">
             <h2 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">
               Get Involved
             </h2>
-            <p className="text-lg md:text-xl mb-8 md:mb-10 text-primary-100 max-w-2xl mx-auto">
-              This is an open wiki maintained by the community. Join us on Discord or help improve the site on GitHub.
+            <p className="text-lg md:text-xl mb-8 md:mb-10 text-[color:var(--nezu)] max-w-2xl mx-auto">
+              This is an open wiki maintained by the community. Join us on Discord or help improve
+              the site on GitHub.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/join"
-                className="inline-flex items-center justify-center gap-2 bg-white text-primary-700 px-8 py-4 rounded-xl font-semibold hover:bg-primary-50 hover:shadow-lg transition-[background-color,box-shadow] duration-200 border-2 border-white/50"
+                href="/join/"
+                className="cta-btn"
               >
                 <Users className="w-5 h-5" />
                 Join Discord
@@ -202,13 +261,13 @@ export default async function Home() {
                 href="https://github.com/drinosaret/vn-club-resources"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-primary-500/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-500/50 transition-[background-color,border-color] duration-200 border-2 border-white/30 hover:border-white/50"
+                className="cta-btn"
               >
                 <GitHubIcon className="w-5 h-5" />
                 Contribute on GitHub
               </a>
             </div>
-            <blockquote className="mt-8 md:mt-12 text-base md:text-lg italic text-primary-200">
+            <blockquote className="mt-8 md:mt-12 text-base md:text-lg italic text-[color:var(--nezu)]">
               &quot;Read more.&quot; – Everyone who made it
             </blockquote>
           </div>

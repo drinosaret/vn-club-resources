@@ -1,6 +1,5 @@
 'use client';
 
-import { ImageOff } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { NSFWNextImage } from '@/components/NSFWImage';
 import { ImageLightbox } from '@/components/ImageLightbox';
@@ -21,9 +20,11 @@ export function VNCover({ imageUrl, imageSexual, title, vnId, className = '' }: 
   const proxiedUrl = imageUrl ? getProxiedImageUrl(imageUrl, { width: 512, vnId }) : null;
 
   return (
-    <div className={`relative w-full ${className}`}>
+    <div className={`vn-cover relative w-full ${className}`}>
       <ImageLightbox src={proxiedUrl ?? ''} alt={title} imageSexual={imageSexual} vnId={vnId}>
-        <div className="relative aspect-3/4 rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-xl cursor-pointer ring-1 ring-black/5 dark:ring-white/10">
+        {/* The art is the only saturated thing on the page, so nothing frames it but a
+            hairline and a square corner. */}
+        <div className="relative aspect-3/4 rounded-[1px] overflow-hidden bg-[color:var(--surface-inset)] cursor-pointer ring-1 ring-[color:var(--rule)]">
           {imageUrl ? (
             <>
               <div className={shimmerClass} />
@@ -42,8 +43,8 @@ export function VNCover({ imageUrl, imageSexual, title, vnId, className = '' }: 
               />
             </>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
-              <ImageOff className="w-16 h-16" />
+            <div className="w-full h-full flex items-center justify-center font-mono text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-faint)]">
+              No cover
             </div>
           )}
         </div>

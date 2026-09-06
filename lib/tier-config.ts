@@ -10,7 +10,7 @@ export interface TierDef {
   label: string;
   color: string;       // Tailwind bg class
   textColor: string;   // Tailwind text class
-  noAutoSort?: boolean; // true for user-added tiers — excluded from VNDB import auto-distribution
+  noAutoSort?: boolean; // true for user-added tiers: excluded from VNDB import auto-distribution
 }
 
 export interface TierVN {
@@ -164,8 +164,10 @@ export const TIER_COLORS: TierColor[] = [
 // === Defaults ===
 
 let _idCounter = 0;
+/** A row id unique within a session and across sessions. Base 36 so it stays inside the
+ *  length a shared layout accepts however many rows a session has been through. */
 export function generateTierId(): string {
-  return `tier-${Date.now()}-${_idCounter++}`;
+  return `t${Date.now().toString(36)}${(_idCounter++).toString(36)}`;
 }
 
 export const DEFAULT_TIER_DEFS: TierDef[] = [

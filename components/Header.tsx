@@ -63,7 +63,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-900 shadow-xs border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-50">
+    <header className="bg-[color:var(--surface)] border-b border-[color:var(--rule)] fixed top-0 left-0 right-0 z-50">
       <nav className="container mx-auto px-4 py-4 max-w-7xl">
         <div className="flex justify-between items-center gap-4">
           {/* Logo */}
@@ -76,12 +76,8 @@ export default function Header() {
               className="w-7 h-7 sm:w-8 sm:h-8"
             />
             <div className="flex items-center gap-0.5 sm:gap-1">
-              <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-primary-600 to-primary-800 dark:from-primary-400 dark:to-primary-600 bg-clip-text text-transparent">
-                VN
-              </span>
-              <span className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                Club
-              </span>
+              <span className="brand brand-mark text-xl sm:text-2xl">VN</span>
+              <span className="brand text-xl sm:text-2xl">Club</span>
             </div>
           </Link>
 
@@ -99,17 +95,13 @@ export default function Header() {
                   <div key={item.name} className="relative" ref={openDropdown === item.name ? dropdownRef : undefined}>
                     <button
                       onClick={() => setOpenDropdown(prev => prev === item.name ? null : item.name)}
-                      className={`inline-flex items-center gap-1 transition-colors font-medium ${
-                        isChildActive
-                          ? 'text-primary-600 dark:text-primary-400'
-                          : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
-                      }`}
+                      className={isChildActive ? 'nav-link nav-link--on' : 'nav-link'}
                     >
                       {item.name}
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === item.name ? 'rotate-180' : ''}`} />
                     </button>
                     {openDropdown === item.name && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-50">
+                      <div className="nav-menu">
                         {item.items.map((sub, subIndex) => {
                           const isSubActive = normalizedPathname.startsWith(sub.href);
                           const group = 'group' in sub ? sub.group : undefined;
@@ -120,8 +112,8 @@ export default function Header() {
                             {startsGroup && (
                               <div
                                 role="presentation"
-                                className={`px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 ${
-                                  subIndex === 0 ? 'pt-1' : 'pt-2.5 mt-1 border-t border-gray-100 dark:border-gray-700/60'
+                                className={`px-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-faint)] ${
+                                  subIndex === 0 ? 'pt-1' : 'pt-2.5 mt-1 border-t border-[color:var(--rule)]/60'
                                 }`}
                               >
                                 {group}
@@ -133,11 +125,7 @@ export default function Header() {
                                 setOpenDropdown(null);
                                 handleNavClick(e, sub.href);
                               }}
-                              className={`block px-4 py-2 text-sm transition-colors ${
-                                isSubActive
-                                  ? 'text-primary-600 dark:text-primary-400 bg-gray-50 dark:bg-gray-700/50'
-                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400'
-                              }`}
+                              className={isSubActive ? 'nav-opt nav-opt--on' : 'nav-opt'}
                             >
                               {sub.name}
                             </Link>
@@ -160,11 +148,7 @@ export default function Header() {
                   key={item.name}
                   href={item.href!}
                   onClick={(e) => handleNavClick(e, item.href!)}
-                  className={`transition-colors font-medium ${
-                    isActive
-                      ? 'text-primary-600 dark:text-primary-400'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
-                  }`}
+                  className={isActive ? 'nav-link nav-link--on' : 'nav-link'}
                 >
                   {item.name}
                 </Link>
@@ -173,10 +157,12 @@ export default function Header() {
             <SearchBar className="w-48 lg:w-64" />
             <Link
               href={DISCORD_URL}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-xs hover:bg-[color:var(--surface-inset)] transition-colors"
               aria-label="Join Discord"
             >
-              <DiscordIcon className="w-5 h-5 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400" />
+              {/* Hovers to the service's own colour, which is a brand mark rather than a
+                  palette choice, so it does not come from the theme. */}
+              <DiscordIcon className="w-5 h-5 text-[color:var(--nezu)] transition-colors hover:text-[#5865F2]" />
             </Link>
             <TitleLanguageToggle />
             <ThemeToggle />
@@ -186,22 +172,22 @@ export default function Header() {
           <div className="lg:hidden flex items-center space-x-1">
             <Link
               href={DISCORD_URL}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-1.5 rounded-xs hover:bg-[color:var(--surface-inset)] transition-colors"
               aria-label="Join Discord"
             >
-              <DiscordIcon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <DiscordIcon className="w-5 h-5 text-[color:var(--nezu)]" />
             </Link>
             <TitleLanguageToggle />
             <ThemeToggle />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-1.5 rounded-xs hover:bg-[color:var(--surface-inset)]"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? (
-                <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <X className="w-5 h-5 text-[color:var(--nezu)]" />
               ) : (
-                <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <Menu className="w-5 h-5 text-[color:var(--nezu)]" />
               )}
             </button>
           </div>
@@ -223,7 +209,7 @@ export default function Header() {
                     <>
                       <button
                         onClick={() => toggleSection(section.name)}
-                        className="w-full flex items-center justify-between text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors py-2 font-medium"
+                        className="nav-row"
                       >
                         {section.name}
                         <ChevronDown
@@ -233,7 +219,7 @@ export default function Header() {
                         />
                       </button>
                       {expandedSections.includes(section.name) && (
-                        <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4 space-y-1">
+                        <div className="ml-4 border-l-2 border-[color:var(--rule)] pl-4 space-y-1">
                           {section.items.map((item) => {
                             const normalizedPath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
                             const isItemActive = item.href === '/'
@@ -247,11 +233,7 @@ export default function Header() {
                                   setIsMenuOpen(false);
                                   handleNavClick(e, item.href);
                                 }}
-                                className={`block transition-colors py-2.5 text-sm ${
-                                  isItemActive
-                                    ? 'text-primary-600 dark:text-primary-400 font-medium'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400'
-                                }`}
+                                className={isItemActive ? 'nav-sub nav-sub--on' : 'nav-sub'}
                               >
                                 {item.name}
                               </Link>
@@ -274,11 +256,7 @@ export default function Header() {
                             setIsMenuOpen(false);
                             handleNavClick(e, section.href!);
                           }}
-                          className={`block transition-colors py-2 font-medium ${
-                            isSectionActive
-                              ? 'text-primary-600 dark:text-primary-400'
-                              : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
-                          }`}
+                          className={isSectionActive ? 'nav-row nav-row--on' : 'nav-row'}
                         >
                           {section.name}
                         </Link>

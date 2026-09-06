@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from '@/components/Link';
-import { ArrowLeft, ArrowRight, Flame } from 'lucide-react';
 
 import { FadeIn } from '@/components/FadeIn';
 import { HotNow } from '@/components/stats/trends/HotNow';
@@ -47,8 +46,12 @@ function Section({ title, blurb, children, delay = 0 }: SectionProps) {
   return (
     <FadeIn delay={delay}>
       <section className="mb-12">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">{title}</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 max-w-2xl">{blurb}</p>
+        <div className="sec-head">
+          <div>
+            <h2 className="sec-title">{title}</h2>
+            <p className="sec-sub max-w-2xl">{blurb}</p>
+          </div>
+        </div>
         {children}
       </section>
     </FadeIn>
@@ -86,24 +89,14 @@ export default function TrendsClient() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <Link
-        href="/stats/"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
+      <Link href="/stats/" className="sec-more">
+        <span aria-hidden>&larr;</span>
         Stats
       </Link>
 
       <header className="mt-4 mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-orange-100 dark:bg-orange-900/30">
-            <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-          </span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-            Trends
-          </h1>
-        </div>
-        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
+        <h1 className="sec-title">Trends</h1>
+        <p className="sec-sub max-w-2xl">
           What the community is reading right now, and what is climbing. Every figure here is
           measured against the period before it, so the page reads as movement rather than as a
           standing.
@@ -111,7 +104,7 @@ export default function TrendsClient() {
 
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           <LanguageFilter value={language} onChange={setLanguage} />
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="st-card-sub max-w-2xl">
             {language === 'ja'
               ? 'Every figure below counts votes on titles originally written in Japanese.'
               : 'Figures below count votes on titles in any original language. Still to come is the one exception: it keeps to upcoming Japanese releases, because a release in another language is usually a new edition of a title that already exists rather than something new.'}
@@ -137,7 +130,7 @@ export default function TrendsClient() {
         ) : (
           // Every placeholder on the page is sized to the card it stands in for, so the page
           // does not grow under a reader who scrolls while it loads.
-          <div className="h-[57rem] sm:h-[29rem] rounded-xl image-placeholder" />
+          <div className="h-[57rem] sm:h-[29rem] rounded-xs image-placeholder" />
         )}
       </Section>
 
@@ -163,7 +156,7 @@ export default function TrendsClient() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[28rem] lg:h-[29rem] rounded-xl image-placeholder" />
+              <div key={i} className="h-[28rem] lg:h-[29rem] rounded-xs image-placeholder" />
             ))}
           </div>
         )}
@@ -196,28 +189,23 @@ export default function TrendsClient() {
           <TrendsUnavailable what="The community's own activity" />
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="h-[23rem] lg:h-[22.5rem] rounded-xl image-placeholder" />
-            <div className="h-[23rem] lg:h-[22.5rem] rounded-xl image-placeholder" />
+            <div className="h-[23rem] lg:h-[22.5rem] rounded-xs image-placeholder" />
+            <div className="h-[23rem] lg:h-[22.5rem] rounded-xs image-placeholder" />
           </div>
         )}
       </Section>
 
       <FadeIn delay={300}>
-        <section className="mb-12 rounded-xl border border-gray-200/60 dark:border-gray-700/80 bg-white dark:bg-gray-800 p-4 sm:p-5">
-          <h2 className="font-semibold text-gray-900 dark:text-white">
-            Looking for the long view?
-          </h2>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
+        <section className="mb-12 st-card p-4 sm:p-5">
+          <h2 className="st-card-title">Looking for the long view?</h2>
+          <p className="st-card-sub mt-1 max-w-2xl">
             How far back people read, which era they read, what was published each year and how
             the database itself was built are all on the global page. Those describe thirty
             years rather than this week.
           </p>
-          <Link
-            href="/stats/global/"
-            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline"
-          >
+          <Link href="/stats/global/" className="sec-more mt-3">
             Global stats
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span aria-hidden>&rarr;</span>
           </Link>
         </section>
       </FadeIn>

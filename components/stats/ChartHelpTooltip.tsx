@@ -22,7 +22,7 @@ export function ChartHelpTooltip({ text }: ChartHelpTooltipProps) {
     // Use the tighter of viewport or parent card bounds
     let boundsL = margin;
     let boundsR = window.innerWidth - margin;
-    const card = el.closest<HTMLElement>('[class*="rounded-xl"]');
+    const card = el.closest<HTMLElement>('.st-card');
     if (card) {
       const cr = card.getBoundingClientRect();
       boundsL = Math.max(boundsL, cr.left + margin);
@@ -39,17 +39,17 @@ export function ChartHelpTooltip({ text }: ChartHelpTooltipProps) {
   return (
     <span
       ref={iconRef}
-      className="relative inline-flex ml-1 group/help"
+      className="relative inline-flex align-middle ml-1.5 group/help"
       onPointerEnter={updatePosition}
     >
-      <HelpCircle className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help" />
+      <HelpCircle className="w-3.5 h-3.5 text-[color:var(--text-faint)] hover:text-[color:var(--nezu)] cursor-help" />
       <span
-        className="pointer-events-none absolute left-1/2 top-full mt-1.5 w-64 rounded-lg bg-gray-900 dark:bg-gray-700 text-white text-xs leading-relaxed px-3 py-2 opacity-0 group-hover/help:opacity-100 transition-opacity z-50 shadow-lg"
+        className="st-tip on-box pointer-events-none absolute left-1/2 top-full mt-1.5 w-64 px-3 py-2 opacity-0 group-hover/help:opacity-100 transition-opacity z-50"
         style={{ transform: `translateX(calc(-50% + ${shift}px))` }}
       >
         {text}
         <span
-          className="absolute bottom-full left-1/2 border-4 border-transparent border-b-gray-900 dark:border-b-gray-700"
+          className="absolute bottom-full left-1/2 border-4 border-transparent border-b-[color:var(--box)]"
           style={{ transform: `translateX(calc(-50% - ${shift}px))` }}
         />
       </span>

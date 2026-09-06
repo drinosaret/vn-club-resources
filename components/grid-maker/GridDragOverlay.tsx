@@ -19,7 +19,7 @@ export function GridDragOverlay({ item, cropSquare, previewUrl, cellWidth, nsfwR
   const h = cropSquare ? w : Math.round(w * 1.5);
   return (
     <div
-      className="rounded-sm overflow-hidden shadow-xl ring-2 ring-purple-500 rotate-2 opacity-90"
+      className="rounded-xs overflow-hidden outline-2 outline-[color:var(--kohaku)] rotate-2 opacity-90"
       style={{ width: w, height: h }}
     >
       {src ? (
@@ -40,7 +40,7 @@ export function GridDragOverlay({ item, cropSquare, previewUrl, cellWidth, nsfwR
           />
         )
       ) : (
-        <div className="w-full h-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[9px] text-gray-600 dark:text-gray-300 p-1 text-center">
+        <div className="w-full h-full bg-[color:var(--surface-inset)] flex items-center justify-center text-[9px] text-[color:var(--nezu)] p-1 text-center">
           {item?.title}
         </div>
       )}

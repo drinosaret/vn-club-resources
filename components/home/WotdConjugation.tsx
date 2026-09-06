@@ -208,17 +208,17 @@ export function WotdConjugation({ readingText, partsOfSpeech }: { readingText: s
   if (!result) return null;
 
   return (
-    <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Conjugations</h2>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{result.type}</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+    <section className="panel p-5 pt-7">
+      <h2 className="nameplate dg-plate">Conjugations</h2>
+      <p className="wd-credit mb-3">{result.type}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
         {result.rows.map((row) => (
-          <div key={row.form} className="flex items-baseline justify-between py-1.5 border-b border-gray-100 dark:border-gray-700">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-20 shrink-0">{row.form}</span>
-              <span className="font-jp text-gray-900 dark:text-white">{row.japanese}</span>
+          <div key={row.form} className="wd-conj">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="wd-conj-form">{row.form}</span>
+              <span className="wd-conj-jp">{row.japanese}</span>
             </div>
-            <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">{row.romaji}</span>
+            <span className="wd-conj-note">{row.romaji}</span>
           </div>
         ))}
       </div>

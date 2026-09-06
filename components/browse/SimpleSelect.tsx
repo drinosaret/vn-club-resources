@@ -106,12 +106,8 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={`
-          w-full flex items-center justify-between gap-2
+          bw-select w-full flex items-center justify-between gap-2
           ${compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm'}
-          rounded-lg border transition-colors
-          bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700
-          text-gray-700 dark:text-gray-300
-          hover:border-gray-400 dark:hover:border-gray-500
         `}
       >
         <span className="truncate">{displayText}</span>
@@ -122,14 +118,14 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
         <div
           ref={listRef}
           role="listbox"
-          className={`absolute z-50 mt-1 w-full sm:min-w-[180px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-64 overflow-y-auto ${align === 'right' ? 'right-0' : ''}`}
+          className={`bw-menu absolute z-50 mt-1 w-full sm:min-w-[180px] max-h-64 overflow-y-auto ${align === 'right' ? 'right-0' : ''}`}
         >
           {options.map((option, index) => (
             <Fragment key={option.value}>
               {option.group && option.group !== options[index - 1]?.group && (
                 <div
                   role="presentation"
-                  className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                  className="bw-menu-head px-3 pt-2 pb-1"
                 >
                   {option.group}
                 </div>
@@ -142,16 +138,16 @@ export function SimpleSelect({ options, value, onChange, label, compact, classNa
                 onClick={() => { onChange(option.value); setIsOpen(false); }}
                 onMouseEnter={() => setFocusedIndex(index)}
                 className={`
-                  w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors
+                  bw-opt w-full px-3 py-2 text-left text-sm flex items-center gap-2
                   ${option.value === value
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                    ? 'bw-opt--on'
                     : index === focusedIndex
-                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}
+                      ? 'bw-opt--focus'
+                      : ''}
                 `}
               >
                 <span className="w-4 shrink-0">
-                  {option.value === value && <Check className="w-4 h-4 text-primary-500" />}
+                  {option.value === value && <Check className="w-4 h-4" />}
                 </span>
                 {option.label}
               </button>

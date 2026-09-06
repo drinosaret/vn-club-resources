@@ -36,26 +36,54 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
   site: {
     label: 'vnclub.org',
     blurb: 'The website',
-    chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200',
+    chip: 'cat-tag cat-tag--site',
   },
   hikaru: {
     label: 'Hikaru',
     blurb: 'Cross-server reading club bot',
-    chip: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200',
+    chip: 'cat-tag cat-tag--hikaru',
   },
   muramasa: {
     label: 'Muramasa',
     blurb: 'VNCR server bot',
-    chip: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
+    chip: 'cat-tag cat-tag--muramasa',
   },
   ichijou: {
     label: 'Ichijou',
     blurb: 'vnclub.org Discord bot',
-    chip: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
+    chip: 'cat-tag cat-tag--ichijou',
   },
 };
 
 export const changelogEntries: ChangelogEntry[] = [
+  {
+    date: '2026-09-05',
+    project: 'site',
+    title: 'Recommendations v2',
+    description:
+      'Recommendations you can steer. Filter by platform, year, difficulty, studio or staff, tune the signals behind the score, and see why each title was picked. Mark anything as read or not interested, and pick the layout you want.',
+    links: [{ label: 'Recommendations', href: '/recommendations/' }],
+  },
+  {
+    date: '2026-09-05',
+    project: 'site',
+    title: 'A new front page, and new pages',
+    description:
+      'The home page is now a daily read: the week in figures, what moved, and a directory of everything the site publishes. Upcoming Japanese releases and every past club pick have pages of their own, and title pages gained their full cast and credits.',
+    links: [
+      { label: 'Home', href: '/' },
+      { label: 'Upcoming releases', href: '/news/upcoming/' },
+      { label: 'Past club picks', href: '/events/history/' },
+    ],
+  },
+  {
+    date: '2026-09-05',
+    project: 'site',
+    title: 'A more consistent look',
+    description:
+      'A style pass over the site. Headings and spacing match from page to page, numbers line up in columns, and light lines separate sections instead of heavy boxes.',
+    links: [{ label: 'Home', href: '/' }],
+  },
   {
     date: '2026-08-21',
     project: 'site',

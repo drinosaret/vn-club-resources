@@ -70,8 +70,9 @@ lock does not provide, since the image would otherwise never install it.
 - `GET /api/v1/stats/{uid}/compare/{other_uid}` - Compare users
 
 ### Recommendations
-- `GET /api/v1/recommendations/{uid}` - Personalized recommendations
-- `GET /api/v1/recommendations/{uid}/similar/{vn_id}` - Similar VNs
+- `GET /api/v1/recommendations/presets` - Named signal-weight presets
+- `GET /api/v1/recommendations/{uid}/v2` - Ranked recommendations for a VNDB list
+- `GET /api/v1/recommendations/{uid}/v2/details/{vn_id}` - Evidence for one recommended title
 
 ### User
 - `GET /api/v1/user/lookup?username=...` - Lookup user by username
@@ -86,11 +87,12 @@ lock does not provide, since the image would otherwise never install it.
 
 ## Data Ingestion
 
-The scheduler automatically downloads and imports VNDB dumps daily at 09:00 UTC.
+The worker process (`scripts/worker.py`) downloads and imports VNDB dumps on a daily
+schedule and retrains the models afterwards.
 
-To run manually:
+To run an import manually:
 ```bash
-python -m app.ingestion.scheduler
+python scripts/initial_import.py
 ```
 
 ## Environment Variables

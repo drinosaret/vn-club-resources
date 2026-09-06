@@ -3,6 +3,7 @@
 import { BrowseFilters } from '@/lib/vndb-stats-api';
 import { RangeSlider } from './RangeSlider';
 import { DIFFICULTY_BANDS } from '@/lib/difficulty';
+import { YEAR_RANGE, RATING_RANGE, VOTES_RANGE, DIFFICULTY_RANGE } from './filter-constants';
 
 interface InlineRangeSlidersProps {
   filters: BrowseFilters;
@@ -12,17 +13,10 @@ interface InlineRangeSlidersProps {
   compact?: boolean;
 }
 
-const MIN_YEAR = 1990;
-const MAX_YEAR = new Date().getFullYear();
-const MIN_RATING = 1;
-const MAX_RATING = 10;
-const MIN_VOTES = 0;
-const MAX_VOTES = 5000;
-// The difficulty bands run 0 to 5. Setting this range at all restricts the results to the
-// titles whose script has been analysed, which is a small fraction of the database, so the
-// slider says so rather than appearing to filter the whole catalogue.
-const MIN_DIFFICULTY = 0;
-const MAX_DIFFICULTY = 5;
+const { min: MIN_YEAR, max: MAX_YEAR } = YEAR_RANGE;
+const { min: MIN_RATING, max: MAX_RATING } = RATING_RANGE;
+const { min: MIN_VOTES, max: MAX_VOTES } = VOTES_RANGE;
+const { min: MIN_DIFFICULTY, max: MAX_DIFFICULTY } = DIFFICULTY_RANGE;
 
 export function InlineRangeSliders({ filters, onChange, layout = 'horizontal', compact }: InlineRangeSlidersProps) {
   return (

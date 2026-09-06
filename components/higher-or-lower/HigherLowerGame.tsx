@@ -249,14 +249,14 @@ export default function HigherLowerGame() {
   if (state.status === 'loading') {
     return (
       <Centered>
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-[color:var(--nezu)]" />
       </Centered>
     );
   }
   if (state.status === 'error') {
     return (
       <Centered>
-        <p className="text-sm text-gray-500 dark:text-gray-400">The game is unavailable right now. Please try again later.</p>
+        <p className="bw-alert px-3 py-2 text-sm">The game is unavailable right now. Please try again later.</p>
       </Centered>
     );
   }
@@ -279,7 +279,7 @@ export default function HigherLowerGame() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6">
       <div className="mb-3 flex justify-center">
-        <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/50">
+        <div className="rc-seg">
           {METRIC_ORDER.map((mk) => {
             const active = state.mode === mk;
             return (
@@ -292,11 +292,7 @@ export default function HigherLowerGame() {
                   if (midRun) setPending({ kind: 'mode', mode: mk });
                   else dispatch({ type: 'SET_MODE', mode: mk });
                 }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${
-                  active
-                    ? 'bg-white text-violet-600 shadow-sm dark:bg-gray-900 dark:text-violet-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                }`}
+                className={`rc-seg-item disabled:opacity-60 ${active ? 'rc-seg-item--on' : ''}`}
               >
                 {METRICS[mk].label}
               </button>
@@ -306,13 +302,7 @@ export default function HigherLowerGame() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
-        <label
-          className={`inline-flex items-center gap-2 text-xs font-medium ${
-            locked || refetching
-              ? 'cursor-not-allowed text-gray-400 dark:text-gray-600'
-              : 'cursor-pointer text-gray-600 dark:text-gray-300'
-          }`}
-        >
+        <label className="toy-check-row">
           <input
             type="checkbox"
             checked={nsfw}
@@ -323,7 +313,7 @@ export default function HigherLowerGame() {
               if (midRun) setPending({ kind: 'nsfw', value: e.target.checked });
               else setNsfw(e.target.checked);
             }}
-            className="h-4 w-4 accent-violet-600"
+            className="bw-check"
           />
           Enable explicit covers
         </label>
@@ -332,7 +322,7 @@ export default function HigherLowerGame() {
             type="button"
             title="Show or blur adult covers everywhere on the site"
             onClick={() => reveal.setAllRevealed(!reveal.allRevealed)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="toy-btn"
           >
             {reveal.allRevealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             {reveal.allRevealed ? 'Blur covers' : 'Reveal covers'}
@@ -355,10 +345,10 @@ export default function HigherLowerGame() {
             onKeyDown={(e) => {
               if (e.key === 'Escape') setPending(null);
             }}
-            className="absolute left-1/2 top-0 z-10 w-full max-w-sm -translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-4 text-center shadow-lg dark:border-gray-700 dark:bg-gray-800"
+            className="toy-panel absolute left-1/2 top-0 z-10 w-full max-w-sm -translate-x-1/2 p-4 text-center"
           >
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">End your current run?</p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="font-display text-sm font-bold text-[color:var(--ink)]">End your current run?</p>
+            <p className="mt-1 text-xs text-[color:var(--nezu)]">
               {pending.kind === 'mode'
                 ? `Switching modes starts a new run. Your streak of ${state.streak} will be lost.`
                 : `Changing this reloads the pool and starts a new run. Your streak of ${state.streak} will be lost.`}
@@ -368,14 +358,14 @@ export default function HigherLowerGame() {
                 type="button"
                 autoFocus
                 onClick={() => setPending(null)}
-                className="flex-1 rounded-xl bg-violet-600 py-2 text-xs font-semibold text-white transition hover:bg-violet-700"
+                className="toy-btn toy-btn--go flex-1"
               >
                 Keep playing
               </button>
               <button
                 type="button"
                 onClick={confirmPending}
-                className="flex-1 rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700/50"
+                className="toy-btn flex-1"
               >
                 {pending.kind === 'mode' ? 'Switch and end run' : 'Change and end run'}
               </button>
@@ -390,9 +380,7 @@ export default function HigherLowerGame() {
         <div className={`flex items-stretch gap-2 sm:gap-3 ${refetching ? 'pointer-events-none' : ''}`}>
           <VNPanel vn={anchor} metric={state.mode} phase="static" linkable />
           <div className="flex shrink-0 items-center justify-center">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-xs font-bold text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
-              VS
-            </span>
+            <span className="toy-vs">VS</span>
           </div>
           <VNPanel
             vn={challenger}
@@ -405,7 +393,7 @@ export default function HigherLowerGame() {
         </div>
         {refetching ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-[color:var(--nezu)]" />
           </div>
         ) : null}
       </div>
@@ -420,8 +408,8 @@ export default function HigherLowerGame() {
 function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div>
-      <div className={`text-3xl font-extrabold tabular-nums ${highlight ? 'text-violet-600 dark:text-violet-400' : 'text-gray-900 dark:text-white'}`}>{value}</div>
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{label}</div>
+      <span className={`fig-value ${highlight ? 'toy-fig--live' : ''}`}>{value}</span>
+      <span className="fig-label">{label}</span>
     </div>
   );
 }

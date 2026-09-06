@@ -15,12 +15,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: `Tag ${tagId} Stats`,
       description: 'Visual novel tag statistics and analysis on VN Club.',
+      // Nothing was found under this id. The page still renders, because the id may be
+      // real and the lookup merely unavailable, but a placeholder describing nothing is
+      // not worth indexing and the id space is unbounded.
+      robots: { index: false, follow: true },
     };
   }
 
   const description = tag.description
     ? truncateDescription(tag.description, 200)
-    : `${tag.name} — visual novel tag statistics, score distribution, and related VNs on VN Club.`;
+    : `${tag.name}: visual novel tag statistics, score distribution, and related VNs on VN Club.`;
 
   return generatePageMetadata({
     title: `${tag.name} - Tag Stats`,

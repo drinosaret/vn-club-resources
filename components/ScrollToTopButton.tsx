@@ -35,14 +35,8 @@ export function ScrollToTopButton() {
       tabIndex={isVisible ? 0 : -1}
       aria-hidden={!isVisible}
       className={`
-        fixed bottom-6 right-6 z-50
-        w-12 h-12 rounded-full
-        bg-primary-600 hover:bg-primary-700
-        text-white shadow-lg hover:shadow-xl
-        flex items-center justify-center
-        transition-[opacity,transform,box-shadow,background-color] duration-300 ease-out
-        focus:outline-hidden focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-        dark:focus:ring-offset-gray-900
+        sw-top fixed bottom-6 right-6 z-50
+        transition-[opacity,transform,background-color] duration-300 ease-out
         ${isVisible
           ? 'opacity-100 translate-y-0'
           : 'opacity-0 translate-y-4 pointer-events-none'

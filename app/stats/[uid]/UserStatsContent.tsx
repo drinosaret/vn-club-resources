@@ -2,10 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo, startTransition, memo } from 'react';
 import Link from '@/components/Link';
-import {
-  ArrowLeft, RefreshCw, ExternalLink, Clock,
-  BookOpen, Star, Trophy, AlertCircle, Sparkles, UserCheck
-} from 'lucide-react';
+import { ArrowLeft, RefreshCw, ExternalLink } from 'lucide-react';
 import {
   vndbStatsApi,
   UserStats,
@@ -175,7 +172,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
   // Initialize tab from server-provided URL param, default to 'summary'
   const initialTabValue = initialTab && VALID_TABS.includes(initialTab as StatsTabId) ? initialTab as StatsTabId : 'summary';
   const [activeTab, setActiveTab] = useState<StatsTabId>(initialTabValue);
-  // Track which tabs have been visited — they stay mounted (display:none) after first visit
+  // Track which tabs have been visited; they stay mounted (display:none) after first visit
   // so switching back is instant (no expensive unmount/remount of SVG charts etc.)
   const [mountedTabs, setMountedTabs] = useState<Set<StatsTabId>>(() => new Set([initialTabValue]));
   const [usingFallback, setUsingFallback] = useState(false);
@@ -200,7 +197,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
   // which would trigger a soft navigation and potentially flash loading.tsx's Suspense boundary
   const handleTabChange = useCallback((newTab: StatsTabId) => {
     setActiveTab(newTab);
-    // Lazily mount tabs on first visit — they stay in the DOM (display:none) afterward
+    // Lazily mount tabs on first visit; they stay in the DOM (display:none) afterward
     // so switching back never triggers expensive unmount/remount of SVG charts
     setMountedTabs(prev => {
       if (prev.has(newTab)) return prev;
@@ -254,7 +251,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
       // Only fetch tag analytics if user has completed VNs - avoids race conditions
       // where tags might return empty because user data isn't fully processed yet
       const tagsData = statsData.summary.total_vns > 0
-        ? await vndbStatsApi.getTagAnalytics(currentUid).catch(() => null)
+        ? await vndbStatsApi.getTagAnalytics(currentUid, forceRefresh).catch(() => null)
         : null;
       if (signal.cancelled) return null;
 
@@ -332,6 +329,10 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
       } catch (e) {
         if (signal.cancelled) return;
 
+        // Exception text can name a configuration key or quote the body of an unexpected
+        // response, so the panel carries a fixed sentence and the detail stays in the console.
+        console.error(e);
+
         // Provide specific error messages based on the actual error
         let errorMessage = 'Failed to load user stats.';
 
@@ -345,11 +346,9 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           } else if (e.message.includes('API error: 5')) {
             errorMessage = 'Server error. Please try again later.';
           } else if (e.message.includes('API error:')) {
-            errorMessage = `Server returned an error: ${e.message}`;
+            errorMessage = 'The stats service returned an error. Please try again later.';
           } else if (e.message.includes('fetch') || e.message.includes('network')) {
             errorMessage = 'Network error. Please check your connection and try again.';
-          } else {
-            errorMessage = `Failed to load user stats: ${e.message}`;
           }
         }
 
@@ -392,7 +391,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
     setIsLoadingNovels(true);
     try {
       const PAGE_SIZE = 2000;
-      // First request — gives us total count + first batch
+      // First request: gives us total count + first batch
       const first = await vndbStatsApi.getUserVNList(uid, 1, PAGE_SIZE);
       const allNovels: VNDBListItem[] = [...first.items];
 
@@ -456,7 +455,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
       // Holds a page's worth while the cached copy is checked. Anything shorter leaves the
       // footer in view, and the footer then travels the height of the loaded page.
       <div className="min-h-[calc(100vh+8rem)] flex items-start justify-center pt-[12vh]">
-        <RefreshCw className="w-6 h-6 animate-spin text-primary-500/40" />
+        <RefreshCw className="w-6 h-6 animate-spin text-[color:var(--ai)]" />
       </div>
     );
   }
@@ -495,10 +494,10 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
     // axis alone, which is all this container needs.
     <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-clip">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
-            <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing…</span>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[color:var(--surface)] backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xs bg-[color:var(--surface)] border border-[color:var(--rule)]">
+            <RefreshCw className="w-4 h-4 animate-spin text-[color:var(--ai)]" />
+            <span className="text-sm text-[color:var(--text-secondary)]">Refreshing…</span>
           </div>
         </div>
       )}
@@ -510,21 +509,21 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
             <button
               onClick={() => window.history.back()}
               aria-label="Go back"
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+              className="st-act st-act--icon shrink-0"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <ArrowLeft className="w-5 h-5 text-[color:var(--nezu)]" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h1 className="sec-title">
                 <span className="truncate">{stats.user.username}</span>
               </h1>
               <a
                 href={getVNDBUserUrl(uid)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1"
+                className="sec-more"
               >
-                View on VNDB <ExternalLink className="w-3 h-3" />
+                View on VNDB <span aria-hidden>&rarr;</span>
               </a>
             </div>
           </div>
@@ -532,25 +531,23 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
             <Link
-              href={`/recommendations?uid=${uid}&username=${encodeURIComponent(stats.user.username)}`}
-              className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+              href={`/recommendations/?uid=${uid}&username=${encodeURIComponent(stats.user.username)}`}
+              className="st-act st-act--go"
             >
-              <Sparkles className="w-4 h-4" />
               <span className="hidden sm:inline">Recommendations</span>
               <span className="sm:hidden">Recs</span>
             </Link>
             <Link
               href={`/stats/compare?mode=similar&user1=${uid}`}
-              className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+              className="st-act"
             >
-              <UserCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Similar Users</span>
               <span className="sm:hidden">Similar</span>
             </Link>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors text-sm font-medium"
+              className="st-act"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
@@ -562,18 +559,11 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
 
       {/* Fallback Mode Warning */}
       {usingFallback && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Limited Data Mode
-              </p>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                Some statistics may be limited or unavailable. Please try again later for full features.
-              </p>
-            </div>
-          </div>
+        <div className="st-note st-note--mild mb-6 p-4">
+          <p className="fig-label">Limited Data Mode</p>
+          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+            Some statistics may be limited or unavailable. Please try again later for full features.
+          </p>
         </div>
       )}
 
@@ -585,7 +575,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           counts={tabCounts}
         />
 
-        {/* Main Content — each tab panel stays mounted after first visit (display:none)
+        {/* Main Content: each tab panel stays mounted after first visit (display:none)
             so switching tabs is instant (no expensive SVG chart unmount/remount) */}
         <div className="flex-1 min-w-0 overflow-hidden">
           {/* Summary Tab */}
@@ -599,14 +589,12 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
                 calling it a total put a number on screen smaller than the wishlist beside it
                 and smaller than the list size this card's own subtext now states. */}
             <StatsSummaryCard
-              icon={<BookOpen className="w-5 h-5" />}
               label="Completed"
               value={stats.summary.completed.toLocaleString()}
               subtext={`of ${listSize.toLocaleString()} on your list`}
               tooltip="Titles you have marked finished. Counted from the daily database dump, so it can differ slightly from VNDB's own display."
             />
             <StatsSummaryCard
-              icon={<Star className="w-5 h-5" />}
               label="Average Score"
               // Zero is a legal rating, so a reader who has rated nothing must not be given
               // one: an empty average is missing data rather than a low opinion.
@@ -623,7 +611,6 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
               tooltip="Mean of votes on finished VNs (VNDB 10-100 scale converted to 1-10). Vote count includes all voted VNs."
             />
             <StatsSummaryCard
-              icon={<Clock className="w-5 h-5" />}
               label="Est. Hours"
               value={formatHours(stats.summary.estimated_hours)}
               subtext={
@@ -634,7 +621,6 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
               tooltip="Sum of estimated playtime for finished VNs using VNDB length data (not all VNs have length info)"
             />
             <StatsSummaryCard
-              icon={<Trophy className="w-5 h-5" />}
               label="Wishlist"
               value={stats.summary.wishlist.toLocaleString()}
               subtext="to read"
@@ -716,18 +702,17 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
             )}
           </div>
           ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none text-center mb-8">
-            <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600 dark:text-gray-400 mb-1">
+          <div className="st-card p-8 text-center mb-8">
+            <p className="text-[color:var(--nezu)] mb-1">
               No completed VNs found on this user&apos;s VNDB list.
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+            <p className="text-sm text-[color:var(--nezu)] mb-4">
               Stats will appear once VNs are marked as &quot;Finished&quot; on VNDB.
             </p>
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-700 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 disabled:opacity-50 transition-colors"
+              className="st-act"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
@@ -742,9 +727,9 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
             // Shaped and sized like the charts that follow. A spinner in a short box lets the
             // footer sit at the fold, and the footer then travels the height of the section.
             <div className="space-y-6">
-              <div className="image-placeholder h-[26rem] rounded-xl" />
-              <div className="image-placeholder h-[26rem] rounded-xl" />
-              <div className="image-placeholder h-56 rounded-xl" />
+              <div className="image-placeholder h-[26rem] rounded-xs" />
+              <div className="image-placeholder h-[26rem] rounded-xs" />
+              <div className="image-placeholder h-56 rounded-xs" />
             </div>
           ) : (
             <TrendsSection
@@ -760,14 +745,13 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           <NovelsSection novels={novels ?? []} isLoading={isLoadingNovels || novels === null} />
           {/* Show empty state only when not loading and no novels */}
           {!isLoadingNovels && novels !== null && novels.length === 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none mt-4">
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="w-5 h-5 text-primary-500" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <div className="st-card p-6 mt-4">
+              <div className="mb-4">
+                <h3 className="st-card-title">
                   Visual Novels
                 </h3>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              <p className="st-card-sub py-8 text-center">
                 No visual novels found in this user&apos;s list.
               </p>
             </div>
@@ -779,9 +763,9 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
           {tags && tags.top_tags.length > 0 ? (
             <TagsSection tags={tags} />
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+            <div className="st-card p-6">
               <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400 mb-2">
+                <p className="text-[color:var(--nezu)] mb-2">
                   {stats.summary.total_vns > 0
                     ? "Tag analytics couldn't be loaded. Try refreshing."
                     : "No tag data available yet."}
@@ -790,7 +774,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
                   <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-primary-600 dark:text-primary-400 hover:underline disabled:opacity-50"
+                    className="st-act"
                   >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                     Refresh Data
@@ -839,7 +823,7 @@ export default function UserStatsContent({ uid, initialUsername, initialTab }: U
 /**
  * Tab panel that stays in the DOM after first mount (display:none when inactive).
  * Avoids expensive unmount/remount of heavy components (e.g. Recharts SVG charts)
- * when switching between tabs — only CSS visibility toggles.
+ * when switching between tabs: only CSS visibility toggles.
  */
 const TabPanel = memo(function TabPanel({
   active,
@@ -861,19 +845,16 @@ const TabPanel = memo(function TabPanel({
 function ErrorState({ error, uid }: { error: string | null; uid: string }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-        <AlertCircle className="w-8 h-8 text-red-500" />
-      </div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <h1 className="sec-title mb-2">
         Unable to Load Stats
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-[color:var(--nezu)] mb-6">
         {error || 'Something went wrong while loading the stats.'}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <Link
-          href="/stats"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          href="/stats/"
+          className="st-act st-act--go"
         >
           <ArrowLeft className="w-4 h-4" />
           Try Another User
@@ -882,7 +863,7 @@ function ErrorState({ error, uid }: { error: string | null; uid: string }) {
           href={getVNDBUserUrl(uid)}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="st-act"
         >
           Check on VNDB
           <ExternalLink className="w-4 h-4" />

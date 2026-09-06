@@ -53,7 +53,7 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
   // still intercepts the first click to reveal (NSFWImage), matching VNCard.
   const head = (
     <>
-      <div className="relative aspect-3/4 max-h-40 w-full bg-gray-100 dark:bg-gray-900 sm:max-h-56">
+      <div className="relative aspect-3/4 max-h-40 w-full bg-[color:var(--surface-inset)] sm:max-h-56">
         {src && !imgFailed ? (
           <>
             <div className={shimmerClass} />
@@ -63,14 +63,14 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
               vnId={vn.id}
               imageSexual={vn.image_sexual ?? undefined}
               objectPosition="top"
-              className={`h-full w-full object-cover transition group-hover/card:brightness-95 ${fadeClass}`}
+              className={`h-full w-full object-cover ${fadeClass}`}
               loading="eager"
               onLoad={onLoad}
               onError={() => setImgFailed(true)}
             />
           </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-gray-300 dark:text-gray-600">
+          <div className="flex h-full w-full items-center justify-center text-[color:var(--text-faint)]">
             <BookOpen className="h-10 w-10" />
           </div>
         )}
@@ -82,13 +82,11 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
           slack from a short title falls above it instead of wedging between title and dev. */}
       <div className="px-3 pt-4 text-center">
         <div className="flex items-end" style={{ height: '2.25rem' }}>
-          <h3 className="w-full line-clamp-2 text-sm font-semibold leading-tight text-gray-900 transition-colors group-hover/card:text-violet-600 dark:text-white dark:group-hover/card:text-violet-400">
-            {title}
-          </h3>
+          <h3 className="toy-card-title line-clamp-2">{title}</h3>
         </div>
         {/* Developer + year wrap to two lines instead of truncating: they are a real
             guessing signal, so the full studio name and year stay readable on a narrow card. */}
-        <p className="mt-2 line-clamp-2 text-xs text-gray-400 dark:text-gray-500" style={{ minHeight: '1rem' }}>
+        <p className="mt-2 line-clamp-2 text-xs text-[color:var(--nezu)]" style={{ minHeight: '1rem' }}>
           {subtitle}
         </p>
         {/* Top spoiler-free tags: a genre preview and a soft signal. A long tag wraps to a
@@ -101,7 +99,7 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
             <span
               key={t}
               title={t}
-              className="line-clamp-2 max-w-full rounded bg-gray-100 px-1.5 py-0.5 text-[10px] leading-tight text-gray-500 dark:bg-gray-700/60 dark:text-gray-400"
+              className="toy-tagpill line-clamp-2"
             >
               {t}
             </span>
@@ -112,7 +110,7 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
   );
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="toy-card">
       {/* The same <a> always renders (so toggling linkable never remounts the cover); it
           only becomes a real link when linkable. With no href until then, the challenger
           can never be opened mid-round (not even via middle click), so it can't spoil the
@@ -122,7 +120,7 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
         target={linkable ? '_blank' : undefined}
         rel={linkable ? 'noopener noreferrer' : undefined}
         aria-label={linkable ? `View ${title} in a new tab` : undefined}
-        className={linkable ? 'group/card block' : 'block cursor-default'}
+        className={linkable ? 'toy-card-link block' : 'block cursor-default'}
       >
         {head}
       </a>
@@ -139,7 +137,7 @@ export function VNPanel({ vn, metric, phase, verdict = null, linkable = false, o
         {phase === 'countup' && <MetricValue vn={vn} metric={metric} animate />}
         {phase === 'guess' && (
           <div className="flex w-full max-w-[12rem] flex-col gap-2">
-            <p className="text-center text-xs text-gray-400 dark:text-gray-500">{m.caption}</p>
+            <p className="text-center text-xs text-[color:var(--nezu)]">{m.caption}</p>
             <GuessButton dir="higher" onGuess={onGuess} />
             <GuessButton dir="lower" onGuess={onGuess} />
           </div>
@@ -162,17 +160,13 @@ function MetricValue({
 }) {
   const m = METRICS[metric];
   const v = m.value(vn);
-  const color =
-    verdict === 'correct'
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : verdict === 'wrong'
-        ? 'text-rose-600 dark:text-rose-400'
-        : 'text-gray-900 dark:text-white';
+  const tone =
+    verdict === 'correct' ? 'toy-value--yes' : verdict === 'wrong' ? 'toy-value--no' : '';
   // The value is the payoff of the round, so it gets scoreboard weight: large enough to
   // own the reserved bottom area instead of floating small inside it. Mobile stays at
   // 2xl so a five-digit vote count fits the narrow panel.
   return (
-    <p className={`flex items-baseline gap-2 text-2xl font-bold tabular-nums sm:text-4xl ${color}`}>
+    <p className={`toy-value ${tone}`}>
       {/* The verdict icon floats above the number (absolute, out of the flex flow) so its
           arrival never pushes the number sideways at the moment the player is reading it.
           Above rather than beside: the reserved bottom area always has headroom there,
@@ -190,7 +184,7 @@ function MetricValue({
         )}
         {animate && m.animate ? <MetricCountUp value={v} /> : m.format(v)}
       </span>
-      {m.unit ? <span className="text-xs font-normal text-gray-400 sm:text-sm">{m.unit}</span> : null}
+      {m.unit ? <span className="toy-value-unit">{m.unit}</span> : null}
     </p>
   );
 }
@@ -201,7 +195,7 @@ function GuessButton({ dir, onGuess }: { dir: 'higher' | 'lower'; onGuess?: (dir
     <button
       type="button"
       onClick={() => onGuess?.(dir)}
-      className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-50 py-2 text-sm font-semibold text-gray-700 transition hover:border-violet-400 hover:bg-violet-50 hover:text-violet-700 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-200 dark:hover:border-violet-500 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
+      className="toy-btn toy-btn--wide"
     >
       <Icon className="h-4 w-4" /> {dir === 'higher' ? 'Higher' : 'Lower'}
     </button>

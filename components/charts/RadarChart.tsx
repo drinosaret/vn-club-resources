@@ -56,7 +56,7 @@ function labelPointFor(index: number, count: number): [number, number, number] {
 
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
 
-export function RadarChart({ axes, size = 260, color = '#4f46e5' }: RadarChartProps) {
+export function RadarChart({ axes, size = 260, color = 'var(--ai)' }: RadarChartProps) {
   const gradientId = useId();
   const [hover, setHover] = useState<string | null>(null);
 
@@ -104,7 +104,7 @@ export function RadarChart({ axes, size = 260, color = '#4f46e5' }: RadarChartPr
               })
               .join(' ')}
             fill="none"
-            className="stroke-gray-200 dark:stroke-gray-700"
+            className="stroke-[color:var(--rule)]"
             strokeWidth={0.4}
           />
         ))}
@@ -118,7 +118,7 @@ export function RadarChart({ axes, size = 260, color = '#4f46e5' }: RadarChartPr
               y1={CENTRE_Y}
               x2={x}
               y2={y}
-              className="stroke-gray-200 dark:stroke-gray-700"
+              className="stroke-[color:var(--rule)]"
               strokeWidth={0.4}
             />
           );
@@ -168,7 +168,7 @@ export function RadarChart({ axes, size = 260, color = '#4f46e5' }: RadarChartPr
               y={y}
               textAnchor={anchor}
               dominantBaseline="middle"
-              className={`fill-gray-500 dark:fill-gray-400 ${
+              className={`fill-[color:var(--nezu)] ${
                 hover === axis.key ? 'font-semibold' : ''
               }`}
               style={{ fontSize: 4.6 }}

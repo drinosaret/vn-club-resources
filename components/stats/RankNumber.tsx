@@ -12,7 +12,7 @@
  */
 export function RankNumber({ rank }: { rank: number }) {
   return (
-    <span className="shrink-0 w-8 text-right text-xs font-medium tabular-nums text-gray-500 dark:text-gray-400">
+    <span className="st-num shrink-0 w-8 text-right text-xs text-[color:var(--text-faint)]">
       {rank}
     </span>
   );

@@ -1,11 +1,13 @@
 """VNDB Stats API - FastAPI Application."""
 
+import ipaddress
 import logging
 from contextlib import asynccontextmanager
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Configure logging - cleaner output for development
 logging.basicConfig(
@@ -25,7 +27,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 logging.getLogger("watchfiles").setLevel(logging.WARNING)
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,6 +44,45 @@ settings = get_settings()
 # Rate limiter - 100 requests per minute per IP for general endpoints
 # Heavy endpoints like recommendations have stricter limits applied via decorators
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+
+
+# Liveness probes carry no caller workload and a throttled probe reads as an outage.
+UNMETERED_PATHS = frozenset({"/health"})
+
+
+class ExternalTrafficRateLimit(SlowAPIMiddleware):
+    """Applies the default per-address ceiling to callers from outside the deployment.
+
+    Server-rendered pages fetch from a neighbouring container, so all of that traffic
+    shares one address; a per-address budget applied to it would bound the whole site's
+    rendering rather than one caller. Public requests reach the app with the client
+    address already resolved by the proxy, which never yields a private source.
+
+    The ceiling is applied by path rather than by resolved route handler. A router
+    mounted under a prefix is a single opaque entry in the application route table,
+    so a handler lookup finds nothing for any path inside it and the base class
+    passes those requests through unmetered.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        try:
+            internal = ipaddress.ip_address(get_remote_address(request)).is_private
+        except ValueError:
+            internal = False
+        if internal or request.scope.get("path") in UNMETERED_PATHS:
+            return await call_next(request)
+        active_limiter = request.app.state.limiter
+        if not active_limiter.enabled:
+            return await call_next(request)
+        try:
+            active_limiter._check_request_limit(request, None, True)
+        except RateLimitExceeded as exc:
+            return _rate_limit_exceeded_handler(request, exc)
+        response = await call_next(request)
+        return active_limiter._inject_headers(
+            response, getattr(request.state, "view_rate_limit", None)
+        )
+
 
 task_manager = TaskManager.get_instance()
 
@@ -101,9 +142,10 @@ app = FastAPI(
     description=(
         "Public API for VNDB visual novel statistics, personalized recommendations, "
         "and browsing data. Powered by daily VNDB database dumps.\n\n"
-        # Actual limits configured in rate_limit_default (line ~48) and per-endpoint @limiter decorators
+        # The default below is what an endpoint without its own @limiter decorator gets;
+        # a decorated endpoint carries the stricter of the two.
         "**Rate limits:** Most endpoints allow 100 requests/minute per IP. "
-        "User stats and recommendations are limited to 10/minute."
+        "User stats are limited to 10/minute; recommendations allow 60/minute."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -111,9 +153,13 @@ app = FastAPI(
     redoc_url="/redoc" if _show_docs else None,
 )
 
-# Rate limiting
+# Rate limiting. The default limits only reach an endpoint through this middleware;
+# without it, an endpoint with no @limiter decorator of its own has no ceiling.
+# It is added before CORS so CORS stays outside it and a 429 still carries the
+# cross-origin headers a browser needs to read the response.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(ExternalTrafficRateLimit)
 
 # CORS middleware - restricted methods and headers for security
 app.add_middleware(
@@ -124,6 +170,11 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
     expose_headers=["X-Correlation-ID"],  # Allow frontend to read correlation ID
 )
+
+# Responses are JSON pages of a hundred titles with repeated keys, which compress well.
+# The production proxy compresses too; this covers every path that does not go through it.
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # Correlation ID middleware for request tracing
 from app.middleware import CorrelationIDMiddleware

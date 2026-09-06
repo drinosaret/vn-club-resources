@@ -57,27 +57,23 @@ export function ScoreDistributionChart({
 
   if (total === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-        <Heading className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Score Distribution
-        </Heading>
-        <p className="text-gray-500 dark:text-gray-400">No rating data available</p>
+      <div className="st-card p-6">
+        <Heading className="st-card-title mb-4">Score Distribution</Heading>
+        <p className="st-card-sub">No rating data available</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <div className="flex items-center justify-between mb-4">
+    <div className="st-card p-6">
+      <div className="st-card-head mb-4">
         <div className="flex items-center gap-2">
-          <Heading className="text-lg font-semibold text-gray-900 dark:text-white">
-            Score Distribution
-          </Heading>
+          <Heading className="st-card-title">Score Distribution</Heading>
           {tooltip && <ChartHelpTooltip text={tooltip} />}
         </div>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Avg: <span className="font-semibold text-primary-600 dark:text-primary-400">{average.toFixed(1)}</span>
-        </div>
+        <span className="fig-label">
+          Avg <span className="st-num text-[color:var(--ink)]">{average.toFixed(1)}</span>
+        </span>
       </div>
 
       <div className="flex items-end gap-2 h-48">
@@ -91,42 +87,38 @@ export function ScoreDistributionChart({
 
           const barContent = (
             <>
-              <div className="text-xs text-gray-500 dark:text-gray-400 text-center leading-tight">
+              <div className="st-num text-center text-xs leading-tight text-[color:var(--nezu)]">
                 {d.count > 0 && (
                   <>
                     <div>{d.count}</div>
                     {jpDistribution && d.jpCount > 0 && (
-                      <div className="text-[10px] text-gray-400 dark:text-gray-500">({d.jpCount} JP)</div>
+                      <div className="text-[10px] text-[color:var(--text-faint)]">({d.jpCount} JP)</div>
                     )}
                   </>
                 )}
               </div>
               <div
-                className={`w-full rounded-t transition-colors relative ${
-                  isAverage
-                    ? 'bg-linear-to-t from-primary-600 to-primary-400'
-                    : 'bg-linear-to-t from-primary-300 to-primary-200 dark:from-primary-800 dark:to-primary-700 group-hover:from-primary-400 group-hover:to-primary-300 dark:group-hover:from-primary-700 dark:group-hover:to-primary-600'
-                } ${browseUrl ? 'group-hover:ring-2 group-hover:ring-primary-400 group-hover:ring-offset-1' : ''}`}
+                className={`relative w-full ${isAverage ? 'st-col st-col--on' : 'st-col'} ${
+                  browseUrl ? 'st-col--pick' : ''
+                }`}
                 // The minimum is for a bar that exists. Giving an empty bucket the same
                 // stub makes nothing look identical to a couple of titles.
                 style={{ height: `${Math.max(heightPx, d.count > 0 ? 4 : 0)}px` }}
               >
                 {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 st-tip on-box opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
                   <div className="flex flex-col items-center">
                     <span>{d.count} VNs ({percentage}%)</span>
                     {jpDistribution && d.jpCount > 0 && (
-                      <span className="text-blue-300">{d.jpCount} Japanese-original</span>
+                      <span className="text-[color:var(--ai)]">{d.jpCount} Japanese-original</span>
                     )}
                   </div>
-                  {browseUrl && <div className="text-gray-400 text-[10px]">Click to browse</div>}
+                  {browseUrl && <div className="text-[color:var(--text-faint)] text-[10px]">Click to browse</div>}
                 </div>
               </div>
               <div
-                className={`text-xs font-medium ${
-                  isAverage
-                    ? 'text-primary-600 dark:text-primary-400'
-                    : 'text-gray-500 dark:text-gray-400'
+                className={`st-num text-xs ${
+                  isAverage ? 'text-[color:var(--ink)]' : 'text-[color:var(--nezu)]'
                 }`}
               >
                 {d.score}
@@ -153,8 +145,8 @@ export function ScoreDistributionChart({
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+      <div className="mt-4 border-t border-[color:var(--rule)] pt-4">
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 font-mono text-xs tabular-nums text-[color:var(--nezu)]">
           <span>VNs with ratings: {total.toLocaleString()}</span>
           <span>Most common: {data.reduce((max, d) => d.count > max.count ? d : max, data[0]).score}/10</span>
         </div>

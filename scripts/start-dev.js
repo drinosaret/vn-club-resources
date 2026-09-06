@@ -8,7 +8,11 @@ const { spawn, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const BACKEND_DIR = path.join(__dirname, '..', 'vndb-stats-backend');
+const ROOT_DIR = path.join(__dirname, '..');
+const BACKEND_DIR = path.join(ROOT_DIR, 'vndb-stats-backend');
+const GUIDES_DIR = path.join(ROOT_DIR, 'content', 'guides');
+const SEARCH_INDEX_PATH = path.join(ROOT_DIR, 'public', 'search-index.json');
+const SEARCH_INDEX_SCRIPT = path.join(__dirname, 'generate-search-index.ts');
 
 // Load backend .env file for Discord bot token check
 const backendEnvPath = path.join(BACKEND_DIR, '.env');
@@ -116,6 +120,47 @@ function runImport() {
 }
 
 
+// The search index is a build artifact, gitignored and rebuilt by `prebuild`, so
+// only a production build refreshes it. A dev server serves whatever copy is on
+// disk, which silently omits guides added or reworded since it was last written.
+function ensureSearchIndex() {
+  let newestSource = 0;
+  try {
+    const sources = fs
+      .readdirSync(GUIDES_DIR)
+      .filter((f) => f.endsWith('.mdx'))
+      .map((f) => path.join(GUIDES_DIR, f))
+      .concat([SEARCH_INDEX_SCRIPT]);
+    for (const file of sources) {
+      newestSource = Math.max(newestSource, fs.statSync(file).mtimeMs);
+    }
+  } catch {
+    // Without a readable guides directory there is nothing to index against.
+    return;
+  }
+
+  let indexBuiltAt = 0;
+  try {
+    indexBuiltAt = fs.statSync(SEARCH_INDEX_PATH).mtimeMs;
+  } catch {
+    // Missing index: fall through and build it.
+  }
+
+  if (indexBuiltAt >= newestSource) {
+    log('Search index is up to date');
+    return;
+  }
+
+  log('Rebuilding search index from content/guides...');
+  try {
+    execSync(`npx tsx "${SEARCH_INDEX_SCRIPT}"`, { cwd: ROOT_DIR, stdio: 'ignore' });
+    logSuccess('Search index rebuilt');
+  } catch {
+    logError('Search index rebuild failed; site search will serve the previous index');
+    logError('Rebuild it manually with: npm run generate-search');
+  }
+}
+
 function startDiscordBot() {
   // Check if DISCORD_BOT_TOKEN is set
   if (!process.env.DISCORD_BOT_TOKEN) {
@@ -158,6 +203,8 @@ function startDiscordBot() {
 function startDevServers() {
   log('Starting development servers...');
 
+  ensureSearchIndex();
+
   // Start Discord bot if configured
   const bot = startDiscordBot();
 
@@ -165,7 +212,7 @@ function startDevServers() {
   // in mangles Ctrl+C on Windows (closing the whole terminal); the bin as a plain
   // child can be torn down cleanly.
   const nextBin = require.resolve('next/dist/bin/next');
-  const next = spawn(process.execPath, [nextBin, 'dev', '--turbo', '-p', '3001'], {
+  const next = spawn(process.execPath, [nextBin, 'dev', '--turbo', '-p', '3000'], {
     stdio: 'inherit',
     cwd: path.join(__dirname, '..'),
   });
@@ -232,7 +279,13 @@ async function main() {
   startDevServers();
 }
 
-main().catch((e) => {
-  logError(e.message);
-  process.exit(1);
-});
+// Guarded so the individual steps can be exercised without booting the
+// containers, which is the only way to check them in isolation.
+if (require.main === module) {
+  main().catch((e) => {
+    logError(e.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { ensureSearchIndex };

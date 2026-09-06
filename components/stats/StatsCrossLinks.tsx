@@ -27,32 +27,30 @@ interface StatsCrossLinksProps {
 
 export function StatsCrossLinks({ current, className = '' }: StatsCrossLinksProps) {
   const others = STATS_PAGES.filter((page) => page.key !== current && !page.outsideSection);
+  // A page that sits outside the stats section (the recommendations page) links onward
+  // to the stats pages without being one of them, so its heading says so.
+  const heading = STATS_PAGES.find((page) => page.key === current)?.outsideSection
+    ? 'More to explore'
+    : 'Elsewhere in stats';
 
   return (
     <nav aria-label="Other statistics pages" className={`mt-12 ${className}`}>
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">
-        Elsewhere in stats
-      </h2>
+      <h2 className="fig-label mb-3">{heading}</h2>
       {/* Wrapping flex rather than a fixed column count. The list is four or five cards
           depending on the page, and this footer sits in containers of different widths, so a
           set number of columns leaves a lone stranded card on some combination of the two.
           Here the cards on the final row grow to fill it instead. */}
       <div className="flex flex-wrap gap-3">
-        {others.map(({ key, href, title, blurb, Icon }) => (
+        {others.map(({ key, href, title, blurb }) => (
           <Link
             key={key}
             href={href}
-            className="group flex min-w-0 flex-1 basis-52 flex-col gap-1 rounded-xl border border-gray-200/60 bg-white p-3.5 transition-colors hover:border-primary-400 dark:border-gray-700/80 dark:bg-gray-800 dark:hover:border-primary-600"
+            className="st-card st-card--pick group flex min-w-0 flex-1 basis-52 flex-col gap-1 p-3.5"
           >
-            <span className="flex items-center gap-2">
-              <Icon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-              <span className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">
-                {title}
-              </span>
+            <span className="st-card-title group-hover:text-[color:var(--ai)] transition-colors">
+              {title}
             </span>
-            <span className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
-              {blurb}
-            </span>
+            <span className="st-card-sub">{blurb}</span>
           </Link>
         ))}
       </div>

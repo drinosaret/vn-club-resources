@@ -55,6 +55,33 @@ async def list_month(
     return response
 
 
+@router.get("/history")
+async def list_history(
+    limit: int = Query(default=60, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    types: str | None = Query(
+        None, description="Comma-separated event types; defaults to every pick type"
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """Past club picks, newest first, with the total number that match."""
+    wanted = events.parse_history_types(types)
+
+    cache = get_cache()
+    cache_key = events.events_history_key(wanted, limit, offset)
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    now = datetime.now(timezone.utc)
+    rows, total = await events.get_past(db, now, wanted, limit=limit, offset=offset)
+    items = [events.event_to_dict(e) for e in rows]
+    await events.enrich_with_covers(db, items)  # blur-capable covers for the site
+    response = {"events": items, "total": total}
+    await cache.set(cache_key, response, ttl=CACHE_TTL)
+    return response
+
+
 @router.get("/upcoming")
 async def list_upcoming(
     limit: int = Query(default=20, ge=1, le=100),

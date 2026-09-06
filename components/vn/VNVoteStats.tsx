@@ -26,18 +26,14 @@ function ChartToggle({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex rounded-md bg-gray-100 dark:bg-gray-700/50 p-0.5 shrink-0">
+    <div className="tabs shrink-0">
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
           aria-pressed={active === opt.value}
-          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-            active === opt.value
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-xs'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
+          className={`tab${active === opt.value ? ' tab--on' : ''}`}
         >
           {opt.label}
         </button>
@@ -89,7 +85,7 @@ function LazySection({ children, height = 200 }: { children: React.ReactNode; he
   return (
     <div
       ref={ref}
-      className="rounded-xl bg-gray-100/50 dark:bg-gray-800/30"
+      className="rounded-xs bg-[color:var(--surface-inset)]"
       style={{ minHeight: height }}
     />
   );
@@ -98,14 +94,14 @@ function LazySection({ children, height = 200 }: { children: React.ReactNode; he
 export function VoteStatsSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="h-20 rounded-xl bg-gray-100 dark:bg-gray-800" />
-      <div className="h-48 rounded-xl bg-gray-100 dark:bg-gray-800" />
+      <div className="h-20 rounded-xs bg-[color:var(--surface-inset)]" />
+      <div className="h-48 rounded-xs bg-[color:var(--surface-inset)]" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-gray-100 dark:bg-gray-800" />
+          <div key={i} className="h-24 rounded-xs bg-[color:var(--surface-inset)]" />
         ))}
       </div>
-      <div className="h-52 rounded-xl bg-gray-100 dark:bg-gray-800" />
+      <div className="h-52 rounded-xs bg-[color:var(--surface-inset)]" />
     </div>
   );
 }
@@ -119,14 +115,14 @@ export function VNVoteStats({ data, isLoading, error, totalVotecount, vnRating }
   if (!isLoading && (error || (data && data.total_votes === 0) || (!data && !isLoading))) {
     if (error || !data) {
       return (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 text-[color:var(--nezu)]">
           Vote statistics are not available for this visual novel.
         </div>
       );
     }
     if (data.total_votes === 0) {
       return (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 text-[color:var(--nezu)]">
           No votes recorded for this visual novel yet.
         </div>
       );
@@ -178,7 +174,7 @@ export function VNVoteStats({ data, isLoading, error, totalVotecount, vnRating }
             xAxisKey="month"
             title="Votes Over Time"
             subtitle={votesMode === 'cumulative' ? 'Cumulative vote count by month' : 'New votes per month'}
-            color="#8b5cf6"
+            color="#E8A317"
             areaFill={votesMode === 'cumulative'}
             formatValue={(v) => v.toLocaleString()}
             formatXAxis={formatMonth}
@@ -202,7 +198,7 @@ export function VNVoteStats({ data, isLoading, error, totalVotecount, vnRating }
             xAxisKey="month"
             title="Average Score Over Time"
             subtitle={scoreMode === 'cumulative' ? 'Running average score (1-10 scale)' : 'Average score of votes that month'}
-            color="#f59e0b"
+            color="#35808C"
             areaFill={false}
             formatValue={(v) => v.toFixed(2)}
             formatXAxis={formatMonth}

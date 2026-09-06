@@ -3,10 +3,6 @@
 import { useEffect, useState, use, useMemo } from 'react';
 import Link from '@/components/Link';
 import {
-  ArrowLeft, ExternalLink, AlertCircle, Eye, EyeOff,
-  User, Heart, Calendar, Ruler, Scale, Droplet, Users
-} from 'lucide-react';
-import {
   vndbStatsApi,
   CharacterDetail,
   SimilarCharacter,
@@ -15,6 +11,7 @@ import { useSimilarCharacters } from '@/lib/vndb-stats-cached';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from '@/components/vn/card-image-utils';
+import { hasJapanese } from '@/components/vn/vn-utils';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { LanguageFilter, LanguageFilterValue } from '@/components/stats/LanguageFilter';
 import { parseBBCode, hasSpoilerContent } from '@/lib/bbcode';
@@ -25,6 +22,12 @@ import { useImageFade } from '@/hooks/useImageFade';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  /**
+   * The record the server already fetched for this page's metadata. Seeding it here is
+   * what puts the appearances, voice actors and traits into the delivered HTML, and
+   * spares the browser a round trip it would otherwise make before showing anything.
+   */
+  initialCharacter?: CharacterDetail | null;
 }
 
 // Format sex display
@@ -64,13 +67,29 @@ const roleLabels: Record<string, string> = {
   appears: 'Appears',
 };
 
-export default function CharacterDetailPage({ params }: PageProps) {
+/**
+ * What stands in the frame when the record carries no art. A word rather than a figure
+ * glyph, which is what the rest of the site puts in an empty cover.
+ */
+function NoArt({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
+  return (
+    <div
+      className={`absolute inset-0 flex items-center justify-center font-mono uppercase text-[color:var(--text-faint)] ${
+        size === 'lg' ? 'text-[11px] tracking-[0.12em]' : 'text-[10px] tracking-[0.08em]'
+      }`}
+    >
+      No art
+    </div>
+  );
+}
+
+export default function CharacterDetailPage({ params, initialCharacter }: PageProps) {
   const resolvedParams = use(params);
   const charId = resolvedParams.id;
   const { preference } = useTitlePreference();
 
-  const [character, setCharacter] = useState<CharacterDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [character, setCharacter] = useState<CharacterDetail | null>(initialCharacter ?? null);
+  const [isLoading, setIsLoading] = useState(!initialCharacter);
   const [error, setError] = useState<string | null>(null);
   const [showSpoilers, setShowSpoilers] = useState(false);
   const [showSexual, setShowSexual] = useState(false);
@@ -78,10 +97,13 @@ export default function CharacterDetailPage({ params }: PageProps) {
   const [similarLanguageFilter, setSimilarLanguageFilter] = useState<LanguageFilterValue>('ja');
   const { onLoad: onMainImageLoad, shimmerClass: mainImageShimmer, fadeClass: mainImageFade } = useImageFade();
 
-  // SWR for similar characters — cached across navigations, instant on revisit
+  // SWR for similar characters, cached across navigations, instant on revisit
   const { data: similarCharacters = [], isLoading: isSimilarLoading } = useSimilarCharacters(charId);
 
   useEffect(() => {
+    // The parent keys this component by id, so a seeded record always belongs to the id
+    // being rendered and there is nothing left to fetch.
+    if (initialCharacter) return;
     loadCharacter();
   }, [charId]);
 
@@ -119,6 +141,11 @@ export default function CharacterDetailPage({ params }: PageProps) {
     ? (preference === 'romaji' ? character.name : character.original)
     : '';
 
+  // The script a name is written in picks its face, so a Japanese name is never set in the
+  // Latin display face and is announced in the language it is written in.
+  const nameIsJapanese = hasJapanese(displayName);
+  const alternateIsJapanese = alternateName ? hasJapanese(alternateName) : false;
+
   // Group traits by category
   const traitsByGroup = useMemo(() => {
     if (!character) return {};
@@ -153,263 +180,265 @@ export default function CharacterDetailPage({ params }: PageProps) {
 
   const vndbUrl = `https://vndb.org/${character.id}`;
   const imageUrl = getProxiedImageUrl(character.image_url);
+  const traitGroups = Object.entries(traitsByGroup);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 pt-6 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="sec-more min-h-6"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="hidden sm:inline">Back</span>
+          <span aria-hidden>&#8592;</span>
+          Back
         </button>
         <a
           href={vndbUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="tab"
         >
           View on VNDB
-          <ExternalLink className="w-4 h-4" />
+          <span aria-hidden>&#8599;</span>
         </a>
       </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 lg:gap-8">
         {/* Left column - Image */}
         <div className="lg:sticky lg:top-20 lg:self-start">
-          {imageUrl ? (
-            <ImageLightbox src={imageUrl} alt={displayName} imageSexual={character.image_sexual} vnId={character.id}>
-              <div className="relative aspect-3/4 max-w-[240px] mx-auto lg:mx-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg cursor-pointer">
-                <div className={mainImageShimmer} />
-                <NSFWNextImage
-                  src={imageUrl}
-                  alt={displayName}
-                  imageSexual={character.image_sexual}
-                  vnId={character.id}
-                  fill
-                  className={`object-cover ${mainImageFade}`}
-                  sizes="240px"
-                  priority
-                  unoptimized // Proxied images already optimized as WebP
-                  hideOverlay // ImageLightbox provides its own overlay
-                  onLoad={onMainImageLoad}
-                />
+          {/* The portrait is the only saturated thing in this column, so nothing frames it
+              but a hairline and a square corner. */}
+          <div className="vn-cover relative max-w-[240px] mx-auto lg:mx-0">
+            {imageUrl ? (
+              <ImageLightbox src={imageUrl} alt={displayName} imageSexual={character.image_sexual} vnId={character.id}>
+                <div className="relative aspect-3/4 rounded-[1px] overflow-hidden bg-[color:var(--surface-inset)] ring-1 ring-[color:var(--rule)] cursor-pointer">
+                  <div className={mainImageShimmer} />
+                  <NSFWNextImage
+                    src={imageUrl}
+                    alt={displayName}
+                    imageSexual={character.image_sexual}
+                    vnId={character.id}
+                    fill
+                    className={`object-cover ${mainImageFade}`}
+                    sizes="240px"
+                    priority
+                    unoptimized // Proxied images already optimized as WebP
+                    hideOverlay // ImageLightbox provides its own overlay
+                    onLoad={onMainImageLoad}
+                  />
+                </div>
+              </ImageLightbox>
+            ) : (
+              <div className="relative aspect-3/4 rounded-[1px] overflow-hidden bg-[color:var(--surface-inset)] ring-1 ring-[color:var(--rule)]">
+                <NoArt size="lg" />
               </div>
-            </ImageLightbox>
-          ) : (
-            <div className="relative aspect-3/4 max-w-[240px] mx-auto lg:mx-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shadow-lg">
-              <div className="w-full h-full flex items-center justify-center">
-                <User className="w-16 h-16 text-gray-400" />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Right column - Details */}
-        <div className="space-y-6">
+        <div className="space-y-4 min-w-0">
           {/* Name and basic info */}
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h1
+              lang={nameIsJapanese ? 'ja' : undefined}
+              className={`flex flex-wrap items-baseline gap-2 text-xl sm:text-2xl lg:text-3xl font-bold leading-tight text-[color:var(--ink)] ${nameIsJapanese ? 'font-jp' : 'font-display'}`}
+            >
               {displayName}
               {character.sex && (
-                <span className={`text-lg ${character.sex === 'f' ? 'text-pink-500' : character.sex === 'm' ? 'text-blue-500' : 'text-purple-500'}`}>
+                <span className="font-mono text-lg text-[color:var(--nezu)]">
                   {character.sex === 'f' ? '♀' : character.sex === 'm' ? '♂' : '⚥'}
                 </span>
               )}
             </h1>
             {alternateName && alternateName !== displayName && (
-              <p className="text-lg text-gray-500 dark:text-gray-400 mt-1">{alternateName}</p>
+              <p
+                lang={alternateIsJapanese ? 'ja' : undefined}
+                className={`mt-1 text-sm text-[color:var(--nezu)] ${alternateIsJapanese ? 'font-jp' : ''}`}
+              >
+                {alternateName}
+              </p>
             )}
 
-            {/* Metadata row */}
-            <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-600 dark:text-gray-400">
+            {/* Each measurement under the label it answers. A label carries what the figure
+                glyph beside it used to, and says it in words. */}
+            <dl className="flex flex-wrap gap-x-6 gap-y-3 mt-4">
               {character.blood_type && character.blood_type.toLowerCase() !== 'unknown' && (
-                <div className="flex items-center gap-1.5">
-                  <Droplet className="w-4 h-4" />
-                  Blood Type {formatBloodType(character.blood_type)}
+                <div>
+                  <dt className="fig-label">Blood type</dt>
+                  <dd className="vn-num mt-1 text-sm text-[color:var(--ink)]">{formatBloodType(character.blood_type)}</dd>
                 </div>
               )}
               {character.age != null && character.age > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />
-                  Age {character.age}
+                <div>
+                  <dt className="fig-label">Age</dt>
+                  <dd className="vn-num mt-1 text-sm text-[color:var(--ink)]">{character.age}</dd>
                 </div>
               )}
-              {character.birthday && (
-                <div className="flex items-center gap-1.5">
-                  <Heart className="w-4 h-4" />
-                  {formatBirthday(character.birthday)}
+              {character.birthday && formatBirthday(character.birthday) && (
+                <div>
+                  <dt className="fig-label">Birthday</dt>
+                  <dd className="vn-num mt-1 text-sm text-[color:var(--ink)]">{formatBirthday(character.birthday)}</dd>
                 </div>
               )}
               {character.height != null && character.height > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Ruler className="w-4 h-4" />
-                  {character.height}cm
+                <div>
+                  <dt className="fig-label">Height</dt>
+                  <dd className="vn-num mt-1 text-sm text-[color:var(--ink)]">{character.height}cm</dd>
                 </div>
               )}
               {character.weight != null && character.weight > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Scale className="w-4 h-4" />
-                  {character.weight}kg
+                <div>
+                  <dt className="fig-label">Weight</dt>
+                  <dd className="vn-num mt-1 text-sm text-[color:var(--ink)]">{character.weight}kg</dd>
                 </div>
               )}
-            </div>
+            </dl>
           </div>
 
           {/* Description */}
           {character.description && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-              {hasDescriptionSpoiler && (
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Description
-                  </h2>
+            <section className="vn-sec p-4 sm:p-5">
+              <div className="vn-sec-head">
+                <h2 className="vn-sec-title">Description</h2>
+                {hasDescriptionSpoiler && (
                   <button
                     onClick={() => setShowSpoilers(!showSpoilers)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                      showSpoilers
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}
+                    aria-pressed={showSpoilers}
+                    className={`tab${showSpoilers ? ' tab--on' : ''}`}
                   >
-                    {showSpoilers ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     {showSpoilers ? 'Hide' : 'Show'} spoilers
                   </button>
-                </div>
-              )}
-              <div className={`text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap ${!showFullDescription && character.description.length > 500 ? 'line-clamp-4' : ''}`}>
+                )}
+              </div>
+              <div className={`text-sm text-[color:var(--text-secondary)] whitespace-pre-wrap ${!showFullDescription && character.description.length > 500 ? 'line-clamp-4' : ''}`}>
                 {parseBBCode(character.description, { showSpoilers })}
               </div>
               {character.description.length > 500 && (
                 <button
                   onClick={() => setShowFullDescription(!showFullDescription)}
-                  className="mt-2 text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                  aria-expanded={showFullDescription}
+                  className="sec-more mt-3 min-h-6"
                 >
                   {showFullDescription ? 'Show less' : 'Show more'}
+                  <span aria-hidden>{showFullDescription ? '▴' : '▾'}</span>
                 </button>
               )}
-            </div>
+            </section>
           )}
 
           {/* Aliases */}
           {character.aliases && character.aliases.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                Aliases
-              </h2>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+            <section className="vn-sec p-4 sm:p-5">
+              <div className="vn-sec-head">
+                <h2 className="vn-sec-title">Aliases</h2>
+              </div>
+              <p className="text-sm text-[color:var(--text-secondary)]">
                 {character.aliases.join(', ')}
               </p>
-            </div>
+            </section>
           )}
 
           {/* Traits */}
           {character.traits.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
-                <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Traits
-                </h2>
-                <div className="flex items-center gap-1.5">
+            <section className="vn-sec">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-[color:var(--rule)]">
+                <h2 className="vn-sec-title">Traits</h2>
+                <div className="flex flex-wrap items-center gap-1.5">
                   {sexualTraitCount > 0 && (
                     <button
                       onClick={() => setShowSexual(!showSexual)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                        showSexual
-                          ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                      }`}
+                      aria-pressed={showSexual}
+                      className={`tab${showSexual ? ' tab--on' : ''}`}
                     >
-                      {showSexual ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      <span>{showSexual ? 'Hide' : 'Show'} sexual ({sexualTraitCount})</span>
+                      <span>{showSexual ? 'Hide' : 'Show'} sexual</span>
+                      <span className="tab-count">{sexualTraitCount}</span>
                     </button>
                   )}
                   {spoilerCount > 0 && (
                     <button
                       onClick={() => setShowSpoilers(!showSpoilers)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                        showSpoilers
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                      }`}
+                      aria-pressed={showSpoilers}
+                      className={`tab${showSpoilers ? ' tab--on' : ''}`}
                     >
-                      {showSpoilers ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      <span>{showSpoilers ? 'Hide' : 'Show'} spoilers ({spoilerCount})</span>
+                      <span>{showSpoilers ? 'Hide' : 'Show'} spoilers</span>
+                      <span className="tab-count">{spoilerCount}</span>
                     </button>
                   )}
                 </div>
               </div>
               <div className="p-4 space-y-3">
-                {Object.entries(traitsByGroup).map(([group, traits]) => (
-                  <div key={group} className="flex flex-wrap items-start gap-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-24 shrink-0 pt-1">
-                      {group}:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5 flex-1">
-                      {traits.map(trait => (
-                        <Link
-                          key={trait.id}
-                          href={`/stats/trait/${trait.id}`}
-                          className={`text-xs px-2 py-1 rounded transition-colors ${
-                            trait.spoiler > 0
-                              ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                          }`}
-                        >
-                          {trait.name}
-                        </Link>
-                      ))}
+                {traitGroups.length === 0 ? (
+                  <p className="text-sm text-[color:var(--nezu)]">
+                    Every trait on this record is held back by the current filters.
+                  </p>
+                ) : (
+                  traitGroups.map(([group, traits]) => (
+                    <div key={group} className="flex flex-wrap items-start gap-2">
+                      <span className="fig-label w-24 shrink-0 pt-1">
+                        {group}:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 flex-1">
+                        {traits.map(trait => (
+                          <Link
+                            key={trait.id}
+                            href={`/stats/trait/${trait.id}`}
+                            className={`vn-chip${trait.spoiler > 0 ? ' vn-chip--held' : ''}`}
+                          >
+                            {trait.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Appears In */}
           {character.vns.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-                Appears In
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <section className="vn-sec p-4 sm:p-5">
+              <div className="vn-sec-head">
+                <h2 className="vn-sec-title">Appears In</h2>
+              </div>
+              <div className="vn-shelf">
                 {character.vns.map(vn => (
                   <AppearsInCard key={vn.id} vn={vn} preference={preference} />
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Voiced By */}
           {character.voiced_by && character.voiced_by.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                Voiced By
-              </h2>
-              <div className="space-y-2">
+            <section className="vn-sec p-4 sm:p-5">
+              <div className="vn-sec-head">
+                <h2 className="vn-sec-title">Voiced By</h2>
+              </div>
+              <ul className="dg-list">
                 {character.voiced_by.map(va => {
                   const vaDisplayName = preference === 'romaji' && va.original ? va.original : va.name;
                   return (
-                    <div key={va.id} className="flex items-center gap-2">
+                    <li key={va.id} className="dg-row">
                       <Link
                         href={`/stats/seiyuu/${va.id}`}
-                        className="text-sm text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        className="dg-name min-h-6"
                       >
                         {vaDisplayName}
                       </Link>
                       {va.note && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="dg-when">
                           ({va.note})
                         </span>
                       )}
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
-            </div>
+              </ul>
+            </section>
           )}
 
           {/* Similar Characters */}
@@ -449,22 +478,19 @@ function SimilarCharactersSection({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-gray-400" />
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Similar Characters
-          </h2>
+      <section className="vn-sec p-4 sm:p-5">
+        <div className="vn-sec-head">
+          <h2 className="vn-sec-title">Similar Characters</h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="vn-shelf">
           {[...Array(5)].map((_, i) => (
             <div key={i}>
-              <div className="aspect-3/4 rounded-lg mb-2 image-placeholder" />
-              <div className="h-4 rounded-sm w-3/4 image-placeholder" />
+              <div className="aspect-3/4 rounded-xs mb-2 image-placeholder" />
+              <div className="h-4 rounded-xs w-3/4 image-placeholder" />
             </div>
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -473,31 +499,28 @@ function SimilarCharactersSection({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary-500" />
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Similar Characters
-          </h2>
-          <span className="text-xs text-gray-400">
+    <section className="vn-sec p-4 sm:p-5">
+      <div className="vn-sec-head">
+        <div className="flex items-baseline gap-2">
+          <h2 className="vn-sec-title">Similar Characters</h2>
+          <span className="vn-num text-sm text-[color:var(--text-faint)]">
             ({filteredCharacters.length}{languageFilter === 'ja' && characters.length !== filteredCharacters.length ? ` of ${characters.length}` : ''})
           </span>
         </div>
         <LanguageFilter value={languageFilter} onChange={onLanguageFilterChange} />
       </div>
       {filteredCharacters.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+        <p className="text-sm text-[color:var(--nezu)] text-center py-4">
           No similar characters from Japanese VNs found. Try switching to &quot;All Languages&quot;.
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="vn-shelf">
           {filteredCharacters.map(char => (
             <SimilarCharacterCard key={char.id} char={char} preference={preference} />
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -510,10 +533,10 @@ function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number];
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      className="shelf-item block"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
-      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
+      <div className="shelf-art">
         {vnImageUrl ? (
           <>
             <div className={shimmerClass} />
@@ -529,19 +552,15 @@ function AppearsInCard({ vn, preference }: { vn: CharacterDetail['vns'][number];
             />
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <User className="w-8 h-8" />
-          </div>
+          <NoArt />
         )}
-        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] rounded-sm z-10">
+        <span className="vn-mark bottom-1.5 left-1.5">
           {roleLabels[vn.role] || vn.role}
-        </div>
+        </span>
       </div>
-      <div className="p-2">
-        <h4 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-          {vnDisplayTitle}
-        </h4>
-      </div>
+      {/* A card is an entry in a list of works, so its name is a heading one level below the
+          section heading it sits under. */}
+      <h3 className="shelf-name">{vnDisplayTitle}</h3>
     </Link>
   );
 }
@@ -555,10 +574,10 @@ function SimilarCharacterCard({ char, preference }: { char: SimilarCharacter; pr
   return (
     <Link
       href={`/character/${char.id}`}
-      className="group block relative bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all"
+      className="shelf-item group block"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
-      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
+      <div className="shelf-art">
         {charImageUrl ? (
           <>
             <div className={shimmerClass} />
@@ -574,39 +593,34 @@ function SimilarCharacterCard({ char, preference }: { char: SimilarCharacter; pr
             />
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <User className="w-8 h-8" />
+          <NoArt />
+        )}
+        <span className="vn-mark bottom-1.5 left-1.5">
+          {Math.round(char.similarity * 100)}% match
+        </span>
+        {/* What the two records share, over the art rather than over the whole card, so the
+            name underneath stays readable while it is up. */}
+        {char.shared_traits.length > 0 && (
+          <div className="on-box absolute inset-0 z-20 flex items-center justify-center p-2 bg-[color:var(--box)]/90 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity pointer-events-none">
+            <p className="text-[10px] leading-snug text-center text-[color:var(--ink-box)] line-clamp-4">
+              Shared: {char.shared_traits.slice(0, 5).join(', ')}
+              {char.shared_traits.length > 5 && ` +${char.shared_traits.length - 5}`}
+            </p>
           </div>
         )}
-        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-primary-600/90 text-white text-[10px] rounded-sm z-10">
-          {Math.round(char.similarity * 100)}% match
-        </div>
       </div>
-      <div className="p-2">
-        <h4 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-          {charDisplayName}
-        </h4>
-        {char.vn_title && (() => {
-          const vnTitle = getDisplayTitle(
-            { title: char.vn_title, title_jp: char.vn_title_jp, title_romaji: char.vn_title_romaji },
-            preference
-          );
-          return vnTitle ? (
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
-              {vnTitle}
-            </p>
-          ) : null;
-        })()}
-      </div>
-      {/* Shared traits tooltip on hover */}
-      {char.shared_traits.length > 0 && (
-        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2 pointer-events-none">
-          <p className="text-[10px] text-white text-center line-clamp-4">
-            Shared: {char.shared_traits.slice(0, 5).join(', ')}
-            {char.shared_traits.length > 5 && ` +${char.shared_traits.length - 5}`}
+      <h3 className="shelf-name">{charDisplayName}</h3>
+      {char.vn_title && (() => {
+        const vnTitle = getDisplayTitle(
+          { title: char.vn_title, title_jp: char.vn_title_jp, title_romaji: char.vn_title_romaji },
+          preference
+        );
+        return vnTitle ? (
+          <p className="shelf-alt">
+            {vnTitle}
           </p>
-        </div>
-      )}
+        ) : null;
+      })()}
     </Link>
   );
 }
@@ -616,31 +630,29 @@ function ErrorState({ error, charId }: { error: string | null; charId: string })
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-        <AlertCircle className="w-8 h-8 text-red-500" />
-      </div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <span className="nameplate">Not loaded</span>
+      <h1 className="font-display text-2xl font-bold text-[color:var(--ink)] mt-4 mb-2">
         Unable to Load Character
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-[color:var(--nezu)] mb-6">
         {error || 'Something went wrong while loading the character.'}
       </p>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      <div className="tabs justify-center">
         <button
           onClick={() => window.history.back()}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          className="tab"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <span aria-hidden>&#8592;</span>
           Go Back
         </button>
         <a
           href={vndbUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="tab"
         >
           Try on VNDB
-          <ExternalLink className="w-4 h-4" />
+          <span aria-hidden>&#8599;</span>
         </a>
       </div>
     </div>

@@ -171,18 +171,46 @@ export function RangeSlider({
     }
   };
 
+  const stepBy = (thumb: 'min' | 'max', delta: number) => {
+    if (thumb === 'min') {
+      const next = Math.max(min, Math.min(localMax, localMin + delta));
+      setLocalMin(next);
+      onChange(next === min ? undefined : next, localMax === max ? undefined : localMax);
+    } else {
+      const next = Math.min(max, Math.max(localMin, localMax + delta));
+      setLocalMax(next);
+      onChange(localMin === min ? undefined : localMin, next === max ? undefined : next);
+    }
+  };
+
+  const handleThumbKey = (thumb: 'min' | 'max') => (e: React.KeyboardEvent) => {
+    const big = step * 10;
+    const current = thumb === 'min' ? localMin : localMax;
+    let target: number | null = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') target = current + step;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') target = current - step;
+    else if (e.key === 'PageUp') target = current + big;
+    else if (e.key === 'PageDown') target = current - big;
+    else if (e.key === 'Home') target = thumb === 'min' ? min : localMin;
+    else if (e.key === 'End') target = thumb === 'min' ? localMax : max;
+    if (target === null) return;
+    e.preventDefault();
+    stepBy(thumb, target - current);
+  };
+
   return (
     <div className={compact ? 'space-y-1' : 'space-y-2'}>
       {compact ? (
         label && (
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-600 dark:text-gray-400" title={hint}>{label}</label>
+            {/* Not a form label: the range it names is two independent sliders below, not one control. */}
+            <span className="bw-label" title={hint}>{label}</span>
             <div className="flex items-center gap-1">
-              <span className={`text-xs ${isFiltered ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'}`}>
+              <span className={`bw-num text-xs ${isFiltered ? 'text-[color:var(--ai)]' : 'text-[color:var(--text-faint)]'}`}>
                 {formatValue(localMin)} — {formatValue(localMax)}
               </span>
               {isFiltered && (
-                <button onClick={handleReset} className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 ml-0.5">×</button>
+                <button onClick={handleReset} className="bw-chip-btn text-xs ml-0.5 hit-24 text-[color:var(--ai)]">×</button>
               )}
             </div>
           </div>
@@ -191,16 +219,16 @@ export function RangeSlider({
         <>
           {label && (
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+              <span className="bw-label block">
                 {label}
                 {hint && (
-                  <span className="block font-normal text-gray-400 dark:text-gray-500">{hint}</span>
+                  <span className="block normal-case tracking-normal text-[color:var(--text-faint)]">{hint}</span>
                 )}
-              </label>
+              </span>
               {isFiltered && (
                 <button
                   onClick={handleReset}
-                  className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                  className="sec-more"
                 >
                   Reset
                 </button>
@@ -209,12 +237,12 @@ export function RangeSlider({
           )}
 
           {/* Value display */}
-          <div className="flex items-center justify-between text-sm">
-            <span className={`font-medium ${isFiltered ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`}>
+          <div className="bw-num flex items-center justify-between text-sm">
+            <span className={isFiltered ? 'text-[color:var(--ai)]' : 'text-[color:var(--nezu)]'}>
               {formatValue(localMin)}
             </span>
-            <span className="text-gray-400 dark:text-gray-500 mx-2">—</span>
-            <span className={`font-medium ${isFiltered ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span className="text-[color:var(--text-faint)] mx-2">—</span>
+            <span className={isFiltered ? 'text-[color:var(--ai)]' : 'text-[color:var(--nezu)]'}>
               {formatValue(localMax)}
             </span>
           </div>
@@ -224,23 +252,30 @@ export function RangeSlider({
       {/* Slider track */}
       <div
         ref={trackRef}
-        className="relative h-2 bg-gray-200 dark:bg-gray-600 rounded-full cursor-pointer"
+        className="bw-track"
         onClick={handleTrackClick}
       >
         {/* Active range */}
         <div
-          className="absolute h-full bg-primary-500 rounded-full"
+          className="bw-track-fill"
           style={{
             left: `${minPercent}%`,
             width: `${maxPercent - minPercent}%`,
           }}
         />
 
-        {/* Min thumb — outer div is the touch target, inner div is the visual thumb */}
+        {/* Min thumb: outer div is the touch target, inner div is the visual thumb */}
         {/* z-index: min=10, max=20, dragging=30 so when thumbs overlap both remain accessible */}
         <div
           data-thumb="min"
-          className="absolute top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center cursor-grab"
+          role="slider"
+          tabIndex={0}
+          aria-label={`${label ?? 'Range'} minimum`}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={localMin}
+          aria-valuetext={formatValue(localMin)}
+          className="absolute top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center cursor-grab focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--ai)] rounded-full"
           style={{
             left: `${minPercent}%`,
             marginLeft: '-16px',
@@ -248,9 +283,10 @@ export function RangeSlider({
           }}
           onMouseDown={handleMouseDown('min')}
           onTouchStart={handleTouchStart('min')}
+          onKeyDown={handleThumbKey('min')}
         >
           <div
-            className={`w-3.5 h-3.5 bg-white dark:bg-gray-200 border-2 border-primary-500 rounded-full shadow-xs transition-transform hover:scale-110 ${
+            className={`bw-thumb transition-transform hover:scale-110 ${
               isDragging === 'min' ? 'scale-125 cursor-grabbing' : ''
             }`}
           />
@@ -259,7 +295,14 @@ export function RangeSlider({
         {/* Max thumb */}
         <div
           data-thumb="max"
-          className="absolute top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center cursor-grab"
+          role="slider"
+          tabIndex={0}
+          aria-label={`${label ?? 'Range'} maximum`}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={localMax}
+          aria-valuetext={formatValue(localMax)}
+          className="absolute top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center cursor-grab focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--ai)] rounded-full"
           style={{
             left: `${maxPercent}%`,
             marginLeft: '-16px',
@@ -267,9 +310,10 @@ export function RangeSlider({
           }}
           onMouseDown={handleMouseDown('max')}
           onTouchStart={handleTouchStart('max')}
+          onKeyDown={handleThumbKey('max')}
         >
           <div
-            className={`w-3.5 h-3.5 bg-white dark:bg-gray-200 border-2 border-primary-500 rounded-full shadow-xs transition-transform hover:scale-110 ${
+            className={`bw-thumb transition-transform hover:scale-110 ${
               isDragging === 'max' ? 'scale-125 cursor-grabbing' : ''
             }`}
           />

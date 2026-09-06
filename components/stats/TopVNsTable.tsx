@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import Link from '@/components/Link';
-import { Star, TrendingUp } from 'lucide-react';
 import type { TopVN } from '@/lib/vndb-stats-api';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { LanguageFilter, LanguageFilterValue, filterByLanguage } from './LanguageFilter';
@@ -24,7 +23,6 @@ interface TopVNsTableProps {
   japaneseVns?: TopVN[];
   showRating?: boolean;
   showVotes?: boolean;
-  icon?: React.ReactNode;
 }
 
 export function TopVNsTable({
@@ -33,7 +31,6 @@ export function TopVNsTable({
   japaneseVns,
   showRating = true,
   showVotes = true,
-  icon,
 }: TopVNsTableProps) {
   const [langFilter, setLangFilter] = useState<LanguageFilterValue>('ja');
   const { preference } = useTitlePreference();
@@ -53,21 +50,18 @@ export function TopVNsTable({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {icon || <TrendingUp className="w-5 h-5 text-primary-500" />}
-          <h3 className="font-semibold text-gray-900 dark:text-white">{title}</h3>
-        </div>
+    <div className="st-card overflow-hidden">
+      <div className="st-card-head border-b border-[color:var(--rule)] px-4 py-3">
+        <h3 className="st-card-title">{title}</h3>
         <LanguageFilter value={langFilter} onChange={setLangFilter} />
       </div>
 
       {filteredVNs.length === 0 ? (
-        <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+        <div className="px-4 py-8 text-center text-[color:var(--nezu)] text-sm">
           No Japanese VNs in this list. Try switching to &quot;All Languages&quot;.
         </div>
       ) : (
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+        <div className="divide-y divide-[color:var(--rule)]">
           {filteredVNs.map((vn) => (
             <TopVNRow key={vn.id} vn={vn} showRating={showRating} showVotes={showVotes} preference={preference} />
           ))}
@@ -83,15 +77,13 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      className="group flex items-center gap-3 px-4 py-2.5"
     >
       {/* Rank */}
-      <span className="w-6 shrink-0 text-center text-sm font-medium text-gray-400 dark:text-gray-500">
-        {vn.rank}
-      </span>
+      <span className="dg-rank">{vn.rank}</span>
 
       {/* Cover thumbnail */}
-      <div className="w-10 h-14 shrink-0 rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700 relative">
+      <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
         {vn.image_url ? (
           <>
             <div className={shimmerClass} />
@@ -108,8 +100,7 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
             />
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <Star className="w-4 h-4" />
+          <div className="w-full h-full flex items-center justify-center text-[color:var(--text-faint)]">
           </div>
         )}
       </div>
@@ -121,21 +112,19 @@ function TopVNRow({ vn, showRating, showVotes, preference }: { vn: TopVN & { ran
           nothing. */}
       <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
         <div className="min-w-0 sm:flex-1">
-          <p className="text-sm font-medium text-gray-900 line-clamp-2 sm:block sm:truncate dark:text-white">
+          <p className="dg-name line-clamp-2 dg-name--wrap">
             {getDisplayTitle({ title: vn.title, title_jp: vn.alttitle, title_romaji: vn.title_romaji }, preference)}
           </p>
         </div>
 
         <div className="mt-0.5 flex items-center gap-4 text-sm sm:mt-0 sm:shrink-0">
           {showVotes && vn.votecount !== undefined && (
-            <span className="text-gray-500 dark:text-gray-400 tabular-nums">
+            <span className="st-num text-[color:var(--text-faint)]">
               {vn.votecount.toLocaleString()}
             </span>
           )}
           {showRating && vn.rating !== undefined && (
-            <span className="flex items-center gap-1 font-semibold text-primary-600 dark:text-primary-400 tabular-nums">
-              {vn.rating.toFixed(2)}
-            </span>
+            <span className="st-num text-[color:var(--ink)]">{vn.rating.toFixed(2)}</span>
           )}
         </div>
       </div>

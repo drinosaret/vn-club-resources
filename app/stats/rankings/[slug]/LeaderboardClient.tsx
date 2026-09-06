@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from '@/components/Link';
-import { ArrowLeft } from 'lucide-react';
 
 import { BoardHeader } from '@/components/rankings/BoardHeader';
 import { BoardHeaderSkeleton } from '@/components/rankings/BoardHeaderSkeleton';
@@ -28,9 +27,7 @@ interface LeaderboardClientProps {
 }
 
 /** The card the rows sit in. Shared with the loading state, which reserves the same box. */
-const BOARD_CARD_CLASS =
-  'rounded-xl bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80 ' +
-  'shadow-md shadow-gray-200/50 dark:shadow-none p-2';
+const BOARD_CARD_CLASS = 'st-card p-2';
 
 /**
  * One sentence describing the current state of the board, for a screen reader.
@@ -101,9 +98,9 @@ export default function LeaderboardClient({
     <div className="max-w-3xl mx-auto px-4 py-10">
       <Link
         href={parentHref}
-        className="inline-flex min-h-6 items-center gap-1.5 mb-6 -my-1.5 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        className="sec-more mb-6 min-h-6 py-1.5"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <span aria-hidden>&larr;</span>
         {parentLabel}
       </Link>
 
@@ -118,36 +115,36 @@ export default function LeaderboardClient({
           <div className={BOARD_CARD_CLASS}>
             <div className="space-y-2">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="h-14 rounded-lg image-placeholder" />
+                <div key={i} className="h-14 rounded-xs image-placeholder" />
               ))}
             </div>
           </div>
         </>
       ) : !board ? (
         <>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+          <h1 className="sec-title mb-3">
             {fallbackTitle}
           </h1>
           {/* Three different absences, each with its own cause. Reporting them the same way
               makes an outage look like routine maintenance. */}
           {result?.state === 'rebuilding' ? (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-[color:var(--nezu)]">
               This ranking is being rebuilt from the latest VNDB data. Check back in a few
               minutes.
             </p>
           ) : result?.state === 'missing' ? (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-[color:var(--nezu)]">
               This ranking no longer exists.{' '}
               <Link
                 href="/stats/rankings/"
-                className="text-primary-600 dark:text-primary-400 hover:underline"
+                className="underline decoration-dotted underline-offset-2 hover:text-[color:var(--ai)]"
               >
                 Browse the current rankings
               </Link>
               .
             </p>
           ) : (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-[color:var(--nezu)]">
               This board is temporarily unreachable. The cause is a connection failure
               rather than a rebuild, so it is worth trying again shortly.
             </p>
@@ -161,9 +158,7 @@ export default function LeaderboardClient({
             <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
               <LanguageFilter value={language} onChange={setLanguage} />
               {language === 'ja' ? (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Showing titles originally written in Japanese.
-                </p>
+                <p className="st-card-sub">Showing titles originally written in Japanese.</p>
               ) : null}
             </div>
           ) : null}

@@ -398,10 +398,10 @@ class UserGraphEmbedding(Base):
 
 
 class VNGraphEmbedding(Base):
-    """VN embeddings from HGAT graph neural network model.
+    """Per-title graph embeddings.
 
-    These embeddings capture rich semantic information about VNs
-    from their relationships with tags, staff, producers, characters, etc.
+    Nothing in the tree writes this table any more; the mapping stays so the
+    schema and the ghost-row cleanup in the importer keep matching the database.
     """
 
     __tablename__ = "vn_graph_embeddings"
@@ -1114,6 +1114,12 @@ class UserRecommendationCache(Base):
 
     Caches combined scores to enable fast recommendations without
     running all recommenders on every request.
+
+    A page's order is stored alongside its scores because the two are not the same
+    thing: the order is settled after scoring, by a diversity pass and, where it is
+    switched on, a popularity pass, neither of which is recoverable from the score.
+    Positions are numbered per run, so a reader's rows are one run's page: a write
+    replaces them rather than merging into them.
     """
 
     __tablename__ = "user_recommendation_cache"
@@ -1130,11 +1136,42 @@ class UserRecommendationCache(Base):
     seiyuu_score = Column(Float)
     trait_score = Column(Float)
     quality_score = Column(Float)
+    # Nullable because rows written before this column existed carry nothing for it, and
+    # because the signal is genuinely absent for a title with no usable description. The
+    # read path renders a missing value as zero either way; the two are only told apart
+    # while a page is being scored.
+    description_score = Column(Float)
+    # Zero-based position in the page the engine returned. A row may carry none, which the
+    # read path orders after the ranked rows.
+    rank = Column(Integer)
+    # What the card says put this title on the page: the name of the strongest signal, how
+    # many of its entities matched, and the few worth naming. Stored rather than derived,
+    # because deriving it needs the reader's whole profile and the candidate's entities,
+    # which is the expensive half of scoring; a page read back without it would carry the
+    # scores and none of the reasons behind them.
+    #
+    # Nullable. A writer that scores without computing details has nothing to put here,
+    # and rows predating the column carry nothing either. Small enough to sit in the row:
+    # a handful of names and two integers.
+    reason = Column(JSONB)
+    # How far the signals agreed on this title when the row was written, 0-100. Stored
+    # because it is a property of the pool the run scored and cannot be rebuilt from the
+    # row. Nullable for rows written before the column existed.
+    confidence = Column(Integer)
+    # The mark the signals expected the reader to give when the row was written, with
+    # the range they disagreed over. Computed from the reader's profile and the title's
+    # neighbours, which the read path does not hold, so stored with the row or not shown.
+    # Nullable: rows written before the columns, and runs with the prediction off.
+    predicted_rating = Column(Float)
+    predicted_low = Column(Float)
+    predicted_high = Column(Float)
     updated_at = Column(DateTime, nullable=False)
 
     __table_args__ = (
-        Index("idx_user_rec_user", "user_id"),
         Index("idx_user_rec_score", "user_id", combined_score.desc()),
+        # The retention sweep filters on age alone; the reader lookups are served by the
+        # primary key and the score index, both of which lead with the reader.
+        Index("idx_user_rec_updated", "updated_at"),
     )
 
 

@@ -8,6 +8,9 @@ import type { TierDef, TierColor } from '@/lib/tier-config';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { tierListStrings } from '@/lib/i18n/translations/tierlist';
 
+/** Distance kept from the tier label and from every viewport edge. */
+const MENU_GAP = 4;
+
 interface TierEditPopoverProps {
   tier: TierDef;
   itemCount: number;
@@ -40,14 +43,27 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
     setEditLabel(tier.label);
   }, [tier.label]);
 
-  // Compute popover position — recalculate whenever the popover is open
+  // Compute popover position: recalculate whenever the popover is open
   // useLayoutEffect prevents visible jump on reorder
   const updatePos = useCallback(() => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
+    const trigger = buttonRef.current;
+    const menu = popoverRef.current;
+    if (!trigger || !menu) return;
+    const rect = trigger.getBoundingClientRect();
+    const view = document.documentElement;
+    const height = menu.offsetHeight;
+    const width = menu.offsetWidth;
+    // Placed against the viewport rather than the page, and a scroll dismisses it, so a
+    // position past an edge could never be brought back into view. It hangs beside the
+    // label where there is room for it and on the label's other side otherwise.
+    const top = Math.max(MENU_GAP, Math.min(rect.top, view.clientHeight - height - MENU_GAP));
+    const left =
+      rect.right + MENU_GAP + width <= view.clientWidth
+        ? rect.right + MENU_GAP
+        : Math.max(MENU_GAP, rect.left - MENU_GAP - width);
     setPopoverPos(prev => {
-      if (prev && prev.top === rect.top && prev.left === rect.right + 4) return prev;
-      return { top: rect.top, left: rect.right + 4 };
+      if (prev && prev.top === top && prev.left === left) return prev;
+      return { top, left };
     });
   }, []);
 
@@ -82,15 +98,6 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
     };
   }, [isOpen]);
 
-  // Compute fixed position when opening
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPopoverPos({ top: rect.top, left: rect.right + 4 });
-    }
-    if (!isOpen) setPopoverPos(null);
-  }, [isOpen]);
-
   // Focus input on open
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.select(), 50);
@@ -111,20 +118,33 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-12 sm:w-16 h-full flex items-center justify-center font-bold cursor-pointer hover:opacity-80 transition-opacity text-center break-words px-0.5 overflow-hidden ${tier.color} ${tier.textColor} ${
+        className={`toy-tierlabel w-12 sm:w-16 ${tier.color} ${tier.textColor} ${
           tier.label.length > 6 ? 'text-[8px] sm:text-[10px] leading-tight' : tier.label.length > 3 ? 'text-[10px] sm:text-xs leading-tight' : 'text-lg sm:text-xl'
-        }${isFirst ? ' rounded-tl-lg' : ''}${isLast ? ' rounded-bl-lg' : ''}`}
+        }`}
         title={s['tierEdit.editTier']}
       >
         {tier.label}
       </button>
 
-      {/* Popover — portaled to body to avoid overflow clipping */}
-      {isOpen && popoverPos && createPortal(
-        <div ref={popoverRef} className="fixed z-50 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-3" style={{ top: popoverPos.top, left: popoverPos.left }}>
+      {/* Popover: portaled to body to avoid overflow clipping */}
+      {isOpen && createPortal(
+        <div
+          ref={popoverRef}
+          className="toy-menu fixed z-50 w-48 p-3 space-y-3"
+          // A popover too tall for the viewport scrolls within itself, since scrolling the
+          // page behind it dismisses it instead of revealing the rest. Held out of sight for
+          // the frame it takes to measure, so it is never seen in the corner it is measured in.
+          style={{
+            maxHeight: `calc(100dvh - ${MENU_GAP * 2}px)`,
+            overflowY: 'auto',
+            ...(popoverPos
+              ? { top: popoverPos.top, left: popoverPos.left }
+              : { top: 0, left: 0, visibility: 'hidden' as const }),
+          }}
+        >
           {/* Rename */}
           <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">{s['tierEdit.label']}</label>
+            <label className="toy-label mb-1 block">{s['tierEdit.label']}</label>
             <input
               ref={inputRef}
               type="text"
@@ -133,21 +153,19 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
               onBlur={handleLabelSubmit}
               onKeyDown={e => { if (e.key === 'Enter') handleLabelSubmit(); }}
               maxLength={40}
-              className="w-full px-2 py-1 text-sm rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+              className="toy-field w-full"
             />
           </div>
 
           {/* Color picker */}
           <div>
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">{s['tierEdit.color']}</label>
+            <label className="toy-label mb-1.5 block">{s['tierEdit.color']}</label>
             <div className="grid grid-cols-6 gap-1.5">
               {TIER_COLORS.map(tc => (
                 <button
                   key={tc.id}
                   onClick={() => { onRecolor(tc); }}
-                  className={`w-6 h-6 rounded ${tc.color} ${
-                    tier.color === tc.color ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-gray-800' : ''
-                  } hover:scale-110 transition-transform`}
+                  className={`toy-swatch ${tc.color} ${tier.color === tc.color ? 'toy-swatch--on' : ''}`}
                   title={tc.id}
                 />
               ))}
@@ -159,7 +177,7 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
             <button
               onClick={() => { onClear(); setIsOpen(false); }}
               disabled={itemCount === 0}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="toy-cmd"
             >
               <Eraser className="w-3.5 h-3.5" />
               {s['tierEdit.clearRow']}
@@ -167,7 +185,7 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
             <button
               onClick={() => { onMoveUp(); }}
               disabled={isFirst}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="toy-cmd"
             >
               <ChevronUp className="w-3.5 h-3.5" />
               {s['tierEdit.moveUp']}
@@ -175,21 +193,21 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
             <button
               onClick={() => { onMoveDown(); }}
               disabled={isLast}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="toy-cmd"
             >
               <ChevronDown className="w-3.5 h-3.5" />
               {s['tierEdit.moveDown']}
             </button>
             <button
               onClick={() => { onInsertAbove(); setIsOpen(false); }}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              className="toy-cmd"
             >
               <Plus className="w-3.5 h-3.5" />
               {s['tierEdit.addAbove']}
             </button>
             <button
               onClick={() => { onInsertBelow(); setIsOpen(false); }}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              className="toy-cmd"
             >
               <Plus className="w-3.5 h-3.5" />
               {s['tierEdit.addBelow']}
@@ -200,7 +218,7 @@ export function TierEditPopover({ tier, itemCount, onRename, onRecolor, onDelete
           {canDelete && (
             <button
               onClick={() => { onDelete(); setIsOpen(false); }}
-              className="w-full flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+              className="toy-cmd toy-cmd--drop"
             >
               <Trash2 className="w-3.5 h-3.5" />
               {s['tierEdit.deleteTier']}

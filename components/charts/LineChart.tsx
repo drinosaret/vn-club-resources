@@ -55,7 +55,7 @@ const AXIS_WIDTH = '2.75rem';
 
 export function LineChart({
   points,
-  color = '#8b5cf6',
+  color = 'var(--ai)',
   area = true,
   height = 200,
   formatValue = compactNumber,
@@ -97,7 +97,7 @@ export function LineChart({
           {ticks.map((tick) => (
             <span
               key={tick}
-              className="absolute right-1.5 text-[10px] leading-none text-gray-400 dark:text-gray-500 tabular-nums -translate-y-1/2"
+              className="absolute right-1.5 text-[10px] leading-none text-[color:var(--text-faint)] tabular-nums -translate-y-1/2"
               style={{ top: `${(1 - scale.norm(tick)) * 100}%` }}
             >
               {formatValue(tick)}
@@ -131,7 +131,7 @@ export function LineChart({
                   x2="100"
                   y1={y}
                   y2={y}
-                  className="stroke-gray-200 dark:stroke-gray-700"
+                  className="stroke-[color:var(--rule)]"
                   strokeWidth={1}
                   strokeDasharray="3 3"
                   vectorEffect="non-scaling-stroke"
@@ -168,7 +168,7 @@ export function LineChart({
 
           {hover !== null ? (
             <span
-              className="absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none ring-2 ring-white dark:ring-gray-800"
+              className="absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2 pointer-events-none ring-2 ring-[color:var(--surface)]"
               style={{
                 left: `${xs[hover]}%`,
                 top: `${(1 - scale.norm(values[hover])) * 100}%`,
@@ -195,7 +195,7 @@ export function LineChart({
 
           {hovered ? (
             <div
-              className="absolute top-0 z-10 pointer-events-none bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+              className="absolute top-0 z-10 pointer-events-none bg-[color:var(--surface)] px-3 py-2 rounded-xs border border-[color:var(--rule)]"
               style={{
                 left: `${xs[hover!]}%`,
                 // Nudged inward at the extremes so the card cannot overflow the plot.
@@ -207,13 +207,13 @@ export function LineChart({
                       : 'translateX(-50%)',
               }}
             >
-              <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              <p className="text-xs text-[color:var(--nezu)] whitespace-nowrap">
                 {formatX(hovered.x)}
               </p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
+              <p className="text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
                 {formatValue(hovered.y)}
                 {valueSuffix ? (
-                  <span className="text-gray-500 dark:text-gray-400 font-normal">
+                  <span className="text-[color:var(--nezu)] font-normal">
                     {' '}
                     {valueSuffix}
                   </span>
@@ -224,7 +224,7 @@ export function LineChart({
 
           {referenceLabel && referenceValue !== undefined ? (
             <span
-              className="absolute right-0 text-[10px] text-gray-400 dark:text-gray-500 -translate-y-full pointer-events-none"
+              className="absolute right-0 text-[10px] text-[color:var(--text-faint)] -translate-y-full pointer-events-none"
               style={{ top: `${(1 - scale.norm(referenceValue)) * 100}%` }}
             >
               {referenceLabel}
@@ -236,7 +236,7 @@ export function LineChart({
           {xLabels.map(({ item, index }) => (
             <span
               key={`${item.x}-${index}`}
-              className="absolute text-[10px] leading-none text-gray-400 dark:text-gray-500 whitespace-nowrap"
+              className="absolute text-[10px] leading-none text-[color:var(--text-faint)] whitespace-nowrap"
               style={{
                 left: `${xs[index]}%`,
                 // Ends align to their edge instead of centring, which would clip them.

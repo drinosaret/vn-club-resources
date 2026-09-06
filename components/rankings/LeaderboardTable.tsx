@@ -29,12 +29,11 @@ interface LeaderboardTableProps {
   emptyMessage?: string;
 }
 
-/** Medal colouring for the top three. Everything below is plain. */
+/** The podium is filled, second and third are ruled, everything below is a plain figure. */
 function rankClasses(rank: number): string {
-  if (rank === 1) return 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200';
-  if (rank === 2) return 'bg-gray-200 text-gray-700 dark:bg-gray-600/40 dark:text-gray-200';
-  if (rank === 3) return 'bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200';
-  return 'text-gray-500 dark:text-gray-400';
+  if (rank === 1) return 'sw-rank--top';
+  if (rank <= 3) return 'sw-rank--near';
+  return '';
 }
 
 /**
@@ -68,13 +67,13 @@ function RowContent({ row, name }: { row: LeaderboardRow; name: string }) {
   return (
     <>
       <span
-        className={`shrink-0 w-9 h-9 rounded-lg grid place-items-center text-sm font-bold tabular-nums ${rankClasses(row.rank)}`}
+        className={`sw-rank shrink-0 w-9 h-9 ${rankClasses(row.rank)}`}
       >
         {row.rank}
       </span>
 
       {row.image_url ? (
-        <span className="shrink-0 w-10 h-[3.75rem] rounded-sm overflow-hidden bg-gray-100 dark:bg-gray-700">
+        <span className="sw-cover shrink-0 w-10 h-[3.75rem]">
           {/* The cover carries no alt text. The title is written beside it, so a screen
               reader would otherwise announce the same name twice, and while the image is
               still loading the browser paints alt text inside the thumbnail box, where a
@@ -97,17 +96,17 @@ function RowContent({ row, name }: { row: LeaderboardRow; name: string }) {
           its own line the name gets the full width and the figure loses nothing. */}
       <span className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
         <span className="min-w-0 sm:flex-1">
-          <span className="font-medium text-gray-900 line-clamp-2 sm:block sm:truncate dark:text-white">
+          <span className="sw-hit-name line-clamp-2 sm:block sm:truncate">
             {name}
           </span>
           {row.sublabel ? (
-            <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+            <span className="sw-hit-sub block truncate">
               {row.sublabel}
             </span>
           ) : null}
         </span>
 
-        <span className="mt-0.5 block text-sm font-semibold tabular-nums text-gray-900 sm:mt-0 sm:shrink-0 sm:text-right sm:text-base dark:text-white">
+        <span className="sw-num mt-0.5 block text-sm font-medium sm:mt-0 sm:shrink-0 sm:text-right sm:text-base">
           {row.value_label}
         </span>
       </span>
@@ -123,7 +122,7 @@ export function LeaderboardTable({
   const { preference } = useTitlePreference();
   if (!rows.length) {
     return (
-      <div className="py-16 text-center text-gray-500 dark:text-gray-400">
+      <div className="sw-empty">
         <Trophy className="w-8 h-8 mx-auto mb-3 opacity-40" />
         <p>{emptyMessage}</p>
       </div>
@@ -131,7 +130,7 @@ export function LeaderboardTable({
   }
 
   return (
-    <ol className="divide-y divide-gray-100 dark:divide-gray-700/60">
+    <ol className="sw-list">
       {rows.map((row) => {
         const highlighted = highlightId && row.id === highlightId;
         // A series row is identified by its franchise but named after one entry, and that
@@ -142,9 +141,7 @@ export function LeaderboardTable({
         return (
           <li
             key={`${row.rank}-${row.id}`}
-            className={`flex items-center pr-1 ${
-              highlighted ? 'bg-primary-50 dark:bg-primary-900/20 rounded-lg' : ''
-            } hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors`}
+            className={`sw-row flex items-center pr-1 ${highlighted ? 'sw-row--mine' : ''}`}
           >
             {/* The VNDB link is a sibling of the row link rather than inside it: an anchor
                 cannot be nested in another anchor. */}
@@ -168,7 +165,7 @@ export function LeaderboardTable({
                 rel="noopener noreferrer"
                 title={`Open ${name} on VNDB`}
                 aria-label={`Open ${name} on VNDB`}
-                className="shrink-0 p-2 rounded-md text-gray-300 dark:text-gray-600 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-gray-800 focus-visible:text-primary-600 dark:focus-visible:text-primary-400 transition-colors"
+                className="sw-icon shrink-0"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>

@@ -45,8 +45,8 @@ export default function RankingBuilderPage() {
       <Suspense
         fallback={
           <div className="mx-auto max-w-3xl px-4 py-10">
-            <div className="image-placeholder mb-6 h-9 w-1/2 rounded-lg" />
-            <div className="image-placeholder h-40 rounded-xl" />
+            <div className="image-placeholder mb-6 h-9 w-1/2 rounded-xs" />
+            <div className="image-placeholder h-40 rounded-xs" />
           </div>
         }
       >

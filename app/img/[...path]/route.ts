@@ -82,11 +82,11 @@ async function ensureDir(filePath: string): Promise<void> {
 
 /**
  * Fetch image from VNDB and save to cache.
- * Deduplicates concurrent requests — if a fetch is already in flight for this
+ * Deduplicates concurrent requests: if a fetch is already in flight for this
  * URL, callers share the same Promise instead of issuing a duplicate request.
  *
  * Rate limiting is applied here (not at the route level) so that cache hits
- * bypass rate limiting entirely — only outbound VNDB fetches are throttled.
+ * bypass rate limiting entirely: only outbound VNDB fetches are throttled.
  */
 async function fetchAndCacheImage(
   vndbUrl: string,
@@ -200,7 +200,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   // Client IP is resolved once and passed to fetchAndCacheImage for rate limiting.
-  // Rate limiting is NOT applied here — cache hits are served without limit.
+  // Rate limiting is NOT applied here: cache hits are served without limit.
   // Only outbound VNDB fetches (cache misses) are rate-limited inside fetchAndCacheImage.
   const clientIp = getClientIp(request);
 

@@ -4,84 +4,79 @@ import { Sparkles, Leaf, Film, BookOpen, CalendarDays, Vote, Sprout, PartyPopper
 
 export interface EventMeta {
   label: string;
+  /** Drawn only where a cell is too narrow for the label, or where a cover is absent. */
   Icon: LucideIcon;
-  dot: string; // small colored dot
-  chip: string; // chip background + text
-  accent: string; // left border accent for list rows
+  /** Label chip variant, `.ev-tag` family. */
+  chip: string;
+  /** Month-grid bar variant, `.ev-bar` family. */
+  bar: string;
 }
+
+/**
+ * One look per kind of thing, not per group of them.
+ *
+ * The colour is what tells a reader at a glance whether a day holds a film night or a reading,
+ * so two kinds that share a shape must not share a colour. The label is always present as well,
+ * since colour alone is not a way to carry meaning.
+ */
+const MONTH = { chip: 'ev-tag ev-tag--month', bar: 'ev-bar ev-bar--month' };
+const SEASON = { chip: 'ev-tag ev-tag--season', bar: 'ev-bar ev-bar--season' };
+const VOTING = { chip: 'ev-tag ev-tag--voting', bar: 'ev-bar ev-bar--voting' };
+const MOVIE = { chip: 'ev-tag ev-tag--movie', bar: 'ev-bar ev-bar--movie' };
+const ROUDOKU = { chip: 'ev-tag ev-tag--roudoku', bar: 'ev-bar ev-bar--roudoku' };
+const SESSION = { chip: 'ev-tag ev-tag--session', bar: 'ev-bar ev-bar--session' };
+const MARK = { chip: 'ev-tag ev-tag--mark', bar: 'ev-bar ev-bar--mark' };
 
 export const EVENT_META: Record<string, EventMeta> = {
   vn_of_month: {
     label: 'VN of the Month',
     Icon: Sparkles,
-    dot: 'bg-indigo-500',
-    chip: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200',
-    accent: 'border-indigo-400',
+    ...MONTH,
   },
   vn_of_season: {
     label: 'VN of the Season',
     Icon: Leaf,
-    dot: 'bg-purple-500',
-    chip: 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200',
-    accent: 'border-purple-400',
+    ...SEASON,
   },
   vn_month_voting: {
     label: 'VN of the Month Voting',
     Icon: Vote,
-    dot: 'bg-amber-500',
-    chip: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
-    accent: 'border-amber-400',
+    ...VOTING,
   },
   vn_season_voting: {
     label: 'VN of the Season Voting',
     Icon: Vote,
-    dot: 'bg-sky-500',
-    chip: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
-    accent: 'border-sky-400',
+    ...VOTING,
   },
   movie_night: {
     label: 'Movie Night',
     Icon: Film,
-    dot: 'bg-rose-500',
-    chip: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
-    accent: 'border-rose-400',
+    ...MOVIE,
   },
-  // Fuchsia rather than a blue/green: sky, teal, indigo and emerald are all taken,
-  // and the dots are 8px, so a near neighbour would be unreadable.
   roudoku: {
     label: 'Weekly Roudoku',
     Icon: BookOpen,
-    dot: 'bg-fuchsia-500',
-    chip: 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-500/20 dark:text-fuchsia-200',
-    accent: 'border-fuchsia-400',
+    ...ROUDOKU,
   },
   custom: {
     label: 'Event',
     Icon: CalendarDays,
-    dot: 'bg-emerald-500',
-    chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200',
-    accent: 'border-emerald-400',
+    ...SESSION,
   },
   season_start: {
     label: 'Season start',
     Icon: Sprout,
-    dot: 'bg-teal-500',
-    chip: 'bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200',
-    accent: 'border-teal-400',
+    ...MARK,
   },
   holiday: {
     label: 'Holiday',
     Icon: PartyPopper,
-    dot: 'bg-gray-400',
-    chip: 'bg-gray-100 text-gray-500 dark:bg-gray-700/40 dark:text-gray-400',
-    accent: 'border-gray-300',
+    ...MARK,
   },
   anniversary: {
     label: 'Anniversary',
     Icon: Cake,
-    dot: 'bg-yellow-500',
-    chip: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200',
-    accent: 'border-yellow-400',
+    ...MARK,
   },
 };
 

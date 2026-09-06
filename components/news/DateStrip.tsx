@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from '@/components/Link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { DateCalendar } from './DateCalendar';
 import { fetchNewsDates, TAB_SLUGS, type NewsDateInfo } from '@/lib/sample-news-data';
 import { skipNextScroll } from '@/components/ScrollToTop';
@@ -11,6 +10,7 @@ import { skipNextScroll } from '@/components/ScrollToTop';
 interface DateStripProps {
   currentDate: string; // YYYY-MM-DD
   tab: string;
+  serverToday?: string; // YYYY-MM-DD, the day the markup was rendered for
 }
 
 function localDateStr(d: Date): string {
@@ -41,17 +41,20 @@ function formatDayLabel(dateStr: string): { weekday: string; day: string; month:
   };
 }
 
-function getToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-export function DateStrip({ currentDate, tab }: DateStripProps) {
+export function DateStrip({ currentDate, tab, serverToday }: DateStripProps) {
   const router = useRouter();
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
 
-  const today = getToday();
+  // Which day counts as today decides whether a pill is a link and whether the Today
+  // shortcut exists, so it is settled once at render and read from the clock again
+  // after mount: cached markup can outlive the day it was built on. A caller that
+  // knows the day the markup was built for passes it in, which keeps the first client
+  // render identical to that markup. News days are filed in UTC.
+  const [today, setToday] = useState(() => serverToday ?? new Date().toISOString().slice(0, 10));
+  useEffect(() => {
+    setToday(new Date().toISOString().slice(0, 10));
+  }, []);
 
   // Show the calendar week (Mon–Sun) containing the selected date
   const weekStart = useMemo(() => getWeekStart(currentDate), [currentDate]);
@@ -98,31 +101,23 @@ export function DateStrip({ currentDate, tab }: DateStripProps) {
   return (
     <div className="flex flex-col gap-2">
       {/* Top row: week label + controls */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-xs tabular-nums text-[color:var(--text-secondary)]">
           {weekLabel}
         </span>
         <div className="flex items-center gap-1.5">
           {!isToday && (
-            <Link
-              href={`/news/${tab}/`}
-              onClick={skipNextScroll}
-              className="px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-            >
+            <Link href={`/news/${tab}/`} onClick={skipNextScroll} className="nw-step">
               Today
             </Link>
           )}
           <div className="relative">
             <button
               onClick={() => setCalendarOpen(!calendarOpen)}
-              className={`p-1.5 rounded-md transition-colors ${
-                calendarOpen
-                  ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
+              className={calendarOpen ? 'nw-step nw-step--on' : 'nw-step'}
               aria-label="Open calendar"
             >
-              <Calendar className="w-4 h-4" />
+              Calendar
             </button>
             {calendarOpen && (
               <DateCalendar
@@ -141,16 +136,12 @@ export function DateStrip({ currentDate, tab }: DateStripProps) {
 
       {/* Bottom row: week navigation */}
       <div className="flex items-center gap-1.5">
-        <button
-          onClick={goToPrevWeek}
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-          aria-label="Previous week"
-        >
-          <ChevronLeft className="w-4 h-4" />
+        <button onClick={goToPrevWeek} className="nw-step shrink-0" aria-label="Previous week">
+          ←
         </button>
 
-        {/* Day pills — fixed Mon-Sun positions */}
-        <div className="flex gap-1 flex-1 justify-center">
+        {/* Day pills: fixed Mon-Sun positions */}
+        <div className="flex flex-1 justify-center gap-1">
           {days.map((dateStr) => {
             const isSelected = dateStr === currentDate;
             const isFuture = dateStr > today;
@@ -164,34 +155,14 @@ export function DateStrip({ currentDate, tab }: DateStripProps) {
                 href={isFuture ? '#' : `/news/${tab}/${dateStr}/`}
                 aria-disabled={isFuture}
                 onClick={isFuture ? (e) => e.preventDefault() : skipNextScroll}
-                className={`
-                  relative flex flex-col items-center px-1.5 sm:px-2.5 py-1.5 rounded-lg text-xs transition-all min-w-0 flex-1
-                  ${isSelected
-                    ? 'bg-rose-500 text-white shadow-xs shadow-rose-500/20'
-                    : isFuture
-                      ? 'text-gray-300 dark:text-gray-600 cursor-default'
-                      : isCurrentToday
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }
-                `}
+                className={`nw-day${isSelected ? ' nw-day--on' : isCurrentToday ? ' nw-day--now' : ''}`}
               >
-                <span className={`text-[10px] font-medium ${
-                  isSelected ? 'text-rose-200' : isFuture ? '' : isCurrentToday ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
-                }`}>
-                  {weekday}
-                </span>
-                <span className={`text-sm font-semibold leading-tight ${isSelected ? 'text-white' : ''}`}>
-                  {day}
-                </span>
-                <span className={`text-[10px] ${
-                  isSelected ? 'text-rose-200' : isFuture ? '' : isCurrentToday ? 'text-blue-400 dark:text-blue-500' : 'text-gray-400 dark:text-gray-500'
-                }`}>
-                  {month}
-                </span>
-                {/* Content dot */}
+                <span className="opacity-70">{weekday}</span>
+                <span className="text-[0.8125rem] font-semibold">{day}</span>
+                <span className="opacity-70">{month}</span>
+                {/* A day the aggregator filed something for */}
                 {hasContent && !isSelected && !isFuture && (
-                  <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-rose-400" />
+                  <span className="absolute right-[3px] top-[3px] h-1 w-1 bg-[color:var(--kohaku)]" />
                 )}
               </Link>
             );
@@ -201,10 +172,10 @@ export function DateStrip({ currentDate, tab }: DateStripProps) {
         <button
           onClick={goToNextWeek}
           disabled={!canGoForward}
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+          className="nw-step shrink-0"
           aria-label="Next week"
         >
-          <ChevronRight className="w-4 h-4" />
+          →
         </button>
       </div>
     </div>

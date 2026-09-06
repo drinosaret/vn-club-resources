@@ -1,7 +1,5 @@
 'use client';
 
-import { Clock } from 'lucide-react';
-
 interface LastUpdatedProps {
   timestamp?: string | null;
   className?: string;
@@ -54,8 +52,7 @@ export function LastUpdated({ timestamp, className = '' }: LastUpdatedProps) {
   const formattedTime = formatRelativeTime(timestamp);
 
   return (
-    <div className={`flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 ${className}`}>
-      <Clock className="w-3 h-3" />
+    <div className={`flex items-center gap-1.5 font-mono text-xs text-[color:var(--nezu)] ${className}`}>
       <span>Updated {formattedTime}</span>
     </div>
   );

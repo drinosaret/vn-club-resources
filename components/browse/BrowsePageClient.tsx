@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useMemo, startTransition, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Search, Loader2, X, AlertCircle, RefreshCw, Eye, EyeOff, Dices } from 'lucide-react';
+import { Search, Loader2, AlertCircle, RefreshCw, Eye, EyeOff, Dices } from 'lucide-react';
 import { mutate } from 'swr';
 import { vndbStatsApi, VNSearchResult, BrowseFilters, BrowseResponse } from '@/lib/vndb-stats-api';
 import { useTitlePreference } from '@/lib/title-preference';
@@ -28,31 +28,31 @@ import { RandomButton } from './RandomButton';
 import { BROWSE_METRICS, METRIC_DISPLAY, isBrowseMetric } from '@/lib/browse-metrics';
 import { JitenAttribution } from '@/components/JitenAttribution';
 
-// Skeleton fallback for entity tabs — matches the structure of the real tab content
+// Skeleton fallback for entity tabs: matches the structure of the real tab content
 // (search bar + filter + alphabet row + results header + pagination + table + pagination)
 const TabLoadingFallback = () => (
   <div className="space-y-4">
     <div className="flex flex-col sm:flex-row gap-3">
-      <div className="flex-1 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+      <div className="flex-1 h-10 rounded-xs image-placeholder" />
       <div className="flex gap-2">
-        <div className="w-32 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+        <div className="w-32 h-10 rounded-xs image-placeholder" />
       </div>
     </div>
-    <div className="h-9 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+    <div className="h-9 rounded-xs image-placeholder" />
     <div className="flex items-center justify-between">
-      <div className="w-24 h-5 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
+      <div className="w-24 h-5 rounded-xs image-placeholder" />
       <div className="flex gap-2">
-        <div className="w-28 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
-        <div className="w-8 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
+        <div className="w-28 h-8 rounded-xs image-placeholder" />
+        <div className="w-8 h-8 rounded-xs image-placeholder" />
       </div>
     </div>
     <PaginationSkeleton />
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="bw-panel overflow-hidden">
       {[...Array(10)].map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
-          <div className="flex-1 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
-          <div className="w-16 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
-          <div className="w-20 h-4 bg-gray-100 dark:bg-gray-800 rounded-sm animate-pulse" />
+        <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-[color:var(--rule)] last:border-0">
+          <div className="flex-1 h-4 rounded-xs image-placeholder" />
+          <div className="w-16 h-4 rounded-xs image-placeholder" />
+          <div className="w-20 h-4 rounded-xs image-placeholder" />
         </div>
       ))}
     </div>
@@ -81,7 +81,7 @@ const BrowseProducerTab = dynamic(
   { loading: TabLoadingFallback, ssr: false }
 );
 
-// Preload tab chunks on hover — raw imports trigger chunk download before click
+// Preload tab chunks on hover: raw imports trigger chunk download before click
 const TAB_PRELOADERS: Partial<Record<BrowseTab, () => void>> = {
   tags: () => { import('./BrowseTagsTab'); },
   traits: () => { import('./BrowseTraitsTab'); },
@@ -143,22 +143,35 @@ function parseFiltersFromParams(params: URLSearchParams, limit: number): BrowseF
   };
 }
 
-// Helper to parse tag/trait/entity names from URL (stored as "type:id:name,type:id:name")
+const FILTER_ENTITY_TYPES: readonly string[] = ['tag', 'trait', 'staff', 'seiyuu', 'developer', 'publisher'];
+
+// The name is the last field of an entry, so a colon inside one is harmless. Only the entry
+// separator and the escape marker itself have to be escaped for the value to survive the
+// round trip; leaving everything else alone keeps the parameter readable.
+function encodeTagName(name: string): string {
+  return name.replace(/%/g, '%25').replace(/,/g, '%2C');
+}
+
+function decodeTagName(name: string): string {
+  return name.replace(/%2C/gi, ',').replace(/%25/gi, '%');
+}
+
+// Helper to parse tag/trait/entity names from URL (stored as "type:id:name,type:id:name").
+// Entries with an unknown type or no id are dropped rather than passed on: they are display
+// chips only, the ids that actually filter travel in their own parameters, and the chip
+// renderer looks its icon up by type.
 function parseTagsFromUrl(param: string | null, mode: 'include' | 'exclude'): SelectedTag[] {
   if (!param) return [];
-  try {
-    return param.split(',').map((item) => {
-      const [type, id, ...nameParts] = item.split(':');
-      return {
-        id: id,
-        name: nameParts.join(':'),
-        mode,
-        type: type as FilterEntityType,
-      };
-    });
-  } catch {
-    return [];
-  }
+  return param.split(',').flatMap((item) => {
+    const [type, id, ...nameParts] = item.split(':');
+    if (!id || !FILTER_ENTITY_TYPES.includes(type)) return [];
+    return [{
+      id,
+      name: decodeTagName(nameParts.join(':')),
+      mode,
+      type: type as FilterEntityType,
+    }];
+  });
 }
 
 // The four plain columns, then the ranking metrics. The metrics are grouped apart because
@@ -191,7 +204,7 @@ export interface BrowsePageClientProps {
   initialData: BrowseResponse | null;
   /** Initial search params from the server component */
   initialSearchParams: { [key: string]: string | string[] | undefined };
-  /** Grid size read from cookie on the server — SSR data uses this limit */
+  /** Grid size read from cookie on the server: SSR data uses this limit */
   serverGridSize?: GridSize;
 }
 
@@ -199,7 +212,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const searchParams = useSearchParams();
   const { preference } = useTitlePreference();
 
-  // Tab state — local state for instant switching, synced from URL on mount/popstate
+  // Tab state: local state for instant switching, synced from URL on mount/popstate
   const urlTab = (searchParams.get('tab') as BrowseTab) || 'novels';
   const [activeTab, setActiveTab] = useState<BrowseTab>(urlTab);
 
@@ -228,7 +241,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   }, []);
 
   // Parse initial state from URL (default: Japanese VNs only).
-  // Only computed once on mount — these seed useState/useRef and mount-time effects.
+  // Only computed once on mount; these seed useState/useRef and mount-time effects.
   // Using [] deps is intentional: searchParams is correct on first render, and internal
   // URL updates (replaceState) must NOT cause these to recompute (avoids cascading
   // re-renders that cause content flashes on Firefox under load).
@@ -237,7 +250,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     [] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Parse tags from URL — computed once on mount (same rationale as initialFilters)
+  // Parse tags from URL, computed once on mount (same rationale as initialFilters)
   const initialTags = useMemo(() => {
     const includeTags = parseTagsFromUrl(searchParams.get('tag_names'), 'include');
     const excludeTags = parseTagsFromUrl(searchParams.get('exclude_tag_names'), 'exclude');
@@ -264,17 +277,17 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const [displayedQueryTime, setDisplayedQueryTime] = useState<number | undefined>(initialData?.query_time); // Stable display value
   const [isLoading, setIsLoading] = useState(!initialData); // Only loading if no SSR data
   const [isPaginatingOnly, setIsPaginatingOnly] = useState(false); // True when only page changed, not filters
-  const [skipPreload, setSkipPreload] = useState(false); // True during pagination — VNGrid shows results immediately
+  const [skipPreload, setSkipPreload] = useState(false); // True during pagination: VNGrid shows results immediately
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false); // Delayed overlay for filter/search changes
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<SelectedTag[]>(initialTags);
-  // Key to force VNGrid remount on back navigation — clears its internal displayResults
+  // Key to force VNGrid remount on back navigation: clears its internal displayResults
   // buffer which otherwise keeps showing stale covers during the refetch.
   const [gridKey, setGridKey] = useState(0);
-  // Initialize from server-known grid size — SSR data already uses this limit,
+  // Initialize from server-known grid size: SSR data already uses this limit,
   // so server and client render identically. No useLayoutEffect needed.
   const [gridSize, setGridSizeState] = useState<GridSize>(serverGridSize);
-  // Ref for gridSize — used in useCallback closures to avoid adding gridSize as a dependency
+  // Ref for gridSize, used in useCallback closures to avoid adding gridSize as a dependency
   const gridSizeRef = useRef<GridSize>(serverGridSize);
   gridSizeRef.current = gridSize;
   // On mount: sync grid size from localStorage and restore/refetch on back navigation.
@@ -285,7 +298,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   //    default filters) but the URL has the user's actual state (page 3, filters, etc.).
   // First tries to restore from a sessionStorage snapshot (saved on VN link click) for
   // instant back navigation. Falls back to refetching if no snapshot is available.
-  // useLayoutEffect runs before paint — prevents flash of stale covers on back navigation.
+  // useLayoutEffect runs before paint: prevents flash of stale covers on back navigation.
   const didRestoreSnapshotRef = useRef(false);
   useLayoutEffect(() => {
     // Read actual grid size from localStorage (always current, unlike cached serverGridSize)
@@ -309,7 +322,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       // Storage can be unavailable or refused, and none of this is load-bearing.
     }
 
-    // On back navigation, cached initialData is likely stale — restore or refetch.
+    // On back navigation, cached initialData is likely stale; restore or refetch.
     // Peek at the flag (nav detection effect will still consume it for scroll restoration).
     // Read from window.location.search (always the real browser URL) instead of
     // useSearchParams() which may return stale params from the cached RSC payload.
@@ -328,7 +341,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
           const limitMatches = snapshot.filters?.limit === correctLimit;
           if (urlMatches && limitMatches) {
             sessionStorage.removeItem('browse-snapshot');
-            // Instant restore — no fetch, no loading flash.
+            // Instant restore, no fetch, no loading flash.
             // Increment gridKey to force VNGrid remount: without this, VNGrid's
             // internal displayResults state still holds the stale initialData covers
             // (from the cached RSC payload) and only updates via a post-paint useEffect.
@@ -349,15 +362,15 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             setSearchInput(snapshot.searchInput);
             setIsLoading(false);
             didRestoreSnapshotRef.current = true;
-            return; // Skip refetch — data is already restored
+            return; // Skip refetch: data is already restored
           }
         } catch {
-          // Parse failed — fall through to refetch
+          // Parse failed: fall through to refetch
         }
         sessionStorage.removeItem('browse-snapshot');
       }
 
-      // No valid snapshot — refetch with correct params.
+      // No valid snapshot: refetch with correct params.
       // Set flag so consumePendingScroll() runs after data loads (handles the case
       // where ScrollToTop's MutationObserver times out before the fetch completes).
       needsScrollRestoreRef.current = true;
@@ -393,7 +406,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const abortControllerRef = useRef<AbortController | null>(null);
   // Ref for debouncing filter changes
   const filterDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const FILTER_DEBOUNCE_MS = 150; // Debounce rapid filter changes (reduced from 300ms — Redis cache makes repeated queries cheap)
+  const FILTER_DEBOUNCE_MS = 150; // Debounce rapid filter changes (reduced from 300ms: Redis cache makes repeated queries cheap)
   // Ref for prefetch cache (adjacent pages)
   const prefetchCacheRef = useRef<Map<string, BrowseResponse>>(new Map());
   const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -405,7 +418,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   const didDetectNavRef = useRef(false);
   // Ref for results section - used for pagination scroll target
   const resultsContainerRef = useRef<HTMLDivElement>(null);
-  // Ref: true when back-nav triggered a refetch (no valid snapshot) — signals
+  // Ref: true when back-nav triggered a refetch (no valid snapshot), signals
   // that we need to call consumePendingScroll() after data loads, in case
   // ScrollToTop's MutationObserver timed out before the fetch completed.
   const needsScrollRestoreRef = useRef(false);
@@ -433,7 +446,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     searchInput: string;
   } | null>(null);
 
-  // Delayed loading overlay — only show for non-pagination loads after 200ms
+  // Delayed loading overlay: only show for non-pagination loads after 200ms
   useEffect(() => {
     if (isLoading && !isPaginatingOnly) {
       overlayDelayRef.current = setTimeout(() => {
@@ -471,7 +484,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   }, []);
 
   // Sync searchInput with URL when navigating (e.g., clicking Browse link resets query).
-  // Skip when the URL change was self-initiated — we already have the correct state.
+  // Skip when the URL change was self-initiated; we already have the correct state.
   useEffect(() => {
     if (lastInternalQueryRef.current !== null) return;
     const urlQuery = searchParams.get('q') || '';
@@ -495,7 +508,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     sessionStorage.removeItem('is-popstate-navigation');
 
     if (isBackNav) {
-      // Back/forward navigation — ScrollToTop handles scroll restoration.
+      // Back/forward navigation: ScrollToTop handles scroll restoration.
       // Clean up any stale browse-scroll key (no longer used).
       sessionStorage.removeItem('browse-scroll');
     } else {
@@ -509,7 +522,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     }
   }, []);
 
-  // Keep browse snapshot ref current — captures latest state for the click handler.
+  // Keep browse snapshot ref current: captures latest state for the click handler.
   // Only updates when we have actual results (not during loading).
   useEffect(() => {
     if (!isLoading && results.length > 0) {
@@ -521,7 +534,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   }, [isLoading, results, total, totalWithSpoilers, metricFloorNote, pages, queryTime, displayedQueryTime, filters, selectedTags, searchInput]);
 
   // Save browse state snapshot when clicking any link that navigates away from browse,
-  // enabling instant back-navigation. Previously only saved for VN links — now covers
+  // enabling instant back-navigation. Previously only saved for VN links; now covers
   // character, tag, staff, and all other outgoing links for a smoother back experience.
   // Scroll position is saved separately by ScrollToTop (generic, all pages).
   useEffect(() => {
@@ -541,7 +554,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
           }
         }
       } catch {
-        // Invalid URL or sessionStorage full — back nav will fall back to refetching
+        // Invalid URL or sessionStorage full: back nav will fall back to refetching
       }
     };
     document.addEventListener('click', handleClick, true);
@@ -732,8 +745,11 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (newFilters.devstatus && newFilters.devstatus !== '-1') params.set('devstatus', newFilters.devstatus);
     if (newFilters.exclude_devstatus) params.set('exclude_devstatus', newFilters.exclude_devstatus);
 
+    // olang is the one filter with a non-empty default, so an absent param reads back as
+    // Japanese. The empty marker is therefore unconditional: it is the only way to say
+    // "all languages" in a URL that is reloaded, shared or opened in a new tab.
     if (newFilters.olang) params.set('olang', newFilters.olang);
-    else if (newFilters.exclude_olang) params.set('olang', ''); // Explicit "all languages"
+    else params.set('olang', ''); // Explicit "all languages"
     if (newFilters.exclude_olang) params.set('exclude_olang', newFilters.exclude_olang);
 
     if (newFilters.platform) params.set('platform', newFilters.platform);
@@ -749,15 +765,18 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (newFilters.sort && newFilters.sort !== 'rating') params.set('sort', newFilters.sort);
     if (newFilters.sort_order && newFilters.sort_order !== 'desc') params.set('sort_order', newFilters.sort_order);
     if (newFilters.page && newFilters.page > 1) params.set('page', String(newFilters.page));
+    // The ranked list is entered from the URL, so it has to survive being rewritten by a
+    // page or filter change; the pagination hrefs are built from the same query string.
+    if (view === 'ranked') params.set('view', 'ranked');
 
     // Store tag/trait names in URL for display (type:id:name format)
     const includeTags = tags.filter(t => t.mode === 'include');
     const excludeTags = tags.filter(t => t.mode === 'exclude');
     if (includeTags.length > 0) {
-      params.set('tag_names', includeTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+      params.set('tag_names', includeTags.map(t => `${t.type}:${t.id}:${encodeTagName(t.name)}`).join(','));
     }
     if (excludeTags.length > 0) {
-      params.set('exclude_tag_names', excludeTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+      params.set('exclude_tag_names', excludeTags.map(t => `${t.type}:${t.id}:${encodeTagName(t.name)}`).join(','));
     }
 
     const queryString = params.toString();
@@ -772,7 +791,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     startTransition(() => {
       window.history.replaceState(window.history.state, '', url);
     });
-  }, [selectedTags]);
+  }, [selectedTags, view]);
 
   // Fetch results (with prefetch cache support)
   const fetchResults = useCallback(async (currentFilters: BrowseFilters) => {
@@ -781,7 +800,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     const cachedResponse = prefetchCacheRef.current.get(cacheKey);
     if (cachedResponse) {
       prefetchCacheRef.current.delete(cacheKey);
-      // Images are already pre-decoded by prefetchPage() — skip redundant preload.
+      // Images are already pre-decoded by prefetchPage(); skip redundant preload.
       // Wrap in startTransition so these 7 setState calls don't batch synchronously
       // with handlePageChange's setState calls. Without this, the entire data update
       // renders synchronously in the click handler (~10ms), adding to the synchronous
@@ -905,7 +924,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       const isTouch = window.matchMedia?.('(hover: none)').matches;
       const p = filters.page || 1;
 
-      // Immediate neighbors — main request is done so no competing.
+      // Immediate neighbors: main request is done so no competing.
       // All calls proceed concurrently (each has its own abort controller).
       const t1 = setTimeout(() => {
         if (p < pages) prefetchPage(p + 1);
@@ -917,7 +936,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
         }
       }, 0);
 
-      // Extended range — after initial batch settles (desktop hover fills gaps too)
+      // Extended range: after initial batch settles (desktop hover fills gaps too)
       const t2 = !isTouch ? setTimeout(() => {
         if (p > 2) prefetchPage(p - 2);
         if (p + 2 < pages) prefetchPage(p + 3);
@@ -1052,7 +1071,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
 
   // Sync state when URL params change (e.g., clicking "Browse" nav link clears params,
   // or external navigation to /browse/?q=xxx from search bar).
-  // Skip when the URL change was self-initiated — we already have the correct state.
+  // Skip when the URL change was self-initiated; we already have the correct state.
   useEffect(() => {
     if (lastInternalQueryRef.current !== null) {
       const expectedQuery = lastInternalQueryRef.current;
@@ -1127,6 +1146,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       const equivalentPage = Math.max(1, Math.floor(firstItemIndex / newLimit) + 1);
       const updated = { ...filters, limit: newLimit, page: equivalentPage };
       setFilters(updated);
+      // The filter handlers build their next state from this ref, so it has to carry the
+      // new page size; otherwise the next change reinstates the previous one.
+      pendingFiltersRef.current = updated;
       updateURL(updated, selectedTags);
       fetchResults(updated);
     }
@@ -1134,7 +1156,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
 
   // Handle filter changes with debouncing to batch rapid multi-filter adjustments
   const handleFilterChange = useCallback((newFilters: Partial<BrowseFilters>) => {
-    setSkipPreload(false); // Filter change — use preload buffer for smooth transition
+    setSkipPreload(false); // Filter change: use preload buffer for smooth transition
     setIsPaginatingOnly(false); // This is a filter change, not pagination-only
 
     // Compute from ref (always current) to avoid stale closure
@@ -1154,7 +1176,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
 
   // Handle tag/trait/entity changes with debouncing
   const handleTagsChange = useCallback((newTags: SelectedTag[]) => {
-    setSkipPreload(false); // Filter change — use preload buffer for smooth transition
+    setSkipPreload(false); // Filter change: use preload buffer for smooth transition
     setIsPaginatingOnly(false); // This is a filter change, not pagination-only
 
     setSelectedTags(newTags);
@@ -1205,18 +1227,19 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     handleFilterChange({ first_char: char || undefined });
   };
 
-  // Handle page change — check prefetch cache inline for synchronous batch.
+  // Handle page change: check prefetch cache inline for synchronous batch.
   // When cache hits, ALL setState calls batch in one synchronous render (~5ms)
   // instead of deferring via startTransition (~30ms, 3 renders).
   const handlePageChange = (page: number) => {
     const updated = { ...filters, page };
+    pendingFiltersRef.current = updated;
     const cacheKey = JSON.stringify(updated);
     const cached = prefetchCacheRef.current.get(cacheKey);
 
     if (cached) {
-      // Cache hit — batch all setState synchronously for single-render swap.
+      // Cache hit: batch all setState synchronously for single-render swap.
       // Safe because pagination renders are lightweight (memo'd VNCover, same grid
-      // structure, images decoded from cache) — well under the ~10ms threshold
+      // structure, images decoded from cache), well under the ~10ms threshold
       // that causes Firefox WebRender text tile drops.
       prefetchCacheRef.current.delete(cacheKey);
       setSkipPreload(true);
@@ -1230,7 +1253,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       setIsLoading(false);
       setIsPaginatingOnly(false);
     } else {
-      // Cache miss — fetch from network
+      // Cache miss: fetch from network
       setSkipPreload(true);
       setIsPaginatingOnly(true);
       setFilters(updated);
@@ -1249,7 +1272,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     return `/browse/${qs ? `?${qs}` : ''}`;
   }, [searchParams]);
 
-  // Prefetch a page on hover — triggers API fetch so data is cached when clicked
+  // Prefetch a page on hover: triggers API fetch so data is cached when clicked
   const handlePrefetchPage = useCallback((page: number) => {
     if (page >= 1 && page <= pages) {
       prefetchPage(page);
@@ -1288,6 +1311,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     if (f.devstatus && f.devstatus !== '-1') p.set('devstatus', f.devstatus);
     if (f.exclude_devstatus) p.set('exclude_devstatus', f.exclude_devstatus);
     if (f.olang) p.set('olang', f.olang);
+    else p.set('olang', ''); // Explicit "all languages": an absent param defaults to Japanese
     if (f.exclude_olang) p.set('exclude_olang', f.exclude_olang);
     if (f.platform) p.set('platform', f.platform);
     if (f.exclude_platform) p.set('exclude_platform', f.exclude_platform);
@@ -1300,15 +1324,15 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
     // Tag/trait names for display on random page
     const incTags = selectedTags.filter(t => t.mode === 'include');
     const excTags = selectedTags.filter(t => t.mode === 'exclude');
-    if (incTags.length > 0) p.set('tag_names', incTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
-    if (excTags.length > 0) p.set('exclude_tag_names', excTags.map(t => `${t.type}:${t.id}:${t.name}`).join(','));
+    if (incTags.length > 0) p.set('tag_names', incTags.map(t => `${t.type}:${t.id}:${encodeTagName(t.name)}`).join(','));
+    if (excTags.length > 0) p.set('exclude_tag_names', excTags.map(t => `${t.type}:${t.id}:${encodeTagName(t.name)}`).join(','));
     const qs = p.toString();
     return `/random/${qs ? `?${qs}` : ''}`;
   }, [filters, selectedTags]);
 
   // Clear all filters (reset to defaults: Japanese VNs, all dev status, include child tags)
   const handleClearFilters = () => {
-    setSkipPreload(false); // Filter change — use preload buffer
+    setSkipPreload(false); // Filter change: use preload buffer
     setSearchInput('');
     setSelectedTags([]);
     const cleared: BrowseFilters = {
@@ -1333,6 +1357,9 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
       publisher: undefined,
     };
     setFilters(cleared);
+    // Every other handler computes its next state from this ref, so it has to follow the
+    // cleared state; otherwise the next change reapplies the filters that were just dropped.
+    pendingFiltersRef.current = cleared;
     updateURL(cleared, []);
     fetchResults(cleared);
   };
@@ -1470,14 +1497,14 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
   }, [filters, selectedTags]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[color:var(--ground)]">
       <div className="max-w-[1400px] mx-auto px-4 pt-6 pb-8">
         {/* Header */}
         <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="sec-title">
             {TAB_TITLES[activeTab]}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="sec-sub">
             {activeTab === 'novels' && `Search and filter the database of ${databaseTotal !== null ? databaseTotal.toLocaleString() : '...'} visual novels`}
             {activeTab === 'tags' && `Browse the database of ${tagsTotal !== null ? tagsTotal.toLocaleString() : '...'} tags`}
             {activeTab === 'traits' && `Browse the database of ${traitsTotal !== null ? traitsTotal.toLocaleString() : '...'} traits`}
@@ -1517,20 +1544,20 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             onModeChange={(mode) => handleFilterChange({ tag_mode: mode })}
           />
           <div className="flex flex-wrap items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 py-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={filters.include_children ?? true}
                 onChange={(e) => handleFilterChange({ include_children: e.target.checked })}
-                className="w-4 h-4 text-primary-600 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded-sm focus:ring-primary-500"
+                className="bw-check"
               />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Include child tags</span>
+              <span className="text-xs text-[color:var(--nezu)]">Include child tags</span>
             </label>
             <div className="flex items-center gap-2">
               {(filters.spoiler_level ?? 0) === 0 ? (
-                <EyeOff className="w-4 h-4 text-gray-400" />
+                <EyeOff className="w-4 h-4 text-[color:var(--text-faint)]" />
               ) : (
-                <Eye className="w-4 h-4 text-amber-500" />
+                <Eye className="w-4 h-4 text-[color:var(--kohaku)]" />
               )}
               <SimpleSelect
                 options={[
@@ -1569,7 +1596,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
             {/* Search Bar */}
             <form onSubmit={handleSearch} className="mb-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[color:var(--text-faint)]" />
                 <input
                   type="search"
                   autoComplete="off"
@@ -1577,7 +1604,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search by title..."
                   aria-label="Search visual novels by title"
-                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  className="bw-field w-full pl-10 pr-4 py-2.5 text-sm"
                 />
               </div>
             </form>
@@ -1593,15 +1620,15 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
 
             {/* Error Banner */}
             {fetchError && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-6 mb-4">
+              <div className="bw-alert p-4 mt-6 mb-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-red-800 dark:text-red-200">{fetchError}</p>
+                    <p className="text-sm">{fetchError}</p>
                   </div>
                   <button
                     onClick={() => fetchResults(filters)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors shrink-0"
+                    className="sec-more shrink-0"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Retry
@@ -1610,10 +1637,13 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
               </div>
             )}
 
-            {/* Results Header */}
+            {/* Results Header. The count beside it changes with every query, so the
+                heading that names the region is a fixed, unstyled one: the entity cards
+                below are h3 and need a section heading above them to nest under. */}
+            <h2 className="sr-only">Results</h2>
             <div ref={resultsContainerRef} className="scroll-mt-20 flex flex-wrap items-center justify-between gap-4 mb-3 mt-3">
               <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-[color:var(--nezu)]">
                   {isLoading && !isPaginatingOnly ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -1621,17 +1651,17 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                     </span>
                   ) : (
                     <>
-                      <span className="text-gray-700 dark:text-gray-200">
+                      <span className="bw-num text-[color:var(--ink)]">
                         {(totalWithSpoilers ?? total).toLocaleString()}
                       </span>
                       {' '}results
                       {totalWithSpoilers !== null && totalWithSpoilers > total && (
-                        <span className="text-amber-600 dark:text-amber-500">
+                        <span className="bw-num">
                           {' '}({(totalWithSpoilers - total).toLocaleString()} hidden)
                         </span>
                       )}
                       {displayedQueryTime !== undefined && (
-                        <span className="text-gray-400 dark:text-gray-500">
+                        <span className="bw-num text-[color:var(--text-faint)]">
                           {' '}in {displayedQueryTime.toFixed(3)}s
                         </span>
                       )}
@@ -1639,7 +1669,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                   )}
                 </span>
                 {activeMetric && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-[color:var(--nezu)]">
                     {METRIC_DISPLAY[activeMetric].blurb}
                     {metricFloorNote && ` ${metricFloorNote}`}
                   </span>
@@ -1647,9 +1677,8 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 {hasActiveFilters && (
                   <button
                     onClick={handleClearFilters}
-                    className="flex items-center gap-1 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 lg:hidden"
+                    className="sec-more sec-more--narrow-only"
                   >
-                    <X className="w-4 h-4" />
                     Clear filters
                   </button>
                 )}
@@ -1667,7 +1696,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                   onClick={() => handleFilterChange({
                     sort_order: filters.sort_order === 'desc' ? 'asc' : 'desc'
                   })}
-                  className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="tab"
                   title={filters.sort_order === 'desc' ? 'Descending' : 'Ascending'}
                 >
                   {filters.sort_order === 'desc' ? '↓' : '↑'}
@@ -1677,7 +1706,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
                 <a
                   href={buildRandomUrl()}
                   title="Random with filters"
-                  className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="tab"
                 >
                   <Dices className="w-4 h-4" />
                 </a>
@@ -1710,7 +1739,7 @@ export default function BrowsePageClient({ initialData, initialSearchParams, ser
               {view === 'ranked' ? (
                 <RankedResults
                   results={results}
-                  startRank={((filters.page || 1) - 1) * ITEMS_PER_PAGE[gridSize] + 1}
+                  startRank={((filters.page || 1) - 1) * (filters.limit ?? ITEMS_PER_PAGE[gridSize]) + 1}
                   metric={activeMetric}
                   isLoading={isLoading}
                 />

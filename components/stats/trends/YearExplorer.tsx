@@ -50,7 +50,7 @@ export function YearExplorer({ language }: { language: LanguageFilterValue }) {
 
   if (loading) {
     // Sized to the loaded card, so the page does not grow under a reader who scrolls mid-load.
-    return <div className="h-[37rem] sm:h-[32rem] rounded-xl image-placeholder" />;
+    return <div className="h-[37rem] sm:h-[32rem] rounded-xs image-placeholder" />;
   }
 
   if (!data) return <TrendsUnavailable what="The year explorer" />;
@@ -67,24 +67,24 @@ export function YearExplorer({ language }: { language: LanguageFilterValue }) {
   const last = years[years.length - 1].year;
 
   return (
-    <div className="rounded-xl border border-gray-200/60 dark:border-gray-700/80 bg-white dark:bg-gray-800 p-4 sm:p-6">
+    <div className="st-card p-4 sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <button
           type="button"
           onClick={() => step(-1)}
           disabled={index <= 0}
           aria-label="Previous year"
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 enabled:hover:bg-gray-100 dark:enabled:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+          className="st-act st-act--icon disabled:opacity-30"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
 
         <div className="text-center">
-          <div className="text-3xl sm:text-4xl font-bold tabular-nums text-gray-900 dark:text-white">
+          <div className="fig-value">
             {current.year}
           </div>
           {current.in_progress ? (
-            <p className="mt-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
+            <p className="fig-label mt-1">
               still running, counts cover the year so far
             </p>
           ) : null}
@@ -95,7 +95,7 @@ export function YearExplorer({ language }: { language: LanguageFilterValue }) {
           onClick={() => step(1)}
           disabled={index >= years.length - 1}
           aria-label="Next year"
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 enabled:hover:bg-gray-100 dark:enabled:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+          className="st-act st-act--icon disabled:opacity-30"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -113,9 +113,9 @@ export function YearExplorer({ language }: { language: LanguageFilterValue }) {
           step={1}
           value={current.year}
           onChange={(event) => setSelected(Number(event.target.value))}
-          className="w-full accent-primary-600 cursor-pointer"
+          className="w-full accent-[color:var(--ai)] cursor-pointer"
         />
-        <div className="flex justify-between text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+        <div className="fig-axis">
           <span>{first}</span>
           <span>{last}</span>
         </div>

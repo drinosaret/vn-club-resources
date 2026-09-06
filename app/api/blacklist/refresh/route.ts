@@ -41,11 +41,13 @@ export async function POST(request: Request) {
     );
   }
 
-  if (
-    !authHeader ||
-    authHeader.length !== expectedSecret.length ||
-    !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expectedSecret))
-  ) {
+  // A header value's character count is not its byte count, and a comparison of raw bytes
+  // rejects a pair of unequal length rather than answering. Comparing digests instead leaves
+  // two fixed-width values whatever arrived, and the comparison stays constant time.
+  const provided = crypto.createHash('sha256').update(authHeader ?? '', 'utf8').digest();
+  const expected = crypto.createHash('sha256').update(expectedSecret, 'utf8').digest();
+
+  if (!crypto.timingSafeEqual(provided, expected)) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }

@@ -30,32 +30,39 @@ export function RouletteResult({
   const s = rouletteStrings[locale];
   const title = getDisplayTitle(result, preference);
 
+  // The name is set into the label at its placeholder rather than placed beside it, because a
+  // label that attaches a particle straight to the name leaves no room for a separator: the
+  // spacing belongs to the translated string. A label with no placeholder takes the name first.
+  const readsLabel = s['result.reads'];
+  const readsAt = readsLabel.indexOf('{player}');
+  const readsBefore = readsAt >= 0 ? readsLabel.slice(0, readsAt) : '';
+  const readsAfter = readsAt >= 0 ? readsLabel.slice(readsAt + '{player}'.length) : ` ${readsLabel}`;
+
   return (
     <div className="w-full max-w-xs mx-auto animate-fade-in">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-4 text-center shadow-xl">
+      <div className="toy-panel p-4 text-center">
         {/* Player assignment header */}
         {mode === 'users' && currentPlayer && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            <span className="font-semibold text-violet-600 dark:text-violet-400">{currentPlayer}</span>
-            {' '}{s['result.reads']}
+          <p className="mb-3 text-sm text-[color:var(--nezu)]">
+            {readsBefore}
+            <span className="font-mono font-medium text-[color:var(--kohaku-text)]">{currentPlayer}</span>
+            {readsAfter}
           </p>
         )}
 
         {/* VN cover */}
         {result.imageUrl && (
-          <div className="w-24 h-32 mx-auto mb-3 rounded-lg overflow-hidden shadow-md">
+          <div className="toy-thumb w-24 h-32 mx-auto mb-3">
             <NSFWImage src={result.imageUrl} alt={title} imageSexual={result.imageSexual ?? undefined} vnId={result.id} className="w-full h-full object-cover" compact />
           </div>
         )}
 
         {/* VN title */}
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-          {title}
-        </h3>
+        <h3 className="toy-pick-title mb-1">{title}</h3>
 
         {/* Rating */}
         {result.rating != null && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          <p className="mb-3 font-mono text-sm tabular-nums text-[color:var(--nezu)]">
             {s['result.rating'].replace('{rating}', result.rating.toFixed(2))}
           </p>
         )}
@@ -63,22 +70,22 @@ export function RouletteResult({
         {/* VN detail link */}
         <Link
           href={`/vn/${result.id}/`}
-          className="inline-flex items-center gap-1 text-sm text-violet-600 dark:text-violet-400 hover:underline mb-4"
+          className="sec-more mb-4"
         >
           {s['result.viewDetails']}
           <ExternalLink className="w-3 h-3" />
         </Link>
 
         {/* Action button */}
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+        <div className="mt-3 pt-3 border-t border-[color:var(--rule)]">
           {allAssigned ? (
-            <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+            <p className="text-sm font-medium text-[color:var(--ai)]">
               {s['result.allAssigned']}
             </p>
           ) : (
             <button
               onClick={onDismiss}
-              className="px-6 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+              className="toy-btn toy-btn--go "
             >
               {mode === 'users' && hasMorePlayers ? s['spin.nextPlayer'] : s['spin.spinAgain']}
             </button>

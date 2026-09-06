@@ -115,7 +115,7 @@ export function MonthExplorer({ language }: { language: LanguageFilterValue }) {
   }, [scrubbing, months]);
 
   if (loading) {
-    return <div className="h-[55rem] sm:h-[32rem] rounded-xl image-placeholder" />;
+    return <div className="h-[55rem] sm:h-[32rem] rounded-xs image-placeholder" />;
   }
 
   // Checked before the empty return below, which would otherwise swallow a real outage: the
@@ -147,39 +147,39 @@ export function MonthExplorer({ language }: { language: LanguageFilterValue }) {
   const settling = asked !== current.month;
 
   return (
-    <div className="rounded-xl border border-gray-200/60 dark:border-gray-700/80 bg-white dark:bg-gray-800 p-4 sm:p-6">
+    <div className="st-card p-4 sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <button
           type="button"
           onClick={() => step(-1)}
           disabled={index <= 0}
           aria-label="Previous month"
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 enabled:hover:bg-gray-100 dark:enabled:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+          className="st-act st-act--icon disabled:opacity-30"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
 
         <div className="text-center">
-          <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="fig-value">
             {monthLabel(scrubbedMonth)}
           </div>
           {/* Withheld while a month is on its way. The note describes the counts that are
               loaded, and the heading has already moved to the month being fetched, so
               leaving it up would attach a caveat about one month to the name of another. */}
           {current.in_progress && !settling ? (
-            <p className="mt-0.5 text-xs font-medium text-orange-600 dark:text-orange-400">
+            <p className="fig-label mt-1">
               still running, counts cover the days so far
             </p>
           ) : null}
           {/* Only a failure gets a line of its own. A month on its way needs no announcement:
               the heading already names it and the lists below it are visibly out of date. */}
           {settling && failed ? (
-            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400" aria-live="polite">
+            <p className="mt-0.5 text-xs text-[color:var(--nezu)]" aria-live="polite">
               {monthLabel(asked)} could not be loaded.{' '}
               <button
                 type="button"
                 onClick={() => load(asked)}
-                className="-mx-1 inline-flex min-h-9 items-center rounded px-1 underline hover:text-primary-600 dark:hover:text-primary-400"
+                className="-mx-1 inline-flex min-h-9 items-center rounded-xs px-1 underline hover:text-[color:var(--ai)]"
               >
                 Try again
               </button>
@@ -192,7 +192,7 @@ export function MonthExplorer({ language }: { language: LanguageFilterValue }) {
           onClick={() => step(1)}
           disabled={index >= months.length - 1}
           aria-label="Next month"
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 enabled:hover:bg-gray-100 dark:enabled:hover:bg-gray-700 disabled:opacity-30 transition-colors"
+          className="st-act st-act--icon disabled:opacity-30"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -211,9 +211,9 @@ export function MonthExplorer({ language }: { language: LanguageFilterValue }) {
           value={index < 0 ? months.length - 1 : index}
           aria-valuetext={monthLabel(months[index < 0 ? months.length - 1 : index] ?? current.month)}
           onChange={(event) => setScrubbing(Number(event.target.value))}
-          className="w-full accent-primary-600 cursor-pointer"
+          className="w-full accent-[color:var(--ai)] cursor-pointer"
         />
-        <div className="flex justify-between text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+        <div className="fig-axis">
           <span>{monthLabel(months[0])}</span>
           <span>{monthLabel(months[months.length - 1])}</span>
         </div>

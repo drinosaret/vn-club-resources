@@ -1,14 +1,22 @@
 import type { Metadata } from 'next';
-import { generatePageMetadata, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
+import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
   title: 'Privacy Policy',
   description:
-    'VN Club privacy policy. What data we collect (not much), how images are proxied, and how your preferences are stored locally.',
+    'The privacy policy for VN Club, a free open source site about Japanese visual novels: what is collected (almost nothing), how cover images are proxied, and how preferences stay in your browser.',
   path: '/privacy/',
 });
 
 const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Privacy Policy',
+    description:
+      'What VN Club collects, how cover images are proxied, and where reader preferences are stored.',
+    url: `${SITE_URL}/privacy/`,
+  },
   generateBreadcrumbJsonLd([
     { name: 'Home', path: '/' },
     { name: 'Privacy Policy', path: '/privacy/' },
@@ -22,17 +30,17 @@ export default function PrivacyPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }}
       />
-      <div className="container mx-auto px-4 py-12 max-w-3xl">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="container mx-auto max-w-3xl px-4 py-12">
+        <h1 className="sec-title">
           Privacy Policy
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-          Last updated: April 9, 2026
+        <p className="op-label mt-3">
+          Last updated: September 5, 2026
         </p>
 
-        <div className="prose dark:prose-invert max-w-none prose-headings:text-xl prose-headings:font-semibold prose-headings:mt-8 prose-headings:mb-3 prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-li:text-gray-600 dark:prose-li:text-gray-300">
+        <div className="prose op-doc mt-8">
           <p>
-            VN Club (vnclub.org) is a free resource site for learning Japanese through visual novels.
+            VN Club (vnclub.org) is a free, open source site about Japanese visual novels.
           </p>
 
           <h2>What we collect</h2>
@@ -72,8 +80,9 @@ export default function PrivacyPage() {
 
           <h2>Cookies and local storage</h2>
           <p>
-            We don&apos;t set cookies. Your browser&apos;s local storage saves your preferences (tier
-            list settings, language toggles) - that data stays on your device and never leaves it.
+            The only cookie we set remembers the grid size you picked on the browse page, for a
+            year. Your browser&apos;s local storage saves your other preferences (tier list settings,
+            language toggles) - that data stays on your device and never leaves it.
           </p>
 
           <h2>Third-party services</h2>
@@ -83,7 +92,11 @@ export default function PrivacyPage() {
               anything with them.
             </li>
             <li>
-              <strong>Jiten.moe</strong> - Language difficulty data, reading statistics, vocabulary
+              <strong>
+                <a href="https://jiten.moe" target="_blank" rel="noopener noreferrer">
+                  Jiten.moe
+                </a>
+              </strong> - Language difficulty data, reading statistics, vocabulary
               data, and example sentences come from Jiten.moe. We don&apos;t share user data with them.
             </li>
             <li>

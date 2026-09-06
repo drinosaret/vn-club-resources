@@ -512,4 +512,9 @@ def slug_cache_key(slug: str, language: str = LANGUAGE_ALL) -> str:
     return f"lb:v1:slug:{slug}"
 
 
+#: Credit for the reading-difficulty measurements, which are the one figure on the site
+#: produced elsewhere. Held here rather than in either consumer so a standing board and a
+#: built one cannot credit the same source two different ways.
+JITEN_ATTRIBUTION = ("jiten.moe", "https://jiten.moe/decks/media?mediaType=7")
+
 CATALOGUE_CACHE_KEY = "lb:v1:catalogue"

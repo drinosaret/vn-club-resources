@@ -100,7 +100,7 @@ export async function fetchBatchCharacters(ids: string[]): Promise<BatchItem[]> 
  * Uses ClipboardItem with a promise-based blob so the browser holds the
  * gesture permission while the async data resolves.
  *
- * Returns { copied: boolean, text: string } — text is the resolved value
+ * Returns { copied: boolean, text: string }; text is the resolved value
  * so the caller can show it as fallback if copy failed.
  */
 export function copyAsyncText(textPromise: Promise<string>): Promise<{ copied: boolean; text: string }> {
@@ -113,7 +113,7 @@ export function copyAsyncText(textPromise: Promise<string>): Promise<{ copied: b
         .then(() => textPromise.then(t => ({ copied: true, text: t })))
         .catch(() => textPromise.then(t => ({ copied: false, text: t })));
     } catch {
-      // ClipboardItem construction failed — fall through
+      // ClipboardItem construction failed; fall through
     }
   }
   // Fallback: wait for text, then try writeText (may fail without gesture)

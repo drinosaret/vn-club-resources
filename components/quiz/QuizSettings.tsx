@@ -62,31 +62,20 @@ export function QuizSettings({ settings, onSettingsChange }: QuizSettingsProps) 
     allRows.every(r => settings.katakanaRows.includes(r));
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Quiz Settings</h3>
+    <div className="panel p-5 pt-7">
+      <h2 className="nameplate dg-plate">Settings</h2>
 
       {/* Quick Presets */}
       <div className="mb-5">
-        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-          Quick Presets
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <ToggleButton
-            active={bothHaveBasic}
-            onClick={selectBasicPreset}
-          >
-            Basic (46)
+        <label className="fig-label mb-2">Quick Presets</label>
+        <div className="tabs">
+          <ToggleButton active={bothHaveBasic} onClick={selectBasicPreset}>
+            Basic <span className="tab-count">46</span>
           </ToggleButton>
-          <ToggleButton
-            active={bothHaveDakuten}
-            onClick={selectDakutenPreset}
-          >
-            Dakuten (25)
+          <ToggleButton active={bothHaveDakuten} onClick={selectDakutenPreset}>
+            Dakuten <span className="tab-count">25</span>
           </ToggleButton>
-          <ToggleButton
-            active={bothHaveAll}
-            onClick={selectAllPreset}
-          >
+          <ToggleButton active={bothHaveAll} onClick={selectAllPreset}>
             All
           </ToggleButton>
         </div>
@@ -94,24 +83,22 @@ export function QuizSettings({ settings, onSettingsChange }: QuizSettingsProps) 
 
       {/* Include Combos */}
       <div>
-        <label className="flex items-center gap-2 cursor-pointer group">
+        <label className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
             checked={settings.includeCombo}
             onChange={handleComboToggle}
-            className="w-4 h-4 rounded-sm border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 dark:bg-gray-700 cursor-pointer"
+            className="h-3.5 w-3.5 cursor-pointer rounded-xs border-[color:var(--rule)] accent-[color:var(--ai)]"
           />
-          <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
-            Include combo characters (kya, sha, cha..)
+          <span className="text-sm text-[color:var(--text-secondary)]">
+            Include combo characters (kya, sha, cha...)
           </span>
         </label>
       </div>
 
       {/* Warning message */}
       {noRowsSelected && (
-        <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-          Select at least one row below
-        </p>
+        <p className="mt-3 text-xs text-[color:var(--beni-text)]">Select at least one row below</p>
       )}
     </div>
   );
@@ -129,14 +116,7 @@ function ToggleButton({ active, onClick, disabled, children }: ToggleButtonProps
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`
-        px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-        ${active
-          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 ring-2 ring-emerald-500/50'
-          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-        }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-      `}
+      className={`tab ${active ? 'tab--on' : ''} ${disabled ? 'opacity-50' : ''}`}
     >
       {children}
     </button>

@@ -12,6 +12,9 @@ import { stripBBCode } from '@/lib/bbcode';
 // Maximum search query length to prevent ReDoS attacks
 const MAX_QUERY_LENGTH = 100;
 const VN_RESULT_LIMIT = 5;
+// Options are addressed by their position in the flat list, so the field can name the
+// highlighted one while keeping the caret and the typing to itself.
+const OPTION_ID_PREFIX = 'search-opt-';
 
 interface SearchBarProps {
   className?: string;
@@ -51,7 +54,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
     }
   }, []);
 
-  // Debounced search — guides + VNs in parallel
+  // Debounced search: guides + VNs in parallel
   useEffect(() => {
     if (!query.trim()) {
       setGuideResults([]);
@@ -125,7 +128,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
   }, [onClose]);
 
   const navigateToGuide = useCallback((result: SearchResult) => {
-    router.push(`/${result.slug}`);
+    router.push(`/${result.slug}/`);
     closeAndReset();
   }, [router, closeAndReset]);
 
@@ -215,7 +218,7 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
 
     return parts.map((part, i) =>
       regex.test(part) ? (
-        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 text-inherit rounded-sm px-0.5">
+        <mark key={i} className="sw-mark">
           {part}
         </mark>
       ) : (
@@ -231,13 +234,16 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
       <div className="relative">
         {isLoading ? (
           <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-indigo-500 dark:border-t-indigo-400 rounded-full animate-spin" />
+            <div className="sw-spin w-3.5 h-3.5" />
           </div>
         ) : (
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--text-faint)]" />
         )}
         <input
           ref={inputRef}
+          // A search field with neither name nor id is reported as a form defect by the browser
+          // and is skipped by password managers and autofill heuristics.
+          name="q"
           type="search"
           autoComplete="off"
           value={query}
@@ -248,29 +254,18 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
             query.trim() && (hasResults || isLoading) && setIsOpen(true);
           }}
           placeholder="Search..."
-          className={`
-            w-full pl-9 pr-8 py-2
-            bg-gray-100 dark:bg-gray-800
-            border border-gray-200 dark:border-gray-700
-            rounded-lg
-            text-sm text-gray-900 dark:text-gray-100
-            placeholder-gray-500 dark:placeholder-gray-400
-            focus:outline-hidden transition-colors
-            ${isMobile
-              ? 'text-base focus:border-gray-400 dark:focus:border-gray-600'
-              : 'focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent'
-            }
-          `}
+          className={`sw-search ${isMobile ? 'sw-search--big' : ''}`}
           aria-label="Search"
           aria-expanded={isOpen}
           aria-controls="search-results"
+          aria-activedescendant={isOpen && selectedIndex >= 0 ? `${OPTION_ID_PREFIX}${selectedIndex}` : undefined}
           role="combobox"
           aria-autocomplete="list"
         />
         {query && (
           <button
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="sw-icon absolute right-1.5 top-1/2 -translate-y-1/2"
             aria-label="Clear search"
           >
             <X className="w-4 h-4" />
@@ -278,29 +273,23 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
         )}
       </div>
 
-      {/* Results dropdown */}
+      {/* Results dropdown. In the mobile menu it keeps to its container's width: that menu is a
+          scroll box, so a panel wider than it is clipped rather than bled into the gutter. */}
       {isOpen && (
         <div
           id="search-results"
           role="listbox"
-          className={`
-            absolute z-50 mt-2
-            bg-white dark:bg-gray-900
-            shadow-lg
-            max-h-112 overflow-y-auto
-            ${isMobile
-              ? '-mx-4 w-[calc(100%+2rem)] rounded-b-lg border-b border-gray-200 dark:border-gray-700'
-              : 'w-full min-w-[420px] rounded-lg border border-gray-200 dark:border-gray-700'
-            }
-          `}
+          className={`sw-menu absolute z-50 mt-2 max-h-112 overflow-y-auto ${
+            isMobile ? 'w-full' : 'w-full min-w-[420px]'
+          }`}
         >
           {isLoading && !hasResults ? (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-              <div className="inline-block w-4 h-4 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin mr-2" />
+            <div className="sw-empty">
+              <span className="sw-spin w-3.5 h-3.5 mr-2 align-middle" />
               Searching...
             </div>
           ) : !isLoading && !hasResults ? (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+            <div className="sw-empty">
               No results found for &ldquo;{query}&rdquo;
             </div>
           ) : (
@@ -309,44 +298,39 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
               {guideResults.length > 0 && (
                 <div>
                   {vnResults.length > 0 && (
-                    <div className="px-4 pt-2.5 pb-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <div className="sw-plate px-3.5 pt-2.5 pb-1.5">
                       Guides
                     </div>
                   )}
-                  <ul className={vnResults.length > 0 ? 'pb-1' : 'py-2'}>
+                  <ul role="presentation">
                     {guideResults.map((result, index) => (
-                      <li key={result.id}>
+                      <li key={result.id} role="presentation">
                         <button
                           onClick={() => navigateToGuide(result)}
                           onMouseEnter={() => setSelectedIndex(index)}
+                          id={`${OPTION_ID_PREFIX}${index}`}
                           role="option"
                           aria-selected={index === selectedIndex}
-                          className={`
-                            w-full px-4 py-3 text-left
-                            hover:bg-gray-100 dark:hover:bg-gray-800
-                            focus:outline-hidden focus:bg-gray-100 dark:focus:bg-gray-800
-                            border-b border-gray-100 dark:border-gray-800 last:border-b-0
-                            ${index === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
-                          `}
+                          className={`sw-hit ${index === selectedIndex ? 'sw-hit--on' : ''}`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className="shrink-0 mt-0.5">
+                            <div className="shrink-0 mt-0.5 text-[color:var(--nezu)]">
                               {result.type === 'guide' ? (
-                                <FileText className="w-4 h-4 text-indigo-500" />
+                                <FileText className="w-4 h-4" />
                               ) : (
-                                <Newspaper className="w-4 h-4 text-purple-500" />
+                                <Newspaper className="w-4 h-4" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                              <div className="sw-hit-name truncate">
                                 {highlightMatch(result.title, query)}
                               </div>
                               {result.section && (
-                                <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
+                                <div className="sw-hit-sub mt-0.5">
                                   in section: {result.section}
                                 </div>
                               )}
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                              <div className="sw-hit-why line-clamp-2">
                                 {highlightMatch(result.excerpt, query)}
                               </div>
                             </div>
@@ -360,11 +344,11 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
 
               {/* VN results */}
               {vnResults.length > 0 && (
-                <div className={guideResults.length > 0 ? 'border-t border-gray-200 dark:border-gray-700' : ''}>
-                  <div className="px-4 pt-2.5 pb-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <div className={guideResults.length > 0 ? 'border-t border-[color:var(--rule)]' : ''}>
+                  <div className="sw-plate px-3.5 pt-2.5 pb-1.5">
                     Visual Novels
                   </div>
-                  <ul className="pb-1">
+                  <ul role="presentation">
                     {vnResults.map((vn, index) => {
                       const flatIndex = guideResults.length + index;
                       const vnId = vn.id.startsWith('v') ? vn.id : `v${vn.id}`;
@@ -379,23 +363,18 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                       ).replace(/\\n|\n/g, ' ').replace(/\s+/g, ' ').trim();
 
                       return (
-                        <li key={vn.id}>
+                        <li key={vn.id} role="presentation">
                           <button
                             onClick={() => navigateToVN(vn)}
                             onMouseEnter={() => setSelectedIndex(flatIndex)}
+                            id={`${OPTION_ID_PREFIX}${flatIndex}`}
                             role="option"
                             aria-selected={flatIndex === selectedIndex}
-                            className={`
-                              w-full px-4 py-2.5 text-left
-                              hover:bg-gray-100 dark:hover:bg-gray-800
-                              focus:outline-hidden focus:bg-gray-100 dark:focus:bg-gray-800
-                              border-b border-gray-100 dark:border-gray-800 last:border-b-0
-                              ${flatIndex === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
-                            `}
+                            className={`sw-hit ${flatIndex === selectedIndex ? 'sw-hit--on' : ''}`}
                           >
                             <div className="flex items-start gap-3">
                               {/* Thumbnail */}
-                              <div className="shrink-0 w-10 h-14 rounded-sm overflow-hidden bg-gray-200 dark:bg-gray-700">
+                              <div className="sw-cover shrink-0 w-10 h-14">
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
@@ -407,34 +386,34 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                                     onError={(e) => { (e.target as HTMLImageElement).classList.remove('opacity-0'); }}
                                   />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Gamepad2 className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                  <div className="w-full h-full flex items-center justify-center text-[color:var(--text-faint)]">
+                                    <Gamepad2 className="w-5 h-5" />
                                   </div>
                                 )}
                               </div>
 
                               {/* Details */}
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                <div className="sw-hit-name truncate">
                                   {highlightMatch(displayTitle, query)}
                                 </div>
                                 {subtitle && subtitle !== displayTitle && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  <div className="sw-hit-sub truncate">
                                     {subtitle}
                                   </div>
                                 )}
-                                <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                <div className="sw-hit-sub flex items-center gap-2 mt-0.5">
                                   {vn.rating != null && (
-                                    <span className="text-yellow-600 dark:text-yellow-400">
+                                    <span className="font-mono tabular-nums">
                                       ★ {vn.rating.toFixed(1)}
                                     </span>
                                   )}
                                   {vn.released && (
-                                    <span>{vn.released.slice(0, 4)}</span>
+                                    <span className="font-mono tabular-nums">{vn.released.slice(0, 4)}</span>
                                   )}
                                 </div>
                                 {vn.description && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                  <div className="sw-hit-why line-clamp-2">
                                     {stripBBCode(vn.description).replace(/\n/g, ' ')}
                                   </div>
                                 )}
@@ -450,17 +429,12 @@ export default function SearchBar({ className = '', onClose, isMobile = false }:
                   <button
                     onClick={navigateToBrowse}
                     onMouseEnter={() => setSelectedIndex(guideResults.length + vnResults.length)}
+                    id={`${OPTION_ID_PREFIX}${guideResults.length + vnResults.length}`}
                     role="option"
                     aria-selected={selectedIndex === guideResults.length + vnResults.length}
-                    className={`
-                      w-full px-4 py-2.5 text-left text-sm
-                      text-indigo-600 dark:text-indigo-400
-                      hover:bg-gray-100 dark:hover:bg-gray-800
-                      focus:outline-hidden
-                      border-t border-gray-200 dark:border-gray-700
-                      flex items-center gap-2
-                      ${selectedIndex === guideResults.length + vnResults.length ? 'bg-gray-100 dark:bg-gray-800' : ''}
-                    `}
+                    className={`sw-all ${
+                      selectedIndex === guideResults.length + vnResults.length ? 'sw-all--on' : ''
+                    }`}
                   >
                     <Search className="w-3.5 h-3.5" />
                     Search all visual novels for &ldquo;{query}&rdquo;

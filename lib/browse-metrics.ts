@@ -86,7 +86,7 @@ export const METRIC_DISPLAY: Record<BrowseMetric, MetricDisplay> = {
   },
   difficulty: {
     label: 'Reading difficulty',
-    blurb: 'How hard the Japanese is, from jiten.moe’s analysis of the script.',
+    blurb: 'How hard the Japanese is, measured from the script.',
     format: asDifficulty,
   },
 };

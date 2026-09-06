@@ -196,18 +196,22 @@ async def train_collaborative_filter():
         rows, cols, data = [], [], []
 
         for user_hash, vn_id, vote in votes:
+            # A low vote is not weak approval, it is disapproval, and an implicit model
+            # reads every entry as a positive. Votes under the floor are left out; the
+            # rest carry a confidence that grows with the mark. The index is allocated
+            # after the check, so a reader or title with nothing kept has no empty row.
+            if vote < settings.cf_min_vote:
+                continue
+            confidence = 1.0 + settings.cf_alpha * (vote - settings.cf_min_vote) / (100 - settings.cf_min_vote)
+
             if user_hash not in user_ids:
                 user_ids[user_hash] = len(user_ids)
             if vn_id not in vn_ids:
                 vn_ids[vn_id] = len(vn_ids)
 
-            # Confidence-weighted implicit feedback
-            # Higher votes = more confidence
-            confidence = 1 + 0.5 * (vote - 50) / 50
-
             rows.append(user_ids[user_hash])
             cols.append(vn_ids[vn_id])
-            data.append(max(0.1, confidence))  # Ensure positive
+            data.append(confidence)
 
         # Build sparse matrix
         interaction_matrix = sparse.csr_matrix(
@@ -701,198 +705,3 @@ async def swap_similarity_tables():
         except Exception as e:
             logger.warning(f"Post-swap cleanup failed (live data is serving correctly): {e}")
             await db.rollback()
-
-
-async def train_hybrid_embeddings(n_components: int = 64, epochs: int = 30):
-    """
-    Train feature-weighted hybrid embeddings using NumPy/SciPy.
-
-    Combines collaborative filtering embeddings (from ALS) with tag-based
-    content features using weighted blending and dimensionality reduction.
-
-    The resulting embeddings capture both:
-    - User behavior patterns (from CF factors, weight: 60%)
-    - Content similarity (from tag vectors, weight: 40%)
-
-    Args:
-        n_components: Embedding dimension (default 64)
-        epochs: Not used (kept for API compatibility with scheduler)
-    """
-    from sklearn.decomposition import TruncatedSVD
-
-    logger.info(f"Training feature-weighted hybrid model (components={n_components})")
-
-    async with async_session() as db:
-        # Load CF factors (from ALS training) — typically ~30K VNs * 64 floats, small enough
-        logger.info("Loading CF factors...")
-        cf_result = await db.execute(
-            select(CFVNFactors.vn_id, CFVNFactors.factors)
-        )
-        cf_factors = {row[0]: np.array(row[1], dtype=np.float32) for row in cf_result.all()}
-
-        # Load tag vectors in batches to avoid OOM
-        logger.info("Loading tag vectors...")
-        tag_id_result = await db.execute(
-            select(TagVNVector.vn_id).order_by(TagVNVector.vn_id)
-        )
-        tag_vn_ids = [row[0] for row in tag_id_result.all()]
-        tag_vectors: dict[str, np.ndarray] = {}
-
-        batch_load_size = 5000
-        for offset in range(0, len(tag_vn_ids), batch_load_size):
-            batch_ids = tag_vn_ids[offset:offset + batch_load_size]
-            result = await db.execute(
-                select(TagVNVector.vn_id, TagVNVector.tag_vector)
-                .where(TagVNVector.vn_id.in_(batch_ids))
-            )
-            for row in result.all():
-                tag_vectors[row[0]] = np.array(row[1], dtype=np.float32)
-
-        logger.info(f"Loaded {len(tag_vectors)} tag vectors")
-
-        if not cf_factors:
-            logger.warning("No CF factors found, run train_collaborative_filter first")
-            return
-
-        if not tag_vectors:
-            logger.warning("No tag vectors found, run compute_tag_vectors first")
-            return
-
-        # Get VNs that have both CF and tag data
-        common_vns = list(set(cf_factors.keys()) & set(tag_vectors.keys()))
-        logger.info(f"Found {len(common_vns)} VNs with both CF and tag data")
-
-        if len(common_vns) < 100:
-            logger.warning("Too few VNs with both data sources")
-            return
-
-        # Build combined feature matrix
-        # Strategy: Concatenate CF factors and compressed tag vectors, then reduce
-        cf_dim = len(next(iter(cf_factors.values())))
-        tag_dim = len(next(iter(tag_vectors.values())))
-
-        logger.info(f"CF dim: {cf_dim}, Tag dim: {tag_dim}")
-
-        # Compress tag vectors to match CF dimension using SVD
-        logger.info("Compressing tag vectors with SVD...")
-        tag_matrix = np.zeros((len(common_vns), tag_dim), dtype=np.float32)
-        for i, vn_id in enumerate(common_vns):
-            tag_matrix[i] = tag_vectors[vn_id]
-
-        # Use TruncatedSVD for dimensionality reduction
-        target_tag_dim = min(cf_dim, tag_dim, 32)
-        svd = TruncatedSVD(n_components=target_tag_dim, random_state=42)
-        compressed_tags = svd.fit_transform(tag_matrix)
-        logger.info(f"Compressed tags to {target_tag_dim} dimensions (explained variance: {svd.explained_variance_ratio_.sum():.2%})")
-
-        # Combine: weighted average of CF and content signals
-        # CF weight: 0.6, Content weight: 0.4 (CF usually stronger signal)
-        cf_weight = 0.6
-        content_weight = 0.4
-
-        hybrid_embeddings = {}
-        now = datetime.utcnow()
-
-        for i, vn_id in enumerate(common_vns):
-            cf_vec = cf_factors[vn_id]
-            tag_vec = compressed_tags[i]
-
-            # Normalize both vectors
-            cf_norm = np.linalg.norm(cf_vec)
-            tag_norm = np.linalg.norm(tag_vec)
-
-            if cf_norm > 0:
-                cf_vec = cf_vec / cf_norm
-            if tag_norm > 0:
-                tag_vec = tag_vec / tag_norm
-
-            # Pad tag_vec to match cf_vec dimension if needed
-            if len(tag_vec) < len(cf_vec):
-                tag_vec = np.pad(tag_vec, (0, len(cf_vec) - len(tag_vec)))
-            elif len(tag_vec) > len(cf_vec):
-                tag_vec = tag_vec[:len(cf_vec)]
-
-            # Weighted combination
-            hybrid = cf_weight * cf_vec + content_weight * tag_vec
-
-            # Normalize final embedding
-            hybrid_norm = np.linalg.norm(hybrid)
-            if hybrid_norm > 0:
-                hybrid = hybrid / hybrid_norm
-
-            hybrid_embeddings[vn_id] = hybrid
-
-        # Also create embeddings for VNs with only tag data (cold start)
-        tag_only_vns = set(tag_vectors.keys()) - set(cf_factors.keys())
-        logger.info(f"Creating content-only embeddings for {len(tag_only_vns)} cold-start VNs")
-
-        # Fit SVD on remaining tag vectors
-        if tag_only_vns:
-            tag_only_matrix = np.zeros((len(tag_only_vns), tag_dim), dtype=np.float32)
-            tag_only_list = list(tag_only_vns)
-            for i, vn_id in enumerate(tag_only_list):
-                tag_only_matrix[i] = tag_vectors[vn_id]
-
-            compressed_cold = svd.transform(tag_only_matrix)
-
-            for i, vn_id in enumerate(tag_only_list):
-                tag_vec = compressed_cold[i]
-                tag_norm = np.linalg.norm(tag_vec)
-                if tag_norm > 0:
-                    tag_vec = tag_vec / tag_norm
-
-                # Pad to CF dimension
-                if len(tag_vec) < cf_dim:
-                    tag_vec = np.pad(tag_vec, (0, cf_dim - len(tag_vec)))
-
-                hybrid_embeddings[vn_id] = tag_vec
-
-        # Store hybrid embeddings
-        logger.info(f"Storing {len(hybrid_embeddings)} hybrid embeddings...")
-
-        # We'll store these in VNGraphEmbedding table with model_version="hybrid_v1"
-        from app.db.models import VNGraphEmbedding
-
-        # Clear existing hybrid embeddings
-        await db.execute(
-            text("DELETE FROM vn_graph_embeddings WHERE model_version = 'hybrid_v1'")
-        )
-
-        batch = []
-        for vn_id, embedding in hybrid_embeddings.items():
-            batch.append({
-                "vn_id": vn_id,
-                "embedding": embedding.tolist(),
-                "model_version": "hybrid_v1",
-                "computed_at": now,
-            })
-
-            if len(batch) >= 1000:
-                await _insert_hybrid_embeddings(db, batch)
-                batch = []
-
-        if batch:
-            await _insert_hybrid_embeddings(db, batch)
-
-        await db.commit()
-
-    logger.info(f"Feature-weighted hybrid model trained: {len(hybrid_embeddings)} VN embeddings")
-
-
-async def _insert_hybrid_embeddings(db, batch: list[dict]):
-    """Insert hybrid VN embeddings."""
-    from app.db.models import VNGraphEmbedding
-
-    stmt = insert(VNGraphEmbedding).values(batch)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["vn_id", "model_version"],
-        set_={
-            "embedding": stmt.excluded.embedding,
-            "computed_at": stmt.excluded.computed_at,
-        }
-    )
-    await db.execute(stmt)
-
-
-# Backwards-compatible alias (deprecated name)
-train_lightfm = train_hybrid_embeddings

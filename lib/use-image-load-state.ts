@@ -17,7 +17,7 @@ export function useImageLoadState(id: string, baseImageUrl: string | null) {
   const [, rerender] = useReducer(x => x + 1, 0);
 
   // Reset when item changes (component instance reuse via key={index}).
-  // Ref mutation — no setState during render, so React doesn't discard + retry.
+  // Ref mutation: no setState during render, so React doesn't discard + retry.
   const prevIdRef = useRef(id);
   if (id !== prevIdRef.current) {
     prevIdRef.current = id;

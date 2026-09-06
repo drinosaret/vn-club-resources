@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from '@/components/Link';
-import { CalendarRange } from 'lucide-react';
 
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { ReadingYear } from '@/lib/vndb-stats-api';
@@ -50,17 +49,16 @@ export function ReadingYears({ uid }: ReadingYearsProps) {
   // shape is still legible instead of a row of slivers.
   const peak = busiest?.rated ?? 0;
 
-  if (loading) return <div className="image-placeholder h-[26rem] rounded-xl" />;
+  if (loading) return <div className="image-placeholder h-[26rem] rounded-xs" />;
   // One year is not a history, and a reader whose votes predate VNDB carrying dates has none.
   if (years.length < 2) return null;
 
   return (
-    <div className="flex h-full max-h-[26rem] flex-col rounded-xl border border-gray-200/60 bg-white p-5 shadow-md shadow-gray-200/50 dark:border-gray-700/80 dark:bg-gray-800 dark:shadow-none">
-      <h2 className="mb-1 flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-        <CalendarRange className="h-4 w-4 text-gray-400" />
+    <div className="flex h-full max-h-[26rem] flex-col st-card p-5">
+      <h2 className="st-card-title mb-1">
         Year by year
       </h2>
-      <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
+      <p className="st-card-sub mb-4">
         When you rated things, not when they came out.
         {busiest ? (
           <>
@@ -78,7 +76,7 @@ export function ReadingYears({ uid }: ReadingYearsProps) {
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pr-3 [scrollbar-gutter:stable]">
         {years.map((year) => (
           <div key={year.year} className="flex items-baseline gap-3">
-            <span className="w-10 shrink-0 text-xs font-medium tabular-nums text-gray-700 dark:text-gray-300">
+            <span className="w-10 shrink-0 text-xs font-medium st-num text-[color:var(--text-secondary)]">
               {year.year}
             </span>
 
@@ -93,17 +91,17 @@ export function ReadingYears({ uid }: ReadingYearsProps) {
                     the busiest year rather than of anything absolute, and without the track
                     there is nothing on screen saying what a full one would be. It also
                     matches the card beside this one, which these bars sit level with. */}
-                <span className="block h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                <span className="st-bar block h-2 min-w-0 flex-1">
                   <span
-                    className="block h-full rounded-full bg-primary-500"
+                    className="st-bar-fill block"
                     style={{ width: `${peak ? Math.max((year.rated / peak) * 100, 2) : 2}%` }}
                     aria-hidden="true"
                   />
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                <span className="shrink-0 text-xs st-num text-[color:var(--nezu)]">
                   {year.rated.toLocaleString()}
                   {year.average !== null ? (
-                    <span className="text-gray-400 dark:text-gray-500">
+                    <span className="text-[color:var(--text-faint)]">
                       {' '}
                       &middot; avg {year.average.toFixed(2)}
                     </span>
@@ -114,7 +112,7 @@ export function ReadingYears({ uid }: ReadingYearsProps) {
               {year.best ? (
                 <Link
                   href={year.best.href}
-                  className="block truncate text-xs text-gray-500 transition-colors hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+                  className="block truncate text-xs text-[color:var(--nezu)] transition-colors hover:text-[color:var(--ai)]"
                 >
                   Best that year:{' '}
                   {getDisplayTitle(

@@ -14,8 +14,23 @@ interface InsightCardsProps {
 
 // ============ Calculation Functions ============
 
+/**
+ * Where a verdict sits on its own scale: rising or strong, falling or weak, the middle of the
+ * scale, or the atypical one worth stopping on. A panel of verdicts otherwise renders as four
+ * identical plates, which is a sentence each to read rather than a glance.
+ */
+type Tone = 'up' | 'down' | 'flat' | 'mark';
+
+const TONE_CLASS: Record<Tone, string> = {
+  up: 'nameplate nameplate--up',
+  down: 'nameplate nameplate--down',
+  flat: 'nameplate nameplate--plain',
+  mark: 'nameplate',
+};
+
 interface PolarizationResult {
   label: string;
+  tone: Tone;
   stddev: number;
   /** 0-1 normalized, higher = more divisive */
   normalized: number;
@@ -45,25 +60,33 @@ function computePolarization(distribution: Record<string, number>): Polarization
 
   let label: string;
   let tooltip: string;
+  let tone: Tone;
+  // Agreement is what makes the average worth trusting, so the tight end reads as the strong
+  // one. A split vote is a finding rather than a failing, so it takes the standout.
   if (stddev < 1.3) {
     label = 'Strong Consensus';
+    tone = 'up';
     tooltip = 'Voters strongly agree on this title. Most scores cluster tightly around the average.';
   } else if (stddev < 1.8) {
     label = 'Broad Agreement';
+    tone = 'flat';
     tooltip = 'General agreement with natural variance. Some spread across scores but no major disagreement.';
   } else if (stddev < 2.3) {
     label = 'Mixed Opinions';
+    tone = 'flat';
     tooltip = 'Notable disagreement among voters. Opinions are spread across multiple score ranges.';
   } else {
     label = 'Love it or Hate it';
+    tone = 'mark';
     tooltip = 'Sharply divided opinions. Votes cluster at opposite ends of the scale.';
   }
 
-  return { label, stddev: Math.round(stddev * 100) / 100, normalized, tooltip };
+  return { label, tone, stddev: Math.round(stddev * 100) / 100, normalized, tooltip };
 }
 
 interface HypeCurveResult {
   label: string;
+  tone: Tone;
   earlyAvg: number;
   lateAvg: number;
   tooltip: string;
@@ -92,22 +115,28 @@ function computeHypeCurve(scoreOverTime: VNMonthlyScore[]): HypeCurveResult | nu
 
   let label: string;
   let tooltip: string;
+  let tone: Tone;
   if (earlyAvg >= 7.5 && lateAvg >= 7.5 && Math.abs(diff) < 0.3) {
     label = 'Instant Classic';
+    tone = 'up';
     tooltip = 'Consistently high scores from release to present. Both early and recent voters average 7.5+ with less than 0.3 difference.';
   } else if (diff > 0.3) {
     label = 'Sleeper Hit';
+    tone = 'up';
     tooltip = 'Scores improved over time. Recent voters rate it higher than early voters by 0.3+ points.';
   } else if (diff < -0.3) {
     label = 'Hype Decay';
+    tone = 'down';
     tooltip = 'Early excitement faded. Scores dropped 0.3+ points from the initial reception period to recent votes.';
   } else {
     label = 'Steady';
+    tone = 'flat';
     tooltip = 'Score has remained stable over time, with less than 0.3 points difference between early and recent voters.';
   }
 
   return {
     label,
+    tone,
     earlyAvg: Math.round(earlyAvg * 100) / 100,
     lateAvg: Math.round(lateAvg * 100) / 100,
     tooltip,
@@ -116,6 +145,7 @@ function computeHypeCurve(scoreOverTime: VNMonthlyScore[]): HypeCurveResult | nu
 
 interface VoteVelocityResult {
   label: string;
+  tone: Tone;
   recentRate: number;
   baselineRate: number;
   tooltip: string;
@@ -138,25 +168,32 @@ function computeVoteVelocity(votesOverTime: VNMonthlyVotes[]): VoteVelocityResul
 
   let label: string;
   let tooltip: string;
+  let tone: Tone;
   if (ratio >= 1.5) {
     label = 'Surging';
+    tone = 'up';
     tooltip = 'Vote rate in the last 3 months is 50%+ higher than the preceding 6 months. Interest is spiking.';
   } else if (ratio >= 1.1) {
     label = 'Growing';
+    tone = 'up';
     tooltip = 'Vote rate is trending upward. The last 3 months show 10%+ more votes than the preceding period.';
   } else if (ratio >= 0.7) {
     label = 'Steady';
+    tone = 'flat';
     tooltip = 'Vote rate is roughly stable, within 30% of the preceding 6-month average.';
   } else if (ratio >= 0.3) {
     label = 'Fading';
+    tone = 'down';
     tooltip = 'Vote rate has dropped significantly. The last 3 months are well below the preceding period.';
   } else {
     label = 'Dormant';
+    tone = 'down';
     tooltip = 'Almost no votes in the last 3 months compared to before. This title is no longer actively being rated.';
   }
 
   return {
     label,
+    tone,
     recentRate: Math.round(recentRate * 10) / 10,
     baselineRate: Math.round(baselineRate * 10) / 10,
     tooltip,
@@ -165,6 +202,7 @@ function computeVoteVelocity(votesOverTime: VNMonthlyVotes[]): VoteVelocityResul
 
 interface NicheQuadrantResult {
   label: string;
+  tone: Tone;
   /** 0-1 X position (log-scaled votecount) */
   x: number;
   /** 0-1 Y position (rating) */
@@ -186,17 +224,24 @@ function computeNicheQuadrant(
 
   let label: string;
   let tooltip: string;
+  let tone: Tone;
+  // A title rated well above the size of its audience is the one a reader came here to find,
+  // so it takes the standout rather than the ranked scale the other three sit on.
   if (highRating && !highPopularity) {
     label = 'Hidden Gem';
+    tone = 'mark';
     tooltip = `Rated above the 75th percentile (${medians.p75_rating.toFixed(1)}+) but with fewer votes than most top-rated titles. Underappreciated quality.`;
   } else if (highRating && highPopularity) {
     label = 'Fan Favorite';
+    tone = 'up';
     tooltip = `Both highly rated (top 25%, ${medians.p75_rating.toFixed(1)}+) and widely played (${Math.round(medians.p75_votecount)}+ votes). A proven hit.`;
   } else if (!highRating && !highPopularity) {
     label = 'Under the Radar';
+    tone = 'flat';
     tooltip = `Below the 75th percentile in both rating and popularity. May appeal to niche audiences or be a lesser-known work.`;
   } else {
     label = 'Mass Market';
+    tone = 'flat';
     tooltip = `Widely played (${Math.round(medians.p75_votecount)}+ votes) but rated below the top 25%. Popular but opinions vary.`;
   }
 
@@ -208,34 +253,10 @@ function computeNicheQuadrant(
 
   const detail = `${rating.toFixed(2)} rating · ${votecount.toLocaleString()} votes (p75: ${medians.p75_rating.toFixed(1)} / ${Math.round(medians.p75_votecount).toLocaleString()})`;
 
-  return { label, x, y, tooltip, detail };
+  return { label, tone, x, y, tooltip, detail };
 }
 
 // ============ Main Component ============
-
-const labelColors: Record<string, string> = {
-  // Quadrant
-  'Hidden Gem': 'text-emerald-600 dark:text-emerald-400',
-  'Fan Favorite': 'text-amber-600 dark:text-amber-400',
-  'Under the Radar': 'text-gray-500 dark:text-gray-400',
-  'Mass Market': 'text-blue-600 dark:text-blue-400',
-  // Polarization
-  'Strong Consensus': 'text-emerald-600 dark:text-emerald-400',
-  'Broad Agreement': 'text-sky-600 dark:text-sky-400',
-  'Mixed Opinions': 'text-amber-600 dark:text-amber-400',
-  'Love it or Hate it': 'text-rose-600 dark:text-rose-400',
-  // Hype curve
-  'Instant Classic': 'text-amber-600 dark:text-amber-400',
-  'Sleeper Hit': 'text-emerald-600 dark:text-emerald-400',
-  'Hype Decay': 'text-rose-600 dark:text-rose-400',
-  // Velocity
-  Surging: 'text-emerald-600 dark:text-emerald-400',
-  Growing: 'text-sky-600 dark:text-sky-400',
-  Fading: 'text-amber-600 dark:text-amber-400',
-  Dormant: 'text-gray-500 dark:text-gray-400',
-  // Shared
-  Steady: 'text-blue-600 dark:text-blue-400',
-};
 
 export function VNInsightCards({
   scoreDistribution,
@@ -255,59 +276,70 @@ export function VNInsightCards({
 
   if (!polarization && !hypeCurve && !velocity && !nicheQuadrant) return null;
 
-  const cardClass = 'rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200/40 dark:border-gray-700/40';
+  // The verdict is the plate: which category a title falls in is the finding, and a plate says
+  // it in the one place the eye lands. Its tone ranks it against the rest of its own scale, so
+  // a reader takes the shape of all four before reading any of them.
+  const cards: Array<{ caption: string; verdict: string; tone: Tone; blurb: string; detail: string }> = [];
+  if (nicheQuadrant) cards.push({
+    caption: 'Popularity',
+    verdict: nicheQuadrant.label,
+    tone: nicheQuadrant.tone,
+    blurb: nicheQuadrant.tooltip,
+    detail: nicheQuadrant.detail,
+  });
+  if (polarization) cards.push({
+    caption: 'Vote Spread',
+    verdict: polarization.label,
+    tone: polarization.tone,
+    blurb: polarization.tooltip,
+    detail: `σ = ${polarization.stddev}`,
+  });
+  if (hypeCurve) cards.push({
+    caption: 'Score Trajectory',
+    verdict: hypeCurve.label,
+    tone: hypeCurve.tone,
+    blurb: hypeCurve.tooltip,
+    detail: `Early avg ${hypeCurve.earlyAvg.toFixed(1)} → Recent ${hypeCurve.lateAvg.toFixed(1)}`,
+  });
+  if (velocity) cards.push({
+    caption: 'Vote Momentum',
+    verdict: velocity.label,
+    tone: velocity.tone,
+    blurb: velocity.tooltip,
+    detail: `${velocity.recentRate.toFixed(0)}/mo (prev ${velocity.baselineRate.toFixed(0)}/mo)`,
+  });
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 border border-gray-200/60 dark:border-gray-700/80">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Insights</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {nicheQuadrant && (
-          <div className={cardClass}>
-            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Popularity</div>
-            <div className={`text-sm font-semibold mt-0.5 ${labelColors[nicheQuadrant.label] || 'text-gray-700 dark:text-gray-300'}`}>{nicheQuadrant.label}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{nicheQuadrant.tooltip}</div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{nicheQuadrant.detail}</div>
+    <section className="vn-sec p-4 sm:p-5">
+      <div className="vn-sec-head">
+        <h2 className="vn-sec-title">Insights</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {cards.map((card) => (
+          <div key={card.caption} className="border-t border-[color:var(--rule)] pt-3">
+            <span className="fig-label">{card.caption}</span>
+            <div className="mt-1.5">
+              <span className={TONE_CLASS[card.tone]}>{card.verdict}</span>
+            </div>
+            <p className="text-xs text-[color:var(--nezu)] mt-2 leading-relaxed">{card.blurb}</p>
+            <p className="vn-num text-[11px] text-[color:var(--text-faint)] mt-1">{card.detail}</p>
           </div>
-        )}
-        {polarization && (
-          <div className={cardClass}>
-            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Vote Spread</div>
-            <div className={`text-sm font-semibold mt-0.5 ${labelColors[polarization.label] || 'text-gray-700 dark:text-gray-300'}`}>{polarization.label}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{polarization.tooltip}</div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">σ = {polarization.stddev}</div>
-          </div>
-        )}
-        {hypeCurve && (
-          <div className={cardClass}>
-            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Score Trajectory</div>
-            <div className={`text-sm font-semibold mt-0.5 ${labelColors[hypeCurve.label] || 'text-gray-700 dark:text-gray-300'}`}>{hypeCurve.label}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{hypeCurve.tooltip}</div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Early avg {hypeCurve.earlyAvg.toFixed(1)} → Recent {hypeCurve.lateAvg.toFixed(1)}</div>
-          </div>
-        )}
-        {velocity && (
-          <div className={cardClass}>
-            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">Vote Momentum</div>
-            <div className={`text-sm font-semibold mt-0.5 ${labelColors[velocity.label] || 'text-gray-700 dark:text-gray-300'}`}>{velocity.label}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{velocity.tooltip}</div>
-            <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{velocity.recentRate.toFixed(0)}/mo (prev {velocity.baselineRate.toFixed(0)}/mo)</div>
-          </div>
-        )}
+        ))}
       </div>
 
       {/* Expandable legend */}
-      <details className="mt-3 group">
-        <summary className="text-[11px] text-gray-400 dark:text-gray-500 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 select-none list-none flex items-center gap-1">
-          <svg className="w-3 h-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M4.5 2.5L8 6L4.5 9.5" /></svg>
+      <details className="mt-4 group">
+        <summary className="sec-more cursor-pointer select-none list-none">
+          <span aria-hidden className="transition-transform group-open:rotate-90 inline-block">&rsaquo;</span>
           All categories
         </summary>
-        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <div><span className="font-medium text-gray-600 dark:text-gray-300">Popularity:</span> Fan Favorite (≥p75 rating &amp; ≥p75 votes) · Hidden Gem (≥p75 rating, &lt;p75 votes) · Mass Market (&lt;p75 rating, ≥p75 votes) · Under the Radar (&lt;p75 both)</div>
-          <div><span className="font-medium text-gray-600 dark:text-gray-300">Vote Spread:</span> Strong Consensus (σ&lt;1.3) · Broad Agreement (σ 1.3–1.8) · Mixed Opinions (σ 1.8–2.3) · Love it or Hate it (σ&gt;2.3)</div>
-          <div><span className="font-medium text-gray-600 dark:text-gray-300">Score Trajectory:</span> Instant Classic (both ≥7.5, &lt;0.3 diff) · Sleeper Hit (&gt;+0.3) · Hype Decay (&gt;−0.3) · Steady (±0.3)</div>
-          <div><span className="font-medium text-gray-600 dark:text-gray-300">Vote Momentum:</span> Surging (≥1.5x) · Growing (≥1.1x) · Steady (≥0.7x) · Fading (≥0.3x) · Dormant (&lt;0.3x)</div>
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-[color:var(--nezu)]">
+          <div><span className="font-medium text-[color:var(--ink)]">Popularity:</span> Fan Favorite (≥p75 rating &amp; ≥p75 votes) · Hidden Gem (≥p75 rating, &lt;p75 votes) · Mass Market (&lt;p75 rating, ≥p75 votes) · Under the Radar (&lt;p75 both)</div>
+          <div><span className="font-medium text-[color:var(--ink)]">Vote Spread:</span> Strong Consensus (σ&lt;1.3) · Broad Agreement (σ 1.3–1.8) · Mixed Opinions (σ 1.8–2.3) · Love it or Hate it (σ&gt;2.3)</div>
+          <div><span className="font-medium text-[color:var(--ink)]">Score Trajectory:</span> Instant Classic (both ≥7.5, &lt;0.3 diff) · Sleeper Hit (&gt;+0.3) · Hype Decay (&gt;−0.3) · Steady (±0.3)</div>
+          <div><span className="font-medium text-[color:var(--ink)]">Vote Momentum:</span> Surging (≥1.5x) · Growing (≥1.1x) · Steady (≥0.7x) · Fading (≥0.3x) · Dormant (&lt;0.3x)</div>
         </div>
       </details>
-    </div>
+    </section>
   );
 }

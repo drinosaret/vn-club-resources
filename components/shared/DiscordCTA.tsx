@@ -52,18 +52,16 @@ export function DiscordCTA({
 
   if (variant === 'banner') {
     return (
-      <div className={`relative rounded-2xl bg-gradient-to-r from-[#5865F2]/10 via-indigo-50 to-[#5865F2]/10 dark:from-[#5865F2]/15 dark:via-indigo-900/20 dark:to-[#5865F2]/15 border border-[#5865F2]/20 dark:border-[#5865F2]/30 p-6 ${className}`}>
+      <div className={`sw-panel relative p-6 ${className}`}>
         <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-          <div className="shrink-0 w-12 h-12 rounded-xl bg-[#5865F2]/15 dark:bg-[#5865F2]/25 flex items-center justify-center">
-            <DiscordIcon className="w-6 h-6 text-[#5865F2]" />
-          </div>
+          <DiscordIcon className="shrink-0 w-8 h-8 text-[#5865F2]" />
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{description}</p>
+            <h3 className="sw-card-title">{title}</h3>
+            <p className="sw-pick-desc mt-1">{description}</p>
           </div>
           <Link
             href={DISCORD_URL}
-            className="shrink-0 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold transition-colors"
+            className="sw-act sw-act--brand shrink-0"
           >
             <DiscordIcon className="w-5 h-5" />
             Join Server
@@ -73,7 +71,7 @@ export function DiscordCTA({
           <button
             onClick={handleDismiss}
             aria-label="Dismiss"
-            className="absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+            className="sw-icon absolute top-2.5 right-2.5"
           >
             <X className="w-4 h-4" />
           </button>
@@ -83,11 +81,11 @@ export function DiscordCTA({
   }
 
   return (
-    <p className={`text-sm text-gray-500 dark:text-gray-400 text-center px-4 ${className}`}>
+    <p className={`text-sm text-[color:var(--nezu)] text-center px-4 ${className}`}>
       {description}{' '}
       <Link
         href={DISCORD_URL}
-        className="text-primary-600 dark:text-primary-400 hover:underline font-medium"
+        className="sw-link font-medium"
       >
         {title}
       </Link>

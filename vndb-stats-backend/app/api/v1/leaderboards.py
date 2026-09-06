@@ -134,8 +134,22 @@ async def get_catalogue(request: Request, response: Response):
         # catalogue is correct, a card that leads nowhere is not.
         live = {board.slug for board in BOARDS}
         boards = [entry for entry in payload.get("boards", []) if entry.get("slug") in live]
-        if len(boards) != len(payload.get("boards", [])):
-            payload = {**payload, "boards": boards}
+        # Credit for an outside source is read from the registry rather than trusted to the
+        # cached copy. A payload written before the field existed carries none, and a listing
+        # that names another project's measurements has to credit them on the run it is read,
+        # not on the one after the next rebuild.
+        credits = {
+            board.slug: {"label": board.attribution[0], "href": board.attribution[1]}
+            for board in BOARDS
+            if board.attribution
+        }
+        boards = [
+            {**entry, "attribution": credits.get(entry.get("slug"))}
+            if entry.get("attribution") is None
+            else entry
+            for entry in boards
+        ]
+        payload = {**payload, "boards": boards}
 
     if payload is None:
         # Fall back to the registry so the catalogue page still renders before the first
@@ -151,6 +165,14 @@ async def get_catalogue(request: Request, response: Response):
                     "window": board.window.value,
                     "facet_description": "",
                     "total_ranked": 0,
+                    "attribution": (
+                        {
+                            "label": board.attribution[0],
+                            "href": board.attribution[1],
+                        }
+                        if board.attribution
+                        else None
+                    ),
                 }
                 for board in BOARDS
             ]

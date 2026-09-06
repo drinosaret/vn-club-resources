@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 import { DiscordCTA } from '@/components/shared/DiscordCTA';
-import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
+import { generatePageMetadata, localizedAlternates, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 import RoulettePageClient from '@/components/roulette/RoulettePageClient';
 
 export const metadata: Metadata = {
@@ -10,13 +10,7 @@ export const metadata: Metadata = {
     description: 'Add visual novels to a roulette wheel and spin to pick your next VN to read. Use group mode to assign VNs to friends for reading challenges and club picks.',
     path: '/roulette/',
   }),
-  alternates: {
-    canonical: `${SITE_URL}/roulette/`,
-    languages: {
-      'en': `${SITE_URL}/roulette/`,
-      'ja': `${SITE_URL}/ja/roulette/`,
-    },
-  },
+  alternates: localizedAlternates('roulette', 'en'),
 };
 
 const jsonLd = [
@@ -67,16 +61,16 @@ export default function Page() {
       />
       <RoulettePageClient />
 
-      <section className="max-w-2xl mx-auto px-4 py-12 text-sm text-gray-600 dark:text-gray-400">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">How it works</h2>
+      <section className="mx-auto max-w-2xl px-4 py-12 text-sm text-[color:var(--nezu)]">
+        <h2 className="rel-group-title">How it works</h2>
 
-        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">Adding visual novels</h3>
+        <h3 className="mt-4 mb-1 font-display font-bold text-[color:var(--ink)]">Adding visual novels</h3>
         <p className="mb-3">Search for any visual novel by title or VNDB ID and click to add it to the wheel. You can add between 2 and 15 VNs. Each entry gets its own colored segment on the wheel. Remove entries with the trash icon, or clear the entire wheel to start over.</p>
 
-        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">Spinning the wheel</h3>
+        <h3 className="mt-4 mb-1 font-display font-bold text-[color:var(--ink)]">Spinning the wheel</h3>
         <p className="mb-3">Hit the Spin button and the wheel animates with a satisfying deceleration, landing on a random visual novel. The result card shows the selected VN with a link to its detail page. Spin as many times as you like. Your wheel setup is saved to your browser automatically.</p>
 
-        <h3 className="font-medium text-gray-800 dark:text-gray-200 mt-4 mb-1">Group mode</h3>
+        <h3 className="mt-4 mb-1 font-display font-bold text-[color:var(--ink)]">Group mode</h3>
         <p className="mb-3">Switch to Group mode for reading challenges and VN club picks. Add player names to the queue, then spin. Each round randomly selects a player and assigns them a VN from the wheel. Players are removed from the queue after assignment while VNs stay on the wheel, so everyone gets a pick. The assignment history table tracks all results.</p>
       </section>
 

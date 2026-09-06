@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface VNDescriptionProps {
   description?: string;
@@ -29,7 +28,7 @@ export function VNDescription({ description, maxLines = 4, bare = false }: VNDes
   const content = (
     <>
       <div
-        className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 ${
+        className={`prose max-w-none text-[color:var(--text-secondary)] ${
           !isExpanded && needsTruncation ? `line-clamp-${maxLines}` : ''
         }`}
         style={!isExpanded && needsTruncation ? {
@@ -45,17 +44,10 @@ export function VNDescription({ description, maxLines = 4, bare = false }: VNDes
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
-          className="mt-3 flex items-center gap-1 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+          className="sec-more mt-3"
         >
-          {isExpanded ? (
-            <>
-              Show less <ChevronUp className="w-4 h-4" />
-            </>
-          ) : (
-            <>
-              Show more <ChevronDown className="w-4 h-4" />
-            </>
-          )}
+          {isExpanded ? 'Show less' : 'Show more'}
+          <span aria-hidden>{isExpanded ? '▴' : '▾'}</span>
         </button>
       )}
     </>
@@ -66,9 +58,9 @@ export function VNDescription({ description, maxLines = 4, bare = false }: VNDes
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="vn-sec p-4 sm:p-6">
+      <div className="vn-sec-head">
+        <h2 className="vn-sec-title">
           Description
         </h2>
       </div>
@@ -78,7 +70,7 @@ export function VNDescription({ description, maxLines = 4, bare = false }: VNDes
 }
 
 /**
- * Escape HTML entities to prevent XSS attacks.
+ * Escape the characters that are markup in an HTML text node.
  */
 function escapeHtml(text: string): string {
   const htmlEscapes: Record<string, string> = {
@@ -92,8 +84,10 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Validate URL to prevent javascript: and data: protocol attacks.
- * Uses case-insensitive checks to prevent bypass via jaVasCript: etc.
+ * Whether a URL is one this component will put in an href.
+ *
+ * Only http and https reach an href. A scheme is not case sensitive, so the comparison
+ * is made against the lowercased form.
  */
 function isValidUrl(url: string): boolean {
   try {
@@ -111,9 +105,10 @@ function isValidUrl(url: string): boolean {
   }
 }
 
-// Clean VNDB description formatting codes with XSS protection
+// Render the source's formatting codes as markup. The input is escaped first, so the only
+// markup in the result is what this function emits.
 function cleanVNDBDescription(text: string): string {
-  // First, escape all HTML in the input to prevent injection
+  // Escaped before any markup is added, so nothing in the source can become an element.
   let result = escapeHtml(text);
 
   // Convert VNDB links to HTML links (with URL validation)
@@ -124,14 +119,14 @@ function cleanVNDBDescription(text: string): string {
     if (isValidUrl(decodedUrl)) {
       // Re-escape the URL for the href attribute
       const safeUrl = escapeHtml(decodedUrl);
-      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-primary-600 dark:text-primary-400 hover:underline">${linkText}</a>`;
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-[color:var(--ai)] hover:underline">${linkText}</a>`;
     }
     // Invalid URL - just show as plain text
     return linkText;
   });
 
   // [spoiler]...[/spoiler] - hide spoilers
-  result = result.replace(/\[spoiler\][\s\S]*?\[\/spoiler\]/gi, '<span class="italic text-gray-400">[Spoiler hidden]</span>');
+  result = result.replace(/\[spoiler\][\s\S]*?\[\/spoiler\]/gi, '<span class="italic text-[color:var(--text-faint)]">[Spoiler hidden]</span>');
 
   // Convert BBCode formatting tags to HTML (content already escaped)
   result = result.replace(/\[b\](.*?)\[\/b\]/gi, '<strong>$1</strong>');
@@ -145,7 +140,7 @@ function cleanVNDBDescription(text: string): string {
   result = result.replace(/\[code\]([\s\S]*?)\[\/code\]/gi, '<code>$1</code>');
 
   // Quote tags
-  result = result.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, '<blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic">$1</blockquote>');
+  result = result.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, '<blockquote class="border-l-2 border-[color:var(--rule)] pl-4 italic">$1</blockquote>');
 
   // Convert line breaks to <br> for display
   // Handle both actual newlines and literal \n sequences (from JSON/database)

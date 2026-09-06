@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.core.cache import get_cache
 from app.core.vndb_client import get_vndb_client
+from app.services.user_service import UserService
 
 # Module-level semaphore to limit concurrent heavy stats calculations
 # Prevents resource exhaustion when multiple users request large profiles
@@ -138,6 +139,7 @@ class StatsService:
         self.db = db
         self.cache = get_cache()
         self.vndb = get_vndb_client()
+        self.user_service = UserService(db)
 
     async def _execute_with_timeout(self, query, timeout: float = DB_QUERY_TIMEOUT):
         """Execute a database query with timeout protection.
@@ -220,7 +222,14 @@ class StatsService:
                 score_dist[bucket] = score_dist.get(bucket, 0) + 1
 
             return UserStatsResponse(
-                user=UserInfo(uid=vndb_uid, username=user_data.get("username", vndb_uid)),
+                user=UserInfo(
+                    uid=vndb_uid,
+                    username=(
+                        user_data.get("username")
+                        or await self.user_service.username_for(vndb_uid)
+                        or vndb_uid
+                    ),
+                ),
                 summary=StatsSummary(
                     total_vns=0,
                     completed=0,
@@ -300,7 +309,14 @@ class StatsService:
         )
 
         response = UserStatsResponse(
-            user=UserInfo(uid=vndb_uid, username=user_data.get("username", vndb_uid)),
+            user=UserInfo(
+                uid=vndb_uid,
+                username=(
+                    user_data.get("username")
+                    or await self.user_service.username_for(vndb_uid)
+                    or vndb_uid
+                ),
+            ),
             summary=summary,
             score_distribution=score_dist,
             release_year_distribution=release_dist,
@@ -1948,8 +1964,22 @@ class StatsService:
                 compatibility = scaled_jaccard
 
         return UserComparisonResponse(
-            user1=UserInfo(uid=uid1, username=data1.get("username", uid1)),
-            user2=UserInfo(uid=uid2, username=data2.get("username", uid2)),
+            user1=UserInfo(
+                uid=uid1,
+                username=(
+                    data1.get("username")
+                    or await self.user_service.username_for(uid1)
+                    or uid1
+                ),
+            ),
+            user2=UserInfo(
+                uid=uid2,
+                username=(
+                    data2.get("username")
+                    or await self.user_service.username_for(uid2)
+                    or uid2
+                ),
+            ),
             compatibility_score=round(compatibility, 2),
             shared_vns=len(shared_voted),
             score_correlation=round(correlation, 2) if correlation is not None else None,

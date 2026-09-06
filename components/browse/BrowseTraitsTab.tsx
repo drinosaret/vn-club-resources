@@ -29,15 +29,6 @@ const GROUP_OPTIONS = [
   { value: 'Subject of (Sexual)', label: 'Subject of (Sexual)' },
 ];
 
-const GROUP_COLORS: Record<string, string> = {
-  Hair: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-  Eyes: 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400',
-  Body: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400',
-  Clothes: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400',
-  Items: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
-  Personality: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-  Role: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
-};
 
 const ITEMS_PER_PAGE = 50;
 const FILTER_DEBOUNCE_MS = 150;
@@ -144,14 +135,14 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
     {
       key: 'name',
       label: 'Name',
-      render: (item) => <span className="font-medium text-gray-900 dark:text-white">{item.name}</span>,
+      render: (item) => <span className="text-[color:var(--ink)]">{item.name}</span>,
     },
     {
       key: 'group_name',
       label: 'Group',
       render: (item) => item.group_name ? (
-        <BadgeCell value={item.group_name} colorClass={GROUP_COLORS[item.group_name]} />
-      ) : <span className="text-gray-400">—</span>,
+        <BadgeCell value={item.group_name} />
+      ) : <span className="text-[color:var(--text-faint)]">—</span>,
     },
     {
       key: 'char_count',
@@ -164,7 +155,7 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
       label: 'Description',
       className: 'max-w-md',
       render: (item) => (
-        <span className="text-gray-500 dark:text-gray-400 text-xs line-clamp-2">
+        <span className="text-[color:var(--nezu)] text-xs line-clamp-2">
           {item.description ? stripBBCode(item.description) : '—'}
         </span>
       ),
@@ -184,20 +175,20 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--text-faint)]" />
           <input
             type="search"
             autoComplete="off"
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search traits..."
-            className="w-full pl-9 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="bw-field w-full pl-9 pr-8 py-2 text-sm"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => handleSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="bw-chip-btn absolute right-3 top-1/2 -translate-y-1/2"
             >
               <X className="w-4 h-4" />
             </button>
@@ -221,8 +212,8 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
 
       {/* Results Header */}
       <div ref={resultsRef} className="scroll-mt-20 flex items-center justify-between">
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          <span><span className="font-semibold text-gray-900 dark:text-white">{total.toLocaleString()}</span> traits</span>
+        <span className="text-sm text-[color:var(--nezu)]">
+          <span><span className="bw-num text-[color:var(--ink)]">{total.toLocaleString()}</span> traits</span>
         </span>
         <div className="flex items-center gap-2">
           <SimpleSelect
@@ -233,7 +224,7 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
           />
           <button
             onClick={() => updateParams({ sort_order: params.sort_order === 'desc' ? 'asc' : 'desc' })}
-            className="px-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300"
+            className="tab"
           >
             {params.sort_order === 'desc' ? '↓' : '↑'}
             <span className="hidden sm:inline text-xs ml-1">{params.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
@@ -258,7 +249,7 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
         />
       ) : null}
 
-      {/* Results — key change on data arrival triggers fade-in animation */}
+      {/* Results: key change on data arrival triggers fade-in animation */}
       <div key={showLoadingSkeleton ? 'loading' : 'loaded'} className={showLoadingSkeleton ? undefined : 'animate-fade-in'}>
       {viewMode === 'table' ? (
         <EntityTable
@@ -286,10 +277,10 @@ export function BrowseTraitsTab({ isActive = true }: BrowseTraitsTabProps) {
                 { label: 'Characters', value: item.char_count.toLocaleString() },
               ]}
               rightContent={
-                <span className="text-lg font-bold text-primary-600 dark:text-primary-400">{item.char_count.toLocaleString()}</span>
+                <span className="bw-num text-lg text-[color:var(--ai)]">{item.char_count.toLocaleString()}</span>
               }
               badges={item.group_name ? (
-                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${GROUP_COLORS[item.group_name] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
+                <span className="bw-badge">
                   {item.group_name}
                 </span>
               ) : undefined}

@@ -144,7 +144,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
         data.cropPreview = preview;
         data.cropPreviewTiny = tiny;
       } catch {
-        // Fall back to no preview — GridCell will generate async
+        // Fall back to no preview; GridCell will generate async
       }
       setSaving(false);
     }
@@ -177,40 +177,37 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
   const imageUrl = effectiveImageUrl ? getCropImageUrl(effectiveImageUrl) : null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="crop-modal-title">
+    <div className="toy-scrim" role="dialog" aria-modal="true" aria-labelledby="crop-modal-title">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70" onClick={onCancel} />
+      <div className="toy-scrim-fill" onClick={onCancel} />
 
       {/* Modal */}
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden outline-hidden flex flex-col"
+        className="toy-modal toy-modal--lg outline-hidden"
         style={{ maxHeight: 'min(90vh, 750px)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h3 id="crop-modal-title" className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-2">
+        <div className="toy-modal-head">
+          <h3 id="crop-modal-title" className="toy-modal-title">
             {t(s, 'crop.editTitle', { title: displayTitle })}
           </h3>
-          <button
-            onClick={onCancel}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-          >
-            <X className="w-4 h-4 text-gray-500" />
+          <button onClick={onCancel} className="toy-x" aria-label={s['crop.cancel']}>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Title + Score inputs */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 space-y-2 overflow-y-auto max-h-[45%]">
+        <div className="px-4 py-3 border-b border-[color:var(--rule)] space-y-2 overflow-y-auto max-h-[45%]">
           <div className="flex flex-col items-center gap-1.5">
-            {showAltTitle && <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-full">{altTitle}</span>}
+            {showAltTitle && <span className="max-w-full truncate text-xs text-[color:var(--nezu)]">{altTitle}</span>}
             <div className="flex items-center gap-2">
               <a
                 href={pageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-md transition-colors"
+                className="toy-btn"
               >
                 VN Club
                 <ExternalLink className="w-3 h-3" />
@@ -219,7 +216,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
                 href={vndbUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+                className="toy-btn"
               >
                 VNDB
                 <ExternalLink className="w-3 h-3" />
@@ -227,26 +224,27 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
             </div>
           </div>
           <label className="flex items-center gap-2">
-            <Type className="w-4 h-4 text-gray-400 shrink-0" />
+            <Type className="w-4 h-4 shrink-0 text-[color:var(--nezu)]" />
             <input
               type="text"
               value={titleInput}
               onChange={e => setTitleInput(e.target.value)}
               placeholder={autoTitle}
-              className="flex-1 px-2 py-1 text-sm rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+              className="toy-field flex-1 min-w-0"
             />
             {titleInput && (
               <button
                 onClick={() => setTitleInput('')}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                className="toy-x"
                 title={s['crop.resetAutoTitle']}
+                aria-label={s['crop.resetAutoTitle']}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             )}
           </label>
           <label className="flex items-center gap-2">
-            <Star className="w-4 h-4 text-gray-400 shrink-0" />
+            <Star className="w-4 h-4 shrink-0 text-[color:var(--nezu)]" />
             <input
               type="number"
               min={10}
@@ -254,13 +252,14 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
               value={voteInput}
               onChange={e => setVoteInput(e.target.value)}
               placeholder={s['crop.scorePlaceholder']}
-              className={`w-32 px-2 py-1 text-sm rounded border ${voteError ? 'border-red-400 dark:border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-200 dark:border-gray-700 focus:ring-purple-500 focus:border-purple-500'} bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 tabular-nums`}
+              className={`toy-field w-32 tabular-nums ${voteError ? 'toy-field--bad' : ''}`}
             />
             {voteInput && (
               <button
                 onClick={() => setVoteInput('')}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0"
+                className="toy-x"
                 title={s['crop.clearScore']}
+                aria-label={s['crop.clearScore']}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -284,7 +283,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
 
         {/* Cropper area */}
         {imageUrl && (
-          <div className="relative flex-1 min-h-[200px] bg-gray-950">
+          <div className="relative flex-1 min-h-[200px] bg-[color:var(--box)]">
             <Cropper
               image={imageUrl}
               crop={crop}
@@ -300,11 +299,11 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
         )}
 
         {/* Controls */}
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 shrink-0 space-y-3">
-          {/* Zoom slider — only when image exists */}
+        <div className="px-4 py-3 border-t border-[color:var(--rule)] shrink-0 space-y-3">
+          {/* Zoom slider: only when image exists */}
           {imageUrl && (
             <div className="flex items-center gap-3">
-              <ZoomIn className="w-4 h-4 text-gray-400 shrink-0" />
+              <ZoomIn className="w-4 h-4 shrink-0 text-[color:var(--nezu)]" />
               <input
                 type="range"
                 min={1}
@@ -312,9 +311,9 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
                 step={0.05}
                 value={zoom}
                 onChange={e => setZoom(Number(e.target.value))}
-                className="flex-1 accent-purple-600"
+                className="rc-range flex-1"
               />
-              <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right tabular-nums">
+              <span className="w-10 text-right font-mono text-xs tabular-nums text-[color:var(--nezu)]">
                 {zoom.toFixed(1)}x
               </span>
             </div>
@@ -325,7 +324,7 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
             {imageUrl ? (
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="toy-btn"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 {s['crop.resetCrop']}
@@ -334,14 +333,14 @@ export function CropModal({ item, cropSquare, onSave, onCancel }: CropModalProps
             <div className="flex items-center gap-2">
               <button
                 onClick={onCancel}
-                className="px-4 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="toy-btn"
               >
                 {s['crop.cancel']}
               </button>
               <button
                 onClick={handleSave}
                 disabled={!!voteError}
-                className="px-4 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                className="toy-btn toy-btn--go"
               >
                 {s['crop.save']}
               </button>

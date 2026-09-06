@@ -1,6 +1,6 @@
 # VN Club
 
-A free, open resource site for learning Japanese through visual novels. Browse the VNDB catalog, get personalized recommendations, follow setup guides, and check your reading stats, all in one place.
+A free, open source site about Japanese visual novels. Browse the full VNDB catalogue, build rankings, follow the reading club, check your stats, and get set up to read the original Japanese.
 
 ## Website
 
@@ -8,20 +8,19 @@ Visit: [vnclub.org](https://vnclub.org/)
 
 ## Features
 
-- **Guides** - 15+ setup guides for essential tools (Textractor, Yomitan, Anki, and more)
-- **Browse** - Search and filter the full VNDB catalog with detail pages for VNs, characters, staff, and producers
-- **Recommendations** - Personalized VN recommendations based on your VNDB list
-- **Stats** - VNDB user stats lookup with reading history and analytics
-- **VN of the Day** - A daily featured visual novel with score, developer, tags, and cover
-- **Word of the Day** - Daily Japanese vocabulary with definitions, pitch accent, conjugations, example sentences from VNs, kanji breakdown with readings and compounds, related VNDB tags, and bilingual example sentences
-- **Events** - A community calendar, VN of the Month and Season, and key dates
-- **News** - Aggregated VN news feed
-- **Quiz** - Kana quiz for beginners
-- **Discord bot** - Daily VN of the Day and Word of the Day posts, plus community features like an events calendar and movie nights
-- **Just for Fun** - Tier list maker, 3x3 collage creator, and VN roulette
-- **Full-text search** across all content
-- **Dark mode** support
-- **Multilingual** - English and Japanese UI
+- **Browse** - Search and filter the whole VNDB catalogue, with pages for titles, characters, staff, voice actors, producers, tags and traits
+- **Recommendations** - Drawn from your VNDB list, filtered by platform, year, reading difficulty, studio or staff. Each title shows the signals that picked it and the score they expect you to give
+- **Stats** - Your reading counted, compared against every public list, and set beside the figures for the database as a whole
+- **Rankings** - Standing leaderboards drawn from the whole vote record, plus a builder for any slice you can describe
+- **Trends** - What the community is reading now, and which way it moved
+- **Guides** - Setup guides for the tools people read with, including Textractor, Yomitan, Anki, JL and OwOCR
+- **Reading club** - VN of the Month and Season, a weekly read-aloud session, an events calendar and every past pick
+- **News** - An aggregated feed, and upcoming Japanese releases
+- **Word of the Day** - A daily word with readings, pitch accent, kanji breakdown and example sentences taken from visual novels
+- **VN of the Day** - A daily title with its score, developer, tags and cover
+- **Things to play with** - Tier list maker, 3x3 collage, roulette, higher or lower, a random picker and a kana quiz
+- **Discord bot** - The daily title and word, the events calendar, film nights and the reading club
+- Full-text search, dark mode, and an English or Japanese interface
 
 ## Contributing
 
@@ -43,7 +42,7 @@ npm run dev:all
 
 ## Community
 
-Join us on [Discord](https://discord.gg/Ze7dYKVTHf) to connect with fellow learners, get help with setup, and share recommendations.
+Join us on [Discord](https://discord.gg/Ze7dYKVTHf) to read alongside other people, get help with setup, and share what you have found.
 
 ## Data Sources
 

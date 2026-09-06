@@ -4,6 +4,7 @@
  */
 
 import { getBackendUrlOptional } from './config';
+import { toProducerCredit, type ProducerCredit } from './upcoming-releases';
 
 export interface VNOfTheDayTag {
   name: string;
@@ -23,7 +24,7 @@ export interface VNOfTheDayData {
   rating: number | null;
   votecount: number | null;
   released: string | null;
-  developers: string[];
+  developers: ProducerCredit[];
   tags: VNOfTheDayTag[];
   length_minutes: number | null;
 }
@@ -47,7 +48,11 @@ export async function getVNOfTheDay(date?: string): Promise<VNOfTheDayData | nul
     });
 
     if (!res.ok) return null;
-    return res.json();
+    const data = (await res.json()) as
+      | (Omit<VNOfTheDayData, 'developers'> & { developers?: (ProducerCredit | string)[] })
+      | null;
+    if (!data) return null;
+    return { ...data, developers: (data.developers ?? []).map(toProducerCredit) };
   } catch {
     return null;
   }

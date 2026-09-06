@@ -15,7 +15,7 @@ export function PrevNextNavigation({ currentSlug }: PrevNextNavigationProps) {
 
   return (
     <nav
-      className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800"
+      className="mt-12 pt-8 border-t border-[color:var(--rule)]"
       aria-label="Page navigation"
     >
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -23,14 +23,14 @@ export function PrevNextNavigation({ currentSlug }: PrevNextNavigationProps) {
         {prevPage ? (
           <Link
             href={prevPage.slug === '' ? '/' : `/${prevPage.slug}`}
-            className="group flex-1 flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
+            className="group flex-1 flex items-center gap-3 p-4 rounded-xs border border-[color:var(--rule)] hover:border-[color:var(--kohaku)] transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors shrink-0" />
+            <ChevronLeft className="w-5 h-5 text-[color:var(--nezu)] group-hover:text-[color:var(--ai)] transition-colors shrink-0" />
             <div className="flex flex-col min-w-0">
-              <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <span className="font-mono text-xs uppercase tracking-wide text-[color:var(--nezu)]">
                 Previous
               </span>
-              <span className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+              <span className="font-medium text-[color:var(--ink)] group-hover:text-[color:var(--ai)] transition-colors truncate">
                 {prevPage.title}
               </span>
             </div>
@@ -43,17 +43,17 @@ export function PrevNextNavigation({ currentSlug }: PrevNextNavigationProps) {
         {nextPage ? (
           <Link
             href={nextPage.slug === '' ? '/' : `/${nextPage.slug}`}
-            className="group flex-1 flex items-center justify-end gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-right"
+            className="group flex-1 flex items-center justify-end gap-3 p-4 rounded-xs border border-[color:var(--rule)] hover:border-[color:var(--kohaku)] transition-colors text-right"
           >
             <div className="flex flex-col min-w-0">
-              <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <span className="font-mono text-xs uppercase tracking-wide text-[color:var(--nezu)]">
                 Next
               </span>
-              <span className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+              <span className="font-medium text-[color:var(--ink)] group-hover:text-[color:var(--ai)] transition-colors truncate">
                 {nextPage.title}
               </span>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors shrink-0" />
+            <ChevronRight className="w-5 h-5 text-[color:var(--nezu)] group-hover:text-[color:var(--ai)] transition-colors shrink-0" />
           </Link>
         ) : (
           <div className="flex-1" />

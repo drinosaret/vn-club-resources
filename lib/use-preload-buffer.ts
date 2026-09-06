@@ -11,7 +11,7 @@ export interface PreloadBufferConfig {
   timeoutMs?: number;
 }
 
-/** Number of above-fold images to preload (legacy — used by NovelsSection) */
+/** Number of above-fold images to preload (legacy, used by NovelsSection) */
 export const PRELOAD_COUNT = 12;
 
 /** Above-fold preload counts per grid size.
@@ -23,19 +23,19 @@ export const PRELOAD_COUNTS: Record<string, number> = {
   large: 8,
 };
 
-/** Default config for filter/search changes — wait for polished swap */
+/** Default config for filter/search changes: wait for polished swap */
 export const PRELOAD_DEFAULTS: Required<PreloadBufferConfig> = {
   preloadCount: PRELOAD_COUNT,
   threshold: 0.4,    // 40% of above-fold images
   timeoutMs: 600,    // Max wait before swap (cached images hit threshold in <10ms)
 };
 
-/** Lighter config for pagination — shorter wait since user expects fast pages.
+/** Lighter config for pagination: shorter wait since user expects fast pages.
  *  For prefetched pages (images in browser cache), threshold is met in <10ms. */
 export const PAGINATION_PRELOAD: Required<PreloadBufferConfig> = {
   preloadCount: PRELOAD_COUNT,
   threshold: 0.25,   // 25% (~3 images)
-  timeoutMs: 300,    // Reduced from 400ms — prefetched images resolve instantly
+  timeoutMs: 300,    // Reduced from 400ms: prefetched images resolve instantly
 };
 
 // ── Hook ───────────────────────────────────────────────────────────────
@@ -57,9 +57,9 @@ export function usePreloadBuffer<T>(
   options?: {
     /** Don't process new items while true (e.g., API fetch in progress) */
     isLoading?: boolean;
-    /** Skip preload — return items directly (e.g., pagination, list view) */
+    /** Skip preload: return items directly (e.g., pagination, list view) */
     disabled?: boolean;
-    /** Preload timing config — use PAGINATION_PRELOAD or PRELOAD_DEFAULTS */
+    /** Preload timing config: use PAGINATION_PRELOAD or PRELOAD_DEFAULTS */
     config?: PreloadBufferConfig;
   },
 ): { displayItems: T[]; isSwapping: boolean } {
@@ -101,7 +101,7 @@ export function usePreloadBuffer<T>(
     }
 
     // Disabled → sync internal state for when disabled flips back to false.
-    // No startTransition needed — the return value below handles disabled display.
+    // No startTransition needed; the return value below handles disabled display.
     if (disabledRef.current) {
       setDisplayItems(items);
       setIsSwapping(false);
@@ -146,13 +146,13 @@ export function usePreloadBuffer<T>(
       return;
     }
 
-    // Preload images using Image() objects + decode() — ensures images are
+    // Preload images using Image() objects + decode(): ensures images are
     // both downloaded AND decoded into bitmaps before grid swap, preventing
     // decode jank when React renders the new grid content.
     //
     // Only the primary URL per item (index 0 = main cover image) counts
     // toward the threshold. Secondary URLs (e.g., NSFW tiny thumbnails)
-    // are preloaded but don't affect swap timing — they're < 1KB and
+    // are preloaded but don't affect swap timing; they're < 1KB and
     // would inflate the counter, causing the swap to fire before main
     // covers finish decoding.
     let loaded = 0;
@@ -171,7 +171,7 @@ export function usePreloadBuffer<T>(
       }
     }
 
-    // Don't wait forever — swap after timeout regardless
+    // Don't wait forever; swap after timeout regardless
     const timeout = setTimeout(doSwap, config.timeoutMs);
 
     cleanupRef.current = () => {
@@ -185,7 +185,7 @@ export function usePreloadBuffer<T>(
     };
   }, [items, isLoading]);
 
-  // When disabled (pagination/list view), return input items directly — no state
+  // When disabled (pagination/list view), return input items directly, no state
   // delay, no extra render. The grid shows new items on the same render that
   // receives them. The effect above syncs internal state for when disabled=false.
   const disabled = options?.disabled ?? false;

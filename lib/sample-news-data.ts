@@ -116,15 +116,28 @@ export const TAB_LABELS: Record<string, string> = {
   announcements: 'Announcements',
 };
 
+export interface NewsTab {
+  slug: string;
+  label: string;
+  /**
+   * Set on a tab that is not a dated archive. Its link is fixed and takes no date segment,
+   * and it has no entry in TAB_SLUGS, so nothing tries to count news items against it.
+   */
+  href?: string;
+}
+
 /** Ordered list of tab configs for rendering navigation */
-export const TAB_LIST = [
+export const TAB_LIST: readonly NewsTab[] = [
   { slug: 'all', label: 'All Sources' },
   { slug: 'releases', label: 'Releases' },
+  // What has come out sits next to what has not, since they are the same subject at
+  // different times.
+  { slug: 'upcoming', label: 'Upcoming', href: '/news/upcoming/' },
   { slug: 'recently-added', label: 'Recently Added' },
   { slug: 'rss', label: 'RSS Feeds' },
   { slug: 'twitter', label: 'Twitter' },
   { slug: 'announcements', label: 'Announcements' },
-] as const;
+];
 
 export function isValidTab(tab: string): boolean {
   return tab in TAB_SLUGS;

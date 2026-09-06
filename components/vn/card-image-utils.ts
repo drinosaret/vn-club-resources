@@ -18,7 +18,7 @@ export function buildCardSrcSet(imageUrl: string, vnId?: string): string | undef
     .join(', ') || undefined;
 }
 
-// Compact grid (stats page NovelsSection) — smaller cards need smaller images
+// Compact grid (stats page NovelsSection): smaller cards need smaller images
 export const COMPACT_CARD_IMAGE_WIDTH: ImageWidth = 128;
 const COMPACT_CARD_SRCSET_WIDTHS: ImageWidth[] = [128, 256];
 
@@ -35,3 +35,23 @@ export function buildCompactCardSrcSet(imageUrl: string, vnId?: string): string 
     .filter(Boolean)
     .join(', ') || undefined;
 }
+
+/**
+ * Recommendations.
+ *
+ * The results sit in a column capped at 1024px with a 16px gutter either side, so every
+ * branch below is that width divided by the columns at that breakpoint, less the gaps. The
+ * breakpoint edges are one pixel under Tailwind's own, because a `max-width` that shares its
+ * edge with a `min-width` leaves a one pixel band where both apply and the wrong candidate is
+ * picked.
+ *
+ * The dense grid runs on the same column counts as the compact stats grid, so it reuses that
+ * pair rather than restating it.
+ */
+
+// grid-cols-2 / sm:3 / lg:4, gap-4
+export const RECOMMENDATION_CARD_SIZES =
+  '(max-width: 639px) calc(50vw - 24px), (max-width: 1023px) calc(33vw - 21px), 244px';
+
+// A fixed cover beside prose, so the slot never scales with the viewport.
+export const RECOMMENDATION_DETAIL_SIZES = '(max-width: 639px) 96px, 120px';

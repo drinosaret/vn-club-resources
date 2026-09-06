@@ -117,11 +117,11 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
   if (headings.length === 0) {
     return (
       <nav className="sticky top-24 z-10">
-        <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
-          <h3 className="font-semibold text-xs uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-4">
+        <div className="sw-toc">
+          <h3 className="sw-plate mb-4">
             On This Page
           </h3>
-          <p className="text-xs text-gray-500">Loading...</p>
+          <p className="text-xs text-[color:var(--nezu)]">Loading...</p>
         </div>
       </nav>
     );
@@ -129,8 +129,8 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
 
   return (
     <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-y-contain pr-4">
-      <div className="border-l-2 border-gray-200 dark:border-gray-700 pl-4">
-        <h3 className="font-semibold text-xs uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-4">
+      <div className="sw-toc">
+        <h3 className="sw-plate mb-4">
           On This Page
         </h3>
         <ul className="space-y-2.5 text-sm">
@@ -142,11 +142,7 @@ export const TableOfContents = memo(function TableOfContents({ content }: TableO
               <a
                 href={`#${heading.id}`}
                 onClick={() => setActiveId(heading.id)}
-                className={`block py-0.5 transition-colors leading-snug ${
-                  activeId === heading.id
-                    ? 'text-indigo-600 dark:text-indigo-400 font-medium'
-                    : 'text-gray-800 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
+                className={`sw-toc-link ${activeId === heading.id ? 'sw-toc-link--on' : ''}`}
               >
                 {heading.text}
               </a>

@@ -3,10 +3,7 @@
 import { useEffect, useState, useRef, use, useCallback } from 'react';
 import Link from '@/components/Link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import {
-  ArrowLeft, ExternalLink, Mic2, Star, BarChart3,
-  AlertCircle, RefreshCw, BookOpen, Users, ChevronRight
-} from 'lucide-react';
+import { ArrowLeft, ExternalLink, RefreshCw, ChevronRight } from 'lucide-react';
 import {
   vndbStatsApi,
   SeiyuuStatsData,
@@ -370,10 +367,10 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-8 overflow-x-clip">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
-            <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing...</span>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[color:var(--surface)] backdrop-blur-xs">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xs bg-[color:var(--surface)] border border-[color:var(--rule)]">
+            <RefreshCw className="w-4 h-4 animate-spin text-[color:var(--ai)]" />
+            <span className="text-sm text-[color:var(--text-secondary)]">Refreshing...</span>
           </div>
         </div>
       )}
@@ -384,30 +381,29 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
           <button
             onClick={() => window.history.back()}
             aria-label="Go back"
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mt-1"
+            className="st-act st-act--icon mt-1"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ArrowLeft className="w-5 h-5 text-[color:var(--nezu)]" />
           </button>
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-2 flex-wrap">
-              <Link href="/browse?tab=seiyuu" className="hover:text-primary-600 dark:hover:text-primary-400">Seiyuu</Link>
+            <div className="flex items-center gap-1 text-sm text-[color:var(--nezu)] mb-2 flex-wrap">
+              <Link href="/browse?tab=seiyuu" className="hover:text-[color:var(--ai)]">Seiyuu</Link>
               <ChevronRight className="w-3 h-3 shrink-0" />
-              <span className="text-gray-700 dark:text-gray-300">{staffDisplayName}</span>
+              <span className="text-[color:var(--text-secondary)]">{staffDisplayName}</span>
             </div>
             <div className="flex items-center gap-2 mb-1">
-              <Mic2 className="w-5 h-5 text-primary-500" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="sec-title">
                 {staffDisplayName}
               </h1>
               {staff.gender && (
-                <span className="px-2 py-0.5 text-xs rounded-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                <span className="st-badge">
                   {staff.gender === 'm' ? 'Male' : staff.gender === 'f' ? 'Female' : staff.gender}
                 </span>
               )}
             </div>
             {staffAltName && staffAltName !== staffDisplayName && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-[color:var(--nezu)]">
                 {staffAltName}
               </p>
             )}
@@ -415,21 +411,20 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
               href={`https://vndb.org/${staff.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-primary-600 dark:text-primary-400 hover:underline inline-flex items-center gap-1 mt-1"
+              className="sec-more mt-1"
             >
-              View on VNDB <ExternalLink className="w-3 h-3" />
+              View on VNDB <span aria-hidden>&rarr;</span>
             </a>
             {/* Character count badge */}
             {stats.character_count > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
-                  <Users className="w-3 h-3" />
+                <span className="st-badge">
                   {stats.character_count} characters voiced
                 </span>
               </div>
             )}
             {staff.description && (
-              <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 max-w-2xl wrap-break-word">
+              <div className="mt-3 text-sm text-[color:var(--nezu)] max-w-2xl wrap-break-word">
                 <p>
                   {parseBBCode(
                     !showFullDescription && staff.description.length > 300
@@ -440,7 +435,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
                 {staff.description.length > 300 && (
                   <button
                     onClick={() => setShowFullDescription(!showFullDescription)}
-                    className="mt-1 text-primary-600 dark:text-primary-400 hover:underline text-sm"
+                    className="sec-more mt-1"
                   >
                     {showFullDescription ? 'Show less' : 'Show more'}
                   </button>
@@ -453,7 +448,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing || Date.now() < refreshBlockedUntil}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="st-act disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh data'}
@@ -463,8 +458,8 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="flex gap-4 -mb-px overflow-x-auto">
+      <div className="mb-6">
+        <nav className="tabs rc-tabs-scroll">
           <TabButton
             active={activeTab === 'summary'}
             onClick={() => handleTabChange('summary')}
@@ -491,25 +486,21 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatsSummaryCard
-              icon={<Star className="w-5 h-5" />}
               label="Average Rating"
               value={stats.average_rating ? stats.average_rating.toFixed(2) : 'N/A'}
               subtext={`from ${stats.total_vns.toLocaleString()} rated VNs`}
             />
             <StatsSummaryCard
-              icon={<Star className="w-5 h-5" />}
               label="Bayesian Rating"
               value={stats.bayesian_rating ? stats.bayesian_rating.toFixed(2) : 'N/A'}
               subtext="weighted by vote count"
             />
             <StatsSummaryCard
-              icon={<Users className="w-5 h-5" />}
               label="Characters"
               value={stats.character_count.toLocaleString()}
               subtext="voiced"
             />
             <StatsSummaryCard
-              icon={<BookOpen className="w-5 h-5" />}
               label="Visual Novels"
               value={staff.vn_count.toLocaleString()}
               subtext="appeared in"
@@ -555,7 +546,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
 
       {/* Novels Tab */}
       {activeTab === 'novels' && (
-        <div ref={vnsResultsRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div ref={vnsResultsRef} className="st-card p-6">
           <div className="flex flex-wrap justify-end gap-2 mb-4">
             <div className="flex flex-wrap items-center gap-2">
               <SpoilerFilter value={spoilerFilter} onChange={handleSpoilerChange} />
@@ -581,7 +572,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
                   )}
                 </div>
               ) : !isLoadingTab ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                <p className="st-card-sub py-8 text-center">
                   No visual novels found for this voice actor{languageFilter === 'ja' ? ' (Japanese only)' : ''}.
                 </p>
               ) : (
@@ -590,13 +581,13 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
                   <PaginationSkeleton />
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                      <div key={i} className="st-card p-4">
                         <div className="flex gap-3">
-                          <div className="w-16 h-20 rounded-sm image-placeholder" />
+                          <div className="w-16 h-20 rounded-xs image-placeholder" />
                           <div className="flex-1 space-y-2">
-                            <div className="h-4 w-3/4 rounded-sm image-placeholder" />
-                            <div className="h-3 w-1/2 rounded-sm image-placeholder" />
-                            <div className="h-3 w-1/3 rounded-sm image-placeholder" />
+                            <div className="h-4 w-3/4 rounded-xs image-placeholder" />
+                            <div className="h-3 w-1/2 rounded-xs image-placeholder" />
+                            <div className="h-3 w-1/3 rounded-xs image-placeholder" />
                           </div>
                         </div>
                       </div>
@@ -612,7 +603,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
 
       {/* Characters Tab */}
       {activeTab === 'characters' && (
-        <div ref={charsResultsRef} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+        <div ref={charsResultsRef} className="st-card p-6">
           <div>
             {/* Content - use cached data during loading for smooth transition */}
             {(() => {
@@ -632,7 +623,7 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
                   )}
                 </div>
               ) : !isLoadingTab ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                <p className="st-card-sub py-8 text-center">
                   No voiced characters found for this voice actor.
                 </p>
               ) : (
@@ -641,13 +632,13 @@ export default function SeiyuuDetailPage({ params }: PageProps) {
                   <PaginationSkeleton />
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {Array.from({ length: 12 }).map((_, i) => (
-                      <div key={i} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                      <div key={i} className="st-card p-4">
                         <div className="flex gap-3">
-                          <div className="w-16 h-20 rounded-sm image-placeholder" />
+                          <div className="w-16 h-20 rounded-xs image-placeholder" />
                           <div className="flex-1 space-y-2">
-                            <div className="h-4 w-3/4 rounded-sm image-placeholder" />
-                            <div className="h-3 w-1/2 rounded-sm image-placeholder" />
-                            <div className="h-3 w-1/3 rounded-sm image-placeholder" />
+                            <div className="h-4 w-3/4 rounded-xs image-placeholder" />
+                            <div className="h-3 w-1/2 rounded-xs image-placeholder" />
+                            <div className="h-3 w-1/3 rounded-xs image-placeholder" />
                           </div>
                         </div>
                       </div>
@@ -678,15 +669,11 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-        active
-          ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-      }`}
+      className={`tab ${active ? 'tab--on' : ''}`}
     >
       {label}
       {count !== undefined && (
-        <span className="ml-1.5 text-xs text-gray-400">({count.toLocaleString()})</span>
+        <span className="tab-count">{count.toLocaleString()}</span>
       )}
     </button>
   );
@@ -701,9 +688,9 @@ function VNCard({ vn }: { vn: TagVN }) {
   return (
     <Link
       href={`/vn/${vn.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="st-card st-card--pick flex gap-3 p-3"
     >
-      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-xs">
         {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
         {showImage ? (
           <NSFWImage
@@ -717,28 +704,26 @@ function VNCard({ vn }: { vn: TagVN }) {
             compact
           />
         ) : (
-          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-            <BookOpen className="w-6 h-6 text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--surface-inset)]">
           </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+        <h4 className="dg-name block">
           {displayTitle}
         </h4>
         {vn.released && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-[color:var(--nezu)] mt-0.5">
             {typeof vn.released === 'string' ? vn.released.substring(0, 4) : ''}
           </p>
         )}
         {vn.rating && (
           <div className="flex items-center gap-1 mt-1">
-            <Star className="w-3 h-3 text-yellow-500" />
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-xs font-medium text-[color:var(--text-secondary)]">
               {vn.rating.toFixed(2)}
             </span>
             {vn.votecount && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-[color:var(--nezu)]">
                 ({vn.votecount.toLocaleString()})
               </span>
             )}
@@ -749,7 +734,7 @@ function VNCard({ vn }: { vn: TagVN }) {
             {sortTagsByWeight(vn.tags).slice(0, 3).map((t) => (
               <span
                 key={t.id}
-                className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm"
+                className="st-badge"
               >
                 {t.name}
               </span>
@@ -770,9 +755,9 @@ function VoicedCharacterCard({ character: char }: { character: SeiyuuVoicedChara
 
   const SEX_LABELS: Record<string, string> = { m: 'Male', f: 'Female', b: 'Both' };
   const SEX_COLORS: Record<string, string> = {
-    m: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-    f: 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400',
-    b: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+    m: 'st-badge',
+    f: 'st-badge',
+    b: 'st-badge',
   };
 
   const maxVNs = 2;
@@ -782,9 +767,9 @@ function VoicedCharacterCard({ character: char }: { character: SeiyuuVoicedChara
   return (
     <Link
       href={`/character/${char.id}`}
-      className="flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none transition-all duration-200"
+      className="st-card st-card--pick flex gap-3 p-3"
     >
-      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-sm">
+      <div className="w-16 h-20 shrink-0 relative overflow-hidden rounded-xs">
         {showImage && !loaded && <div className="absolute inset-0 image-placeholder" />}
         {showImage ? (
           <NSFWImage
@@ -798,32 +783,31 @@ function VoicedCharacterCard({ character: char }: { character: SeiyuuVoicedChara
             compact
           />
         ) : (
-          <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-            <Users className="w-6 h-6 text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--surface-inset)]">
           </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+        <h4 className="dg-name block">
           {displayName}
         </h4>
         {altName && altName !== displayName && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{altName}</p>
+          <p className="text-xs text-[color:var(--nezu)] truncate">{altName}</p>
         )}
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {char.sex && SEX_LABELS[char.sex] && (
-            <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-sm ${SEX_COLORS[char.sex]}`}>
+            <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-xs ${SEX_COLORS[char.sex]}`}>
               {SEX_LABELS[char.sex]}
             </span>
           )}
           {char.vn_count > 0 && (
-            <span className="text-[10px] text-gray-500 dark:text-gray-400">
+            <span className="text-[10px] text-[color:var(--nezu)]">
               {char.vn_count} VN{char.vn_count !== 1 ? 's' : ''}
             </span>
           )}
         </div>
         {char.note && (
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 italic truncate">
+          <p className="text-[10px] text-[color:var(--text-faint)] mt-0.5 italic truncate">
             {char.note}
           </p>
         )}
@@ -834,14 +818,14 @@ function VoicedCharacterCard({ character: char }: { character: SeiyuuVoicedChara
               return (
                 <span
                   key={vn.id}
-                  className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-sm truncate max-w-[140px]"
+                  className="st-badge [--badge-max:140px]"
                 >
                   {vnTitle}
                 </span>
               );
             })}
             {overflowCount > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] text-gray-400 dark:text-gray-500">
+              <span className="px-1.5 py-0.5 text-[10px] text-[color:var(--text-faint)]">
                 +{overflowCount} more
               </span>
             )}
@@ -855,8 +839,8 @@ function VoicedCharacterCard({ character: char }: { character: SeiyuuVoicedChara
 function LoadingTabContent({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center py-12">
-      <RefreshCw className="w-6 h-6 animate-spin text-primary-500" />
-      <span className="ml-2 text-gray-500 dark:text-gray-400">{message}</span>
+      <RefreshCw className="w-6 h-6 animate-spin text-[color:var(--ai)]" />
+      <span className="ml-2 text-[color:var(--nezu)]">{message}</span>
     </div>
   );
 }
@@ -864,19 +848,16 @@ function LoadingTabContent({ message }: { message: string }) {
 function ErrorState({ error, staffId }: { error: string | null; staffId: string }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-        <AlertCircle className="w-8 h-8 text-red-500" />
-      </div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <h1 className="sec-title mb-2">
         Unable to Load Voice Actor
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-[color:var(--nezu)] mb-6">
         {error || 'Something went wrong while loading the voice actor information.'}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         <button
           onClick={() => window.history.back()}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          className="st-act st-act--go"
         >
           <ArrowLeft className="w-4 h-4" />
           Go Back
@@ -885,7 +866,7 @@ function ErrorState({ error, staffId }: { error: string | null; staffId: string 
           href={`https://vndb.org/${staffId.startsWith('s') ? staffId : `s${staffId}`}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="st-act"
         >
           Try on VNDB
           <ExternalLink className="w-4 h-4" />

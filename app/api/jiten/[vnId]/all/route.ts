@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveDeckId } from '../../resolve-deck';
 import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
-// Language stats change rarely — cache aggressively
+// Language stats change rarely, so cache aggressively
 const CACHE_CONTROL = 'public, max-age=21600, stale-while-revalidate=21600';
 
 // Server-side response cache to avoid amplifying upstream requests.
@@ -63,13 +63,13 @@ export async function GET(
     }
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const deckId = await resolveDeckId(vnId, controller.signal);
-    if (!deckId) {
-      clearTimeout(timeoutId);
+    if (!deckId) {
       const data = { detail: null, difficulty: null, coverage: null };
       cacheSet(vnId, data);
       return NextResponse.json(
@@ -82,8 +82,7 @@ export async function GET(
       fetch(`https://api.jiten.moe/api/media-deck/${deckId}/detail`, { signal: controller.signal }),
       fetch(`https://api.jiten.moe/api/media-deck/${deckId}/difficulty`, { signal: controller.signal }),
       fetch(`https://api.jiten.moe/api/media-deck/${deckId}/coverage-curve`, { signal: controller.signal }),
-    ]);
-    clearTimeout(timeoutId);
+    ]);
 
     // Unwrap jiten.moe's { data: ... } wrapper for each sub-response,
     // matching what jitenFetcher (json?.data ?? json) does for individual endpoints
@@ -110,5 +109,7 @@ export async function GET(
       { detail: null, difficulty: null, coverage: null },
       { status: 502, headers: { 'Cache-Control': 'no-store' } },
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

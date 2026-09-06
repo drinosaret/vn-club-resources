@@ -60,10 +60,10 @@ export default function Page() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(jsonLd) }} />
 
-      <div className="border-b border-gray-100 dark:border-gray-800">
+      <div className="border-b border-[color:var(--rule)]">
         <div className="mx-auto max-w-3xl px-4 py-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">VN Higher or Lower</h1>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="sec-title">VN Higher or Lower</h1>
+          <p className="sec-sub mx-auto max-w-xl">
             Two Japanese visual novels, one call: which has more votes, the higher rating, or the newer release? Pick a
             mode, guess higher or lower, and build the longest streak you can.
           </p>
@@ -72,8 +72,8 @@ export default function Page() {
 
       <HigherLowerGame />
 
-      <section className="mx-auto max-w-2xl px-4 py-12 text-sm text-gray-600 dark:text-gray-400">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">How it works</h2>
+      <section className="mx-auto max-w-2xl px-4 py-12 text-sm text-[color:var(--nezu)]">
+        <h2 className="rel-group-title">How it works</h2>
         <p className="mb-3">
           You are shown two visual novels. One reveals its value for the current mode. Guess whether the other is Higher
           or Lower, then keep going.
@@ -81,14 +81,14 @@ export default function Page() {
         <p className="mb-2">Pick what to compare with the toggle above the board:</p>
         <ul className="mb-3 list-disc space-y-1 pl-5">
           <li>
-            <span className="font-medium text-gray-800 dark:text-gray-200">Votes</span>: how many people have rated it on
+            <span className="font-medium text-[color:var(--ink)]">Votes</span>: how many people have rated it on
             VNDB, a stand-in for popularity.
           </li>
           <li>
-            <span className="font-medium text-gray-800 dark:text-gray-200">Rating</span>: its VNDB rating out of 10.
+            <span className="font-medium text-[color:var(--ink)]">Rating</span>: its VNDB rating out of 10.
           </li>
           <li>
-            <span className="font-medium text-gray-800 dark:text-gray-200">Year</span>: its release year, so the call is
+            <span className="font-medium text-[color:var(--ink)]">Year</span>: its release year, so the call is
             newer or older.
           </li>
         </ul>

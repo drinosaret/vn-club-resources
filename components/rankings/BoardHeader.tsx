@@ -45,18 +45,18 @@ export function BoardHeader({ board, headingLevel = 'h1' }: BoardHeaderProps) {
 
   return (
     <header className="mb-6">
-      <Heading className="text-3xl font-bold text-gray-900 dark:text-white">
+      <Heading className="sec-title">
         {board.title}
       </Heading>
 
       {board.blurb ? (
-        <p className="mt-2 text-gray-600 dark:text-gray-400 max-w-2xl">{board.blurb}</p>
+        <p className="sec-sub max-w-2xl">{board.blurb}</p>
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* State the cap rather than the full total on its own: only the top slice is
             stored, so a bare count would suggest there is more to scroll to. */}
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+        <span className="text-sm text-[color:var(--nezu)]">
           {shown < board.total_ranked
             ? `Top ${shown} of ${describeField(board.subject, board.total_ranked)}`
             : describeField(board.subject, board.total_ranked)}
@@ -67,13 +67,13 @@ export function BoardHeader({ board, headingLevel = 'h1' }: BoardHeaderProps) {
       {/* Sits with the title rather than inside the methodology panel: the figure being
           ranked comes from elsewhere, so the credit should not need a disclosure opened to find. */}
       {board.attribution ? (
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-xs text-[color:var(--nezu)]">
           Difficulty data from{' '}
           <a
             href={board.attribution.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
+            className="sw-link inline-flex items-center gap-1"
           >
             {board.attribution.label}
             <ExternalLink className="w-3 h-3" />
@@ -87,7 +87,7 @@ export function BoardHeader({ board, headingLevel = 'h1' }: BoardHeaderProps) {
             type="button"
             onClick={() => setNotesOpen((open) => !open)}
             aria-expanded={notesOpen}
-            className="-mx-2 flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="sw-act sw-act--tall"
           >
             <Info className="w-3.5 h-3.5" />
             How this is counted
@@ -97,15 +97,15 @@ export function BoardHeader({ board, headingLevel = 'h1' }: BoardHeaderProps) {
           </button>
 
           {notesOpen ? (
-            <div className="mt-3 max-w-3xl rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
+            <div className="sw-panel mt-3 max-w-3xl p-4">
               {disclosure ? (
                 <dl className="grid gap-x-5 gap-y-2.5 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
                   {DISCLOSURE_FIELDS.map(({ key, label }) => (
                     <div key={key} className="contents">
-                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 sm:pt-0.5">
+                      <dt className="sw-plate sm:pt-0.5">
                         {label}
                       </dt>
-                      <dd className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+                      <dd className="text-xs leading-relaxed text-[color:var(--text-secondary)]">
                         {disclosure[key]}
                       </dd>
                     </div>
@@ -115,8 +115,8 @@ export function BoardHeader({ board, headingLevel = 'h1' }: BoardHeaderProps) {
 
               {board.notes.length > 0 ? (
                 <ul
-                  className={`space-y-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400 list-disc list-outside pl-4 ${
-                    disclosure ? 'mt-4 pt-4 border-t border-gray-200 dark:border-gray-700' : ''
+                  className={`space-y-1.5 text-xs leading-relaxed text-[color:var(--nezu)] list-disc list-outside pl-4 ${
+                    disclosure ? 'mt-4 pt-4 border-t border-[color:var(--rule)]' : ''
                   }`}
                 >
                   {board.notes.map((note) => (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, BarChart3, Star, Users, Globe, BookOpen, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { vndbStatsApi, TopVN, GlobalStats } from '@/lib/vndb-stats-api';
 import { TopVNsTable } from '@/components/stats/TopVNsTable';
 import { ScoreDistributionChart } from '@/components/stats/ScoreDistributionChart';
@@ -112,16 +112,13 @@ export default function GlobalStatsClient() {
           <button
             onClick={() => window.history.back()}
             aria-label="Go back"
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="st-act st-act--icon"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ArrowLeft className="w-5 h-5 text-[color:var(--nezu)]" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Globe className="w-6 h-6 text-primary-500" />
-              Global VNDB Stats
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <h1 className="sec-title">Global VNDB Stats</h1>
+            <p className="sec-sub">
               The shape of the database as it stands. For what is moving, see trends.
             </p>
           </div>
@@ -130,7 +127,7 @@ export default function GlobalStatsClient() {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing || isRefreshBlocked}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="st-act disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh data'}
@@ -146,15 +143,14 @@ export default function GlobalStatsClient() {
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+        <div className="st-note mb-6 p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">{error}</p>
+              <p className="text-sm font-medium text-[color:var(--beni-text)]">{error}</p>
             </div>
             <button
               onClick={() => loadData()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors shrink-0"
+              className="st-act shrink-0"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Retry
@@ -168,18 +164,18 @@ export default function GlobalStatsClient() {
         <div className="space-y-8">
           {/* Top VNs Skeleton */}
           <div>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
+            <div className="h-6 w-40 rounded-xs image-placeholder" />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {[0, 1].map((i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
+                <div key={i} className="st-card p-4">
+                  <div className="h-5 w-32 rounded-xs image-placeholder" />
                   <div className="space-y-3">
                     {Array.from({ length: 5 }).map((_, j) => (
                       <div key={j} className="flex items-center gap-3">
-                        <div className="w-10 h-14 bg-gray-200 dark:bg-gray-700 rounded-sm image-placeholder" />
+                        <div className="w-10 h-14 rounded-xs image-placeholder" />
                         <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4 image-placeholder" />
-                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2 image-placeholder" />
+                          <div className="h-4 rounded-xs image-placeholder" />
+                          <div className="h-3 rounded-xs image-placeholder" />
                         </div>
                       </div>
                     ))}
@@ -190,12 +186,12 @@ export default function GlobalStatsClient() {
           </div>
           {/* Stats Cards Skeleton */}
           <div>
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
+            <div className="h-6 w-40 rounded-xs image-placeholder" />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                  <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded-sm mb-3 image-placeholder" />
-                  <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded-sm image-placeholder" />
+                <div key={i} className="st-card p-4">
+                  <div className="h-4 w-20 rounded-xs image-placeholder" />
+                  <div className="h-8 w-24 rounded-xs image-placeholder" />
                 </div>
               ))}
             </div>
@@ -206,10 +202,10 @@ export default function GlobalStatsClient() {
               travelled when the data arrived. */}
           {[0, 1, 2, 3].map((i) => (
             <div key={`section-${i}`}>
-              <div className="h-6 w-48 bg-gray-200 dark:bg-gray-700 rounded-sm mb-4 image-placeholder" />
+              <div className="h-6 w-48 rounded-xs image-placeholder" />
               <div className="grid gap-6 lg:grid-cols-2">
-                <div className="image-placeholder h-64 rounded-xl" />
-                <div className="image-placeholder h-64 rounded-xl" />
+                <div className="image-placeholder h-64 rounded-xs" />
+                <div className="image-placeholder h-64 rounded-xs" />
               </div>
             </div>
           ))}
@@ -222,18 +218,15 @@ export default function GlobalStatsClient() {
           {/* Top Visual Novels Section */}
           <FadeIn delay={0}>
             <div className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Top Visual Novels
-              </h2>
+              <h2 className="sec-title mb-4">Top Visual Novels</h2>
               {topRated.length === 0 && mostPopular.length === 0 ? (
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                <div className="st-card p-6">
                   <div className="flex items-start gap-3">
-                    <BarChart3 className="w-6 h-6 text-gray-400 shrink-0 mt-0.5" />
                     <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                      <h3 className="st-card-title mb-1">
                         Top lists unavailable
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-[color:var(--nezu)]">
                         The backend didn&apos;t return the top VN lists. Try &quot;Refresh data&quot;, or check the backend logs if this persists.
                       </p>
                     </div>
@@ -245,7 +238,6 @@ export default function GlobalStatsClient() {
                     title="Highest Rated"
                     vns={topRated}
                     japaneseVns={topRatedJa}
-                    icon={<Star className="w-5 h-5 text-yellow-500" />}
                     showVotes={true}
                     showRating={true}
                   />
@@ -253,7 +245,6 @@ export default function GlobalStatsClient() {
                     title="Most Popular"
                     vns={mostPopular}
                     japaneseVns={mostPopularJa}
-                    icon={<Users className="w-5 h-5 text-blue-500" />}
                     showVotes={true}
                     showRating={true}
                   />
@@ -266,45 +257,27 @@ export default function GlobalStatsClient() {
           {globalStats && (
             <FadeIn delay={100}>
               <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Database Overview
-                </h2>
+                <h2 className="sec-title mb-4">Database Overview</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BookOpen className="w-4 h-4 text-primary-500" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Total VNs</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {globalStats.total_vns.toLocaleString()}
-                    </p>
+                  <div className="st-card p-4">
+                    <span className="fig-label">Total VNs</span>
+                    <span className="fig-value">{globalStats.total_vns.toLocaleString()}</span>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="w-4 h-4 text-yellow-500" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">With Ratings</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <div className="st-card p-4">
+                    <span className="fig-label">With ratings</span>
+                    <span className="fig-value">
                       {globalStats.total_with_ratings.toLocaleString()}
-                    </p>
+                    </span>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-green-500" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Average Rating</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {globalStats.average_rating.toFixed(2)}
-                    </p>
+                  <div className="st-card p-4">
+                    <span className="fig-label">Average rating</span>
+                    <span className="fig-value">{globalStats.average_rating.toFixed(2)}</span>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BarChart3 className="w-4 h-4 text-blue-500" />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Rating %</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <div className="st-card p-4">
+                    <span className="fig-label">Rating %</span>
+                    <span className="fig-value">
                       {((globalStats.total_with_ratings / globalStats.total_vns) * 100).toFixed(1)}%
-                    </p>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -315,9 +288,7 @@ export default function GlobalStatsClient() {
           {globalStats && (
             <FadeIn delay={200}>
               <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Distribution Charts
-                </h2>
+                <h2 className="sec-title mb-4">Distribution Charts</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {globalStats.score_distribution && (
                     <ScoreDistributionChart
@@ -347,10 +318,10 @@ export default function GlobalStatsClient() {
               reading has shifted is a fact about its readers, and lives with the trends. */}
           <FadeIn delay={150}>
             <section className="mt-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+              <h2 className="sec-title">
                 When people read
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              <p className="sec-sub mb-5">
                 These key on when votes were cast rather than when titles came out, so they
                 describe the community rather than the medium.
               </p>
@@ -360,10 +331,10 @@ export default function GlobalStatsClient() {
 
           <FadeIn delay={170}>
             <section className="mt-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+              <h2 className="sec-title">
                 How far back people read
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              <p className="sec-sub mb-5">
                 Keyed on when a vote was cast against when its title came out. This describes
                 the audience rather than the medium, and it has moved a long way.
               </p>
@@ -373,10 +344,10 @@ export default function GlobalStatsClient() {
 
           <FadeIn delay={175}>
             <section className="mt-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+              <h2 className="sec-title">
                 What was published
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              <p className="sec-sub mb-5">
                 Keyed on the year a title was first released.
               </p>
               <ReleaseTimelineSection />
@@ -385,10 +356,10 @@ export default function GlobalStatsClient() {
 
           <FadeIn delay={200}>
             <section className="mt-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+              <h2 className="sec-title">
                 How the record was built
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              <p className="sec-sub mb-5">
                 Keyed on when an entry was catalogued, which is a fact about the editors
                 rather than about the games.
               </p>
@@ -399,14 +370,13 @@ export default function GlobalStatsClient() {
           {/* Fallback message if no global stats */}
           {!globalStats && (
             <FadeIn delay={100}>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+              <div className="st-card p-6">
                 <div className="flex items-start gap-3">
-                  <BarChart3 className="w-6 h-6 text-gray-400 shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                    <h3 className="st-card-title mb-1">
                       Distribution Charts Unavailable
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-[color:var(--nezu)]">
                       The backend service is not available. Distribution charts require
                       the backend to process aggregated statistics from the VNDB data dumps.
                     </p>

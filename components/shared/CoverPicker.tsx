@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, ImageIcon, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { sharedStrings } from '@/lib/i18n/translations/shared';
 import { NSFW_THRESHOLD } from '@/lib/nsfw-reveal';
@@ -90,7 +90,7 @@ export function CoverPicker({ vnId, currentImageUrl, originalImageUrl, originalI
         type="button"
         onClick={handleToggle}
         aria-expanded={expanded}
-        className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+        className="sw-act"
       >
         <ImageIcon className="w-3.5 h-3.5" />
         <span>{s['cover.changeCover']}</span>
@@ -100,18 +100,18 @@ export function CoverPicker({ vnId, currentImageUrl, originalImageUrl, originalI
       {expanded && (
         <div className="mt-2">
           {loading && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-400 py-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <div className="sw-plate flex items-center gap-1.5 py-2">
+              <span className="sw-spin w-3 h-3" />
               {s['cover.loading']}
             </div>
           )}
 
           {error && (
-            <p className="text-xs text-red-500 py-1">{s['cover.error']}</p>
+            <p className="text-xs text-[color:var(--beni-text)] py-1">{s['cover.error']}</p>
           )}
 
           {!loading && !error && covers !== null && !hasCovers && (
-            <p className="text-xs text-gray-400 py-1">{s['cover.noAlts']}</p>
+            <p className="text-xs text-[color:var(--text-faint)] py-1">{s['cover.noAlts']}</p>
           )}
 
           {!loading && hasCovers && (
@@ -124,11 +124,7 @@ export function CoverPicker({ vnId, currentImageUrl, originalImageUrl, originalI
                     key={cover.imageUrl}
                     type="button"
                     onClick={() => onSelect(cover.imageUrl, cover.imageSexual)}
-                    className={`relative shrink-0 w-[48px] h-[72px] rounded overflow-hidden border-2 bg-gray-200 dark:bg-gray-700 transition-colors ${
-                      isSelected
-                        ? 'border-blue-500'
-                        : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}
+                    className={`sw-thumb relative shrink-0 w-[48px] h-[72px] ${isSelected ? 'sw-thumb--on' : ''}`}
                     title={cover.title}
                   >
                     <img
@@ -139,7 +135,7 @@ export function CoverPicker({ vnId, currentImageUrl, originalImageUrl, originalI
                     />
                     {isNsfw && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[10px] text-white/80 bg-black/40 px-1 rounded">NSFW</span>
+                        <span className="sw-mark-art">NSFW</span>
                       </div>
                     )}
                   </button>

@@ -1,13 +1,15 @@
 """Visual Novel metadata endpoints."""
 
 import asyncio
+import hashlib
 import logging
 import re
+from dataclasses import replace
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete, case, and_, or_, text
+from sqlalchemy import select, func, delete, case, and_, or_, text, true
 from sqlalchemy.dialects.postgresql import insert
 
 from slowapi import Limiter
@@ -15,22 +17,28 @@ from slowapi.util import get_remote_address
 
 from app.db.database import get_db, async_session_maker
 from app.db import schemas
-from app.db.models import VisualNovel, VNDifficulty, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, ReleasePlatform, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
+from app.db.vn_filters import (
+    MAX_FILTER_IDS,
+    FilterListTooLong,
+    parse_vn_filters,
+    vn_attribute_predicates,
+    vn_entity_predicates,
+)
+from app.db.models import VisualNovel, VNDifficulty, Tag, VNTag, Trait, VNSimilarity, VNCoOccurrence, CharacterVN, CharacterTrait, Character, Producer, Release, ReleaseVN, ReleaseProducer, Staff, VNStaff, VNSeiyuu, VNRelation, ExtlinksMaster, VNExtlink, WikidataEntry, ReleaseExtlink
 from app.services.extlinks_service import build_extlink_url, build_wikidata_links, get_site_label, SHOP_SITES, LINK_SITES, LINK_SORT_ORDER, SHOP_SORT_ORDER, DEPRECATED_SITES, TRANSLATION_ONLY_SITES, NON_JP_CONSOLE_STORES
+from app.services.vn_credits import group_seiyuu_credits, order_staff_credits
 from app.core.vndb_client import get_vndb_client
 from app.core.auth import require_admin
 from app.core.cache import get_cache
 from app.core.search_utils import relevance_rank
+from app.services.bbcode import BLURB_SOURCE_CHARS, plain_summary
+from app.services.release_dates import classify_release_precision
 from app.leaderboards.browse_metrics import METRIC_SORTS, describe_floor
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
-
-# Ceiling on the ids accepted in a comma-separated filter. Each id can add a subquery, so
-# the cost of one request grows with the length of the list.
-MAX_FILTER_IDS = 30
 
 # Genre tags used for percentile ranking in vote-stats endpoint
 _GENRE_TAGS = [
@@ -42,7 +50,7 @@ _GENRE_TAGS = [
 # VN length category labels (matches VNDB length field values 1-5)
 _LENGTH_LABELS = {1: "Very Short", 2: "Short", 3: "Medium", 4: "Long", 5: "Very Long"}
 
-# Minute ranges for each length category — must match get_length_filter() in search_vns
+# Minute ranges for each length category. Must match the ranges in app/db/vn_filters.py.
 _LENGTH_RANGES = {
     1: (None, 120),      # Very Short: < 2h
     2: (120, 600),       # Short: 2-10h
@@ -233,8 +241,8 @@ async def search_vns(
     max_rating: float | None = Query(default=None, ge=0, le=10, description="Maximum rating"),
     min_votecount: int | None = Query(default=None, ge=0, description="Minimum vote count"),
     max_votecount: int | None = Query(default=None, ge=0, description="Maximum vote count"),
-    min_difficulty: float | None = Query(default=None, ge=0, le=10, description="Minimum Japanese reading difficulty (restricts to analysed titles)"),
-    max_difficulty: float | None = Query(default=None, ge=0, le=10, description="Maximum Japanese reading difficulty (restricts to analysed titles)"),
+    min_difficulty: float | None = Query(default=None, ge=0, le=10, description="Minimum Japanese reading difficulty band, 0-5 (restricts to analysed titles)"),
+    max_difficulty: float | None = Query(default=None, ge=0, le=10, description="Maximum Japanese reading difficulty band, 0-5 (restricts to analysed titles)"),
 
     # Category filters (support comma-separated values for multi-select)
     length: str | None = Query(default=None, description="Length: very_short, short, medium, long, very_long (comma-separated)"),
@@ -392,196 +400,41 @@ async def search_vns(
         query = query.where(char_filter)
         count_query = count_query.where(char_filter)
 
-    # Year range filter
-    if year_min:
-        year_filter = func.extract("year", VisualNovel.released) >= year_min
-        query = query.where(year_filter)
-        count_query = count_query.where(year_filter)
-
-    if year_max:
-        year_filter = func.extract("year", VisualNovel.released) <= year_max
-        query = query.where(year_filter)
-        count_query = count_query.where(year_filter)
-
-    # Rating range
-    if min_rating is not None:
-        query = query.where(VisualNovel.rating >= min_rating)
-        count_query = count_query.where(VisualNovel.rating >= min_rating)
-
-    if max_rating is not None:
-        query = query.where(VisualNovel.rating < max_rating)
-        count_query = count_query.where(VisualNovel.rating < max_rating)
-
-    # Vote count range
-    if min_votecount is not None:
-        query = query.where(VisualNovel.votecount >= min_votecount)
-        count_query = count_query.where(VisualNovel.votecount >= min_votecount)
-
-    if max_votecount is not None:
-        query = query.where(VisualNovel.votecount <= max_votecount)
-        count_query = count_query.where(VisualNovel.votecount <= max_votecount)
-
-    # Reading difficulty. Only a small fraction of titles have been analysed, so asking for a
-    # difficulty at all restricts the results to those, which is why it is expressed as a
-    # subquery on presence rather than an outer join that would admit unmeasured titles.
-    if min_difficulty is not None or max_difficulty is not None:
-        measured = select(VNDifficulty.vn_id)
-        if min_difficulty is not None:
-            measured = measured.where(VNDifficulty.difficulty_raw >= min_difficulty)
-        if max_difficulty is not None:
-            measured = measured.where(VNDifficulty.difficulty_raw <= max_difficulty)
-        query = query.where(VisualNovel.id.in_(measured))
-        count_query = count_query.where(VisualNovel.id.in_(measured))
-
-    # Length filter (using length_minutes when available)
-    # Helper function for length filter conditions
-    # Must match length_to_categories() logic: treat length_minutes <= 0 as invalid
-    # and fall back to the legacy length field in those cases.
-    def get_length_filter(length_key: str):
-        length_ranges = {
-            "very_short": (None, 120),      # < 2 hours
-            "short": (120, 600),            # 2-10 hours
-            "medium": (600, 1800),          # 10-30 hours
-            "long": (1800, 3000),           # 30-50 hours
-            "very_long": (3000, None),      # 50+ hours
-        }
-        length_values = {"very_short": 1, "short": 2, "medium": 3, "long": 4, "very_long": 5}
-        if length_key not in length_ranges:
-            return None
-        min_len, max_len = length_ranges[length_key]
-        conditions = []
-        # Use length_minutes only when it's positive (valid data)
-        if min_len is not None and max_len is not None:
-            conditions.append((VisualNovel.length_minutes > 0) & (VisualNovel.length_minutes >= min_len) & (VisualNovel.length_minutes < max_len))
-        elif min_len is not None:
-            conditions.append((VisualNovel.length_minutes > 0) & (VisualNovel.length_minutes >= min_len))
-        elif max_len is not None:
-            conditions.append((VisualNovel.length_minutes > 0) & (VisualNovel.length_minutes < max_len))
-        # Fall back to length category when length_minutes is null or non-positive
-        conditions.append(
-            or_(VisualNovel.length_minutes.is_(None), VisualNovel.length_minutes <= 0) &
-            (VisualNovel.length == length_values[length_key])
+    # Filter predicates shared with the other surfaces that offer the same controls, so
+    # one filter selects one set of titles wherever it is presented.
+    try:
+        filter_spec = parse_vn_filters(
+            year_min=year_min,
+            year_max=year_max,
+            min_rating=min_rating,
+            max_rating=max_rating,
+            min_votecount=min_votecount,
+            max_votecount=max_votecount,
+            min_difficulty=min_difficulty,
+            max_difficulty=max_difficulty,
+            length=length,
+            minage=minage,
+            devstatus=devstatus,
+            olang=olang,
+            platform=platform,
+            exclude_length=exclude_length,
+            exclude_minage=exclude_minage,
+            exclude_devstatus=exclude_devstatus,
+            exclude_olang=exclude_olang,
+            exclude_platform=exclude_platform,
+            staff=staff,
+            seiyuu=seiyuu,
+            developer=developer,
+            publisher=publisher,
+            producer=producer,
+            nsfw=nsfw,
         )
-        return or_(*conditions)
+    except FilterListTooLong as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    if length:
-        length_values = [v.strip() for v in length.split(",") if v.strip()]
-        if length_values:
-            length_conditions = [get_length_filter(lv) for lv in length_values if get_length_filter(lv) is not None]
-            if length_conditions:
-                len_filter = or_(*length_conditions)
-                query = query.where(len_filter)
-                count_query = count_query.where(len_filter)
-
-    if exclude_length:
-        exclude_length_values = [v.strip() for v in exclude_length.split(",") if v.strip()]
-        if exclude_length_values:
-            exclude_conditions = [get_length_filter(lv) for lv in exclude_length_values if get_length_filter(lv) is not None]
-            if exclude_conditions:
-                exclude_filter = ~or_(*exclude_conditions)
-                query = query.where(exclude_filter)
-                count_query = count_query.where(exclude_filter)
-
-    # Age rating filter
-    def get_age_filter(age_key: str):
-        if age_key == "all_ages":
-            return VisualNovel.minage <= 12
-        elif age_key == "teen":
-            return (VisualNovel.minage > 12) & (VisualNovel.minage <= 17)
-        elif age_key == "adult":
-            return VisualNovel.minage >= 18
-        return None
-
-    if minage:
-        minage_values = [v.strip() for v in minage.split(",") if v.strip()]
-        if minage_values:
-            age_conditions = [get_age_filter(av) for av in minage_values if get_age_filter(av) is not None]
-            if age_conditions:
-                age_filter = or_(*age_conditions)
-                query = query.where(age_filter)
-                count_query = count_query.where(age_filter)
-
-    if exclude_minage:
-        exclude_minage_values = [v.strip() for v in exclude_minage.split(",") if v.strip()]
-        if exclude_minage_values:
-            exclude_age_conditions = [get_age_filter(av) for av in exclude_minage_values if get_age_filter(av) is not None]
-            if exclude_age_conditions:
-                exclude_age_filter = ~or_(*exclude_age_conditions)
-                query = query.where(exclude_age_filter)
-                count_query = count_query.where(exclude_age_filter)
-
-    # Development status filter (default: finished only)
-    # Parse devstatus as comma-separated values (-1 means all/no filter)
-    if devstatus and devstatus != "-1":
-        devstatus_values = [int(v.strip()) for v in devstatus.split(",") if v.strip().lstrip('-').isdigit() and int(v.strip()) >= 0]
-        if devstatus_values:
-            if len(devstatus_values) == 1:
-                status_filter = VisualNovel.devstatus == devstatus_values[0]
-            else:
-                status_filter = VisualNovel.devstatus.in_(devstatus_values)
-            query = query.where(status_filter)
-            count_query = count_query.where(status_filter)
-
-    if exclude_devstatus:
-        exclude_devstatus_values = [int(v.strip()) for v in exclude_devstatus.split(",") if v.strip().lstrip('-').isdigit() and int(v.strip()) >= 0]
-        if exclude_devstatus_values:
-            exclude_status_filter = ~VisualNovel.devstatus.in_(exclude_devstatus_values)
-            query = query.where(exclude_status_filter)
-            count_query = count_query.where(exclude_status_filter)
-
-    # Original language filter
-    if olang:
-        olang_values = [v.strip() for v in olang.split(",") if v.strip()]
-        if olang_values:
-            if len(olang_values) == 1:
-                lang_filter = VisualNovel.olang == olang_values[0]
-            else:
-                lang_filter = VisualNovel.olang.in_(olang_values)
-            query = query.where(lang_filter)
-            count_query = count_query.where(lang_filter)
-
-    if exclude_olang:
-        exclude_olang_values = [v.strip() for v in exclude_olang.split(",") if v.strip()]
-        if exclude_olang_values:
-            exclude_lang_filter = ~VisualNovel.olang.in_(exclude_olang_values)
-            query = query.where(exclude_lang_filter)
-            count_query = count_query.where(exclude_lang_filter)
-
-    # Platform filter (query through release_vn and release_platforms tables)
-    if platform:
-        platform_values = [v.strip() for v in platform.split(",") if v.strip()]
-        if platform_values:
-            platform_subquery = (
-                select(ReleaseVN.vn_id)
-                .join(ReleasePlatform, ReleaseVN.release_id == ReleasePlatform.release_id)
-                .where(ReleasePlatform.platform.in_(platform_values))
-                .where(ReleaseVN.rtype == 'complete')
-                .distinct()
-            )
-            query = query.where(VisualNovel.id.in_(platform_subquery))
-            count_query = count_query.where(VisualNovel.id.in_(platform_subquery))
-
-    if exclude_platform:
-        exclude_platform_values = [v.strip() for v in exclude_platform.split(",") if v.strip()]
-        if exclude_platform_values:
-            exclude_platform_subquery = (
-                select(ReleaseVN.vn_id)
-                .join(ReleasePlatform, ReleaseVN.release_id == ReleasePlatform.release_id)
-                .where(ReleasePlatform.platform.in_(exclude_platform_values))
-                .where(ReleaseVN.rtype == 'complete')
-                .distinct()
-            )
-            query = query.where(~VisualNovel.id.in_(exclude_platform_subquery))
-            count_query = count_query.where(~VisualNovel.id.in_(exclude_platform_subquery))
-
-    # NSFW filter (when false, exclude 18+ content)
-    if not nsfw:
-        nsfw_filter = or_(
-            VisualNovel.minage < 18,
-            VisualNovel.minage.is_(None)
-        )
-        query = query.where(nsfw_filter)
-        count_query = count_query.where(nsfw_filter)
+    for predicate in vn_attribute_predicates(filter_spec):
+        query = query.where(predicate)
+        count_query = count_query.where(predicate)
 
     # Tag include filter
     if tags:
@@ -716,65 +569,10 @@ async def search_vns(
             query = query.where(~VisualNovel.id.in_(exclude_trait_subquery))
             count_query = count_query.where(~VisualNovel.id.in_(exclude_trait_subquery))
 
-    # Staff filter
-    if staff:
-        staff_ids = _parse_str_list(staff)
-        if staff_ids:
-            staff_sub = select(VNStaff.vn_id).where(VNStaff.staff_id.in_(staff_ids)).distinct()
-            query = query.where(VisualNovel.id.in_(staff_sub))
-            count_query = count_query.where(VisualNovel.id.in_(staff_sub))
-
-    # Seiyuu filter
-    if seiyuu:
-        seiyuu_ids = _parse_str_list(seiyuu)
-        if seiyuu_ids:
-            seiyuu_sub = select(VNSeiyuu.vn_id).where(VNSeiyuu.staff_id.in_(seiyuu_ids)).distinct()
-            query = query.where(VisualNovel.id.in_(seiyuu_sub))
-            count_query = count_query.where(VisualNovel.id.in_(seiyuu_sub))
-
-    # Developer filter (through release_vn -> release_producers)
-    if developer:
-        dev_ids = _parse_str_list(developer)
-        if dev_ids:
-            dev_sub = (
-                select(ReleaseVN.vn_id)
-                .join(ReleaseProducer, ReleaseVN.release_id == ReleaseProducer.release_id)
-                .where(ReleaseProducer.producer_id.in_(dev_ids))
-                .where(ReleaseProducer.developer == True)
-                .distinct()
-            )
-            query = query.where(VisualNovel.id.in_(dev_sub))
-            count_query = count_query.where(VisualNovel.id.in_(dev_sub))
-
-    # Publisher filter (through release_vn -> release_producers)
-    if publisher:
-        pub_ids = _parse_str_list(publisher)
-        if pub_ids:
-            pub_sub = (
-                select(ReleaseVN.vn_id)
-                .join(ReleaseProducer, ReleaseVN.release_id == ReleaseProducer.release_id)
-                .where(ReleaseProducer.producer_id.in_(pub_ids))
-                .where(ReleaseProducer.publisher == True)
-                .distinct()
-            )
-            query = query.where(VisualNovel.id.in_(pub_sub))
-            count_query = count_query.where(VisualNovel.id.in_(pub_sub))
-
-    # Producer filter (matches developer OR publisher role)
-    # Used by producer stats pages to link to browse with all VNs by a producer
-    if producer:
-        prod_ids = _parse_str_list(producer)
-        if prod_ids:
-            # Match VNs where the producer is either developer OR publisher
-            prod_sub = (
-                select(ReleaseVN.vn_id)
-                .join(ReleaseProducer, ReleaseVN.release_id == ReleaseProducer.release_id)
-                .where(ReleaseProducer.producer_id.in_(prod_ids))
-                .where(or_(ReleaseProducer.developer == True, ReleaseProducer.publisher == True))
-                .distinct()
-            )
-            query = query.where(VisualNovel.id.in_(prod_sub))
-            count_query = count_query.where(VisualNovel.id.in_(prod_sub))
+    # Staff, seiyuu and producer credits
+    for predicate in vn_entity_predicates(filter_spec):
+        query = query.where(predicate)
+        count_query = count_query.where(predicate)
 
     # Sorting - always include secondary sort by ID for stable pagination
     if sort == "random":
@@ -866,88 +664,14 @@ async def search_vns(
                 efc = _escape_like(first_char)
                 char_filter = VisualNovel.title.ilike(f"{efc}%")
             spoiler_count_query = spoiler_count_query.where(char_filter)
-        if year_min:
-            spoiler_count_query = spoiler_count_query.where(func.extract("year", VisualNovel.released) >= year_min)
-        if year_max:
-            spoiler_count_query = spoiler_count_query.where(func.extract("year", VisualNovel.released) <= year_max)
-        if min_rating is not None:
-            spoiler_count_query = spoiler_count_query.where(VisualNovel.rating >= min_rating)
-        if max_rating is not None:
-            spoiler_count_query = spoiler_count_query.where(VisualNovel.rating < max_rating)
-        if min_votecount is not None:
-            spoiler_count_query = spoiler_count_query.where(VisualNovel.votecount >= min_votecount)
-        if max_votecount is not None:
-            spoiler_count_query = spoiler_count_query.where(VisualNovel.votecount <= max_votecount)
-        if length:
-            length_values = [v.strip() for v in length.split(",") if v.strip()]
-            if length_values:
-                length_conditions = [get_length_filter(lv) for lv in length_values if get_length_filter(lv) is not None]
-                if length_conditions:
-                    spoiler_count_query = spoiler_count_query.where(or_(*length_conditions))
-        if exclude_length:
-            exclude_length_values = [v.strip() for v in exclude_length.split(",") if v.strip()]
-            if exclude_length_values:
-                exclude_conditions = [get_length_filter(lv) for lv in exclude_length_values if get_length_filter(lv) is not None]
-                if exclude_conditions:
-                    spoiler_count_query = spoiler_count_query.where(~or_(*exclude_conditions))
-        if minage:
-            minage_values = [v.strip() for v in minage.split(",") if v.strip()]
-            if minage_values:
-                age_conditions = [get_age_filter(av) for av in minage_values if get_age_filter(av) is not None]
-                if age_conditions:
-                    spoiler_count_query = spoiler_count_query.where(or_(*age_conditions))
-        if exclude_minage:
-            exclude_minage_values = [v.strip() for v in exclude_minage.split(",") if v.strip()]
-            if exclude_minage_values:
-                exclude_age_conditions = [get_age_filter(av) for av in exclude_minage_values if get_age_filter(av) is not None]
-                if exclude_age_conditions:
-                    spoiler_count_query = spoiler_count_query.where(~or_(*exclude_age_conditions))
-        if devstatus and devstatus != "-1":
-            devstatus_values = [int(v.strip()) for v in devstatus.split(",") if v.strip().lstrip('-').isdigit() and int(v.strip()) >= 0]
-            if devstatus_values:
-                if len(devstatus_values) == 1:
-                    spoiler_count_query = spoiler_count_query.where(VisualNovel.devstatus == devstatus_values[0])
-                else:
-                    spoiler_count_query = spoiler_count_query.where(VisualNovel.devstatus.in_(devstatus_values))
-        if exclude_devstatus:
-            exclude_devstatus_values = [int(v.strip()) for v in exclude_devstatus.split(",") if v.strip().lstrip('-').isdigit() and int(v.strip()) >= 0]
-            if exclude_devstatus_values:
-                spoiler_count_query = spoiler_count_query.where(~VisualNovel.devstatus.in_(exclude_devstatus_values))
-        if olang:
-            olang_values = [v.strip() for v in olang.split(",") if v.strip()]
-            if olang_values:
-                if len(olang_values) == 1:
-                    spoiler_count_query = spoiler_count_query.where(VisualNovel.olang == olang_values[0])
-                else:
-                    spoiler_count_query = spoiler_count_query.where(VisualNovel.olang.in_(olang_values))
-        if exclude_olang:
-            exclude_olang_values = [v.strip() for v in exclude_olang.split(",") if v.strip()]
-            if exclude_olang_values:
-                spoiler_count_query = spoiler_count_query.where(~VisualNovel.olang.in_(exclude_olang_values))
-        if platform:
-            platform_values = [v.strip() for v in platform.split(",") if v.strip()]
-            if platform_values:
-                platform_subquery = (
-                    select(ReleaseVN.vn_id)
-                    .join(ReleasePlatform, ReleaseVN.release_id == ReleasePlatform.release_id)
-                    .where(ReleasePlatform.platform.in_(platform_values))
-                    .where(ReleaseVN.rtype == 'complete')
-                    .distinct()
-                )
-                spoiler_count_query = spoiler_count_query.where(VisualNovel.id.in_(platform_subquery))
-        if exclude_platform:
-            exclude_platform_values = [v.strip() for v in exclude_platform.split(",") if v.strip()]
-            if exclude_platform_values:
-                exclude_platform_subquery = (
-                    select(ReleaseVN.vn_id)
-                    .join(ReleasePlatform, ReleaseVN.release_id == ReleasePlatform.release_id)
-                    .where(ReleasePlatform.platform.in_(exclude_platform_values))
-                    .where(ReleaseVN.rtype == 'complete')
-                    .distinct()
-                )
-                spoiler_count_query = spoiler_count_query.where(~VisualNovel.id.in_(exclude_platform_subquery))
-        if not nsfw:
-            spoiler_count_query = spoiler_count_query.where(or_(VisualNovel.minage < 18, VisualNovel.minage.is_(None)))
+
+        # Reading difficulty and the combined producer role sit outside this count's
+        # filter set, so the two figures are comparable on the tag and trait dimension.
+        spoiler_spec = replace(
+            filter_spec, min_difficulty=None, max_difficulty=None, producer=()
+        )
+        for predicate in vn_attribute_predicates(spoiler_spec):
+            spoiler_count_query = spoiler_count_query.where(predicate)
 
         # Apply tag filters WITH spoiler_level=2 (include all spoilers)
         if tags:
@@ -1066,38 +790,8 @@ async def search_vns(
                 spoiler_count_query = spoiler_count_query.where(~VisualNovel.id.in_(exclude_trait_subquery))
 
         # Apply entity filters to spoiler count query too
-        if staff:
-            staff_ids = _parse_str_list(staff)
-            if staff_ids:
-                staff_sub = select(VNStaff.vn_id).where(VNStaff.staff_id.in_(staff_ids)).distinct()
-                spoiler_count_query = spoiler_count_query.where(VisualNovel.id.in_(staff_sub))
-        if seiyuu:
-            seiyuu_ids = _parse_str_list(seiyuu)
-            if seiyuu_ids:
-                seiyuu_sub = select(VNSeiyuu.vn_id).where(VNSeiyuu.staff_id.in_(seiyuu_ids)).distinct()
-                spoiler_count_query = spoiler_count_query.where(VisualNovel.id.in_(seiyuu_sub))
-        if developer:
-            dev_ids = _parse_str_list(developer)
-            if dev_ids:
-                dev_sub = (
-                    select(ReleaseVN.vn_id)
-                    .join(ReleaseProducer, ReleaseVN.release_id == ReleaseProducer.release_id)
-                    .where(ReleaseProducer.producer_id.in_(dev_ids))
-                    .where(ReleaseProducer.developer == True)
-                    .distinct()
-                )
-                spoiler_count_query = spoiler_count_query.where(VisualNovel.id.in_(dev_sub))
-        if publisher:
-            pub_ids = _parse_str_list(publisher)
-            if pub_ids:
-                pub_sub = (
-                    select(ReleaseVN.vn_id)
-                    .join(ReleaseProducer, ReleaseVN.release_id == ReleaseProducer.release_id)
-                    .where(ReleaseProducer.producer_id.in_(pub_ids))
-                    .where(ReleaseProducer.publisher == True)
-                    .distinct()
-                )
-                spoiler_count_query = spoiler_count_query.where(VisualNovel.id.in_(pub_sub))
+        for predicate in vn_entity_predicates(spoiler_spec):
+            spoiler_count_query = spoiler_count_query.where(predicate)
 
         # Execute spoiler-inclusive count query on a separate session
         total_with_spoilers = await _run_count(spoiler_count_query)
@@ -1566,6 +1260,69 @@ async def batch_vns(
     ]
 
 
+@router.post("/batch/blurbs", response_model=list[schemas.BatchItemBlurb])
+async def batch_vn_blurbs(
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Batch VN info plus the prose a cover-beside-text layout needs.
+
+    A sibling of the route above rather than a wider version of it: that response answers for
+    characters too, and these columns have no meaning there.
+
+    The description is cut in the query as well as after it. The first bound keeps multi
+    kilobyte blobs inside the database, the second is what a few clamped lines can show.
+    """
+    ids = body.get("ids", [])
+    if not isinstance(ids, list) or not ids or len(ids) > 100:
+        raise HTTPException(status_code=400, detail="ids must be a list of 1-100 VN IDs")
+
+    vn_ids = [i for i in ids if isinstance(i, str) and re.match(r"^v\d+$", i)]
+    if not vn_ids:
+        return []
+
+    # Keyed on the set asked for rather than per title: the cache has no multi-get, and a
+    # page of single lookups is a round trip each. A reader moving between layouts, tabs and
+    # reloads asks for the same set every time, which is what this key matches.
+    cache = get_cache()
+    cache_key = f"vn:blurbs:{hashlib.sha256(','.join(sorted(vn_ids)).encode()).hexdigest()}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return [schemas.BatchItemBlurb(**row) for row in cached]
+
+    result = await db.execute(
+        select(
+            VisualNovel.id,
+            VisualNovel.title,
+            VisualNovel.title_jp,
+            VisualNovel.title_romaji,
+            VisualNovel.image_url,
+            VisualNovel.image_sexual,
+            func.left(VisualNovel.description, BLURB_SOURCE_CHARS).label("description"),
+            VisualNovel.released,
+        ).where(VisualNovel.id.in_(vn_ids))
+    )
+
+    rows = [
+        {
+            "id": row.id,
+            "title": row.title,
+            "title_jp": row.title_jp,
+            "title_romaji": row.title_romaji,
+            "image_url": row.image_url,
+            "image_sexual": row.image_sexual,
+            "description": plain_summary(row.description),
+            "released": row.released.isoformat() if row.released else None,
+        }
+        for row in result
+    ]
+
+    # Descriptions change with the nightly import, so a day is the shortest interval over
+    # which the answer can differ.
+    await cache.set(cache_key, rows, ttl=86400)
+    return [schemas.BatchItemBlurb(**row) for row in rows]
+
+
 @router.get("/top", response_model=list[schemas.TopVN])
 async def get_top_vns(
     sort: str = Query(default="rating", description="Sort by: rating, votecount"),
@@ -1620,6 +1377,130 @@ async def get_top_vns(
         )
         for i, vn in enumerate(vns)
     ]
+
+
+@router.get("/upcoming", response_model=schemas.UpcomingReleasesResponse)
+async def get_upcoming_releases(
+    limit: int = Query(default=300, ge=1, le=500, description="Maximum titles to return"),
+    japanese_only: bool = Query(
+        default=True,
+        description="Restrict to titles written in Japanese first, which is the default",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Titles whose first release is still ahead, soonest first.
+
+    Read from the VN row rather than from individual releases, so a title appears once for
+    the day it arrives instead of once per edition. Cancelled entries are dropped; a title
+    still in development is exactly what belongs here.
+
+    Each date carries how much of it the dump actually stated, because an unknown month or
+    day is clamped on import and would otherwise read as a precise day.
+
+    Restricted by default to titles written in Japanese first. A title that merely carries a
+    Japanese release among its languages is a different thing from a Japanese work, and the
+    two were being shown together.
+    """
+    today = datetime.utcnow().date()
+
+    cache = get_cache()
+    # Keyed on the day the cutoff was taken from, so the list turns over at midnight
+    # without needing an explicit invalidation.
+    cache_key = f"vn:upcoming:{today.isoformat()}:{limit}:{int(japanese_only)}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return schemas.UpcomingReleasesResponse(**cached)
+
+    exact_release = (
+        select(1)
+        .select_from(ReleaseVN)
+        .join(Release, Release.id == ReleaseVN.release_id)
+        .where(
+            ReleaseVN.vn_id == VisualNovel.id,
+            or_(ReleaseVN.rtype.is_(None), ReleaseVN.rtype != "trial"),
+            Release.official.is_(True),
+            Release.released == VisualNovel.released,
+        )
+        .exists()
+    )
+
+    rows = (
+        await db.execute(
+            select(
+                VisualNovel.id,
+                VisualNovel.title,
+                VisualNovel.title_jp,
+                VisualNovel.title_romaji,
+                VisualNovel.image_url,
+                VisualNovel.image_sexual,
+                VisualNovel.released,
+                VisualNovel.languages,
+                VisualNovel.platforms,
+                VisualNovel.minage,
+                exact_release.label("has_exact_release"),
+            )
+            .where(VisualNovel.released > today)
+            .where(or_(VisualNovel.devstatus.is_(None), VisualNovel.devstatus != 2))
+            .where(VisualNovel.olang == "ja" if japanese_only else true())
+            .order_by(
+                VisualNovel.released.asc(),
+                VisualNovel.popularity.desc().nulls_last(),
+                VisualNovel.title.asc(),
+            )
+            .limit(limit)
+        )
+    ).all()
+
+    vn_ids = [row.id for row in rows]
+
+    # The denormalised developers column on the VN row is written from released editions,
+    # so an unreleased title has nothing in it and the credit has to come from the
+    # producer side of its announced releases.
+    developers: dict[str, list[schemas.ProducerCredit]] = {}
+    if vn_ids:
+        dev_rows = (
+            await db.execute(
+                select(ReleaseVN.vn_id, Producer.name, Producer.original)
+                .join(ReleaseProducer, ReleaseProducer.release_id == ReleaseVN.release_id)
+                .join(Producer, Producer.id == ReleaseProducer.producer_id)
+                .where(ReleaseVN.vn_id.in_(vn_ids))
+                .where(ReleaseProducer.developer.is_(True))
+                .distinct()
+            )
+        ).all()
+        for vn_id, name, original in dev_rows:
+            if name:
+                developers.setdefault(vn_id, []).append(
+                    schemas.ProducerCredit(name=name, original=original)
+                )
+
+    items = []
+    for row in rows:
+        languages = list(row.languages or [])
+        items.append(
+            schemas.UpcomingRelease(
+                id=row.id,
+                title=row.title,
+                title_jp=row.title_jp,
+                title_romaji=row.title_romaji,
+                image_url=row.image_url,
+                image_sexual=row.image_sexual,
+                released=row.released.isoformat(),
+                date_precision=classify_release_precision(row.released, row.has_exact_release),
+                developers=sorted(developers.get(row.id, []), key=lambda credit: credit.name),
+                platforms=sorted(row.platforms or []),
+                languages=sorted(languages),
+                japanese="ja" in languages,
+                minage=row.minage,
+            )
+        )
+
+    response = schemas.UpcomingReleasesResponse(
+        as_of=today.isoformat(), total=len(items), items=items
+    )
+    await cache.set(cache_key, response.model_dump(mode="json"), ttl=3600)
+    return response
 
 
 @router.get("/{vn_id}/similar", response_model=schemas.SimilarVNsResponse)
@@ -1771,6 +1652,85 @@ async def get_vn_characters(
     ]
 
     return characters
+
+
+@router.get("/{vn_id}/credits", response_model=schemas.VNCreditsResponse)
+async def get_vn_credits(
+    vn_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get the credited staff and voice actors for a visual novel.
+
+    Both lists are capped: a large title credits hundreds of people, and this exists to
+    name the significant ones. Staff are ordered by the significance of their role, voice
+    actors by the importance of the character they voice, so the cap keeps the top of
+    each list rather than an arbitrary slice.
+    """
+    normalized_id = vn_id if vn_id.startswith("v") else f"v{vn_id}"
+
+    vn_check = await db.execute(
+        select(VisualNovel.id).where(VisualNovel.id == normalized_id)
+    )
+    if not vn_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail=f"VN {vn_id} not found")
+
+    staff_rows = (await db.execute(
+        select(VNStaff.staff_id, Staff.name, Staff.original, VNStaff.role)
+        .join(Staff, VNStaff.staff_id == Staff.id)
+        .where(VNStaff.vn_id == normalized_id)
+        .order_by(Staff.name)
+    )).all()
+
+    # The character's role in this VN decides which voice actors survive the cap, so the
+    # cast link is the one that carries it, not the credit row itself.
+    character_role_rank = case(
+        (CharacterVN.role == 'main', 1),
+        (CharacterVN.role == 'primary', 2),
+        (CharacterVN.role == 'side', 3),
+        else_=4,
+    )
+    seiyuu_rows = (await db.execute(
+        select(
+            VNSeiyuu.staff_id,
+            Staff.name,
+            Staff.original,
+            VNSeiyuu.character_id,
+            Character.name,
+            Character.original,
+        )
+        .join(Staff, VNSeiyuu.staff_id == Staff.id)
+        .join(Character, VNSeiyuu.character_id == Character.id)
+        .outerjoin(
+            CharacterVN,
+            and_(
+                CharacterVN.character_id == VNSeiyuu.character_id,
+                CharacterVN.vn_id == normalized_id,
+            ),
+        )
+        .where(VNSeiyuu.vn_id == normalized_id)
+        .order_by(character_role_rank, Character.name)
+    )).all()
+
+    staff = order_staff_credits(staff_rows)
+    seiyuu = group_seiyuu_credits(seiyuu_rows)
+
+    return schemas.VNCreditsResponse(
+        staff=[schemas.VNStaffCreditResponse(**person) for person in staff],
+        seiyuu=[
+            schemas.VNSeiyuuCreditResponse(
+                id=person["id"],
+                name=person["name"],
+                original=person["original"],
+                characters=[
+                    schemas.VNSeiyuuCharacterInfo(**char) for char in person["characters"]
+                ],
+            )
+            for person in seiyuu
+        ],
+        staff_total=len({row[0] for row in staff_rows}),
+        seiyuu_total=len({row[0] for row in seiyuu_rows}),
+    )
 
 
 @router.get("/{vn_id}/vote-stats", response_model=schemas.VNVoteStatsResponse)

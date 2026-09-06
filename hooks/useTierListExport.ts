@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { getDisplayTitle, type TitlePreference } from '@/lib/title-preference';
 import { NSFW_THRESHOLD } from '@/lib/nsfw-reveal';
-import type { TierDef, TierVN, SizeConfig } from '@/lib/tier-config';
+import type { TierDef, TierVN, SizeConfig, TierListMode } from '@/lib/tier-config';
 
 function readTitlePreference(): TitlePreference {
   try {
@@ -17,34 +17,36 @@ const TITLE_H = 32;
 const BORDER = 2;
 const CANVAS_W = 1200;
 
-// Tailwind class → hex color map
+// Tier swatches are stored as utility classes, so the canvas needs the hex behind each
+// one. These are the values the stylesheet paints for the palette version in use; the
+// swatch a reader sees on the board is what the exported image has to reproduce.
 const COLOR_MAP: Record<string, string> = {
-  'bg-red-400': '#f87171',
-  'bg-orange-400': '#fb923c',
-  'bg-amber-400': '#fbbf24',
-  'bg-yellow-300': '#fde047',
-  'bg-lime-400': '#a3e635',
-  'bg-green-400': '#4ade80',
-  'bg-teal-400': '#2dd4bf',
-  'bg-blue-400': '#60a5fa',
-  'bg-purple-400': '#c084fc',
-  'bg-pink-400': '#f472b6',
-  'bg-gray-300': '#d1d5db',
-  'bg-gray-600': '#4b5563',
+  'bg-red-400': '#ff6568',
+  'bg-orange-400': '#ff8b1a',
+  'bg-amber-400': '#fcbb00',
+  'bg-yellow-300': '#ffe02a',
+  'bg-lime-400': '#9de500',
+  'bg-green-400': '#05df72',
+  'bg-teal-400': '#00d3bd',
+  'bg-blue-400': '#54a2ff',
+  'bg-purple-400': '#c07eff',
+  'bg-pink-400': '#fb64b6',
+  'bg-gray-300': '#d1d5dc',
+  'bg-gray-600': '#4a5565',
 };
 
 const TEXT_COLOR_MAP: Record<string, string> = {
-  'text-red-950': '#450a0a',
-  'text-orange-950': '#431407',
-  'text-amber-950': '#451a03',
-  'text-yellow-950': '#422006',
-  'text-lime-950': '#1a2e05',
-  'text-green-950': '#052e16',
-  'text-teal-950': '#042f2e',
-  'text-blue-950': '#172554',
-  'text-purple-950': '#3b0764',
-  'text-pink-950': '#500724',
-  'text-gray-700': '#374151',
+  'text-red-950': '#460809',
+  'text-orange-950': '#441306',
+  'text-amber-950': '#461901',
+  'text-yellow-950': '#432004',
+  'text-lime-950': '#192e03',
+  'text-green-950': '#032e15',
+  'text-teal-950': '#022f2e',
+  'text-blue-950': '#162456',
+  'text-purple-950': '#3c0366',
+  'text-pink-950': '#510424',
+  'text-gray-700': '#364153',
   'text-gray-200': '#e5e7eb',
 };
 
@@ -202,6 +204,7 @@ export function useTierListExport(
   titleMaxH: number,
   exportScale: ExportScale = 2,
   nsfwState?: ExportNSFWState,
+  mode: TierListMode = 'vns',
 ) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -229,7 +232,13 @@ export function useTierListExport(
 
   const renderToCanvas = useCallback(async (): Promise<HTMLCanvasElement> => {
     const isDark = document.documentElement.classList.contains('dark');
-    const bgColor = isDark ? '#111827' : '#ffffff';
+    // Everything around the swatches is painted from the theme tokens in effect rather
+    // than a second copy of them, so a palette edit cannot leave the image belonging to a
+    // different theme than the board it was taken from. The fallbacks are the values
+    // those tokens carry today, for the case where the stylesheet has not resolved.
+    const rootStyle = getComputedStyle(document.documentElement);
+    const token = (name: string, fallback: string) => rootStyle.getPropertyValue(name).trim() || fallback;
+    const bgColor = token('--ground', isDark ? '#0F1113' : '#FFFFFF');
     const isCovers = displayMode === 'covers';
     const { itemW: ITEM_W, itemH: ITEM_H, minRowH: MIN_ROW_H, gap: GAP, pad: PAD, scoreFontSize, titleFontSize } = sizeConfig.export;
     // Cache title preference once for the entire export (avoids 200+ localStorage reads)
@@ -322,9 +331,9 @@ export function useTierListExport(
 
     // Title header
     if (listTitle.trim()) {
-      ctx.fillStyle = isDark ? '#1f2937' : '#f3f4f6';
+      ctx.fillStyle = token('--surface-inset', isDark ? '#16191C' : '#F6F7F8');
       ctx.fillRect(0, 0, canvasW, headerH);
-      ctx.fillStyle = isDark ? '#f3f4f6' : '#111827';
+      ctx.fillStyle = token('--ink', isDark ? '#E9EAEC' : '#17181A');
       ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -388,8 +397,8 @@ export function useTierListExport(
         ctx.fillText(labelLines[li], LABEL_W / 2, startY + li * lineH, maxLabelW);
       }
 
-      // Items area background (slightly different from main bg for contrast)
-      ctx.fillStyle = isDark ? '#1f2937' : '#f9fafb';
+      // Items area background: the panel surface the rows sit on
+      ctx.fillStyle = token('--surface', isDark ? '#1B1E21' : '#FFFFFF');
       ctx.fillRect(LABEL_W, y, itemsAreaW, height);
 
       // Draw items
@@ -432,14 +441,14 @@ export function useTierListExport(
               }
             } else {
               // Placeholder for failed image
-              ctx.fillStyle = isDark ? '#374151' : '#e5e7eb';
+              ctx.fillStyle = token('--surface-inset', isDark ? '#16191C' : '#F6F7F8');
               ctx.fillRect(ix, iy, itemW, itemH);
             }
           } else {
             // No image — draw truncated title like the page (.slice(0, 20))
-            ctx.fillStyle = isDark ? '#374151' : '#e5e7eb';
+            ctx.fillStyle = token('--surface-inset', isDark ? '#16191C' : '#F6F7F8');
             ctx.fillRect(ix, iy, itemW, itemH);
-            ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+            ctx.fillStyle = token('--nezu', isDark ? '#9BA1A9' : '#5A5F66');
             ctx.font = '11px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -512,8 +521,8 @@ export function useTierListExport(
           }
 
           // Badge background
-          ctx.fillStyle = isDark ? '#374151' : '#f3f4f6';
-          ctx.strokeStyle = isDark ? '#4b5563' : '#d1d5db';
+          ctx.fillStyle = token('--surface', isDark ? '#1B1E21' : '#FFFFFF');
+          ctx.strokeStyle = token('--rule', isDark ? '#2E3237' : '#E3E5E8');
           ctx.lineWidth = 1;
           ctx.beginPath();
           safeRoundRect(ctx, bx, by, bw, TITLE_H, BADGE_RADIUS);
@@ -523,7 +532,7 @@ export function useTierListExport(
           // Badge text
           const titleText = getTitle(vn);
           const labelText = showScores && vn.vote ? `${titleText} (${vn.vote})` : titleText;
-          ctx.fillStyle = isDark ? '#e5e7eb' : '#374151';
+          ctx.fillStyle = token('--ink', isDark ? '#E9EAEC' : '#17181A');
           ctx.font = '12px system-ui, -apple-system, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -536,7 +545,7 @@ export function useTierListExport(
       // Row separator
       y += height;
       if (ri < rows.length - 1) {
-        ctx.fillStyle = isDark ? '#374151' : '#e5e7eb';
+        ctx.fillStyle = token('--rule', isDark ? '#2E3237' : '#E3E5E8');
         ctx.fillRect(0, y, canvasW, BORDER);
         y += BORDER;
         // Yield to main thread between rows for UI responsiveness
@@ -572,7 +581,10 @@ export function useTierListExport(
       });
       const userPart = (username || 'tierlist').replace(/[^a-zA-Z0-9_-]/g, '_');
       const ext = format === 'png' ? 'png' : format === 'webp' ? 'webp' : 'jpg';
-      const filename = `vn-tierlist-${userPart}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+      // Prefixed by kind, matching the shared image, so the two sorts of board stay
+      // apart in a downloads folder.
+      const prefix = mode === 'characters' ? 'char' : 'vn';
+      const filename = `${prefix}-tierlist-${userPart}-${new Date().toISOString().slice(0, 10)}.${ext}`;
       const file = new File([blob], filename, { type: mimeType });
       const fileUrl = URL.createObjectURL(file);
       const link = document.createElement('a');
@@ -586,10 +598,13 @@ export function useTierListExport(
       }, 100);
     } catch (err) {
       console.error('Tier list export failed:', err);
+      // A canvas this size can be past what the browser will encode, and the only signal
+      // otherwise is the spinner stopping with no download.
+      showExportError('Export failed - try a smaller scale or fewer items.');
     } finally {
       setExporting(false);
     }
-  }, [renderToCanvas, checkWebPLimits, username]);
+  }, [renderToCanvas, checkWebPLimits, showExportError, username, mode]);
 
   return { exporting, exportAsImage, generateBlob, exportError, dismissExportError };
 }

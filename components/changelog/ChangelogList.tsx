@@ -103,17 +103,17 @@ export default function ChangelogList() {
               onClick={() => toggle(project)}
               aria-pressed={active[project]}
               title={active[project] ? 'Click to hide these updates' : 'Click to show these updates'}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-opacity cursor-pointer ${PROJECT_META[project].chip} ${active[project] ? '' : 'opacity-40 grayscale'}`}
+              className={`${PROJECT_META[project].chip} ${active[project] ? 'cat-tag--on' : 'cat-tag--off'}`}
             >
               {PROJECT_META[project].label}
             </button>
-            <span className="text-gray-500 dark:text-gray-400">{PROJECT_META[project].blurb}</span>
+            <span className="text-[color:var(--nezu)]">{PROJECT_META[project].blurb}</span>
           </span>
         ))}
       </div>
 
       {!anyVisible && (
-        <p className="mt-10 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-10 text-sm text-[color:var(--nezu)]">
           No updates to show. Toggle a category above.
         </p>
       )}
@@ -122,22 +122,22 @@ export default function ChangelogList() {
         const visibleInGroup = group.entries.some((entry) => active[entry.project]);
         return (
           <section key={group.key} className={visibleInGroup ? undefined : 'hidden'}>
-            <h2 className="mt-10 mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 pb-2">
+            <h2 className="sw-group-title mt-10 mb-4">
               {monthLabel(group.key)}
             </h2>
             <ul className="space-y-5">
               {group.entries.map((entry) => (
                 <li key={`${entry.date}-${entry.title}`} className={active[entry.project] ? undefined : 'hidden'}>
                   <div className="flex flex-wrap items-baseline gap-2">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PROJECT_META[entry.project].chip}`}>
+                    <span className={PROJECT_META[entry.project].chip}>
                       {PROJECT_META[entry.project].label}
                     </span>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{entry.title}</h3>
-                    <time dateTime={entry.date} className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                    <h3 className="sw-card-title">{entry.title}</h3>
+                    <time dateTime={entry.date} className="sw-when ml-auto">
                       {formatChangelogDay(entry.date)}
                     </time>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{entry.description}</p>
+                  <p className="mt-1 text-sm text-[color:var(--text-secondary)]">{entry.description}</p>
                   {entry.links && entry.links.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
                       {entry.links.map((link) => (

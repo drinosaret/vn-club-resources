@@ -9,7 +9,10 @@ import { ExternalLink } from 'lucide-react';
  */
 
 interface JitenAttributionProps {
-  /** What the reader is looking at, so the sentence fits its surroundings. */
+  /**
+   * What the reader is looking at, so the sentence fits its surroundings. Singular: it is the
+   * subject of "comes from", and a plural here would leave the sentence disagreeing.
+   */
   describes?: string;
   className?: string;
 }
@@ -19,13 +22,13 @@ export function JitenAttribution({
   className = '',
 }: JitenAttributionProps) {
   return (
-    <p className={`text-xs text-gray-500 dark:text-gray-400 ${className}`}>
+    <p className={`text-xs text-[color:var(--nezu)] ${className}`}>
       {describes} comes from{' '}
       <a
         href="https://jiten.moe/decks/media?mediaType=7"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline"
+        className="sw-link inline-flex items-center gap-1"
       >
         jiten.moe
         <ExternalLink className="w-3 h-3" />

@@ -1,6 +1,6 @@
 const deckIdCache = new Map<string, { id: number | null; ts: number }>();
-const DECK_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours — deck ID mappings essentially never change
-const NULL_CACHE_TTL = 60 * 60 * 1000;       // 1 hour — recheck "not on jiten" results sooner
+const DECK_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours: deck ID mappings essentially never change
+const NULL_CACHE_TTL = 60 * 60 * 1000;       // 1 hour: recheck "not on jiten" results sooner
 
 /** Resolve a VNDB ID (e.g. "v17") to a jiten.moe deck ID. */
 export async function resolveDeckId(vnId: string, signal?: AbortSignal): Promise<number | null> {
@@ -10,9 +10,12 @@ export async function resolveDeckId(vnId: string, signal?: AbortSignal): Promise
     if (Date.now() - cached.ts < ttl) return cached.id;
   }
 
+  // The in-process map above is bounded and does not survive a restart, so the mapping is
+  // also held in the data cache. A title gains a deck without warning, so the shared copy is
+  // revalidated on the shorter of the two windows above rather than the longer.
   const res = await fetch(
     `https://api.jiten.moe/api/media-deck/by-link-id/2/${vnId}`,
-    { signal }
+    { signal, next: { revalidate: NULL_CACHE_TTL / 1000 } }
   );
   if (res.status >= 500) throw new Error(`Jiten API error: ${res.status}`);
   if (!res.ok) return null; // 4xx = no deck found for this VN

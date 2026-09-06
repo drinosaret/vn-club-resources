@@ -51,8 +51,8 @@ export function generatePageMetadata({
   noIndex = false,
   largeImage = false,
 }: MetadataInput): Metadata {
-  // Use relative paths — Next.js resolves them against the dynamic metadataBase
-  // set in app/layout.tsx (which reads the Host header).
+  // Relative paths, which Next resolves against the metadataBase pinned to SITE_URL in
+  // app/layout.tsx, so a canonical names the canonical host whatever host served the request.
   const isDefaultImage = image === DEFAULT_OG_IMAGE;
   const ogWidth = imageWidth || (isDefaultImage ? 512 : undefined);
   const ogHeight = imageHeight || (isDefaultImage ? 512 : undefined);
@@ -85,6 +85,34 @@ export function generatePageMetadata({
       images: [image],
     },
     robots: noIndex ? { index: false, follow: true } : undefined,
+  };
+}
+
+/**
+ * Canonical plus hreflang set for a page that exists at both `/{slug}/` and
+ * `/ja/{slug}/`. Both members of a pair must name the same set of URLs and each
+ * must name itself, so the set is built in one place rather than per page.
+ *
+ * `x-default` names the English page: it is where a reader whose language
+ * matches neither annotation should land.
+ *
+ * Only call this where the Japanese route really exists. An hreflang pointing
+ * at a URL that answers 404 invalidates the annotation for the whole pair.
+ */
+export function localizedAlternates(
+  slug: string,
+  locale: 'en' | 'ja'
+): NonNullable<Metadata['alternates']> {
+  const en = `${SITE_URL}/${slug}/`;
+  const ja = `${SITE_URL}/ja/${slug}/`;
+
+  return {
+    canonical: locale === 'ja' ? ja : en,
+    languages: {
+      en,
+      ja,
+      'x-default': en,
+    },
   };
 }
 
@@ -181,7 +209,7 @@ export function buildVNMetaDescription(vn: {
     parts.push(`rated ${ratingStr}/10`);
   }
 
-  const prefix = parts.join(' — ');
+  const prefix = parts.join(', ');
 
   // If VNDB description exists, append a truncated version
   if (vn.description) {

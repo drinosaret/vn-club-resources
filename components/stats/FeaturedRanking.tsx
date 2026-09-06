@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from '@/components/Link';
-import { Trophy } from 'lucide-react';
 
 import { PreviewPanel, PreviewRow } from '@/components/stats/PreviewPanel';
 import { getDisplayTitle, useTitlePreference } from '@/lib/title-preference';
@@ -58,14 +57,13 @@ export function FeaturedRanking() {
   }, []);
 
   if (loading) {
-    return <div className="h-[26rem] rounded-xl image-placeholder" />;
+    return <div className="h-[26rem] rounded-xs image-placeholder" />;
   }
 
   if (!board || board.rows.length === 0) return null;
 
   return (
     <PreviewPanel
-      icon={<Trophy className="h-4 w-4 text-amber-500" />}
       title={board.title}
       href={FEATURED_HREF}
       linkLabel="Full ranking"
@@ -75,9 +73,10 @@ export function FeaturedRanking() {
       footer={
         <Link
           href="/stats/rankings/"
-          className="text-xs font-medium text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+          className="sec-more"
         >
           Browse all {board.total_ranked.toLocaleString()} ranked, and every other ranking
+          <span aria-hidden>&rarr;</span>
         </Link>
       }
     >
@@ -107,7 +106,7 @@ export function FeaturedRanking() {
                 : 'across every public vote'
             }
             figure={
-              <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+              <span className="st-num text-sm text-[color:var(--ink)]">
                 {row.value_label}
               </span>
             }

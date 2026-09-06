@@ -104,7 +104,7 @@ export function checkRateLimit(
  * the multi-value X-Forwarded-For which is easier to spoof.
  */
 export function getClientIp(request: Request): string {
-  // Cloudflare sets this to the real client IP — single value, not spoofable
+  // Cloudflare sets this to the real client IP: single value, not spoofable
   // when traffic goes through Cloudflare.
   const cfIp = request.headers.get('cf-connecting-ip');
   if (cfIp) {
@@ -117,7 +117,7 @@ export function getClientIp(request: Request): string {
     return realIp.trim();
   }
 
-  // Fallback to X-Forwarded-For — take the first IP (original client).
+  // Fallback to X-Forwarded-For: take the first IP (original client).
   // When behind a trusted proxy like Cloudflare/nginx, the proxy overwrites
   // this header, so the first entry is the real client IP.
   const forwardedFor = request.headers.get('x-forwarded-for');

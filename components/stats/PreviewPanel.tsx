@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import Link from '@/components/Link';
-import { ArrowRight } from 'lucide-react';
 
 import { NSFWImage } from '@/components/NSFWImage';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -22,7 +21,6 @@ import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
  */
 
 interface PreviewPanelProps {
-  icon: ReactNode;
   title: string;
   /** Where "see everything" goes, and what to call it. */
   href: string;
@@ -34,7 +32,6 @@ interface PreviewPanelProps {
 }
 
 export function PreviewPanel({
-  icon,
   title,
   href,
   linkLabel,
@@ -43,24 +40,18 @@ export function PreviewPanel({
   footer,
 }: PreviewPanelProps) {
   return (
-    <div className="flex h-full flex-col rounded-xl border border-gray-200/60 bg-white p-5 shadow-md shadow-gray-200/50 dark:border-gray-700/80 dark:bg-gray-800 dark:shadow-none">
-      <div className="mb-1 flex items-start justify-between gap-4">
-        <h2 className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-          {icon}
-          {title}
-        </h2>
-        <Link
-          href={href}
-          className="-my-1 inline-flex min-h-9 shrink-0 items-center gap-1 rounded px-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
-        >
+    <div className="st-card flex h-full flex-col p-5">
+      <div className="st-card-head mb-1">
+        <h2 className="st-card-title">{title}</h2>
+        <Link href={href} className="sec-more -my-1 min-h-9 py-1">
           {linkLabel}
-          <ArrowRight className="h-3 w-3" />
+          <span aria-hidden>&rarr;</span>
         </Link>
       </div>
 
-      <p className="mb-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">{blurb}</p>
+      <p className="st-card-sub mb-3">{blurb}</p>
 
-      <ol className="flex-1 space-y-1">{children}</ol>
+      <ol className="flex-1">{children}</ol>
 
       {footer ? <div className="mt-3">{footer}</div> : null}
     </div>
@@ -95,17 +86,10 @@ export function PreviewRow({
 }: PreviewRowProps) {
   return (
     <li>
-      <Link
-        href={href}
-        className="group -m-0.5 flex items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40"
-      >
-        {place !== undefined ? (
-          <span className="w-4 shrink-0 text-right text-xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">
-            {place}
-          </span>
-        ) : null}
+      <Link href={href} className="dg-row st-mid group">
+        {place !== undefined ? <span className="dg-rank">{place}</span> : null}
 
-        <span className="relative h-11 w-8 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-700">
+        <span className="relative h-11 w-8 shrink-0 self-center overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
           {imageUrl ? (
             <NSFWImage
               src={getProxiedImageUrl(imageUrl, 128)}
@@ -118,16 +102,14 @@ export function PreviewRow({
           ) : null}
         </span>
 
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-gray-900 transition-colors group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
-            {name}
-          </span>
-          <span className="block truncate text-xs tabular-nums text-gray-500 dark:text-gray-400">
+        <span className="min-w-0 flex-1 self-center">
+          <span className="dg-name block">{name}</span>
+          <span className="block truncate font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
             {detail}
           </span>
         </span>
 
-        <span className="shrink-0 text-right">{figure}</span>
+        <span className="shrink-0 self-center text-right">{figure}</span>
       </Link>
     </li>
   );

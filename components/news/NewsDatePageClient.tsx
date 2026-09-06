@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, Newspaper } from 'lucide-react';
 import { TabNavigation } from './TabNavigation';
 import { DateStrip } from './DateStrip';
 import { NewsCard } from './NewsCard';
@@ -12,7 +11,6 @@ import {
   TAB_SLUGS,
   type NewsListItem,
   type NewsListResponse,
-  newsSources,
 } from '@/lib/sample-news-data';
 import type { VNOfTheDayData } from '@/lib/vn-of-the-day';
 
@@ -70,7 +68,7 @@ export function NewsDatePageClient({ tab, date, initialData, vnOfTheDay }: NewsD
 
       {/* Date heading + server clock */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="font-display text-xl font-bold text-[color:var(--ink)]">
           {formattedDate}
         </h2>
         <UTCClock />
@@ -78,7 +76,7 @@ export function NewsDatePageClient({ tab, date, initialData, vnOfTheDay }: NewsD
 
       {/* Error state */}
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm">
+        <div className="mb-4 rounded-xs border border-[color:var(--rule)] border-l-[3px] border-l-[color:var(--kohaku)] p-3 text-sm text-[color:var(--text-secondary)]">
           {error}
         </div>
       )}
@@ -119,12 +117,9 @@ function AllSourcesView({ items, sourceCounts }: { items: NewsListItem[]; source
 
   if (sections.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-          <Newspaper className="w-8 h-8 text-gray-400" />
-        </div>
-        <p className="text-gray-500 dark:text-gray-400">No news items for this date</p>
-      </div>
+      <p className="py-12 text-center text-sm text-[color:var(--nezu)]">
+        No news items for this date
+      </p>
     );
   }
 
@@ -133,15 +128,11 @@ function AllSourcesView({ items, sourceCounts }: { items: NewsListItem[]; source
       {sections.map(src => {
         const sectionItems = grouped[src];
         const label = SOURCE_SECTION_LABELS[src] || src;
-        const sourceConfig = newsSources.find(s => s.id === src);
-
         return (
           <section key={src}>
-            <div className="flex items-center gap-3 mb-3">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                {label}
-              </h3>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium ${sourceConfig?.color ?? ''} ${sourceConfig?.darkColor ?? ''}`}>
+            <div className="nw-group">
+              <h3 className="nw-group-title">{label}</h3>
+              <span className="nameplate nameplate--plain tabular-nums">
                 {sectionItems.length} {sectionItems.length === 1 ? 'item' : 'items'}
               </span>
             </div>
@@ -207,8 +198,10 @@ function UTCClock() {
   if (!time) return null;
 
   return (
-    <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400" title="Server time (UTC) — news updates daily at midnight UTC">
-      <Clock className="w-3.5 h-3.5" />
+    <span
+      className="font-mono text-xs tabular-nums text-[color:var(--text-faint)]"
+      title="Server time (UTC). News updates daily at midnight UTC."
+    >
       {time} UTC
     </span>
   );
@@ -228,14 +221,11 @@ function EmptyState({ tab, date }: { tab: string; date: string }) {
   const label = EMPTY_LABELS[tab] || 'news';
 
   return (
-    <div className="text-center py-16">
-      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-        <Newspaper className="w-10 h-10 text-gray-400" />
-      </div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+    <div className="py-16 text-center">
+      <h3 className="font-display text-lg font-bold text-[color:var(--ink)]">
         No {label} for {date}
       </h3>
-      <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+      <p className="mx-auto mt-2 max-w-md text-sm text-[color:var(--nezu)]">
         Try selecting a different date using the date picker above, or check another source tab.
       </p>
     </div>

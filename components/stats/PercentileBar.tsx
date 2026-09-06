@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
 
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 import type { UserPercentiles } from '@/lib/vndb-stats-api';
@@ -122,16 +121,15 @@ export function PercentileBar({
   const entries = Object.entries(data?.percentiles ?? {});
   // Holding the space while the standings are fetched. Rendering nothing and then a full card
   // moves everything below it, which on this page is most of the page.
-  if (loading) return <div className="image-placeholder h-[26rem] rounded-xl" />;
+  if (loading) return <div className="image-placeholder h-[26rem] rounded-xs" />;
   if (!entries.length) return null;
 
   return (
-    <div className="flex h-full flex-col rounded-xl bg-white dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none p-5">
-      <h2 className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-1">
-        <Users className="w-4 h-4 text-gray-400" />
+    <div className="flex h-full flex-col st-card p-5">
+      <h2 className="st-card-title mb-1">
         How you compare
       </h2>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+      <p className="st-card-sub mb-4">
         Against every VNDB user with a public list
       </p>
 
@@ -142,21 +140,21 @@ export function PercentileBar({
         {entries.map(([key, entry]) => (
           <div key={key}>
             <div className="flex items-baseline justify-between gap-3 mb-1">
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-sm text-[color:var(--text-secondary)]">
                 {formatValue(key, entry.value)} {labelFor(key, entry.value)}
               </span>
-              <span className="text-sm font-semibold text-primary-600 dark:text-primary-400 tabular-nums">
+              <span className="text-sm font-semibold text-[color:var(--ink)]">
                 {phrase(key, entry.percentile, entry.below ?? entry.percentile)}
               </span>
             </div>
-            <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+            <div className="st-bar h-2">
               {/* Drawn to the figure the row states, whatever that figure means. The share
                   at or below is a standing on most rows and the size of a tie on the rest,
                   and the wording beside the bar is what separates the two. A bar drawn to
                   anything else, however defensible on its own, contradicts the number
                   printed an inch away from it. */}
               <div
-                className="h-full rounded-full bg-primary-500"
+                className="st-bar-fill"
                 style={{ width: `${Math.min(100, Math.max(2, entry.percentile))}%` }}
               />
             </div>

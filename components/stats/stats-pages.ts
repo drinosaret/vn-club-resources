@@ -1,15 +1,13 @@
-import { BarChart3, Sparkles, Trophy, TrendingUp, User, Users } from 'lucide-react';
-
 /**
  * The stats section's pages, in the order every surface lists them.
  *
  * Three places offer these links: the navigation at the top of each page, the row on the
- * section's landing page, and the cross-links at the foot. Held separately, the copies drift: the same destination ends up in a
- * different position, or under a different icon, on each surface.
+ * section's landing page, and the cross-links at the foot. Held separately, the copies drift,
+ * and the same destination ends up in a different position on each surface.
  *
  * Both spellings of each label live here rather than at the call sites, because the surfaces
- * genuinely want different lengths: a pill in a wrapping row has space for a word, a card has
- * space for a sentence. What none of them get to choose is the order or the icon.
+ * genuinely want different lengths: a tab in a wrapping row has space for a word, a card has
+ * space for a sentence. What none of them get to choose is the order.
  */
 
 export interface StatsPage {
@@ -20,7 +18,6 @@ export interface StatsPage {
   /** The page's own name, for a card or a heading. */
   title: string;
   blurb: string;
-  Icon: typeof Users;
   /**
    * Set for a destination that sits outside the stats section.
    *
@@ -38,7 +35,6 @@ export const STATS_PAGES: StatsPage[] = [
     label: 'Yours',
     title: 'Your stats',
     blurb: 'Your reading, and where it places against everyone else.',
-    Icon: User,
   },
   {
     key: 'global',
@@ -46,7 +42,6 @@ export const STATS_PAGES: StatsPage[] = [
     label: 'Global',
     title: 'Global stats',
     blurb: 'The shape of the database: ratings, lengths, releases and how it grew.',
-    Icon: BarChart3,
   },
   {
     key: 'trends',
@@ -54,7 +49,6 @@ export const STATS_PAGES: StatsPage[] = [
     label: 'Trends',
     title: 'Trends',
     blurb: "What's popular now, and what was popular every year before.",
-    Icon: TrendingUp,
   },
   {
     key: 'rankings',
@@ -62,7 +56,6 @@ export const STATS_PAGES: StatsPage[] = [
     label: 'Rankings',
     title: 'Rankings',
     blurb: 'Leaderboards drawn from the whole vote record, each showing how it was counted.',
-    Icon: Trophy,
   },
   {
     key: 'compare',
@@ -70,7 +63,6 @@ export const STATS_PAGES: StatsPage[] = [
     label: 'Compare',
     title: 'Compare',
     blurb: 'Two readers side by side: overlap, disagreement and blind spots.',
-    Icon: Users,
   },
   {
     key: 'recommendations',
@@ -78,7 +70,6 @@ export const STATS_PAGES: StatsPage[] = [
     label: 'Recs',
     title: 'Recommendations',
     blurb: 'What to read next, worked out from what you have rated.',
-    Icon: Sparkles,
     outsideSection: true,
   },
 ];

@@ -215,6 +215,9 @@ class CatalogueEntry(BaseModel):
     facet_kind: str = "none"
     total_ranked: int = 0
     generated_at: datetime | None = None
+    #: (label, href) crediting a source outside this site, carried here as well as on the
+    #: board itself so a listing can credit what it lists without opening each one.
+    attribution: dict[str, str] | None = None
 
 
 class CatalogueResponse(BaseModel):

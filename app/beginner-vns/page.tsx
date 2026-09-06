@@ -13,9 +13,9 @@ import { getFeaturedVNsData, type FeaturedVNData } from '@/lib/featured-vns';
 export const revalidate = 3600;
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Beginner Visual Novel Recommendations - Learn Japanese with VNs',
+  title: 'Beginner Japanese Visual Novels',
   description:
-    'Curated beginner-friendly visual novels for learning Japanese through immersion. Handpicked starter VNs plus easy-difficulty titles to build your reading skills.',
+    'Japanese visual novels that are approachable to read in the original. Handpicked first titles plus the easiest of what the catalogue holds, with the reading difficulty of each.',
   path: '/beginner-vns/',
 });
 
@@ -29,22 +29,22 @@ function LoadingFallback() {
     <div className="min-h-[80vh] flex flex-col items-center px-4 py-12">
       <div className="max-w-5xl w-full">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 mb-4">
-            <BookOpen className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xs border border-[color:var(--rule)] mb-4">
+            <BookOpen className="w-8 h-8 text-[color:var(--ai)]" aria-hidden="true" />
           </div>
-          <div className="w-72 h-8 mx-auto rounded image-placeholder mb-3" />
-          <div className="w-96 h-5 mx-auto rounded image-placeholder" />
+          <div className="w-72 h-8 mx-auto rounded-xs image-placeholder mb-3" />
+          <div className="w-96 h-5 mx-auto rounded-xs image-placeholder" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700"
+              className="rounded-xs overflow-hidden border border-[color:var(--rule)]"
             >
               <div className="aspect-3/4 image-placeholder" />
               <div className="p-3 space-y-2">
-                <div className="h-4 w-3/4 rounded image-placeholder" />
-                <div className="h-3 w-full rounded image-placeholder" />
+                <div className="h-4 w-3/4 rounded-xs image-placeholder" />
+                <div className="h-3 w-full rounded-xs image-placeholder" />
               </div>
             </div>
           ))}
@@ -83,7 +83,12 @@ function buildItemListJsonLd(vns: FeaturedVNData[]) {
 
 export default async function Page() {
   const featuredVNs = await getFeaturedVNsData();
-  const jsonLd = [buildItemListJsonLd(featuredVNs), breadcrumbJsonLd];
+  // The list is declared only when it has members: a batch that came back empty leaves a
+  // page whose visible content holds nothing and structured data claiming otherwise.
+  const jsonLd =
+    featuredVNs.length > 0
+      ? [buildItemListJsonLd(featuredVNs), breadcrumbJsonLd]
+      : [breadcrumbJsonLd];
 
   return (
     <>

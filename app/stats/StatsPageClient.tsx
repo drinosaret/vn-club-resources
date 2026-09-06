@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from '@/components/Link';
-import { Search, BarChart3, Sparkles, Users, TrendingUp } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { vndbStatsApi, DataStatus } from '@/lib/vndb-stats-api';
 import { DataFreshness } from '@/components/stats/DataFreshness';
 import { FeaturedRanking } from '@/components/stats/FeaturedRanking';
@@ -31,7 +31,7 @@ export default function StatsPageClient() {
       const user = await vndbStatsApi.lookupUser(query.trim());
 
       if (user) {
-        router.push(`/stats/${user.uid}?username=${encodeURIComponent(user.username)}`);
+        router.push(`/stats/${user.uid}/?username=${encodeURIComponent(user.username)}`);
       } else {
         setError(`User "${query}" not found on VNDB`);
       }
@@ -46,14 +46,9 @@ export default function StatsPageClient() {
     <div className="min-h-[80vh] flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-3xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-4">
-            <BarChart3 className="w-10 h-10 text-primary-600 dark:text-primary-400" />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
-            VNDB Stats
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+        <div className="mb-8 text-center">
+          <h1 className="sec-title">VNDB Stats</h1>
+          <p className="sec-sub">
             Analyze your visual novel reading habits and explore the database
           </p>
         </div>
@@ -65,47 +60,45 @@ export default function StatsPageClient() {
 
         {/* Search Form */}
         <form onSubmit={handleSubmit} className="mb-8">
-          <div className="relative max-w-lg mx-auto">
+          {/* The field and the control that submits it stand side by side rather than one
+              inside the other: a target laid over the end of an input covers what is being
+              typed once the field is narrow enough. Where the pair no longer fits on one
+              line the control takes its own. */}
+          <div className="flex flex-wrap justify-center max-w-lg mx-auto gap-2">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Enter your VNDB username"
-              className="w-full px-5 py-4 pr-14 text-lg rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:focus:border-primary-400 dark:focus:ring-primary-400 transition-colors"
+              className="st-field flex-1 min-w-0 basis-56 px-4 py-3 text-base"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !query.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 focus:outline-2 focus:outline-offset-[-4px] focus:outline-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="st-act st-act--go disabled:cursor-not-allowed"
             >
-              {isLoading ? (
-                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Search className="w-6 h-6" />
-              )}
+              {isLoading ? 'Looking' : 'Look up'}
+              <Search className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
           {error && (
-            <p className="mt-3 text-center text-red-500 dark:text-red-400">{error}</p>
+            <p className="mt-3 text-center text-[color:var(--beni-text)]">{error}</p>
           )}
         </form>
 
         {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
           <FeatureCard
-            icon={<TrendingUp className="w-6 h-6" />}
             title="Reading Stats"
             description="Score distribution, release year trends, and reading activity"
           />
           <FeatureCard
-            icon={<Sparkles className="w-6 h-6" />}
             title="Recommendations"
             description="Personalized suggestions based on your taste profile"
           />
-          <Link href="/stats/compare" className="block">
+          <Link href="/stats/compare/" className="block">
             <FeatureCard
-              icon={<Users className="w-6 h-6" />}
               title="Compare Lists"
               description="See how your taste compares to other readers"
             />
@@ -125,14 +118,14 @@ export default function StatsPageClient() {
         </div>
 
         {/* Note & Data Status */}
-        <div className="mt-10 text-sm text-gray-500 dark:text-gray-500 text-center space-y-2">
+        <div className="mt-10 space-y-2 text-center text-sm text-[color:var(--nezu)]">
           <p>Your VNDB list must be public for stats to be generated.</p>
           <DataFreshness
             lastImport={dataStatus?.last_import}
             vnCount={dataStatus?.vn_count}
             className="justify-center"
           />
-          <p className="text-xs text-gray-400 dark:text-gray-600">
+          <p className="font-mono text-xs text-[color:var(--text-faint)]">
             Inspired by the now-defunct vnstat.net
           </p>
         </div>
@@ -142,23 +135,18 @@ export default function StatsPageClient() {
 }
 
 function FeatureCard({
-  icon,
   title,
   description,
 }: {
-  icon: React.ReactNode;
   title: string;
   description: string;
 }) {
   return (
-    <div className="p-5 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-      <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 mb-3">
-        {icon}
-      </div>
-      <h2 className="font-semibold text-gray-900 dark:text-white mb-1">
+    <div className="st-card p-4">
+      <h2 className="st-card-title mb-1">
         {title}
       </h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+      <p className="st-card-sub">
         {description}
       </p>
     </div>

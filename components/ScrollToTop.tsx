@@ -183,7 +183,7 @@ export function ScrollToTop() {
               scrollCleanupRef.current = null;
               const canScrollNow = document.body.scrollHeight >= targetPosition + window.innerHeight;
               if (canScrollNow) {
-                // Page became tall enough but observer missed it — scroll now
+                // Page became tall enough but observer missed it; scroll now
                 window.scrollTo(0, targetPosition);
                 sessionStorage.removeItem(PENDING_SCROLL_KEY);
               }

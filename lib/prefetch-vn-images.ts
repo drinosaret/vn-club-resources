@@ -41,7 +41,7 @@ export function prefetchVNImages(items: PrefetchItem[], imageWidth: ImageWidth):
  * expires. Use this to keep a loading spinner visible while images
  * download, so the grid swap shows actual covers instead of grey shimmers.
  *
- * Only primary cover images count toward the threshold — NSFW tiny
+ * Only primary cover images count toward the threshold; NSFW tiny
  * thumbnails are preloaded but don't affect when the promise resolves.
  */
 export function awaitVNImageDecode(

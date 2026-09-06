@@ -1,5 +1,5 @@
 import Link from '@/components/Link';
-import { ArrowRight, BookOpen, Link as LinkIcon } from 'lucide-react';
+import { BookOpen, Link as LinkIcon } from 'lucide-react';
 import type { RelatedCategory } from '@/lib/resource-parser';
 
 interface RelatedPagesProps {
@@ -8,13 +8,13 @@ interface RelatedPagesProps {
 
 export function RelatedPages({ categories }: RelatedPagesProps) {
   return (
-    <section className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-      <h2 id="related-pages" className="group text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
-        <BookOpen className="w-6 h-6 text-primary-500" />
+    <section className="mt-12 pt-8 border-t border-[color:var(--rule)]">
+      <h2 id="related-pages" className="sec-title group flex items-center gap-2 mb-6">
+        <BookOpen className="w-6 h-6 text-[color:var(--nezu)]" />
         Related Pages
         <a
           href="#related-pages"
-          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="sw-icon ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
           title="Permanent link"
           aria-label="Link to this section"
         >
@@ -26,9 +26,9 @@ export function RelatedPages({ categories }: RelatedPagesProps) {
         {categories.map((category, idx) => (
           <div
             key={category.title + idx}
-            className="rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-4"
+            className="sw-panel p-4"
           >
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm uppercase tracking-wide">
+            <h3 className="sw-plate mb-3">
               {category.title}
             </h3>
             <ul className="space-y-2">
@@ -36,19 +36,16 @@ export function RelatedPages({ categories }: RelatedPagesProps) {
                 <li key={link.url + linkIdx}>
                   <Link
                     href={link.url}
-                    className="group flex items-start gap-2 text-sm hover:bg-white dark:hover:bg-gray-800 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
+                    className="sw-pick -mx-2 px-2 py-1.5"
                   >
-                    <ArrowRight className="w-4 h-4 mt-0.5 text-primary-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-primary-600 dark:text-primary-400 group-hover:underline">
-                        {link.text}
+                    <span className="sw-pick-name text-sm">
+                      {link.text}
+                    </span>
+                    {link.description && (
+                      <span className="sw-pick-desc mt-0.5 line-clamp-2">
+                        {link.description}
                       </span>
-                      {link.description && (
-                        <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5 line-clamp-2">
-                          {link.description}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </Link>
                 </li>
               ))}

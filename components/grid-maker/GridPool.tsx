@@ -22,7 +22,7 @@ interface GridPoolProps {
   onEdit: (itemId: string) => void;
 }
 
-// Lightweight draggable pool item — no SortableContext overhead
+// Lightweight draggable pool item, no SortableContext overhead
 const PoolItem = memo(function PoolItem({
   itemId,
   item,
@@ -62,7 +62,7 @@ const PoolItem = memo(function PoolItem({
       style={{ opacity: isDragging ? 0.4 : 1, contain: 'style paint', touchAction: 'manipulation' }}
       {...attributes}
       {...listeners}
-      className={`${cropSquare ? 'w-[80px] h-[80px]' : 'w-[80px] h-[120px]'} rounded-sm overflow-hidden cursor-grab active:cursor-grabbing touch-manipulation select-none group/pool-item bg-gray-200 dark:bg-gray-700 relative shrink-0`}
+      className={`toy-tile ${cropSquare ? 'w-[80px] h-[80px]' : 'w-[80px] h-[120px]'} cursor-grab active:cursor-grabbing touch-manipulation select-none group/pool-item shrink-0`}
       title={displayTitle}
     >
       {(item.cropPreview ?? item.imageUrl) ? (
@@ -85,7 +85,7 @@ const PoolItem = memo(function PoolItem({
           />
         )
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-[9px] text-gray-500 dark:text-gray-400 text-center p-1 leading-tight">
+        <div className="w-full h-full flex items-center justify-center text-[9px] text-[color:var(--nezu)] text-center p-1 leading-tight">
           {displayTitle}
         </div>
       )}
@@ -94,7 +94,7 @@ const PoolItem = memo(function PoolItem({
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onEdit(itemId); }}
-        className="touch-action-btn absolute top-[22px] right-0.5 w-4 h-4 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover/pool-item:opacity-100 transition-opacity z-10 hover:bg-black/80"
+        className="toy-act touch-action-btn top-[22px] right-0.5 w-4 h-4 toy-act--reveal"
         title={s['cell.edit']}
         aria-label={s['cell.edit']}
       >
@@ -105,7 +105,7 @@ const PoolItem = memo(function PoolItem({
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onRemove(itemId); }}
-        className="touch-action-btn absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/pool-item:opacity-100 transition-opacity z-10 hover:bg-red-600"
+        className="toy-act toy-act--drop touch-action-btn top-0.5 right-0.5 w-4 h-4 toy-act--reveal"
         title={s['cell.remove']}
         aria-label={s['cell.remove']}
       >
@@ -152,12 +152,16 @@ export const GridPool = memo(function GridPool({
     scrollLockRef.current = null;
   }, [activeDrag]);
 
-  // Load pinned state from localStorage + auto-collapse on touch devices
+  // Load pinned state from localStorage + auto-collapse on touch devices.
+  // A pinned pool is never collapsed here: while pinned the header button does not toggle
+  // and the drop area is not rendered, so the two states together leave no way to reopen it.
   useEffect(() => {
+    let isPinned = false;
     try {
-      if (localStorage.getItem(PINNED_KEY) === 'true') setPinned(true);
+      isPinned = localStorage.getItem(PINNED_KEY) === 'true';
     } catch { /* ignore */ }
-    if (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches) {
+    if (isPinned) setPinned(true);
+    if (!isPinned && typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches) {
       setCollapsed(true);
     }
   }, []);
@@ -183,48 +187,33 @@ export const GridPool = memo(function GridPool({
     const observer = new ResizeObserver(update);
     observer.observe(poolRef.current);
     return () => observer.disconnect();
-  }, [pinned, collapsed]); // pool.length not needed — ResizeObserver fires when children resize the element
+  }, [pinned, collapsed]); // pool.length not needed; ResizeObserver fires when children resize the element
 
   const poolContent = (
     <div
       ref={poolRef}
-      className={`border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900 ${
-        pinned ? 'shadow-[0_-4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]' : ''
-      }`}
+      className={`toy-panel overflow-hidden ${pinned ? 'toy-panel--dock' : ''}`}
     >
       {/* Header */}
-      <div className="flex items-center bg-gray-100 dark:bg-gray-800 select-none">
+      <div className="toy-panel-head select-none">
         <button
           onClick={() => !pinned && setCollapsed(!collapsed)}
           aria-expanded={!collapsed}
-          className="flex-1 flex items-center gap-2 px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          className="toy-cmd flex-1"
         >
-          <LayoutGrid className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
-          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-            {s['pool.label']}
-          </span>
-          {pool.length > 0 && (
-            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">
-              {pool.length}
-            </span>
-          )}
+          <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+          <span>{s['pool.label']}</span>
+          {pool.length > 0 && <span className="toy-count">{pool.length}</span>}
           {!pinned && (
             <span className="ml-auto">
-              {collapsed
-                ? <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                : <ChevronUp className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-              }
+              {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
             </span>
           )}
         </button>
         {/* Pin toggle */}
         <button
           onClick={togglePinned}
-          className={`px-2.5 py-2 transition-colors ${
-            pinned
-              ? 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300'
-              : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-          }`}
+          className={`toy-x mr-1 ${pinned ? 'toy-x--on' : ''}`}
           title={pinned ? s['pool.unpin'] : s['pool.pin']}
         >
           {pinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
@@ -236,7 +225,7 @@ export const GridPool = memo(function GridPool({
         <div
           ref={(node) => { setNodeRef(node); scrollAreaRef.current = node; }}
           className={`flex flex-wrap justify-center gap-1.5 p-2 min-h-[3rem] max-h-[30vh] sm:max-h-[240px] overflow-y-auto ${
-            isOver ? 'bg-purple-50 dark:bg-purple-900/20' : ''
+            isOver ? 'tier-drop-highlight' : ''
           }`}
           style={{ scrollbarGutter: 'stable' }}
         >
@@ -256,7 +245,7 @@ export const GridPool = memo(function GridPool({
             );
           })}
           {pool.length === 0 && (
-            <div className="flex items-center justify-center w-full text-xs text-gray-400 dark:text-gray-500 select-none border border-dashed border-gray-300 dark:border-gray-600 rounded py-3">
+            <div className="toy-slot w-full select-none py-3 text-xs">
               {s[mode === 'characters' ? 'pool.emptyHintChars' : 'pool.emptyHint']}
             </div>
           )}

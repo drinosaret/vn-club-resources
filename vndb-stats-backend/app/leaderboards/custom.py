@@ -45,7 +45,7 @@ from . import facets
 from .aggregate import BAYESIAN_PRIOR_VOTES, RATE_PRIOR_KEY, RATE_PRIOR_READERS
 from .disclosures import TIE_BREAK, VOTE_EXCLUSIONS
 from .serialize import format_value
-from .spec import Disclosure, Facet, Metric
+from .spec import JITEN_ATTRIBUTION, Disclosure, Facet, Metric
 from .thresholds import MIN_LIBRARY_FOR_SHARE
 
 #: Rows kept per live ranking, matching what the materialised boards keep so a reader moving
@@ -1014,5 +1014,15 @@ async def build_custom_ranking(
             "score": disclosure.score,
             "excluded": disclosure.excluded,
         },
+        # Ranking on the measurement and narrowing to it both put it in front of a reader,
+        # so both are credited. Carried on the payload rather than worked out by the page,
+        # which cannot do it while the question list is still loading or failed to load.
+        "attribution": (
+            {"label": JITEN_ATTRIBUTION[0], "href": JITEN_ATTRIBUTION[1]}
+            if question.needs_difficulty
+            or facet.difficulty_min is not None
+            or facet.difficulty_max is not None
+            else None
+        ),
         "notes": [],
     }

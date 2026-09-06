@@ -39,7 +39,7 @@ function readerIdentity(uid: string, username?: string) {
     safeUsername,
     displayName,
     title: `${displayName}'s Stats`,
-    description: `Visual novel reading statistics for ${displayName}: score distribution, favorite tags, developers and seiyuu, plus reading recommendations for anyone learning Japanese with visual novels.`,
+    description: `Visual novel reading statistics for ${displayName}: score distribution, favorite tags, developers and seiyuu, plus what to read next.`,
   };
 }
 

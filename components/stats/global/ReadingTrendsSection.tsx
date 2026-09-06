@@ -23,12 +23,13 @@ const ERA_LABELS: Record<string, string> = {
   '2020s': '2020s',
 };
 
-// Oldest era darkest, so the eye reads the stack as depth into the past.
+// A ramp between the site's two accents through the neutral between them, oldest era at the
+// deep end, so the eye reads the stack as depth into the past rather than as four categories.
 const ERA_COLORS: Record<string, string> = {
-  pre2000: '#7c3aed',
-  '2000s': '#2563eb',
-  '2010s': '#0891b2',
-  '2020s': '#10b981',
+  pre2000: 'var(--ai)',
+  '2000s': 'color-mix(in oklab, var(--ai) 55%, var(--nezu))',
+  '2010s': 'color-mix(in oklab, var(--kohaku) 45%, var(--nezu))',
+  '2020s': 'var(--kohaku)',
 };
 
 export function ReadingTrendsSection() {
@@ -59,8 +60,8 @@ export function ReadingTrendsSection() {
   if (loading) {
     return (
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="image-placeholder h-52 rounded-xl" />
-        <div className="image-placeholder h-52 rounded-xl" />
+        <div className="image-placeholder h-52 rounded-xs" />
+        <div className="image-placeholder h-52 rounded-xs" />
       </div>
     );
   }
@@ -72,7 +73,7 @@ export function ReadingTrendsSection() {
   // retry in a minute.
   if (trends === null) {
     return (
-      <p className="text-sm italic text-gray-500 dark:text-gray-400">
+      <p className="st-card-sub italic">
         These could not be loaded. The stats service did not answer, which is usually brief.
       </p>
     );
@@ -80,7 +81,7 @@ export function ReadingTrendsSection() {
 
   if (!years.length) {
     return (
-      <p className="text-sm italic text-gray-500 dark:text-gray-400">
+      <p className="st-card-sub italic">
         Not available until the nightly rebuild has run.
       </p>
     );
@@ -96,7 +97,7 @@ export function ReadingTrendsSection() {
         subtitle="Average age of a title at the moment someone rates it"
         height={200}
         footer={
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-[color:var(--nezu)]">
             A title was typically {first.mean_age} years old when it was rated in{' '}
             {first.year}, and {last.mean_age} years old by {last.year}. The audience is
             drifting further into the back catalogue, not keeping pace with new releases.
@@ -105,7 +106,7 @@ export function ReadingTrendsSection() {
       >
         <LineChart
           points={agePoints}
-          color="#7c3aed"
+          color="var(--ai)"
           area
           valueSuffix=" yrs"
           formatValue={(v) => `${v.toFixed(1)} yrs`}
@@ -117,7 +118,7 @@ export function ReadingTrendsSection() {
         subtitle="Share of each year's votes going to titles from each decade"
         height={200}
         footer={
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-[color:var(--nezu)]">
             Read down a column rather than across: every year totals 100%, so a band growing
             means that decade took a larger share of what was read, not that more was read.
           </p>

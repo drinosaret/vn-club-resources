@@ -1,7 +1,7 @@
 /**
  * Cloudflare Turnstile integration for bot protection.
  *
- * Uses invisible mode — no UI widget. Tokens are fetched on demand
+ * Uses invisible mode, no UI widget. Tokens are fetched on demand
  * via the JS API and sent with protected requests.
  *
  * Requires NEXT_PUBLIC_TURNSTILE_SITE_KEY to be set. If missing,
@@ -80,7 +80,7 @@ export async function getTurnstileToken(action?: string): Promise<string | null>
       settle(null);
     }
 
-    // Safety timeout — don't hang forever
+    // Safety timeout: don't hang forever
     setTimeout(() => { settle(null); }, 10_000);
   });
 }

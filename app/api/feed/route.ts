@@ -41,7 +41,7 @@ export async function GET() {
         });
       }
     } catch {
-      // API unavailable — return feed with no items
+      // API unavailable: return feed with no items
     }
   }
 
@@ -71,7 +71,7 @@ export async function GET() {
   <channel>
     <title>VN Club - Visual Novel News</title>
     <link>${SITE_URL}/news/all/</link>
-    <description>Japanese visual novel news — new releases, VNDB additions, and community updates for learners reading VNs in Japanese.</description>
+    <description>Japanese visual novel news: new releases, VNDB additions, and community updates.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>

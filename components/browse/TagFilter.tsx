@@ -30,43 +30,13 @@ interface TagFilterProps {
   onModeChange: (mode: 'and' | 'or') => void;
 }
 
-const ENTITY_CONFIG: Record<FilterEntityType, { icon: typeof TagIcon; color: string; chipColor: string; chipIcon: typeof TagIcon }> = {
-  tag: {
-    icon: TagIcon,
-    color: 'text-blue-500',
-    chipColor: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-    chipIcon: TagIcon,
-  },
-  trait: {
-    icon: User,
-    color: 'text-purple-500',
-    chipColor: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
-    chipIcon: User,
-  },
-  staff: {
-    icon: Pen,
-    color: 'text-green-500',
-    chipColor: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
-    chipIcon: Pen,
-  },
-  seiyuu: {
-    icon: Mic,
-    color: 'text-pink-500',
-    chipColor: 'bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300',
-    chipIcon: Mic,
-  },
-  developer: {
-    icon: Building2,
-    color: 'text-orange-500',
-    chipColor: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
-    chipIcon: Building2,
-  },
-  publisher: {
-    icon: Newspaper,
-    color: 'text-teal-500',
-    chipColor: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',
-    chipIcon: Newspaper,
-  },
+const ENTITY_CONFIG: Record<FilterEntityType, { icon: typeof TagIcon; chipIcon: typeof TagIcon }> = {
+  tag: { icon: TagIcon, chipIcon: TagIcon },
+  trait: { icon: User, chipIcon: User },
+  staff: { icon: Pen, chipIcon: Pen },
+  seiyuu: { icon: Mic, chipIcon: Mic },
+  developer: { icon: Building2, chipIcon: Building2 },
+  publisher: { icon: Newspaper, chipIcon: Newspaper },
 };
 
 export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }: TagFilterProps) {
@@ -102,7 +72,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
         setSelectedIndex(-1);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          // Request was aborted (cleanup or timeout) — ignore silently
+          // Request was aborted (cleanup or timeout); ignore silently
         } else {
           console.error('TagFilter search error:', error);
           setResults([]);
@@ -206,8 +176,8 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
     <div className="space-y-3">
       {/* Search input */}
       <div ref={containerRef} className="relative">
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent">
-          <Search className="w-4 h-4 text-gray-400 shrink-0" />
+        <div className="bw-field flex items-center gap-2 px-3">
+          <Search className="w-4 h-4 text-[color:var(--text-faint)] shrink-0" />
           <input
             ref={inputRef}
             type="search"
@@ -216,18 +186,19 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => query.length >= 2 && results.length > 0 && setIsOpen(true)}
+            aria-label="Search tags, traits, staff and developers"
             placeholder="Search tags, traits, staff, developers..."
-            className="flex-1 bg-transparent border-none outline-hidden text-sm text-gray-900 dark:text-white placeholder-gray-400"
+            className="flex-1 py-2 bg-transparent border-none outline-hidden text-sm text-[color:var(--ink)] placeholder:text-[color:var(--text-faint)]"
           />
         </div>
 
         {/* Results dropdown */}
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+          <div className="bw-menu absolute z-50 mt-1 w-full max-h-72 overflow-y-auto">
             {isLoading ? (
-              <div className="p-3 text-center text-sm text-gray-500">Searching...</div>
+              <div className="p-3 text-center text-sm text-[color:var(--nezu)]">Searching...</div>
             ) : results.length === 0 ? (
-              <div className="p-3 text-center text-sm text-gray-500">
+              <div className="p-3 text-center text-sm text-[color:var(--nezu)]">
                 No results found for &ldquo;{query}&rdquo;
               </div>
             ) : (
@@ -240,23 +211,23 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
                       <button
                         onClick={() => addTag(result)}
                         onMouseEnter={() => setSelectedIndex(index)}
-                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                          index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
+                        className={`bw-opt w-full px-3 py-2 text-left flex items-center gap-2 ${
+                          index === selectedIndex ? 'bw-opt--focus' : ''
                         }`}
                       >
-                        <IconComponent className={`w-4 h-4 ${config.color} shrink-0`} />
+                        <IconComponent className="w-4 h-4 shrink-0" />
                         <span
-                          className="flex-1 text-sm text-gray-900 dark:text-white truncate"
+                          className="flex-1 text-sm truncate"
                           title={`${getEntityDisplayName(result, preference)}${result.category ? ` (${result.category})` : ''}`}
                         >
                           {getEntityDisplayName(result, preference)}
                           {result.category && (
-                            <span className="text-gray-400 dark:text-gray-500 ml-1">
+                            <span className="text-[color:var(--text-faint)] ml-1">
                               ({result.category})
                             </span>
                           )}
                         </span>
-                        <span className="text-xs text-gray-400 shrink-0">
+                        <span className="bw-num text-xs text-[color:var(--text-faint)] shrink-0">
                           {result.count.toLocaleString()}
                         </span>
                       </button>
@@ -272,24 +243,16 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
       {/* Tag mode toggle */}
       {selectedTags.length > 1 && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Match:</span>
+          <span className="bw-label">Match:</span>
           <button
             onClick={() => onModeChange('and')}
-            className={`px-2 py-1 text-xs rounded ${
-              tagMode === 'and'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+            className={`tab${tagMode === 'and' ? ' tab--on' : ''}`}
           >
             ALL
           </button>
           <button
             onClick={() => onModeChange('or')}
-            className={`px-2 py-1 text-xs rounded ${
-              tagMode === 'or'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
+            className={`tab${tagMode === 'or' ? ' tab--on' : ''}`}
           >
             ANY
           </button>
@@ -301,7 +264,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
         <div className="space-y-2">
           {includeTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Include:</span>
+              <span className="bw-label mr-1">Include:</span>
               {includeTags.map((tag) => (
                 <TagChip
                   key={`${tag.type}-${tag.id}`}
@@ -314,7 +277,7 @@ export function TagFilter({ selectedTags, onTagsChange, tagMode, onModeChange }:
           )}
           {excludeTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Exclude:</span>
+              <span className="bw-label mr-1">Exclude:</span>
               {excludeTags.map((tag) => (
                 <TagChip
                   key={`${tag.type}-${tag.id}`}
@@ -344,17 +307,11 @@ function TagChip({
   const config = ENTITY_CONFIG[tag.type];
   const ChipIcon = config.chipIcon;
 
-  const colorClasses = isExclude
-    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-    : config.chipColor;
-
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorClasses}`}
-    >
+    <span className={`bw-chip ${isExclude ? 'bw-chip--off' : 'bw-chip--on'}`}>
       <button
         onClick={onToggle}
-        className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+        className="bw-chip-btn w-4 h-4 hit-24"
         title={isExclude ? 'Click to include' : 'Click to exclude'}
       >
         {isExclude ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
@@ -363,7 +320,7 @@ function TagChip({
       <span className={isExclude ? 'line-through' : ''}>{tag.name}</span>
       <button
         onClick={onRemove}
-        className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+        className="bw-chip-btn w-4 h-4 hit-24"
         title="Remove"
       >
         <X className="w-3 h-3" />

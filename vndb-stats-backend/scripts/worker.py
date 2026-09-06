@@ -262,6 +262,9 @@ async def run_daily_update():
                     "staff_stats:*", "seiyuu_stats:*", "similar_tags:*",
                     "similar_traits:*", "tag_traits:*", "trait_tags:*",
                     "vn:*", "global_stats:*",
+                    # The reader profiles and signal pages are built against the catalogue
+                    # the import has just replaced.
+                    "rec:profile:*", "rec:list:*",
                 )
             }
             logger.info(
@@ -293,6 +296,8 @@ async def run_daily_update():
 
             # last_import marks the data load. last_full_update only advances when
             # every stage succeeded, so a degraded run stays visibly behind it.
+            # The Discord-triggered import path stamps the same key in timezone-aware
+            # form; readers of this value normalise both shapes rather than assuming one.
             now = datetime.utcnow().isoformat()
             stamps = {"last_import": now}
             if not degraded:
@@ -401,6 +406,81 @@ async def recompute_models_only():
     except Exception as e:
         logger.error(f"Model recompute failed: {e}", exc_info=True)
         raise
+
+
+async def run_description_embedding_update():
+    """Top up description vectors for entries the import added or reworded.
+
+    Scheduled well clear of the import rather than chained onto it. The import's atomic
+    swaps rename the tag, staff, relation and release tables; this job reads only
+    visual_novels and writes only its own table, so it cannot hold a lock either of them
+    waits on, and its session sets a short lock timeout besides.
+
+    Failure is logged and swallowed. Recommendations degrade to a day-old matrix, which
+    is a far smaller problem than a worker that crash-loops out of its other schedules.
+    """
+    from app.ingestion.description_embeddings import run_nightly
+
+    try:
+        async with asyncio.timeout(5400):
+            stats = await run_nightly(async_session_maker)
+        logger.info(f"Description embeddings updated: {stats}")
+    except asyncio.TimeoutError:
+        logger.error(
+            "Description embedding update timed out; committed work is kept and the "
+            "next run resumes from it"
+        )
+    except Exception as e:
+        logger.error(f"Description embedding update failed: {e}", exc_info=True)
+
+
+async def run_user_recs_precompute():
+    """Rewrite the cached recommendation page of readers who already hold one.
+
+    The read path treats a page older than its TTL as absent, while retention keeps rows
+    for weeks, so a reader returning the day after their last visit pays for a full
+    scoring run against rows still sitting in the table. Refreshing on a schedule is what
+    closes that gap.
+
+    Scheduled clear of both the import and the embedding top-up: it scores against the
+    models those two produce, and reading them half-rebuilt would cache pages nothing
+    would reproduce.
+
+    The audience is capped, and the cap matters on a disk-constrained host: a page
+    rewritten nightly is never old enough for the retention sweep, so the readers covered
+    are a floor under the table rather than a tenancy that expires.
+
+    Failure is logged and swallowed. The request path still computes and caches a page on
+    demand, so the worst outcome is the cold read this job exists to avoid.
+    """
+    from app.ingestion.precompute_user_recs import (
+        get_cached_readers,
+        precompute_user_recommendations,
+    )
+
+    settings = get_settings()
+    cap = settings.precompute_max_users
+
+    try:
+        async with asyncio.timeout(settings.precompute_timeout):
+            readers = await get_cached_readers(limit=cap)
+            if not readers:
+                logger.info("Recommendation precompute: no cached readers, nothing to refresh")
+                return
+            if len(readers) == cap:
+                logger.warning(
+                    f"Recommendation precompute capped at {cap} readers; the oldest pages "
+                    f"are refreshed first and the rest wait for the next run"
+                )
+            stats = await precompute_user_recommendations(user_ids=readers)
+        logger.info(f"Recommendation precompute complete: {stats}")
+    except asyncio.TimeoutError:
+        logger.error(
+            "Recommendation precompute timed out; pages already written are kept and the "
+            "next run starts from the oldest"
+        )
+    except Exception as e:
+        logger.error(f"Recommendation precompute failed: {e}", exc_info=True)
 
 
 async def check_and_update_if_stale():
@@ -542,6 +622,7 @@ async def main():
     from app.services.word_of_the_day_service import run_word_of_the_day_selection
     from app.services.hikaru_import import run_import as run_hikaru_import, is_enabled as hikaru_import_enabled
     from app.logging.cleanup import cleanup_old_logs
+    from app.services.recommendation_cache import cleanup_stale_cache
 
     scheduler = AsyncIOScheduler(
         timezone=timezone.utc,
@@ -623,12 +704,44 @@ async def main():
             replace_existing=True,
         )
 
+        # Recommendation cache cleanup - 02:30 UTC daily. The read path applies its TTL as a
+        # filter and the request path writes a row on every miss, so nothing else bounds the
+        # table. Scheduled clear of the import so a long sweep cannot overlap it.
+        scheduler.add_job(
+            cleanup_stale_cache,
+            CronTrigger(hour=2, minute=30),
+            id="recommendation_cache_cleanup",
+            replace_existing=True,
+        )
+
         logger.info("Scheduler started - daily update at 4:00 AM UTC")
         logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), RSS (06:00, 18:00), Twitter (01:00, 07:00, 13:00, 19:00)")
         logger.info("VN of the Day scheduled: 00:05 UTC daily")
         logger.info("Word of the Day scheduled: 00:10 UTC daily")
         logger.info("News catch-up job scheduled: every 2 hours from 10:30 to 22:30 UTC")
         logger.info("App logs cleanup scheduled: 03:00 UTC daily (30 day retention)")
+        # Description embedding top-up - 09:30 UTC daily. The import starts at 04:00 and
+        # is bounded by its own 4 hour timeout, so this cannot begin while it is running.
+        scheduler.add_job(
+            run_description_embedding_update,
+            CronTrigger(hour=9, minute=30),
+            id="description_embeddings",
+            replace_existing=True,
+        )
+
+        # Cached recommendation page refresh - 11:30 UTC daily. Last in the chain the
+        # import starts: the embedding top-up begins at 09:30 under a 90 minute timeout,
+        # and the pages written here are scored against what it leaves behind.
+        scheduler.add_job(
+            run_user_recs_precompute,
+            CronTrigger(hour=11, minute=30),
+            id="user_recs_precompute",
+            replace_existing=True,
+        )
+
+        logger.info("Recommendation cache cleanup scheduled: 02:30 UTC daily")
+        logger.info("Description embedding top-up scheduled: 09:30 UTC daily")
+        logger.info("Recommendation page refresh scheduled: 11:30 UTC daily")
     else:
         logger.info("Scheduler not started (DEV_MODE=true)")
 

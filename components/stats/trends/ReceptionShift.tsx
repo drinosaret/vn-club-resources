@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from '@/components/Link';
-import { TrendingDown, TrendingUp } from 'lucide-react';
 
 import { NSFWImage } from '@/components/NSFWImage';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -65,9 +64,9 @@ function ShiftRow({ entry, rising }: { entry: ShiftingTitle; rising: boolean }) 
     <li>
       <Link
         href={entry.href}
-        className="group flex items-center gap-3 rounded-lg p-1.5 -m-0.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        className="dg-row st-mid group"
       >
-        <span className="relative w-8 h-11 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-700">
+        <span className="relative h-11 w-8 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
           {entry.image_url ? (
             <NSFWImage
               src={getProxiedImageUrl(entry.image_url, 128)}
@@ -81,10 +80,10 @@ function ShiftRow({ entry, rising }: { entry: ShiftingTitle; rising: boolean }) 
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          <span className="dg-name block">
             {name}
           </span>
-          <span className="block text-xs tabular-nums text-gray-500 dark:text-gray-400">
+          <span className="block truncate font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
             {entry.baseline !== undefined && entry.current_score !== undefined
               ? `${entry.baseline.toFixed(2)} to ${entry.current_score.toFixed(2)}, from ${entry.window_votes.toLocaleString()} votes`
               : `across ${entry.window_votes.toLocaleString()} votes`}
@@ -92,10 +91,8 @@ function ShiftRow({ entry, rising }: { entry: ShiftingTitle; rising: boolean }) 
         </span>
 
         <span
-          className={`shrink-0 text-sm font-semibold tabular-nums ${
-            rising
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : 'text-rose-600 dark:text-rose-400'
+          className={`st-num shrink-0 text-sm ${
+            rising ? 'text-[color:var(--ink)]' : 'text-[color:var(--beni-text)]'
           }`}
         >
           {entry.shift > 0 ? '+' : ''}
@@ -116,15 +113,13 @@ export function ReceptionShift({ periods }: { periods: Record<string, ShiftingPe
   const period = periods[chosen.key];
 
   return (
-    <div className="rounded-xl border border-gray-200/60 dark:border-gray-700/80 bg-white dark:bg-gray-800 overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-gray-200/60 dark:border-gray-700/80">
-        <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 max-w-xl">
-          {chosen.caption}
-        </p>
+    <div className="st-card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-[color:var(--rule)]">
+        <p className="st-card-sub max-w-xl">{chosen.caption}</p>
         <div
           role="tablist"
           aria-label="Window"
-          className="flex flex-wrap shrink-0 rounded-lg bg-gray-100 dark:bg-gray-900/50 p-0.5"
+          className="tabs shrink-0"
         >
           {available.map((window) => {
             const selected = window.key === chosen.key;
@@ -135,11 +130,7 @@ export function ReceptionShift({ periods }: { periods: Record<string, ShiftingPe
                 role="tab"
                 aria-selected={selected}
                 onClick={() => setActive(window.key)}
-                className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  selected
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`tab ${selected ? 'tab--on' : ''}`}
               >
                 {window.label}
               </button>
@@ -148,12 +139,9 @@ export function ReceptionShift({ periods }: { periods: Record<string, ShiftingPe
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60 dark:divide-gray-700/80">
+      <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[color:var(--rule)]">
         <section className="min-w-0 p-4 sm:p-5">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white mb-3">
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
-            Rated higher than usual
-          </h3>
+          <h3 className="st-card-title mb-3">Rated higher than usual</h3>
           {period.rising.length ? (
             <ol className="space-y-0.5">
               {period.rising.map((entry) => (
@@ -161,17 +149,14 @@ export function ReceptionShift({ periods }: { periods: Record<string, ShiftingPe
               ))}
             </ol>
           ) : (
-            <p className="text-sm italic text-gray-500 dark:text-gray-400">
+            <p className="st-card-sub italic">
               Nothing moved up clearly in this window.
             </p>
           )}
         </section>
 
         <section className="min-w-0 p-4 sm:p-5">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white mb-3">
-            <TrendingDown className="w-4 h-4 text-rose-500" />
-            Rated lower than usual
-          </h3>
+          <h3 className="st-card-title mb-3">Rated lower than usual</h3>
           {period.falling.length ? (
             <ol className="space-y-0.5">
               {period.falling.map((entry) => (
@@ -179,7 +164,7 @@ export function ReceptionShift({ periods }: { periods: Record<string, ShiftingPe
               ))}
             </ol>
           ) : (
-            <p className="text-sm italic text-gray-500 dark:text-gray-400">
+            <p className="st-card-sub italic">
               Nothing moved down clearly in this window.
             </p>
           )}

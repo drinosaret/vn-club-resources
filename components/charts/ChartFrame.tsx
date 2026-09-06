@@ -46,13 +46,13 @@ export function ChartFrame({
 }: ChartFrameProps) {
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none ${className}`}
+      className={`sw-panel p-5 ${className}`}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">{title}</h3>
+          <h3 className="sw-card-title">{title}</h3>
           {subtitle ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subtitle}</p>
+            <p className="sw-pick-desc mt-0.5">{subtitle}</p>
           ) : null}
         </div>
         {headerRight}
@@ -60,7 +60,7 @@ export function ChartFrame({
 
       {empty ? (
         <div
-          className="flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm"
+          className="flex items-center justify-center text-[color:var(--text-faint)] text-sm"
           style={{ height }}
         >
           {emptyMessage}

@@ -468,6 +468,20 @@ export function useTierListState(shareId?: string) {
   }, [updateState]);
 
   const applyPreset = useCallback((preset: TierPreset) => {
+    // A save queued by an earlier edit still carries that edit's snapshot, so any path that
+    // writes storage itself has to drop it first or it lands afterwards and restores the
+    // board that was just replaced.
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    // Swapping the preset is an edit like any other, so it leaves the shared layout
+    // behind: the address bar has to come off the share route or a reload re-fetches the
+    // share and overwrites the draft that was just saved.
+    if (viewingShareRef.current) {
+      viewingShareRef.current = false;
+      setNeedsUrlReset(true);
+    }
     setState(prev => {
       const newTierDefs = preset.tiers.map(t => ({ ...t }));
       const newTiers: Record<string, string[]> = {};
@@ -592,14 +606,20 @@ export function useTierListState(shareId?: string) {
         const imageUrl = item.image_url
           ? getProxiedImageUrl(item.image_url, { vnId: item.id })
           : null;
-        const title = mode === 'characters'
-          ? (pref === 'japanese' && item.title_jp ? item.title_jp : item.title)
+        // A character batch row carries the Japanese name in `title` and its romanization
+        // in `title_jp`, the reverse of the visual novel row, so the fields are assigned
+        // by kind rather than by name. Storing them the other way round hands the display
+        // helper a romanization it reads as Japanese, and every name resolves to the
+        // script the reader did not ask for.
+        const isCharacter = mode === 'characters';
+        const title = isCharacter
+          ? (pref === 'japanese' ? item.title : (item.title_jp || item.title))
           : getDisplayTitle({ title: item.title, title_jp: item.title_jp ?? undefined, title_romaji: item.title_romaji ?? undefined }, pref);
         newVnMap[item.id] = {
           id: item.id,
           title: title || item.id,
-          titleJp: item.title_jp ?? undefined,
-          titleRomaji: item.title_romaji ?? undefined,
+          titleJp: isCharacter ? item.title : (item.title_jp ?? undefined),
+          titleRomaji: isCharacter ? (item.title_jp ?? undefined) : (item.title_romaji ?? undefined),
           imageUrl,
           defaultImageUrl: imageUrl,
           imageSexual: item.image_sexual ?? null,
@@ -634,6 +654,10 @@ export function useTierListState(shareId?: string) {
         importedUser: null,
         listTitle,
       };
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
       setState(loadedState);
       // Save to localStorage so user edits persist across refresh
       saveToStorage(loadedState);
@@ -653,6 +677,10 @@ export function useTierListState(shareId?: string) {
   }, []);
 
   const clearAll = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
     const fresh = buildEmptyState();
     fresh.mode = state.mode;
     setState(fresh);

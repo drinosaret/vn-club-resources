@@ -80,6 +80,10 @@ _USER_STATS_TTL = 60 * 60 * 26
 _IMPORT_STAMP_TTL = 300
 _IMPORT_STAMP_KEY = "stats:import-stamp:v1"
 
+#: The catalogue-wide counts, held whole. Each one reads a whole table and they move
+#: only when a dump lands, so they are worked out once per window rather than per request.
+_GLOBAL_SCALE_KEY = "stats:global-scale:v1"
+
 #: Profiles worked out at once. Each one reads a reader's whole list and is the most
 #: expensive answer here; a profile already worked out never reaches this.
 _PROFILE_CEILING = Ceiling(slots=6, wait_seconds=20.0, what="profiles")
@@ -156,6 +160,66 @@ async def get_global_stats(
 
     # Generate and check ETag for 304 Not Modified
     etag = generate_etag(result.model_dump())
+    response.headers["ETag"] = etag
+    if check_etag_match(request, etag):
+        return Response(status_code=304, headers={"ETag": etag})
+
+    return result
+
+
+@router.get("/global/scale")
+@stats_limiter.limit("30/minute")  # Six catalogue-wide counts per request
+async def get_global_scale(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """How much the catalogue holds, as figures a page can quote.
+
+    Counts rather than samples, so a page that states them is stating the database rather
+    than a number someone typed once and stopped maintaining. They move only when a dump is
+    imported, which is why the cache window is long.
+
+    The Japanese-original count is separate from the total: a page about reading in Japanese
+    is describing that subset, and the two differ by enough that using one for the other
+    would misstate the catalogue.
+
+    Every figure here is a plain count over an indexed or small relation. A count of the
+    distinct people behind the votes belongs to the same story but takes tens of seconds on
+    this table, which is longer than any page should wait, so it is left out rather than
+    served as an estimate dressed as a count.
+    """
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_GLOBAL_STATS}"
+
+    from app.core.cache import get_cache
+
+    cache = get_cache()
+    result = await cache.get(_GLOBAL_SCALE_KEY)
+
+    if result is None:
+        # One at a time on purpose. A session carries a single connection and does not accept
+        # concurrent statements, so gathering these would fail rather than overlap them. The
+        # cost is paid once per cache window.
+        vns = await db.scalar(select(func.count()).select_from(VisualNovel))
+        japanese_vns = await db.scalar(
+            select(func.count()).select_from(VisualNovel).where(VisualNovel.olang == "ja")
+        )
+        characters = await db.scalar(select(func.count()).select_from(Character))
+        producers = await db.scalar(select(func.count()).select_from(Producer))
+        staff = await db.scalar(select(func.count()).select_from(Staff))
+        votes = await db.scalar(text("SELECT count(*) FROM global_votes"))
+
+        result = {
+            "visual_novels": vns or 0,
+            "japanese_visual_novels": japanese_vns or 0,
+            "characters": characters or 0,
+            "producers": producers or 0,
+            "staff": staff or 0,
+            "votes": votes or 0,
+        }
+        await cache.set(_GLOBAL_SCALE_KEY, result, ttl=CACHE_GLOBAL_STATS)
+
+    etag = generate_etag(result)
     response.headers["ETag"] = etag
     if check_etag_match(request, etag):
         return Response(status_code=304, headers={"ETag": etag})
@@ -1344,11 +1408,13 @@ async def get_user_stats(
 
 
 @router.get("/{vndb_uid}/tags", response_model=schemas.TagAnalyticsResponse)
+@stats_limiter.limit("5/minute")  # A refresh here recalculates over a whole list
 async def get_user_tag_analytics(
     vndb_uid: str,
     request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
+    force_refresh: bool = Query(False, description="Clear Redis cache and recalculate"),
 ):
     """
     Get tag analytics for a user.
@@ -1362,25 +1428,48 @@ async def get_user_tag_analytics(
     # User-specific tag analytics
     response.headers["Cache-Control"] = f"private, max-age={CACHE_USER_STATS}"
 
+    from app.core.cache import get_cache
+
     user_service = UserService(db)
     stats_service = StatsService(db)
 
     # Resolve username to UID if needed
     uid = await resolve_user_id(user_service, vndb_uid)
 
-    user_data = await user_service.get_user_list(uid)
+    # The aggregation behind these is one pass over every tag on every finished title in a
+    # list, which is measured in seconds for a long one, and it is derived from a dump that
+    # changes once a day. Keyed on the import so a new dump supersedes the answer, and read
+    # before the list is loaded, since loading the list is part of what the cache exists to
+    # save.
+    cache = get_cache()
+    key = f"user:tags:v1:{await _import_stamp(db)}:{uid}"
+    if force_refresh:
+        await cache.delete(key)
+    else:
+        cached = await cache.get(key)
+        if cached is not None:
+            etag = generate_etag(cached)
+            response.headers["ETag"] = etag
+            if check_etag_match(request, etag):
+                return Response(status_code=304, headers={"ETag": etag})
+            return cached
+
+    user_data = await user_service.get_user_list(uid, force_refresh=force_refresh)
     if not user_data:
         raise HTTPException(status_code=404, detail=f"User {vndb_uid} not found")
 
     tag_analytics = await stats_service.calculate_tag_analytics(uid, user_data)
 
+    payload = tag_analytics.model_dump(mode="json")
+    await cache.set(key, payload, ttl=_USER_STATS_TTL)
+
     # Generate and check ETag for 304 Not Modified
-    etag = generate_etag(tag_analytics.model_dump())
+    etag = generate_etag(payload)
     response.headers["ETag"] = etag
     if check_etag_match(request, etag):
         return Response(status_code=304, headers={"ETag": etag})
 
-    return tag_analytics
+    return payload
 
 
 @router.get("/{vndb_uid}/compare/{other_uid}", response_model=schemas.UserComparisonResponse)

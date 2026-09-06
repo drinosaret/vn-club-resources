@@ -2,6 +2,11 @@
 
 Pre-caches combined recommendation scores for active users to enable
 fast retrieval without running all recommenders on every request.
+
+Reads and writes the same table the recommendations endpoint does, so it holds to the
+same two rules: the order a page is served in is the one recorded on its rows, and a
+write replaces the reader's rows rather than merging into them. The write itself is the
+shared one for that reason.
 """
 
 import logging
@@ -10,15 +15,19 @@ from typing import Optional
 
 from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.dialects.postgresql import insert
 
 from app.db.models import UserRecommendationCache, VisualNovel
 from app.db.query_utils import not_in_ids
+from app.services.recommendation_cache import replace_user_rows
 
 logger = logging.getLogger(__name__)
 
 # Cache freshness threshold (24 hours)
 CACHE_TTL_HOURS = 24
+
+# Rows kept per reader. Well above any page this service is asked for, so the extra rows
+# survive the per-VN filtering the read applies after the fact.
+MAX_STORED_RECOMMENDATIONS = 200
 
 
 class UserCacheService:
@@ -55,7 +64,13 @@ class UserCacheService:
             .where(UserRecommendationCache.user_id == user_id)
             .where(UserRecommendationCache.updated_at >= freshness_threshold)
             .where(not_in_ids(UserRecommendationCache.vn_id, exclude_vns))
-            .order_by(UserRecommendationCache.combined_score.desc())
+            # The recorded order, which is a selection made after scoring rather than a
+            # sort of the scores. A row that carries no position sorts after the ranked
+            # ones, on score.
+            .order_by(
+                UserRecommendationCache.rank.asc().nulls_last(),
+                UserRecommendationCache.combined_score.desc(),
+            )
             .limit(limit * 2)  # Get extra for filtering
         )
 
@@ -110,6 +125,11 @@ class UserCacheService:
         """
         Store computed recommendations in cache.
 
+        `recommendations` must be in the order they are to be served in; the position is
+        recorded alongside the scores. This method measures three of the signals the table
+        holds and leaves the rest unset, rather than letting them keep values from a run
+        that is no longer represented.
+
         Args:
             user_id: VNDB user ID
             recommendations: List of recommendation dicts with scores
@@ -118,32 +138,23 @@ class UserCacheService:
             return
 
         now = datetime.utcnow()
-        records = []
-
-        for rec in recommendations[:200]:  # Store top 200
-            records.append({
+        records = [
+            {
                 "user_id": user_id,
                 "vn_id": rec["vn_id"],
+                "rank": position,
                 "combined_score": rec.get("score", 0),
                 "tag_score": rec.get("tag_score"),
                 "cf_score": rec.get("cf_score"),
                 "hgat_score": rec.get("hgat_score"),
                 "updated_at": now,
-            })
-
-        # Upsert records
-        stmt = insert(UserRecommendationCache).values(records)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["user_id", "vn_id"],
-            set_={
-                "combined_score": stmt.excluded.combined_score,
-                "tag_score": stmt.excluded.tag_score,
-                "cf_score": stmt.excluded.cf_score,
-                "hgat_score": stmt.excluded.hgat_score,
-                "updated_at": stmt.excluded.updated_at,
             }
-        )
-        await self.db.execute(stmt)
+            for position, rec in enumerate(
+                recommendations[:MAX_STORED_RECOMMENDATIONS]
+            )
+        ]
+
+        await replace_user_rows(self.db, user_id, records)
         await self.db.commit()
 
         logger.info(f"Cached {len(records)} recommendations for user {user_id}")

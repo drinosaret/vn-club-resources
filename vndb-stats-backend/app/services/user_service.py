@@ -91,6 +91,28 @@ class UserService:
             list_public=True,  # Assume public unless we get an error
         )
 
+    async def username_for(self, vndb_uid: str) -> str:
+        """Resolve a display name for a UID.
+
+        The name is display only and is fetched by the pages that show it, so
+        the list fetch, which every recommendation request makes, carries no
+        outbound call.
+        """
+        cache_key = f"user:name:{vndb_uid}"
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            user = await self.vndb.get_user(uid=vndb_uid)
+            username = user.get("username", "") if user else ""
+        except Exception as e:
+            logger.debug(f"[{vndb_uid}] Could not fetch username: {e}")
+            return ""
+
+        await self.cache.set(cache_key, username, ttl=3600)
+        return username
+
     async def get_user_list(self, vndb_uid: str, force_refresh: bool = False) -> dict | None:
         """
         Get user's VN list from LOCAL DATABASE (dump data).
@@ -146,13 +168,9 @@ class UserService:
         # Process into the expected format
         processed = self._process_local_user_list(vn_entries, label_entries)
 
-        # Try to get username from API (lightweight call, cached)
-        try:
-            user = await self.vndb.get_user(uid=vndb_uid)
-            processed["username"] = user.get("username", "") if user else ""
-        except Exception as e:
-            logger.debug(f"[{vndb_uid}] Could not fetch username: {e}")
-            processed["username"] = ""
+        # The list is local data and stays local: nothing on the recommendation path
+        # reads a username, and a fetch here would put an outbound call on every miss.
+        processed["username"] = ""
 
         logger.info(
             f"[{vndb_uid}] Loaded user list from database: "
@@ -195,6 +213,8 @@ class UserService:
                 votes.append({
                     "vn_id": vid,
                     "score": entry.vote,  # 10-100 scale
+                    # Unix seconds, or None where the dump carries no date for the vote.
+                    "vote_date": entry.vote_date,
                 })
 
             # Process labels for this VN

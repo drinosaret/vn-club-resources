@@ -5,7 +5,7 @@ import { browseVNsServer } from '@/lib/vndb-server';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Browse Visual Novels for Learning Japanese',
+  title: 'Browse Japanese Visual Novels',
   description: 'Browse thousands of visual novels from VNDB. Filter by tags, length, release date, and language to find your next Japanese reading challenge. Updated daily.',
   path: '/browse/',
 });
@@ -14,7 +14,7 @@ const browseJsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'Browse Visual Novels for Learning Japanese',
+    name: 'Browse Japanese Visual Novels',
     description: 'Browse thousands of visual novels from VNDB. Filter by tags, length, release date, and language to find your next Japanese reading challenge. Updated daily.',
     url: `${SITE_URL}/browse/`,
     isPartOf: { '@type': 'WebSite', name: 'VN Club', url: SITE_URL },

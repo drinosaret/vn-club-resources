@@ -6,7 +6,9 @@ import os from 'os';
 import sharp from 'sharp';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit';
 
-// Allowed domains for external image proxying
+// Allowed domains for external image proxying. The second group holds the image hosts of
+// the news sources the backend ingests: a feed added there without its host here leaves
+// every card from that source falling back to a favicon.
 const ALLOWED_DOMAINS = [
   'pbs.twimg.com',
   'video.twimg.com',
@@ -18,6 +20,9 @@ const ALLOWED_DOMAINS = [
   'game.watch.impress.co.jp',
   'asset.watch.impress.co.jp',
   'www.ima-ero.com',
+  'moepedia.net',
+  'www.inside-games.jp',
+  'news.denfaminicogamer.jp',
 ];
 
 // Cache configuration
@@ -165,7 +170,7 @@ async function doFetchAndCache(
       .toBuffer();
     await fs.writeFile(cachePath, webpBuffer);
 
-    // Probabilistic cache eviction — runs ~1% of writes to avoid unbounded growth
+    // Probabilistic cache eviction: runs ~1% of writes to avoid unbounded growth
     if (Math.random() < EVICT_PROBABILITY) {
       evictStaleCache().catch(() => {});
     }
@@ -252,7 +257,7 @@ export async function GET(request: NextRequest) {
     // Cache miss
   }
 
-  // Cache hit — serve immediately (no rate limit check)
+  // Cache hit: serve immediately (no rate limit check)
   if (cachedBuffer && !isStale) {
     return new NextResponse(new Uint8Array(cachedBuffer), {
       headers: {
@@ -263,10 +268,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Cache miss or stale — check rate limit before fetching from source
+  // Cache miss or stale: check rate limit before fetching from source
   const rateLimitResult = checkRateLimit(`proxy-image:${clientIp}`, RATE_LIMITS.imageProxy);
   if (!rateLimitResult.allowed) {
-    // Rate limited — serve stale cache if available, otherwise 429
+    // Rate limited: serve stale cache if available, otherwise 429
     if (cachedBuffer) {
       return new NextResponse(new Uint8Array(cachedBuffer), {
         headers: {
@@ -295,7 +300,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Fetch failed but we have stale cache — serve it as fallback
+  // Fetch failed but we have stale cache; serve it as fallback
   if (cachedBuffer) {
     return new NextResponse(new Uint8Array(cachedBuffer), {
       headers: {

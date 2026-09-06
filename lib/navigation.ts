@@ -1,5 +1,5 @@
 // Single source of truth for site navigation
-// Used by PageNavigation, PrevNextNavigation, Header, and SiteDirectory
+// Used by Header, PageNavigation, PrevNextNavigation and NavigationPrefetch
 
 export interface NavItem {
   title: string;
@@ -18,18 +18,25 @@ export interface NavSection {
  * The "More" menu, grouped by intent.
  *
  * A flat list in build order tells a visitor nothing about which entry they want. The
- * groups are the three reasons anyone opens this menu: to find something to read, to look
- * at what the community is doing, or to play with the data.
+ * groups are the reasons anyone opens this menu: to see what is new today, to find
+ * something to read, to look at what the community is doing, or to play with the data.
+ *
+ * What changes every day leads, since it is the only entry whose value expires.
  */
 const MORE_MENU = [
+  { name: 'Word of the Day', href: '/word-of-the-day', group: 'Daily' },
+
+  { name: 'Discovery', href: '/find', group: 'Find a VN' },
   { name: 'Recommendations', href: '/recommendations', group: 'Find a VN' },
   { name: 'Random', href: '/random', group: 'Find a VN' },
   { name: 'Roulette', href: '/roulette', group: 'Find a VN' },
 
+  { name: 'Global Stats', href: '/stats/global', group: 'Community' },
   { name: 'Rankings', href: '/stats/rankings', group: 'Community' },
   { name: 'Trends', href: '/stats/trends', group: 'Community' },
   { name: 'Compare', href: '/stats/compare', group: 'Community' },
   { name: 'Events', href: '/events', group: 'Community' },
+  { name: 'Past Club Picks', href: '/events/history', group: 'Community' },
 
   { name: 'Tier List', href: '/tierlist', group: 'Make & play' },
   { name: '3x3 Maker', href: '/3x3-maker', group: 'Make & play' },
@@ -42,7 +49,6 @@ export function getHeaderNavigation() {
   const startHere = navigation.find(s => s.title === 'Start Here');
   const resources = navigation.find(s => s.title === 'Resources');
   const guides = navigation.find(s => s.title === 'Guides');
-  const features = navigation.find(s => s.title === 'Features');
 
   return {
     mobile: [
@@ -57,7 +63,11 @@ export function getHeaderNavigation() {
       },
       {
         name: 'Guides',
-        items: guides?.items.map(item => ({ name: item.title, href: `/${item.slug}` })) ?? [],
+        // The hub leads its own group: on a phone there is no sidebar to reach it from.
+        items: [
+          { name: 'All guides', href: '/guides' },
+          ...(guides?.items.map(item => ({ name: item.title, href: `/${item.slug}` })) ?? []),
+        ],
       },
       // Features shown directly (not collapsed) since they're main site features
       { name: 'Browse', href: '/browse' },
@@ -70,6 +80,10 @@ export function getHeaderNavigation() {
     ],
     desktop: [
       { name: 'Home', href: '/' },
+      // The walkthrough, not the index. Every guide page carries the full list in its sidebar,
+      // so an index is a page the reader passes through rather than one they wanted. The index
+      // is still reached from the footer, from the home page's guides band, and from the
+      // breadcrumb on every guide.
       { name: 'Guides', href: '/guide' },
       { name: 'Browse', href: '/browse' },
       { name: 'Stats', href: '/stats' },
@@ -82,22 +96,59 @@ export function getHeaderNavigation() {
   };
 }
 
-// Helper to get sections for SiteDirectory
-export function getSiteDirectorySections() {
-  const startHere = navigation.find(s => s.title === 'Start Here');
-  const resources = navigation.find(s => s.title === 'Resources');
-  const features = navigation.find(s => s.title === 'Features');
-  const community = navigation.find(s => s.title === 'Community');
-  const guides = navigation.find(s => s.title === 'Guides');
+/**
+ * The sections the site directory is built from, in the order it renders them, plus the
+ * guides section it renders as its own column.
+ *
+ * Naming them once here is what keeps the directory honest: a section renamed in
+ * `navigation` fails loudly on the next build instead of silently rendering one column
+ * fewer than the site has.
+ */
+const DIRECTORY_SECTION_TITLES = ['Start Here', 'Resources', 'Features', 'Community'] as const;
+const DIRECTORY_GUIDES_TITLE = 'Guides';
 
+export interface DirectoryLink {
+  name: string;
+  href: string;
+}
+
+export interface DirectorySection {
+  key: string;
+  title: string;
+  items: DirectoryLink[];
+}
+
+export interface SiteDirectory {
+  mainSections: DirectorySection[];
+  guides: NavItem[];
+}
+
+function requireSection(title: string): NavSection {
+  const section = navigation.find((s) => s.title === title);
+  if (!section) {
+    throw new Error(`Navigation has no "${title}" section, which the site directory is built from`);
+  }
+  return section;
+}
+
+function toDirectoryLink(item: NavItem): DirectoryLink {
+  return { name: item.title, href: item.href ?? `/${item.slug}/` };
+}
+
+/**
+ * Every destination the navigation knows about, grouped for a full directory listing.
+ *
+ * Guides come back as nav items rather than links because a directory renders them under
+ * one heading, where the trailing "Guide" in each title is redundant.
+ */
+export function getSiteDirectorySections(): SiteDirectory {
   return {
-    mainSections: [
-      { key: 'start-here', title: 'Start Here', items: startHere?.items ?? [] },
-      { key: 'resources', title: 'Resources', items: resources?.items ?? [] },
-      { key: 'features', title: 'Features', items: features?.items ?? [] },
-      { key: 'community', title: 'Community', items: community?.items ?? [] },
-    ],
-    guides: guides?.items ?? [],
+    mainSections: DIRECTORY_SECTION_TITLES.map((title) => ({
+      key: title.toLowerCase().replace(/\s+/g, '-'),
+      title,
+      items: requireSection(title).items.map(toDirectoryLink),
+    })),
+    guides: requireSection(DIRECTORY_GUIDES_TITLE).items,
   };
 }
 
@@ -109,8 +160,8 @@ export const navigation: NavSection[] = [
   {
     title: 'Start Here',
     items: [
-      { title: 'The Guide', slug: 'guide' },
-      { title: 'FAQ', slug: 'faq', description: 'Frequently asked questions' },
+      { title: 'The Guide', slug: 'guide', description: 'From kana to reading a visual novel in Japanese, start to finish' },
+      { title: 'FAQ', slug: 'faq', description: 'Common questions about reading visual novels in the original' },
     ],
   },
   {
@@ -124,18 +175,24 @@ export const navigation: NavSection[] = [
   {
     title: 'Features',
     items: [
-      { title: 'Beginner VNs', slug: 'beginner-vns', description: 'Recommended beginner visual novels' },
-      { title: 'Browse', slug: 'browse', description: 'Search and browse visual novels' },
-      { title: 'Stats', slug: 'stats', description: 'VNDB stats and analytics' },
+      { title: 'Beginner VNs', slug: 'beginner-vns', description: 'Handpicked starter titles and the easiest VNs to read in Japanese' },
+      { title: 'Browse', slug: 'browse', description: 'The whole VNDB catalogue, filtered by tag, length, year and language' },
+      { title: 'Stats', slug: 'stats', description: 'Any VNDB list as charts: scores, release years, reading activity' },
+      { title: 'Global Stats', slug: 'stats/global', description: 'The shape of the whole database: what is rated highest, read most, and released when' },
       { title: 'Rankings', slug: 'stats/rankings', description: 'Community leaderboards across VNDB' },
       { title: 'Trends', slug: 'stats/trends', description: 'How reading and publishing shifted over time' },
-      { title: 'Recommendations', slug: 'recommendations', description: 'Personalized VN recommendations' },
+      { title: 'Compare Lists', slug: 'stats/compare', description: 'Two VNDB lists side by side: shared titles and where the scores part' },
+      { title: 'Recommendations', slug: 'recommendations', description: 'Titles matched to your VNDB ratings by tag, staff and similar readers' },
       { title: 'Tier List', slug: 'tierlist', description: 'Rank your visual novels' },
       { title: '3x3 Maker', slug: '3x3-maker', description: 'Create a VN cover collage' },
       { title: 'Roulette', slug: 'roulette', description: 'Spin the wheel to pick a VN' },
       { title: 'Higher or Lower', slug: 'higher-or-lower', description: 'Guess which VN ranks higher' },
-      { title: 'News', slug: 'news', description: 'VN news aggregator' },
-      { title: 'Events', slug: 'events', description: 'Club calendar: VN of the month/season, movie night' },
+      { title: 'News', slug: 'news', description: 'Japanese releases, announcements and industry news, gathered daily' },
+      { title: 'Upcoming Releases', slug: 'news/upcoming', description: 'Visual novels with a release date still ahead' },
+      { title: 'Word of the Day', slug: 'word-of-the-day', description: 'A Japanese word a day, with example sentences drawn from visual novels' },
+      { title: 'Events', slug: 'events', description: 'Club calendar: VN of the Month and Season, Movie Night, Roudoku' },
+      { title: 'Past Club Picks', slug: 'events/history', description: 'Everything the club has picked together, newest first' },
+      { title: 'Random Picker', slug: 'random', description: 'Roll for a title, with filters for tag, length, rating and language' },
       { title: 'Quiz', slug: 'quiz', description: 'Kana practice quiz' },
     ],
   },
@@ -167,7 +224,8 @@ export const navigation: NavSection[] = [
   {
     title: 'Community',
     items: [
-      { title: 'Discord', slug: 'join', description: 'Join our Discord server' },
+      { title: 'Discord', slug: 'join', description: 'The club Discord: group reads, setup help, untranslated titles' },
+      { title: 'Level 1 Vocabulary', slug: 'level1', description: 'The hundred words the Discord entry quiz is drawn from, with readings and meanings' },
       { title: 'Changelog', slug: 'changelog', description: 'Major updates across the site and bots' },
     ],
   },

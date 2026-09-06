@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, X, Tag, Heart, Plus, Minus } from 'lucide-react';
+import { Search, X, Plus, Minus } from 'lucide-react';
+import { getBackendUrl } from '@/lib/config';
 
 export interface SelectedItem {
   id: number;
@@ -58,13 +59,8 @@ export default function TagTraitAutocomplete({
       const timeoutHandle = setTimeout(() => abortController.abort(), 10000);
 
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_VNDB_STATS_API;
-        if (!apiUrl) {
-          setResults([]);
-          return;
-        }
         const response = await fetch(
-          `${apiUrl}/api/v1/vn/search-tags-traits?q=${encodeURIComponent(query)}&limit=20`,
+          `${getBackendUrl()}/api/v1/vn/search-tags-traits?q=${encodeURIComponent(query)}&limit=20`,
           { signal: abortController.signal }
         );
         clearTimeout(timeoutHandle);
@@ -191,6 +187,9 @@ export default function TagTraitAutocomplete({
           }
           break;
         case 'Escape':
+          // Marked handled so a surrounding disclosure listening for Escape does not also
+          // close on the press that only dismissed this list.
+          e.preventDefault();
           setIsOpen(false);
           setSelectedIndex(-1);
           break;
@@ -208,14 +207,9 @@ export default function TagTraitAutocomplete({
     <div ref={containerRef} className="relative">
       {/* Input with chips */}
       <div
-        className={`
-          flex flex-wrap items-center gap-1.5 px-3 py-2 min-h-[42px]
-          bg-white dark:bg-gray-700
-          border border-gray-300 dark:border-gray-600
-          rounded-lg
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          focus-within:ring-2 focus-within:ring-violet-500 focus-within:border-transparent
-        `}
+        className={`rc-field flex flex-wrap items-center gap-1.5 px-3 py-2 min-h-[42px] ${
+          disabled ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
         {/* Selected chips */}
         {selectedItems.map((item, index) => (
@@ -228,8 +222,8 @@ export default function TagTraitAutocomplete({
         ))}
 
         {/* Search input */}
-        <div className="flex-1 min-w-[120px] flex items-center">
-          <Search className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+        <div className="flex-1 min-w-[120px] flex items-center gap-2">
+          <Search aria-hidden className="w-4 h-4 shrink-0 text-[color:var(--text-faint)]" />
           <input
             ref={inputRef}
             type="search"
@@ -240,11 +234,7 @@ export default function TagTraitAutocomplete({
             onFocus={() => query.length >= 2 && results.length > 0 && setIsOpen(true)}
             placeholder={selectedItems.length === 0 ? placeholder : 'Add more...'}
             disabled={disabled || selectedItems.length >= maxItems}
-            className={`
-              flex-1 bg-transparent border-none outline-hidden
-              text-sm text-gray-900 dark:text-gray-100
-              placeholder-gray-400 dark:placeholder-gray-500
-            `}
+            className="flex-1 bg-transparent border-none outline-hidden text-sm text-[color:var(--ink)] placeholder:text-[color:var(--text-faint)]"
             aria-label="Search tags and traits"
             aria-expanded={isOpen}
             aria-controls="tag-trait-results"
@@ -253,11 +243,12 @@ export default function TagTraitAutocomplete({
           />
           {selectedItems.length > 0 && (
             <button
+              type="button"
               onClick={clearAll}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="rc-chip-btn"
               aria-label="Clear all filters"
             >
-              <X className="w-4 h-4" />
+              <X aria-hidden className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -268,70 +259,42 @@ export default function TagTraitAutocomplete({
         <div
           id="tag-trait-results"
           role="listbox"
-          className="
-            absolute z-50 mt-1 w-full
-            bg-white dark:bg-gray-900
-            border border-gray-200 dark:border-gray-700
-            rounded-lg shadow-lg
-            max-h-64 overflow-y-auto
-          "
+          className="rc-menu absolute z-50 mt-1 w-full max-h-64 overflow-y-auto"
         >
           {isLoading ? (
-            <div className="p-3 text-center text-gray-500 dark:text-gray-400">
-              <div className="inline-block w-4 h-4 border-2 border-gray-300 border-t-violet-500 rounded-full animate-spin mr-2" />
+            <p className="rc-why flex items-center justify-center gap-2 p-3">
+              <span aria-hidden className="rc-spin w-3 h-3" />
               Searching...
-            </div>
+            </p>
           ) : results.length === 0 ? (
-            <div className="p-3 text-center text-gray-500 dark:text-gray-400">
-              No results for &ldquo;{query}&rdquo;
-            </div>
+            <p className="rc-why p-3 text-center">No results for &ldquo;{query}&rdquo;</p>
           ) : (
             <ul className="py-1">
               {results.map((result, index) => (
                 <li key={`${result.type}-${result.id}`}>
                   <button
+                    type="button"
                     onClick={() => addItem(result)}
                     onMouseEnter={() => setSelectedIndex(index)}
                     role="option"
                     aria-selected={index === selectedIndex}
-                    className={`
-                      w-full px-3 py-2 text-left flex items-center gap-2
-                      hover:bg-gray-100 dark:hover:bg-gray-800
-                      ${index === selectedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''}
-                    `}
+                    className={`rc-opt w-full px-3 py-2 text-left flex items-center gap-2 ${
+                      index === selectedIndex ? 'rc-opt--focus' : ''
+                    }`}
                   >
-                    {/* Type indicator */}
-                    <span
-                      className={`
-                        flex items-center justify-center w-6 h-6 rounded
-                        ${
-                          result.type === 'tag'
-                            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
-                            : 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400'
-                        }
-                      `}
-                    >
-                      {result.type === 'tag' ? (
-                        <Tag className="w-3.5 h-3.5" />
-                      ) : (
-                        <Heart className="w-3.5 h-3.5" />
+                    {/* Which of the two lists the row came from. A name alone does not say. */}
+                    <span className="rc-kind w-9 shrink-0">{result.type}</span>
+
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-sm text-[color:var(--ink)]">
+                        {result.name}
+                      </span>
+                      {result.category && (
+                        <span className="rc-why block truncate">{result.category}</span>
                       )}
                     </span>
 
-                    {/* Name and category */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">
-                        {result.name}
-                      </div>
-                      {result.category && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {result.category}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Count */}
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                    <span className="rc-num text-xs text-[color:var(--text-faint)]">
                       {result.count.toLocaleString()}
                     </span>
                   </button>
@@ -344,9 +307,13 @@ export default function TagTraitAutocomplete({
 
       {/* Helper text */}
       {selectedItems.length > 0 && (
-        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Click chip icon to toggle include/exclude. {selectedItems.length}/{maxItems} selected.
-        </div>
+        <p className="rc-why mt-1">
+          Click chip icon to toggle include/exclude.{' '}
+          <span className="rc-num">
+            {selectedItems.length}/{maxItems}
+          </span>{' '}
+          selected.
+        </p>
       )}
     </div>
   );
@@ -362,55 +329,24 @@ function FilterChip({
   onToggleMode: () => void;
 }) {
   const isExclude = item.mode === 'exclude';
-  const isTag = item.type === 'tag';
 
   return (
-    <span
-      className={`
-        inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
-        ${
-          isExclude
-            ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700'
-            : isTag
-            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-            : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
-        }
-      `}
-    >
-      {/* Toggle mode button */}
+    <span className={`rc-chip ${isExclude ? 'rc-chip--off' : 'rc-chip--on'}`}>
       <button
+        type="button"
         onClick={onToggleMode}
-        className={`
-          flex items-center justify-center w-4 h-4 rounded-full
-          hover:bg-black/10 dark:hover:bg-white/10
-          ${isExclude ? 'text-red-600 dark:text-red-400' : ''}
-        `}
+        className="rc-chip-btn"
+        aria-label={isExclude ? `Include ${item.name}` : `Exclude ${item.name}`}
         title={isExclude ? 'Click to include' : 'Click to exclude'}
       >
-        {isExclude ? (
-          <Minus className="w-3 h-3" />
-        ) : (
-          <Plus className="w-3 h-3" />
-        )}
+        {isExclude ? <Minus aria-hidden className="w-3 h-3" /> : <Plus aria-hidden className="w-3 h-3" />}
       </button>
 
-      {/* Type icon */}
-      {isTag ? (
-        <Tag className="w-3 h-3" />
-      ) : (
-        <Heart className="w-3 h-3" />
-      )}
-
-      {/* Name */}
+      <span className="rc-kind">{item.type}</span>
       <span className={isExclude ? 'line-through' : ''}>{item.name}</span>
 
-      {/* Remove button */}
-      <button
-        onClick={onRemove}
-        className="flex items-center justify-center w-4 h-4 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-        title="Remove"
-      >
-        <X className="w-3 h-3" />
+      <button type="button" onClick={onRemove} className="rc-chip-btn" aria-label={`Remove ${item.name} filter`}>
+        <X aria-hidden className="w-3 h-3" />
       </button>
     </span>
   );

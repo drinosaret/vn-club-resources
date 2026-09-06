@@ -1,6 +1,6 @@
 'use client';
 
-import { Activity, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 interface CompareCompatibilityProps {
   jaccardSimilarity: number | null;
@@ -28,14 +28,13 @@ export function CompareCompatibility({
   if (jaccardSimilarity == null && tagSimilarity == null) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+    <div className="st-card p-6">
       <div className="flex items-center gap-2 mb-2">
-        <Activity className="w-5 h-5 text-primary-500" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h3 className="st-card-title">
           Compatibility Breakdown
         </h3>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+      <p className="text-sm text-[color:var(--nezu)] mb-4">
         Individual metrics that make up the compatibility score. Hover over the <Info className="w-3 h-3 inline" /> icons for calculation details.
       </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -93,31 +92,35 @@ function MetricBar({
   const percent = Math.round(value * 100);
   const displayPercent = value > 0 && percent === 0 ? '< 1' : percent.toString();
   const barWidth = value > 0 && percent === 0 ? 1 : percent;
-  const barColor = percent >= 60 ? 'bg-green-500' : percent >= 35 ? 'bg-yellow-500' : 'bg-red-500';
+  // A weak measure is quieter, not a different colour: the figure beside the bar already
+  // says how strong it is, and a red bar would report a low overlap as a fault.
+  const barQuiet = percent < 35;
 
   return (
     <div className="group relative">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+        <span className="fig-label fig-label--row">
           {label}
           {tooltip && (
-            <span className="cursor-help text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title={tooltip}>
+            <span className="cursor-help text-[color:var(--text-faint)] hover:text-[color:var(--nezu)]" title={tooltip}>
               <Info className="w-3.5 h-3.5" />
             </span>
           )}
         </span>
-        <span className="text-sm font-bold text-gray-900 dark:text-white">
+        <span className="st-num text-sm text-[color:var(--ink)]">
           {displayPercent}%
-          {showRawCount !== undefined && <span className="font-normal text-gray-500 ml-1">({showRawCount})</span>}
+          {showRawCount !== undefined && (
+            <span className="ml-1 text-[color:var(--text-faint)]">({showRawCount})</span>
+          )}
         </span>
       </div>
-      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="st-bar h-2">
         <div
-          className={`h-full ${barColor} transition-all duration-300`}
+          className={`st-bar-fill ${barQuiet ? 'st-bar-fill--quiet' : ''}`}
           style={{ width: `${barWidth}%` }}
         />
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+      <p className="st-card-sub mt-1">{description}</p>
     </div>
   );
 }

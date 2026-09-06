@@ -146,7 +146,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
   const [exportScale, setExportScale] = useState<GridExportScale>(2);
   const { exporting, exportAsImage, generateBlob } = useGridExport(gridSize, cells, itemMap, importedUser ?? '', mode, cropSquare, showFrame, showTitles, showScores, gridTitle, titleMaxH, exportScale, nsfwExportState);
 
-  // Share — build payload with settings + overrides
+  // Share: build payload with settings + overrides
   const buildShareData = useCallback(() => {
     // Read title preference from localStorage
     let titlePreference: 'romaji' | 'japanese' = 'romaji';
@@ -157,7 +157,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
 
     const settings = { cropSquare, showFrame, showTitles, showScores, titleMaxH, titlePreference };
 
-    // Build sparse overrides — only items with user changes
+    // Build sparse overrides: only items with user changes
     const overrides: Record<string, Record<string, unknown>> = {};
     for (const [id, item] of Object.entries(itemMap)) {
       const o: Record<string, unknown> = {};
@@ -177,7 +177,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
   const shareText = t(s, 'export.shareText', { size: gridSize, mode: mode === 'characters' ? s['export.shareTextChar'] : '' });
   const shareHashtags = s['export.shareHashtags'];
 
-  // Cached share URL — reuses existing link if data hasn't changed
+  // Cached share URL: reuses existing link if data hasn't changed
   const lastShareRef = useRef<{ hash: string; url: string } | null>(null);
   const getShareUrl = useCallback(async () => {
     const data = buildShareData();
@@ -200,14 +200,21 @@ export function GridBoard({ shareId }: GridBoardProps) {
     exportFormat,
   });
 
-  // Share link — "Copy Link" button handler
+  // Share link: "Copy Link" button handler
   const [creatingLink, setCreatingLink] = useState(false);
   const [linkToast, setLinkToast] = useState<string | null>(null);
   const [linkToastIsError, setLinkToastIsError] = useState(false);
+  // One timer for the whole component: a replacement toast must not be dismissed by the
+  // countdown that belonged to the message it replaced.
+  const linkToastTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const showLinkToast = useCallback((msg: string, duration: number, isError = false) => {
+    if (linkToastTimerRef.current) clearTimeout(linkToastTimerRef.current);
     setLinkToast(msg);
     setLinkToastIsError(isError);
-    setTimeout(() => setLinkToast(null), duration);
+    linkToastTimerRef.current = setTimeout(() => setLinkToast(null), duration);
+  }, []);
+  useEffect(() => () => {
+    if (linkToastTimerRef.current) clearTimeout(linkToastTimerRef.current);
   }, []);
   const handleCreateLink = useCallback(async () => {
     if (itemCount === 0) return;
@@ -263,7 +270,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
   // Cell fill modal (click empty cell → modal with search + pool)
   const [fillCellIndex, setFillCellIndex] = useState<number | null>(null);
 
-  // Handle adding an item from search bar (top bar — no target cell)
+  // Handle adding an item from search bar (top bar, no target cell)
   const handleAddItem = useCallback((item: GridItem) => {
     if (directAdd) {
       const nextEmpty = getNextEmptyCell();
@@ -360,7 +367,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
     }
   }, [importFromVNDB, setImportedUser, importToPool]);
 
-  // Auto-load from share link (always fetch from API — cached via Redis)
+  // Auto-load from share link (always fetch from API, cached via Redis)
   const shareLoadedRef = useRef(false);
   useEffect(() => {
     if (!shareId || !hydrated || shareLoadedRef.current) return;
@@ -371,7 +378,9 @@ export function GridBoard({ shareId }: GridBoardProps) {
       if (settings.showTitles != null) setShowTitles(settings.showTitles);
       if (settings.showScores != null) setShowScores(settings.showScores);
       if (settings.titleMaxH != null) setTitleMaxH(settings.titleMaxH);
-      if (settings.titlePreference) setPreference(settings.titlePreference);
+      // The payload also records the language its author read in, which is deliberately not
+      // applied: the title language is a site-wide setting the visitor owns, and the board's
+      // own items already carry the language the payload was built in.
     });
   }, [shareId, hydrated, loadFromShare]);
 
@@ -415,13 +424,13 @@ export function GridBoard({ shareId }: GridBoardProps) {
     <div>
       {/* Share loading banner */}
       {shareLoading && (
-        <div className="mb-3 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+        <div className="toy-panel mb-3 flex items-center gap-2 p-3 text-sm text-[color:var(--nezu)]">
           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
           Loading shared grid&hellip;
         </div>
       )}
       {shareError && (
-        <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+        <div className="bw-alert mb-3 p-3 text-sm">
           {shareError}
         </div>
       )}
@@ -441,14 +450,10 @@ export function GridBoard({ shareId }: GridBoardProps) {
       {/* Toolbar */}
       <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
         {/* Content: Mode toggle */}
-        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="rc-seg">
           <button
             onClick={() => handleModeSwitch('vns')}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              mode === 'vns'
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item gap-1 ${mode === 'vns' ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.vnMode']}
           >
             <Monitor className="w-3 h-3" />
@@ -456,11 +461,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
           </button>
           <button
             onClick={() => handleModeSwitch('characters')}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              mode === 'characters'
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item gap-1 ${mode === 'characters' ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.charMode']}
           >
             <Users className="w-3 h-3" />
@@ -468,43 +469,31 @@ export function GridBoard({ shareId }: GridBoardProps) {
           </button>
         </div>
 
-        <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="toy-divider hidden sm:block" />
 
         {/* Grid: Size selector + Crop mode */}
-        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="rc-seg">
           {GRID_SIZES.map(size => (
             <button
               key={size}
               onClick={() => handleGridSizeSwitch(size)}
-              className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                hydrated && gridSize === size
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
+              className={`rc-seg-item ${hydrated && gridSize === size ? 'rc-seg-item--on' : ''}`}
             >
               {size}x{size}
             </button>
           ))}
         </div>
-        <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="rc-seg">
           <button
             onClick={() => setCropSquare(true)}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              hydrated && cropSquare
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item rc-seg-item--icon ${hydrated && cropSquare ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.squareCrop']}
           >
             <Square className="w-3 h-3" />
           </button>
           <button
             onClick={() => setCropSquare(false)}
-            className={`px-2.5 py-1.5 text-xs font-medium transition-colors inline-flex items-center gap-1 ${
-              hydrated && !cropSquare
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`rc-seg-item rc-seg-item--icon ${hydrated && !cropSquare ? 'rc-seg-item--on' : ''}`}
             title={s['toolbar.coverAspect']}
           >
             <RectangleVertical className="w-3 h-3" />
@@ -513,68 +502,56 @@ export function GridBoard({ shareId }: GridBoardProps) {
         <div ref={settingsRef} className="relative">
           <button
             onClick={() => setSettingsOpen(!settingsOpen)}
-            className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-              settingsOpen
-                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'
-                : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`toy-btn ${settingsOpen ? 'toy-btn--on' : ''}`}
             title={s['export.displaySettings']}
           >
             <Settings className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{s['export.displaySettings']}</span>
           </button>
           {settingsOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl p-3 space-y-2">
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={showFrame} onChange={e => setShowFrame(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500" />
+            <div className="toy-menu absolute right-0 top-full mt-1 z-50 w-52 p-3 space-y-2">
+              <label className="toy-check-row">
+                <input type="checkbox" checked={showFrame} onChange={e => setShowFrame(e.target.checked)} className="bw-check" />
                 {s['settings.frame']}
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={showScores} onChange={e => setShowScores(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500" />
+              <label className="toy-check-row">
+                <input type="checkbox" checked={showScores} onChange={e => setShowScores(e.target.checked)} className="bw-check" />
                 {s['settings.scores']}
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={nsfwContext?.allRevealed ?? false} onChange={e => nsfwContext?.setAllRevealed(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500" />
+              <label className="toy-check-row">
+                <input type="checkbox" checked={nsfwContext?.allRevealed ?? false} onChange={e => nsfwContext?.setAllRevealed(e.target.checked)} className="bw-check" />
                 {s['settings.nsfw']}
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={showTitles} onChange={e => setShowTitles(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500" />
+              <label className="toy-check-row">
+                <input type="checkbox" checked={showTitles} onChange={e => setShowTitles(e.target.checked)} className="bw-check" />
                 {s['settings.titles']}
               </label>
-              <div className="border-t border-gray-100 dark:border-gray-700" />
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                <input type="checkbox" checked={directAdd} onChange={e => { setDirectAdd(e.target.checked); localStorage.setItem('grid-direct-add', String(e.target.checked)); }} className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500" />
+              <div className="border-t border-[color:var(--rule)]" />
+              <label className="toy-check-row">
+                <input type="checkbox" checked={directAdd} onChange={e => { setDirectAdd(e.target.checked); localStorage.setItem('grid-direct-add', String(e.target.checked)); }} className="bw-check" />
                 {s['settings.directAdd']}
               </label>
-              <div className="border-t border-gray-100 dark:border-gray-700" />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-300">{s['settings.language']}</span>
-                <div className="inline-flex items-center rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="border-t border-[color:var(--rule)]" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="toy-label">{s['settings.language']}</span>
+                <div className="rc-seg">
                   <button
                     onClick={() => setPreference('romaji')}
-                    className={`px-2 py-1 text-xs font-medium transition-colors ${
-                      preference === 'romaji'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`rc-seg-item ${preference === 'romaji' ? 'rc-seg-item--on' : ''}`}
                   >
                     EN
                   </button>
                   <button
                     onClick={() => setPreference('japanese')}
-                    className={`px-2 py-1 text-xs font-medium transition-colors ${
-                      preference === 'japanese'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`rc-seg-item ${preference === 'japanese' ? 'rc-seg-item--on' : ''}`}
                   >
                     JP
                   </button>
                 </div>
               </div>
-              <div className="border-t border-gray-100 dark:border-gray-700" />
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                <span className="whitespace-nowrap">{s['settings.titleHeight']}</span>
+              <div className="border-t border-[color:var(--rule)]" />
+              <label className="toy-check-row">
+                <span className="toy-label whitespace-nowrap">{s['settings.titleHeight']}</span>
                 <input
                   type="number"
                   min={10}
@@ -586,21 +563,21 @@ export function GridBoard({ shareId }: GridBoardProps) {
                     setTitleMaxH(v);
                   }}
                   onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                  className="w-12 px-1 py-0.5 text-xs text-center rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-purple-500 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  className="toy-field toy-field--num w-12 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
-                <span>%</span>
+                <span className="toy-label">%</span>
               </label>
             </div>
           )}
         </div>
 
-        <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="toy-divider hidden sm:block" />
 
         {/* Data: Import + Clear */}
         {mode === 'vns' && (
           <button
             onClick={() => setShowImport(!showImport)}
-            className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className={`toy-btn ${showImport ? 'toy-btn--on' : ''}`}
           >
             <Upload className="w-3.5 h-3.5" />
             {s['toolbar.import']}
@@ -617,14 +594,14 @@ export function GridBoard({ shareId }: GridBoardProps) {
             }
           }}
           disabled={itemCount === 0 && pool.length === 0}
-          className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="toy-btn toy-btn--drop"
           title={s['toolbar.clear']}
         >
           <Trash2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">{s['toolbar.clear']}</span>
         </button>
 
-        <div className="hidden sm:block h-6 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="toy-divider hidden sm:block" />
 
         {/* Export: Share + Copy + Export */}
         <ShareMenu
@@ -636,11 +613,10 @@ export function GridBoard({ shareId }: GridBoardProps) {
           creatingLink={creatingLink}
           onOpen={imageShare.prepareBlob}
         />
-        <div className="inline-flex items-stretch">
+        <div className="toy-split">
           <button
             onClick={() => exportAsImage(exportFormat)}
             disabled={exporting || importing || itemCount === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-l-lg transition-colors"
           >
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{s['export.export']}</span>
@@ -648,7 +624,6 @@ export function GridBoard({ shareId }: GridBoardProps) {
           <button
             onClick={() => setExportScale(exportScale === 1 ? 1.5 : exportScale === 1.5 ? 2 : 1)}
             disabled={exporting || importing || itemCount === 0}
-            className="text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-purple-500 px-2 cursor-pointer transition-colors"
             title={s['export.exportScale']}
           >
             {exportScale}x
@@ -656,7 +631,6 @@ export function GridBoard({ shareId }: GridBoardProps) {
           <button
             onClick={() => setExportFormat(exportFormat === 'jpeg' ? 'png' : exportFormat === 'png' ? 'webp' : 'jpeg')}
             disabled={exporting || importing || itemCount === 0}
-            className="text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed border-l border-purple-500 rounded-r-lg px-2 cursor-pointer transition-colors"
             title="Export format"
           >
             {exportFormat === 'jpeg' ? 'JPG' : exportFormat === 'png' ? 'PNG' : 'WebP'}
@@ -666,7 +640,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
 
       {/* VNDB import form */}
       {showImport && mode === 'vns' && (
-        <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="toy-panel mb-3 p-3">
           <form onSubmit={handleImport} className="flex gap-2">
             <input
               type="text"
@@ -674,43 +648,43 @@ export function GridBoard({ shareId }: GridBoardProps) {
               onChange={e => setImportInput(e.target.value)}
               placeholder={s['import.placeholder']}
               disabled={importing}
-              className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 focus:ring-purple-500"
+              className="toy-field flex-1 min-w-0"
             />
             <button
               type="submit"
               disabled={importing || !importInput.trim()}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg transition-colors"
+              className="toy-btn toy-btn--go"
             >
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : s['import.button']}
             </button>
           </form>
-          <div className="mt-2 flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <div className="mt-2 flex items-center gap-4">
+            <label className="toy-check-row">
               <input
                 type="radio"
                 name="importDest"
                 checked={!importToPool}
                 onChange={() => setImportToPool(false)}
-                className="text-purple-600 focus:ring-purple-500"
+                className="bw-check"
               />
               {s['import.autoFill']}
             </label>
-            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <label className="toy-check-row">
               <input
                 type="radio"
                 name="importDest"
                 checked={importToPool}
                 onChange={() => setImportToPool(true)}
-                className="text-purple-600 focus:ring-purple-500"
+                className="bw-check"
               />
               {s['import.toPool']}
             </label>
           </div>
           {importing && importProgress && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{importProgress}</p>
+            <p className="mt-2 text-xs text-[color:var(--nezu)]">{importProgress}</p>
           )}
           {importError && (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{importError}</p>
+            <p className="mt-2 text-xs text-[color:var(--beni-text)]">{importError}</p>
           )}
         </div>
       )}
@@ -730,7 +704,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
         onDragCancel={() => { setOverId(null); handleDragCancel(); }}
       >
         <div className="mx-auto" style={{ maxWidth }}>
-          {/* Title header — always visible, editable inline */}
+          {/* Title header: always visible, editable inline */}
           <div className="py-2.5">
             <input
               type="text"
@@ -738,13 +712,13 @@ export function GridBoard({ shareId }: GridBoardProps) {
               onChange={e => setGridTitle(e.target.value)}
               placeholder={s['export.titlePlaceholder']}
               maxLength={60}
-              className="w-full text-base font-bold text-center bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-300 dark:placeholder-gray-600 outline-none"
+              className="toy-title-field"
             />
           </div>
 
           <SortableContext items={cellIds} strategy={noMovementStrategy}>
             <div
-              className="grid gap-1"
+              className={`grid ${showFrame ? 'gap-1' : 'gap-0'}`}
               style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}
             >
               {cells.map((itemId, index) => (
@@ -752,6 +726,7 @@ export function GridBoard({ shareId }: GridBoardProps) {
                   key={`cell-${index}`}
                   id={`cell-${index}`}
                   index={index}
+                  gridSize={gridSize}
                   item={itemId ? itemMap[itemId] ?? null : null}
                   cropSquare={cropSquare}
                   showTitles={showTitles}
@@ -785,40 +760,41 @@ export function GridBoard({ shareId }: GridBoardProps) {
         </DragOverlay>
       </DndContext>
 
-      <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+      <p className="mt-2 text-center font-mono text-xs tabular-nums text-[color:var(--nezu)]">
         {t(s, mode === 'characters' ? 'export.countChars' : 'export.countVNs', { count: itemCount, total: gridSize * gridSize })}
         {pool.length > 0 && ` + ${pool.length} ${s['pool.label'].toLowerCase()}`}
       </p>
-      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 text-center">
+      <p className="mt-1 text-center text-xs text-[color:var(--text-faint)]">
         {mode === 'characters' ? s['grid.hintChars'] : s['grid.hintVNs']}
       </p>
       {saveStatus && (
-        <p className="mt-1 text-center text-[10px] text-gray-300 dark:text-gray-600">
+        <p className="mt-1 text-center font-mono text-[10px] text-[color:var(--text-faint)]">
           {saveStatus.type === 'saved'
-            ? `Last autosaved: ${new Date(saveStatus.time).toLocaleTimeString()}`
-            : 'Draft cleared'}
+            ? `${locale === 'ja' ? '最終自動保存' : 'Last autosaved'}: ${new Date(saveStatus.time).toLocaleTimeString(locale === 'ja' ? 'ja-JP' : 'en-US')}`
+            : locale === 'ja' ? '下書きをクリアしました' : 'Draft cleared'}
         </p>
       )}
 
       <div className="mt-6 flex justify-center gap-4">
         <Link
           href={locale === 'ja' ? '/ja/tierlist/' : '/tierlist/'}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+          className="toy-btn"
         >
           <Rows3 className="w-4 h-4" />
           {s['grid.tryTierList']}
         </Link>
         <Link
           href={locale === 'ja' ? '/ja/roulette/' : '/roulette/'}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+          className="toy-btn"
         >
           <Dices className="w-4 h-4" />
           {s['grid.tryRoulette']}
         </Link>
       </div>
 
-      {/* Cell fill modal */}
-      {fillCellIndex !== null && !cells[fillCellIndex] && (
+      {/* Cell fill modal: gated on what the cell renders, so a slot holding an id with no
+          metadata behind it is still offered as empty and can be filled. */}
+      {fillCellIndex !== null && !itemMap[cells[fillCellIndex] ?? ''] && (
         <CellFillModal
           cellIndex={fillCellIndex}
           mode={mode}
@@ -846,9 +822,9 @@ export function GridBoard({ shareId }: GridBoardProps) {
       <ShareToast message={linkToast} isError={linkToastIsError} onDismiss={() => setLinkToast(null)} />
 
       {storageWarning && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 rounded-lg bg-amber-100 dark:bg-amber-900/80 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-sm shadow-lg flex items-center gap-2">
+        <div className="toy-toast">
           <span className="flex-1">{s['storage.warning']}</span>
-          <button onClick={dismissStorageWarning} className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium shrink-0">OK</button>
+          <button onClick={dismissStorageWarning} className="toy-btn shrink-0">OK</button>
         </div>
       )}
     </div>

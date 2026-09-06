@@ -3,10 +3,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from '@/components/Link';
-import {
-  ArrowLeft, Users, Heart, AlertTriangle,
-  TrendingUp, BookOpen, Star, Tag, Target, UserCheck
-} from 'lucide-react';
+import { ArrowLeft, Users, Loader2 } from 'lucide-react';
 import {
   vndbStatsApi,
   UserComparisonResponse,
@@ -21,6 +18,12 @@ import { StatsSummaryCard } from '@/components/stats/StatsSummaryCard';
 import { FadeIn } from '@/components/FadeIn';
 
 type Mode = 'compare' | 'similar';
+
+/**
+ * How many shared favourites a comparison carries. The list is a sample, not a tally, so a
+ * response holding this many titles states a floor and the summary figure is marked as one.
+ */
+const SHARED_FAVORITES_CAP = 10;
 
 interface UserLookupResult {
   uid: string;
@@ -275,15 +278,15 @@ export default function CompareContent() {
         <button
           onClick={() => window.history.back()}
           aria-label="Go back"
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="st-act st-act--icon"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <ArrowLeft className="w-5 h-5 text-[color:var(--nezu)]" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="sec-title">
             {mode === 'similar' ? 'Find Similar Users' : 'Compare Lists'}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-[color:var(--nezu)]">
             {mode === 'similar'
               ? 'Find users with similar VN taste'
               : 'See how your VN taste matches with another user'}
@@ -292,27 +295,19 @@ export default function CompareContent() {
       </div>
 
       {/* Mode Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="tabs mb-6">
         <button
           onClick={() => handleModeChange('compare')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-            mode === 'compare'
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
+          aria-pressed={mode === 'compare'}
+          className={`tab ${mode === 'compare' ? 'tab--on' : ''}`}
         >
-          <Users className="w-4 h-4" />
           Compare Two Users
         </button>
         <button
           onClick={() => handleModeChange('similar')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-            mode === 'similar'
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
+          aria-pressed={mode === 'similar'}
+          className={`tab ${mode === 'similar' ? 'tab--on' : ''}`}
         >
-          <UserCheck className="w-4 h-4" />
           Find Similar Users
         </button>
       </div>
@@ -320,8 +315,8 @@ export default function CompareContent() {
       {/* Input Form */}
       {mode === 'similar' ? (
         <form onSubmit={handleFindSimilar} className="mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="st-card p-6">
+            <label className="fig-label mb-2">
               VNDB Username
             </label>
             <div className="flex gap-2">
@@ -341,35 +336,32 @@ export default function CompareContent() {
                     }
                   }}
                   placeholder="Enter your VNDB username"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
+                  className="st-field w-full px-4 py-2"
                 />
                 {isLookingUp1 && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin text-[color:var(--ai)]" aria-hidden="true" />
                   </div>
                 )}
               </div>
               {user1 && (
-                <span className="flex items-center px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium">
-                  {user1.username}
-                </span>
+                <span className="st-badge self-center">{user1.username}</span>
               )}
             </div>
 
             {(error || lookupError) && (
-              <p className="mt-4 text-red-500 dark:text-red-400 text-sm">{error || lookupError}</p>
+              <p className="mt-4 text-sm text-[color:var(--beni-text)]">{error || lookupError}</p>
             )}
 
             <button
               type="submit"
               disabled={!user1 || isLoading}
-              className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="st-act st-act--go mt-6 w-full disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <>
-                  <UserCheck className="w-5 h-5" />
                   Find Similar Users
                 </>
               )}
@@ -378,11 +370,11 @@ export default function CompareContent() {
         </form>
       ) : (
         <form onSubmit={handleCompare} className="mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+          <div className="st-card p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* User 1 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="fig-label mb-2">
                   User 1
                 </label>
                 <div className="flex gap-2">
@@ -402,25 +394,23 @@ export default function CompareContent() {
                         }
                       }}
                       placeholder="VNDB username"
-                      className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
+                      className="st-field w-full px-4 py-2"
                     />
                     {isLookingUp1 && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin text-[color:var(--ai)]" aria-hidden="true" />
                       </div>
                     )}
                   </div>
                   {user1 && (
-                    <span className="flex items-center px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium">
-                      {user1.username}
-                    </span>
+                    <span className="st-badge self-center">{user1.username}</span>
                   )}
                 </div>
               </div>
 
               {/* User 2 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="fig-label mb-2">
                   User 2
                 </label>
                 <div className="flex gap-2">
@@ -440,37 +430,34 @@ export default function CompareContent() {
                         }
                       }}
                       placeholder="VNDB username"
-                      className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-primary-500"
+                      className="st-field w-full px-4 py-2"
                     />
                     {isLookingUp2 && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin text-[color:var(--ai)]" aria-hidden="true" />
                       </div>
                     )}
                   </div>
                   {user2 && (
-                    <span className="flex items-center px-3 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium">
-                      {user2.username}
-                    </span>
+                    <span className="st-badge self-center">{user2.username}</span>
                   )}
                 </div>
               </div>
             </div>
 
             {(error || lookupError) && (
-              <p className="mt-4 text-red-500 dark:text-red-400 text-sm">{error || lookupError}</p>
+              <p className="mt-4 text-sm text-[color:var(--beni-text)]">{error || lookupError}</p>
             )}
 
             <button
               type="submit"
               disabled={!user1 || !user2 || isLoading}
-              className="mt-6 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+              className="st-act st-act--go mt-6 w-full disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
                 <>
-                  <Users className="w-5 h-5" />
                   Compare Lists
                 </>
               )}
@@ -542,14 +529,15 @@ function SimilarUsersResults({
 }) {
   if (similarUsers.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none text-center">
-        <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          No Similar Users Found
+      <div className="st-card p-8 text-center">
+        <h3 className="st-card-title mb-2">
+          No Similar Users to Show
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-          No users with enough shared rated VNs were found.
-          Try a user with more rated VNs for better results.
+        {/* An empty result and a search that never ran arrive here as the same thing, so the
+            wording covers both rather than telling a reader something about their own list. */}
+        <p className="text-[color:var(--nezu)] max-w-md mx-auto">
+          Either no users share enough rated VNs with this one, or the search could not be
+          completed. Try again, or try a user with more rated VNs.
         </p>
       </div>
     );
@@ -558,7 +546,7 @@ function SimilarUsersResults({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="sec-sub">
           Found {similarUsers.length} users with similar taste to {currentUsername}
         </p>
       </div>
@@ -569,7 +557,7 @@ function SimilarUsersResults({
         ))}
       </div>
 
-      <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+      <p className="st-card-sub text-center">
         Similarity is calculated based on shared VNs, rating patterns, and tag preferences.
       </p>
     </div>
@@ -578,54 +566,41 @@ function SimilarUsersResults({
 
 function SimilarUserCard({ user, currentUid, onCompare }: { user: SimilarUser; currentUid: string; onCompare: () => void }) {
   const compatibilityPercent = Math.round(user.compatibility * 100);
-  const compatibilityColor =
-    compatibilityPercent >= 60 ? 'text-green-600 dark:text-green-400' :
-    compatibilityPercent >= 35 ? 'text-yellow-600 dark:text-yellow-400' :
-    'text-red-600 dark:text-red-400';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none hover:shadow-lg hover:shadow-gray-300/50 dark:hover:shadow-none hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
-        <div>
+    <div className="st-card st-card--pick p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <Link
             href={`/stats/${user.uid}?username=${encodeURIComponent(user.username)}`}
-            className="font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400"
+            className="dg-name block"
           >
             {user.username}
           </Link>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {user.total_vns} VNs
-            {user.avg_score && ` · ${user.avg_score.toFixed(1)} avg`}
-          </div>
+          {user.avg_score != null && (
+            <div className="st-num text-xs text-[color:var(--text-faint)]">
+              {user.avg_score.toFixed(1)} avg
+            </div>
+          )}
         </div>
-        <div className={`text-2xl font-bold ${compatibilityColor}`}>
-          {compatibilityPercent}%
-        </div>
+        <div className="fig-value shrink-0">{compatibilityPercent}%</div>
       </div>
 
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-        <BookOpen className="w-4 h-4" />
-        <span>{user.shared_vns} shared VNs</span>
+      <div className="st-num mb-3 text-xs text-[color:var(--text-faint)]">
+        {user.shared_vns} shared VNs
       </div>
 
       {/* Compatibility bar */}
-      <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden mb-3">
+      <div className="st-bar mb-3 h-1.5">
         <div
-          className={`h-full transition-all duration-300 ${
-            compatibilityPercent >= 60 ? 'bg-green-500' :
-            compatibilityPercent >= 35 ? 'bg-yellow-500' :
-            'bg-red-500'
-          }`}
+          className={`st-bar-fill ${compatibilityPercent < 35 ? 'st-bar-fill--quiet' : ''}`}
           style={{ width: `${compatibilityPercent}%` }}
         />
       </div>
 
-      <button
-        onClick={onCompare}
-        className="inline-flex items-center gap-1.5 text-sm text-primary-600 dark:text-primary-400 hover:underline"
-      >
-        <Users className="w-3.5 h-3.5" />
+      <button onClick={onCompare} className="sec-more">
         Compare lists
+        <span aria-hidden>&rarr;</span>
       </button>
     </div>
   );
@@ -637,53 +612,42 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
   return (
     <div className="space-y-6">
       {/* Compatibility Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none text-center">
-        <div className="text-6xl font-bold mb-2">
-          <span className={
-            compatibilityPercent >= 60 ? 'text-green-600 dark:text-green-400' :
-            compatibilityPercent >= 35 ? 'text-yellow-600 dark:text-yellow-400' :
-            'text-red-600 dark:text-red-400'
-          }>
-            {compatibilityPercent}%
-          </span>
-        </div>
-        <p className="text-gray-600 dark:text-gray-400">
+      <div className="st-card p-6 text-center">
+        <p className="fig-label">Compatibility</p>
+        <p className="fig-value">{compatibilityPercent}%</p>
+        <p className="st-card-sub mt-2">
           Compatibility between{' '}
-          <span className="font-semibold text-gray-900 dark:text-white">{comparison.user1.username}</span>
+          <span className="font-semibold text-[color:var(--ink)]">{comparison.user1.username}</span>
           {' '}and{' '}
-          <span className="font-semibold text-gray-900 dark:text-white">{comparison.user2.username}</span>
+          <span className="font-semibold text-[color:var(--ink)]">{comparison.user2.username}</span>
         </p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsSummaryCard
-          icon={<Heart className="w-5 h-5" />}
           label="Compatibility"
           value={`${compatibilityPercent}%`}
           subtext={compatibilityPercent >= 60 ? 'Great match!' : compatibilityPercent >= 35 ? 'Some overlap' : 'Different tastes'}
           tooltip="Weighted combination of list overlap, rating similarity, and tag preferences. With more shared VNs, rating correlation matters more. With fewer shared VNs, tag similarity is weighted higher."
         />
         <StatsSummaryCard
-          icon={<BookOpen className="w-5 h-5" />}
           label="Shared VNs"
           value={comparison.shared_vns.toString()}
           subtext="rated by both"
           tooltip="Visual novels that both users have rated. Only VNs with scores from both users are counted."
         />
         <StatsSummaryCard
-          icon={<Target className="w-5 h-5" />}
           label="Confidence"
           value={comparison.confidence != null ? `${Math.round(comparison.confidence * 100)}%` : 'N/A'}
           subtext={comparison.confidence != null ? (comparison.confidence >= 0.7 ? 'High reliability' : comparison.confidence >= 0.3 ? 'Moderate data' : 'Limited data') : 'calculating...'}
           tooltip="How reliable is this comparison? Based on number of shared rated VNs. Formula: min(shared_rated / 20, 100%). More shared ratings = higher confidence in the comparison."
         />
         <StatsSummaryCard
-          icon={<Star className="w-5 h-5" />}
           label="Favorites"
-          value={comparison.shared_favorites.length.toString()}
+          value={`${comparison.shared_favorites.length}${comparison.shared_favorites.length >= SHARED_FAVORITES_CAP ? '+' : ''}`}
           subtext="both love"
-          tooltip="VNs that both users rated 8/10 or higher. These are titles you both really enjoyed!"
+          tooltip="VNs that both users rated 8/10 or higher. The comparison carries at most ten of them, so a figure marked with a plus is a floor rather than the total."
         />
       </div>
 
@@ -697,21 +661,14 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
 
       {/* Common Tags */}
       {comparison.common_tags && comparison.common_tags.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-          <div className="flex items-center gap-2 mb-2">
-            <Tag className="w-5 h-5 text-green-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Shared Favorites Tags
-            </h3>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Tags you both rate highly
-          </p>
+        <div className="st-card p-6">
+          <h3 className="st-card-title">Shared Favorites Tags</h3>
+          <p className="st-card-sub mb-4">Tags you both rate highly</p>
           <div className="flex flex-wrap gap-2">
             {comparison.common_tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium"
+                className="st-chip"
               >
                 {tag}
               </span>
@@ -724,27 +681,20 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
       {comparison.differing_tastes &&
         (comparison.differing_tastes.user1_prefers?.length > 0 ||
          comparison.differing_tastes.user2_prefers?.length > 0) && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="w-5 h-5 text-purple-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Differing Tastes
-            </h3>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Tags where your ratings differ significantly
-          </p>
+        <div className="st-card p-6">
+          <h3 className="st-card-title">Differing Tastes</h3>
+          <p className="st-card-sub mb-4">Tags where your ratings differ significantly</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {comparison.differing_tastes.user1_prefers?.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <h4 className="text-sm font-medium text-[color:var(--text-secondary)] mb-2">
                   {comparison.user1.username} prefers:
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {comparison.differing_tastes.user1_prefers.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm"
+                      className="st-chip"
                     >
                       {tag}
                     </span>
@@ -754,14 +704,14 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
             )}
             {comparison.differing_tastes.user2_prefers?.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <h4 className="text-sm font-medium text-[color:var(--text-secondary)] mb-2">
                   {comparison.user2.username} prefers:
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {comparison.differing_tastes.user2_prefers.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-3 py-1.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-sm"
+                      className="st-chip"
                     >
                       {tag}
                     </span>
@@ -778,7 +728,6 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
         <SharedVNsSection
           title="Shared Favorites"
           subtitle="VNs you both rated 8+/10"
-          icon={<Heart className="w-5 h-5 text-pink-500" />}
           vns={comparison.shared_favorites}
           user1Name={comparison.user1.username}
           user2Name={comparison.user2.username}
@@ -790,7 +739,6 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
         <SharedVNsSection
           title="Biggest Disagreements"
           subtitle="VNs with very different ratings"
-          icon={<AlertTriangle className="w-5 h-5 text-orange-500" />}
           vns={comparison.biggest_disagreements}
           user1Name={comparison.user1.username}
           user2Name={comparison.user2.username}
@@ -800,12 +748,9 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
 
       {/* No shared VNs message */}
       {comparison.shared_vns === 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none text-center">
-          <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No Shared VNs
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="st-card p-8 text-center">
+          <h3 className="st-card-title mb-2">No Shared VNs</h3>
+          <p className="st-card-sub">
             These users haven&apos;t read any of the same visual novels yet.
           </p>
         </div>
@@ -817,7 +762,6 @@ function ComparisonResults({ comparison }: { comparison: UserComparisonResponse 
 interface SharedVNsSectionProps {
   title: string;
   subtitle: string;
-  icon: React.ReactNode;
   vns: SharedVNScore[];
   user1Name: string;
   user2Name: string;
@@ -827,21 +771,15 @@ interface SharedVNsSectionProps {
 function SharedVNsSection({
   title,
   subtitle,
-  icon,
   vns,
   user1Name,
   user2Name,
   showDifference = false,
 }: SharedVNsSectionProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {title}
-        </h3>
-      </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{subtitle}</p>
+    <div className="st-card p-6">
+      <h3 className="st-card-title">{title}</h3>
+      <p className="st-card-sub mb-4">{subtitle}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {vns.map((vn) => (
@@ -876,10 +814,10 @@ function VNComparisonCard({
   return (
     <Link
       href={`/vn/${vn.vn_id}`}
-      className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg shadow-xs hover:shadow-md hover:shadow-gray-200/40 dark:hover:shadow-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
+      className="st-card st-card--pick group flex gap-3 p-3"
     >
       {/* Image */}
-      <div className="w-16 h-20 shrink-0 bg-gray-200 dark:bg-gray-700 rounded-sm overflow-hidden">
+      <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
         {vn.image_url ? (
           <img
             src={getProxiedImageUrl(vn.image_url, { width: 128, vnId: vn.vn_id }) ?? undefined}
@@ -889,40 +827,29 @@ function VNComparisonCard({
             decoding="async"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <BookOpen className="w-6 h-6" />
+          <div className="w-full h-full flex items-center justify-center text-[color:var(--text-faint)]">
           </div>
         )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <h4 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-          {displayTitle}
-        </h4>
-        <div className="mt-2 space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-500 dark:text-gray-400 truncate">{user1Name}:</span>
-            <span className="font-medium text-gray-900 dark:text-white ml-2">
-              {vn.user1_score.toFixed(1)}
-            </span>
+        <h4 className="dg-name line-clamp-2 dg-name--wrap">{displayTitle}</h4>
+        <div className="mt-2 space-y-1 text-xs">
+          <div className="flex justify-between gap-2">
+            <span className="truncate text-[color:var(--nezu)]">{user1Name}</span>
+            <span className="st-num text-[color:var(--ink)]">{vn.user1_score.toFixed(1)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 dark:text-gray-400 truncate">{user2Name}:</span>
-            <span className="font-medium text-gray-900 dark:text-white ml-2">
-              {vn.user2_score.toFixed(1)}
-            </span>
+          <div className="flex justify-between gap-2">
+            <span className="truncate text-[color:var(--nezu)]">{user2Name}</span>
+            <span className="st-num text-[color:var(--ink)]">{vn.user2_score.toFixed(1)}</span>
           </div>
         </div>
         {showDifference && (
-          <div className="mt-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
+          <div className="st-num mt-1 text-xs text-[color:var(--text-faint)]">
             {scoreDiff.toFixed(1)} point difference
           </div>
         )}
-        <div className="mt-1 flex items-center gap-1 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-          <TrendingUp className="w-3 h-3" />
-          View stats
-        </div>
       </div>
     </Link>
   );

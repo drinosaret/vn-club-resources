@@ -1,7 +1,7 @@
 """Pydantic schemas for API request/response validation."""
 
 from datetime import date, datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 # ============ User Schemas ============
@@ -276,6 +276,40 @@ class TopVN(BaseModel):
     olang: str | None = None
 
 
+class ProducerCredit(BaseModel):
+    """A studio credit carrying both scripts.
+
+    Which one a reader sees is a browser setting, so a payload that carries only one
+    forces every surface reading it to show the same script to everyone.
+    """
+    name: str
+    original: str | None = None  # Romanized/latin name, where the catalogue has one
+
+
+class UpcomingRelease(BaseModel):
+    """A title whose first release has not happened yet."""
+    id: str
+    title: str
+    title_jp: str | None = None
+    title_romaji: str | None = None
+    image_url: str | None = None
+    image_sexual: float | None = None
+    released: str                    # ISO date, clamped where the dump was imprecise
+    date_precision: str              # day, month or year: how much of it was announced
+    developers: list[ProducerCredit] = []
+    platforms: list[str] = []
+    languages: list[str] = []
+    japanese: bool = False           # has, or is due, a Japanese release
+    minage: int | None = None
+
+
+class UpcomingReleasesResponse(BaseModel):
+    """Upcoming releases in date order, with the day they were selected against."""
+    as_of: str                       # ISO date the cutoff was taken from
+    total: int
+    items: list[UpcomingRelease]
+
+
 class VNWithTags(BaseModel):
     """VN with full tag information for weighted sorting."""
     id: str
@@ -294,8 +328,8 @@ class VNWithTags(BaseModel):
 class DeveloperInfo(BaseModel):
     """Developer/producer basic info."""
     id: str
-    name: str  # Romaji/Latin name
-    original: str | None = None  # Original language name (Japanese, etc.)
+    name: str  # As the catalogue writes it, which for a Japanese studio is Japanese
+    original: str | None = None  # Romanized/latin name, where the catalogue has one
 
 
 class ExtlinkInfo(BaseModel):
@@ -426,47 +460,6 @@ class VNListByCategoryResponse(BaseModel):
 
 
 # ============ Recommendation Schemas ============
-
-class Recommendation(BaseModel):
-    """Single recommendation with explanation."""
-    vn_id: str
-    title: str
-    title_jp: str | None = None      # Original Japanese title (kanji/kana)
-    title_romaji: str | None = None  # Romanized title
-    image_url: str | None
-    image_sexual: float | None = None  # For NSFW blur
-    rating: float | None
-    released: date | None
-    score: float = Field(description="Recommendation confidence 0-1")
-    reasons: list[str]
-    tag_match_score: float | None = None
-    cf_score: float | None = None
-    olang: str | None = None  # Original language
-    length: int | None = None  # 1-5 scale
-    # Method-specific matched entities
-    matched_tags: list[str] | None = None
-    matched_traits: list[str] | None = None
-    matched_staff: list[str] | None = None
-    matched_seiyuu: list[str] | None = None  # Voice actors (separate from staff)
-    matched_producer: str | None = None
-    # Source traceability for specific methods
-    similar_to_titles: list[str] | None = None  # For Similar Novels: which favorites this is similar to
-    similar_user_count: int | None = None  # For Similar Users: how many similar users liked this
-    # Multi-signal combined recommendations
-    methods_matched: int | None = None  # How many recommendation methods scored this VN
-    signal_scores: dict[str, float] | None = None  # Individual scores from each method
-
-
-class RecommendationsResponse(BaseModel):
-    """Recommendations response."""
-    method: str
-    recommendations: list[Recommendation]
-    excluded_count: int
-    # Detailed exclusion breakdown
-    dropped_count: int = 0
-    blacklisted_count: int = 0
-    total_excluded_message: str | None = None
-
 
 class SimilarVN(BaseModel):
     """Similar VN entry."""
@@ -1084,6 +1077,18 @@ class BatchItemBrief(BaseModel):
     image_sexual: float | None = None
 
 
+class BatchItemBlurb(BatchItemBrief):
+    """A VN with the prose a layout that sets a cover beside text needs.
+
+    Separate from the brief above because that one answers for characters as well, and a
+    release date says nothing about a character. The description arrives stripped of markup and
+    cut to a readable length: a page of them is requested at once and a few lines of each are
+    shown.
+    """
+    description: str | None = None
+    released: str | None = None
+
+
 class VNCharacterResponse(BaseModel):
     """Character information for a VN's character list."""
     id: str
@@ -1093,6 +1098,37 @@ class VNCharacterResponse(BaseModel):
     role: str
     spoiler: int = 0  # 0=none, 1=minor, 2=major (character's role as spoiler)
     traits: list[CharacterTraitInfo]
+
+
+class VNStaffCreditResponse(BaseModel):
+    """One credited staff member on a VN, with every role they are credited under."""
+    id: str  # Staff ID
+    name: str
+    original: str | None = None
+    roles: list[str]
+
+
+class VNSeiyuuCharacterInfo(BaseModel):
+    """A character a voice actor plays in this VN."""
+    id: str
+    name: str
+    original: str | None = None
+
+
+class VNSeiyuuCreditResponse(BaseModel):
+    """One voice actor on a VN, with the characters they voice in it."""
+    id: str  # Staff ID
+    name: str
+    original: str | None = None
+    characters: list[VNSeiyuuCharacterInfo]
+
+
+class VNCreditsResponse(BaseModel):
+    """Capped credits for a VN: who made it and who voices it."""
+    staff: list[VNStaffCreditResponse]
+    seiyuu: list[VNSeiyuuCreditResponse]
+    staff_total: int  # Distinct credited people before the cap
+    seiyuu_total: int
 
 
 class SimilarCharacterResponse(BaseModel):

@@ -54,8 +54,8 @@ export const TierRow = memo(function TierRow({
   const handleAddToTier = useCallback(() => onAddToTier(tier.id), [tier.id, onAddToTier]);
 
   return (
-    <div className="tier-row flex border-b border-gray-200 dark:border-gray-700 last:border-b-0" style={{ contain: 'style' }}>
-      {/* Tier label — click to edit */}
+    <div className="tier-row flex border-b border-[color:var(--rule)] last:border-b-0" style={{ contain: 'style' }}>
+      {/* Tier label: click to edit */}
       <TierEditPopover
         tier={tier}
         tierIndex={tierIndex}
@@ -76,7 +76,7 @@ export const TierRow = memo(function TierRow({
       {/* Drop zone */}
       <div
         data-tier-drop={tier.id}
-        className={`flex flex-wrap ${sizeConfig.rowGap} ${sizeConfig.rowPad} flex-1 min-w-0 ${sizeConfig.rowMinH} transition-colors duration-200${isFirst ? ' rounded-tr-lg' : ''}${isLast ? ' rounded-br-lg' : ''}`}
+        className={`flex flex-wrap ${sizeConfig.rowGap} ${sizeConfig.rowPad} flex-1 min-w-0 ${sizeConfig.rowMinH} transition-colors duration-200`}
       >
         {vnIds.map(id => (
           <TierItem key={id} id={id} vn={vnMap[id]} tierIndex={tierIndex} displayMode={displayMode} sizeConfig={sizeConfig} showTitles={showTitles} showScores={showScores} titleMaxH={titleMaxH} nsfwRevealed={nsfwRevealed} onRemove={onRemoveVN} onEdit={onEditVN} />
@@ -85,22 +85,22 @@ export const TierRow = memo(function TierRow({
         {displayMode === 'covers' ? (
           <button
             onClick={handleAddToTier}
-            className={`${sizeConfig.coverClass} border-2 border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0`}
+            className={`toy-slot ${sizeConfig.coverClass} shrink-0`}
             title={t(s, 'tier.addToTier', { tier: tier.label })}
           >
-            <Plus className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
+            <Plus className="w-4 h-4" />
           </button>
         ) : (
           <button
             onClick={handleAddToTier}
-            className="self-stretch w-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors flex items-center justify-center group shrink-0"
+            className="toy-slot self-stretch w-10 shrink-0"
             title={t(s, 'tier.addToTier', { tier: tier.label })}
           >
-            <Plus className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-blue-400 dark:group-hover:text-blue-500 transition-colors" />
+            <Plus className="w-4 h-4" />
           </button>
         )}
         {vnIds.length === 0 && (
-          <div className="flex items-center justify-center flex-1 -ml-6 sm:-ml-8 text-xs text-gray-400 dark:text-gray-500 select-none pointer-events-none">
+          <div className="flex items-center justify-center flex-1 -ml-6 sm:-ml-8 text-xs text-[color:var(--nezu)] select-none pointer-events-none">
             {s[mode === 'characters' ? 'tier.dragHereChars' : 'tier.dragHere']}
           </div>
         )}

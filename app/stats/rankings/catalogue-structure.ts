@@ -1,4 +1,3 @@
-import { BookOpen, Building2, Layers, Pen, Tag, Users } from 'lucide-react';
 
 import type { LeaderboardCatalogueEntry } from '@/lib/vndb-stats-api';
 
@@ -40,7 +39,6 @@ export interface CatalogueSection {
   key: string;
   label: string;
   blurb: string;
-  Icon: typeof Users;
   /** Board subjects gathered into this section. */
   subjects: string[];
   /** Optional split within the section, applied in order. */
@@ -56,7 +54,6 @@ export const CATALOGUE_SECTIONS: CatalogueSection[] = [
     key: 'vn',
     label: 'Visual novels',
     blurb: 'What is moving now, and where a reading list stops. Rating and dropping are questions for the builder.',
-    Icon: BookOpen,
     subjects: ['vn'],
     clusters: [
       {
@@ -111,7 +108,6 @@ export const CATALOGUE_SECTIONS: CatalogueSection[] = [
     key: 'user',
     label: 'Readers',
     blurb: 'Who reads what, and how much of it.',
-    Icon: Users,
     subjects: ['user'],
     clusters: [
       {
@@ -170,7 +166,6 @@ export const CATALOGUE_SECTIONS: CatalogueSection[] = [
     key: 'tags',
     label: 'Tags',
     blurb: 'What the tags themselves say about the titles carrying them.',
-    Icon: Tag,
     subjects: ['tag'],
     clusters: [
       {
@@ -193,7 +188,6 @@ export const CATALOGUE_SECTIONS: CatalogueSection[] = [
     key: 'series',
     label: 'Series',
     blurb: 'Franchises, inferred from how titles relate to each other.',
-    Icon: Layers,
     subjects: ['series'],
     clusters: [
       {
@@ -211,7 +205,6 @@ export const CATALOGUE_SECTIONS: CatalogueSection[] = [
     key: 'studios',
     label: 'Studios',
     blurb: 'Developers and publishers, by how their catalogue was received.',
-    Icon: Building2,
     subjects: ['developer', 'publisher'],
     clusters: [
       {
@@ -233,7 +226,6 @@ export const CATALOGUE_SECTIONS: CatalogueSection[] = [
     key: 'people',
     label: 'Creators',
     blurb: 'Writers, artists, composers and the voices behind the cast.',
-    Icon: Pen,
     subjects: ['staff', 'seiyuu'],
     clusters: [
       {

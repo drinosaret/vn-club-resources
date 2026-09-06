@@ -1,6 +1,5 @@
 'use client';
 
-import { GitBranch } from 'lucide-react';
 import type { VNRelation } from '@/lib/vndb-stats-api';
 import { VNCard } from './VNCard';
 
@@ -27,20 +26,19 @@ export function VNRelations({ relations }: VNRelationsProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
-      <div className="flex items-center gap-2 mb-4">
-        <GitBranch className="w-5 h-5 text-primary-500" />
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <section className="vn-sec p-4 sm:p-5">
+      <div className="vn-sec-head">
+        <h2 className="vn-sec-title">
           Related Visual Novels
         </h2>
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="vn-shelf">
         {relations.map((rel) => (
           <RelationCard key={rel.id} rel={rel} />
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -55,9 +53,12 @@ function RelationCard({ rel }: { rel: VNRelation }) {
       imageSexual={rel.image_sexual}
       rating={rel.rating}
       badge={
-        <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-900/80 text-white text-xs rounded-sm">
+        // The badge cannot wrap and the cover it sits on clips what overflows, and three
+        // covers to a row leaves about a hundred pixels at phone width. Bounded to the
+        // cover so a longer label ends in an ellipsis rather than mid-word.
+        <span className="vn-mark bottom-1.5 left-1.5 max-w-[calc(100%-0.75rem)] overflow-hidden text-ellipsis">
           {relationLabels[rel.relation] || rel.relation}
-        </div>
+        </span>
       }
     />
   );

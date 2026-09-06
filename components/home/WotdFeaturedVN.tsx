@@ -37,22 +37,22 @@ export function WotdFeaturedVN({ vn }: { vn: FeaturedVN }) {
   return (
     <Wrapper
       {...wrapperProps as any}
-      className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-colors group self-start w-full md:w-auto"
+      className="wd-vn self-start w-full md:w-auto"
     >
       {/* Mobile: horizontal compact row */}
       <div className="flex md:hidden items-center gap-3 p-3">
         {coverImage && (
-          <div className="relative w-12 h-16 rounded overflow-hidden shrink-0">
+          <div className="wd-vn-art w-12 h-16">
             {coverImage}
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Most found in</p>
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight line-clamp-2">
+          <p className="fig-label">Most found in</p>
+          <p className="wd-vn-name mt-1 line-clamp-2">
             {displayTitle}
           </p>
           {vn.occurrences != null && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="wd-vn-meta">
               {vn.occurrences.toLocaleString()} occurrences
             </p>
           )}
@@ -61,18 +61,18 @@ export function WotdFeaturedVN({ vn }: { vn: FeaturedVN }) {
 
       {/* Desktop: vertical column */}
       <div className="hidden md:flex w-48 min-w-0 flex-col items-center gap-2.5 p-4">
-        <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Most found in</p>
+        <p className="fig-label">Most found in</p>
         {coverImage && (
-          <div className="relative w-24 h-[130px] rounded-md overflow-hidden shadow-sm">
+          <div className="wd-vn-art w-24 h-[130px]">
             {coverImage}
           </div>
         )}
         <div className="text-center">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight">
+          <p className="wd-vn-name">
             {displayTitle}
           </p>
           {vn.occurrences != null && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <p className="wd-vn-meta mt-1">
               {vn.occurrences.toLocaleString()} occurrences
             </p>
           )}

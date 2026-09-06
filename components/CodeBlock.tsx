@@ -27,19 +27,19 @@ export function CodeBlock({ children }: CodeBlockProps) {
     <div className="relative group">
       <pre
         ref={preRef}
-        className="bg-gray-100 dark:bg-gray-800 p-4 pr-12 rounded-lg my-6 overflow-x-auto text-sm"
+        className="sw-code my-6 overflow-x-auto"
       >
         {children}
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute top-3 right-3 p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-gray-300 dark:hover:bg-gray-600"
+        className="sw-act sw-act--icon absolute top-2.5 right-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         aria-label="Copy code"
       >
         {copied ? (
-          <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <Check className="w-4 h-4 sw-tick" />
         ) : (
-          <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          <Copy className="w-4 h-4" />
         )}
       </button>
     </div>

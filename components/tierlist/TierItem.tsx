@@ -44,8 +44,11 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
 
   const srcSet = useMemo(() => {
     if (!vn?.imageUrl || isNsfw) return undefined;
-    const sep = vn.imageUrl.includes('?') ? '&' : '?';
-    return [128, 256].map(w => `${vn.imageUrl}${sep}w=${w} ${w}w`).join(', ');
+    // A stored cover URL can already carry a width, and both the route and the cache in front
+    // of it read the first w= in the query, so an appended one would never take effect.
+    const base = vn.imageUrl.replace(/([?&])w=\d+(&|$)/, '$1').replace(/[?&]$/, '');
+    const sep = base.includes('?') ? '&' : '?';
+    return [128, 256].map(w => `${base}${sep}w=${w} ${w}w`).join(', ');
   }, [vn?.imageUrl, isNsfw]);
 
   // Image loading state for shimmer placeholder
@@ -62,19 +65,19 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
       <div
         data-item-id={id}
         style={ITEM_STYLE}
-        className={`relative flex items-center gap-1 px-1.5 py-0.5 max-w-full rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-grab active:cursor-grabbing select-none group/tier-item`}
+        className="toy-tag cursor-grab active:cursor-grabbing select-none group/tier-item"
         title={title}
       >
-        <span className="text-xs text-gray-700 dark:text-gray-300 truncate">
+        <span className="truncate">
           {title}
           {showScores && vn?.vote && (
-            <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium">{vn.vote}</span>
+            <span className="ml-1 font-mono text-[10px] tabular-nums text-[color:var(--nezu)]">{vn.vote}</span>
           )}
         </span>
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onEdit(id); }}
-          className="touch-action-btn shrink-0 w-3.5 h-3.5 rounded-full bg-black/60 text-white items-center justify-center hidden group-hover/tier-item:flex hover:bg-black/80"
+          className="toy-act toy-act--inline touch-action-btn shrink-0 w-3.5 h-3.5 toy-act--reveal"
           title={s['tierItem.edit']}
           aria-label={s['tierItem.edit']}
         >
@@ -83,7 +86,7 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onRemove(id); }}
-          className="touch-action-btn shrink-0 w-3.5 h-3.5 rounded-full bg-red-500/80 text-white items-center justify-center hidden group-hover/tier-item:flex hover:bg-red-600"
+          className="toy-act toy-act--drop toy-act--inline touch-action-btn shrink-0 w-3.5 h-3.5 toy-act--reveal"
           title={s['tierItem.remove']}
           aria-label={s['tierItem.remove']}
         >
@@ -97,7 +100,7 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
     <div
       data-item-id={id}
       style={ITEM_STYLE}
-      className={`relative ${sizeConfig.coverClass} shrink-0 rounded overflow-hidden cursor-grab active:cursor-grabbing select-none group/tier-item bg-gray-200 dark:bg-gray-700`}
+      className={`toy-tile ${sizeConfig.coverClass} shrink-0 cursor-grab active:cursor-grabbing select-none group/tier-item`}
       title={title}
     >
       {vn?.imageUrl ? (
@@ -112,11 +115,11 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
                 loading="lazy"
                 decoding="async"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
-                <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+              <div className="toy-veil">
+                <div className="flex flex-col items-center gap-1 px-2 text-center text-xs font-medium sm:text-[10px]">
                   <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
-                  <span className="sm:hidden">Tap to reveal</span>
-                  <span className="hidden sm:inline">Click to reveal</span>
+                  <span className="sm:hidden">{s['tierItem.tapToReveal']}</span>
+                  <span className="hidden sm:inline">{s['tierItem.clickToReveal']}</span>
                 </div>
               </div>
             </div>
@@ -136,14 +139,14 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
           {!isNsfw && !imageLoaded && <div className="absolute inset-0 image-placeholder pointer-events-none" />}
         </>
       ) : (
-        <div className={`w-full h-full flex items-center justify-center ${sizeConfig.noImageFontClass} text-gray-500 dark:text-gray-400 text-center p-0.5 leading-tight`}>
+        <div className={`w-full h-full flex items-center justify-center ${sizeConfig.noImageFontClass} text-[color:var(--nezu)] text-center p-0.5 leading-tight`}>
           {title.slice(0, 20)}
         </div>
       )}
 
       {/* Score badge */}
       {showScores && vn?.vote && (
-        <div className={`absolute top-0.5 left-0.5 bg-black/70 text-white ${sizeConfig.scoreFontClass} font-bold px-1 py-px rounded-full pointer-events-none ${sizeConfig.scoreMinW} text-center leading-tight`}>
+        <div className={`toy-mark top-0.5 left-0.5 ${sizeConfig.scoreFontClass} px-1 py-px ${sizeConfig.scoreMinW}`}>
           {vn.vote}
         </div>
       )}
@@ -152,9 +155,9 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
       {showTitles && title && (() => {
         const maxLines = Math.max(1, Math.floor(titleMaxH / 10));
         return (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-0.5 py-0.5 pointer-events-none">
+          <div className="toy-cap">
             <p
-              className={`${sizeConfig.titleFontClass} font-bold text-white text-center leading-tight`}
+              className={sizeConfig.titleFontClass}
               style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: maxLines, overflow: 'hidden' }}
             >
               {title}
@@ -167,7 +170,7 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onEdit(id); }}
-        className={`touch-action-btn absolute ${sizeConfig.editBtnTopClass} right-0.5 ${sizeConfig.actionBtnClass} rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover/tier-item:opacity-100 transition-opacity z-10 hover:bg-black/80`}
+        className={`toy-act touch-action-btn ${sizeConfig.editBtnTopClass} right-0.5 ${sizeConfig.actionBtnClass} toy-act--reveal`}
         title={s['tierItem.edit']}
         aria-label={s['tierItem.edit']}
       >
@@ -178,7 +181,7 @@ export const TierItem = memo(function TierItem({ id, vn, tierIndex, displayMode,
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onRemove(id); }}
-        className={`touch-action-btn absolute top-0.5 right-0.5 ${sizeConfig.actionBtnClass} rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/tier-item:opacity-100 transition-opacity z-10 hover:bg-red-600`}
+        className={`toy-act toy-act--drop touch-action-btn top-0.5 right-0.5 ${sizeConfig.actionBtnClass} toy-act--reveal`}
         title={s['tierItem.remove']}
         aria-label={s['tierItem.remove']}
       >

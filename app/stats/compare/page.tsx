@@ -10,7 +10,7 @@ import CompareContent from './CompareContent';
 import { ArrowLeft, Users } from 'lucide-react';
 
 export const metadata: Metadata = generatePageMetadata({
-  title: 'Compare Lists',
+  title: 'Compare Visual Novel Reading Lists',
   description: 'Compare your visual novel reading list with another VNDB user. Find readers with similar taste, see shared VNs, and discover score differences across your libraries.',
   path: '/stats/compare/',
 });
@@ -56,42 +56,37 @@ function LoadingFallback() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="p-2 rounded-lg">
-          <ArrowLeft className="w-5 h-5 text-gray-400" />
+        <div className="p-2 rounded-xs">
+          <ArrowLeft className="w-5 h-5 text-[color:var(--text-faint)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Compare Lists
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h1 className="sec-title">Compare Lists</h1>
+          <p className="sec-sub">
             See how your VN taste matches with another user
           </p>
         </div>
       </div>
 
       {/* Mode Tabs */}
-      <div className="flex gap-2 mb-6">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white font-medium">
-          <Users className="w-4 h-4" />
-          Compare Two Users
-        </div>
-        <div className="w-40 h-10 rounded-lg image-placeholder" />
+      <div className="tabs mb-6">
+        <span className="tab tab--on">Compare Two Users</span>
+        <div className="h-9 w-40 rounded-xs image-placeholder" />
       </div>
 
       {/* Form skeleton */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
+      <div className="st-card p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <div className="w-24 h-5 rounded-sm mb-2 image-placeholder" />
-            <div className="w-full h-10 rounded-lg image-placeholder" />
+            <div className="w-24 h-5 rounded-xs mb-2 image-placeholder" />
+            <div className="w-full h-10 rounded-xs image-placeholder" />
           </div>
           <div>
-            <div className="w-24 h-5 rounded-sm mb-2 image-placeholder" />
-            <div className="w-full h-10 rounded-lg image-placeholder" />
+            <div className="w-24 h-5 rounded-xs mb-2 image-placeholder" />
+            <div className="w-full h-10 rounded-xs image-placeholder" />
           </div>
         </div>
         <div className="mt-4 flex justify-center">
-          <div className="w-32 h-10 rounded-lg image-placeholder" />
+          <div className="w-32 h-10 rounded-xs image-placeholder" />
         </div>
       </div>
     </div>

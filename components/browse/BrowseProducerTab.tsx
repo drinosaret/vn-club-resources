@@ -28,11 +28,6 @@ const TYPE_LABELS: Record<string, string> = {
   ng: 'Amateur',
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  co: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
-  in: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
-  ng: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-};
 
 const LANG_OPTIONS = [
   { value: '', label: 'Any Language' },
@@ -162,14 +157,14 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
       key: 'type',
       label: 'Type',
       render: (item) => item.type ? (
-        <BadgeCell value={TYPE_LABELS[item.type] || item.type} colorClass={TYPE_COLORS[item.type]} />
-      ) : <span className="text-gray-400">—</span>,
+        <BadgeCell value={TYPE_LABELS[item.type] || item.type} />
+      ) : <span className="text-[color:var(--text-faint)]">—</span>,
     },
     {
       key: 'lang',
       label: 'Language',
       render: (item) => (
-        <span className="text-gray-600 dark:text-gray-400 uppercase text-xs">{item.lang || '—'}</span>
+        <span className="bw-label">{item.lang || '—'}</span>
       ),
     },
     {
@@ -183,7 +178,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
       label: 'Description',
       className: 'max-w-md',
       render: (item) => (
-        <span className="text-gray-500 dark:text-gray-400 text-xs line-clamp-2">
+        <span className="text-[color:var(--nezu)] text-xs line-clamp-2">
           {item.description ? stripBBCode(item.description) : '—'}
         </span>
       ),
@@ -203,20 +198,20 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[color:var(--text-faint)]" />
           <input
             type="search"
             autoComplete="off"
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search producers..."
-            className="w-full pl-9 pr-8 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="bw-field w-full pl-9 pr-8 py-2 text-sm"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => handleSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="bw-chip-btn absolute right-3 top-1/2 -translate-y-1/2"
             >
               <X className="w-4 h-4" />
             </button>
@@ -252,8 +247,8 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
 
       {/* Results Header */}
       <div ref={resultsRef} className="scroll-mt-20 flex items-center justify-between">
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          <span><span className="font-semibold text-gray-900 dark:text-white">{total.toLocaleString()}</span> producers</span>
+        <span className="text-sm text-[color:var(--nezu)]">
+          <span><span className="bw-num text-[color:var(--ink)]">{total.toLocaleString()}</span> producers</span>
         </span>
         <div className="flex items-center gap-2">
           <SimpleSelect
@@ -264,7 +259,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
           />
           <button
             onClick={() => updateParams({ sort_order: params.sort_order === 'desc' ? 'asc' : 'desc' })}
-            className="px-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300"
+            className="tab"
           >
             {params.sort_order === 'desc' ? '↓' : '↑'}
             <span className="hidden sm:inline text-xs ml-1">{params.sort_order === 'desc' ? 'Desc' : 'Asc'}</span>
@@ -289,7 +284,7 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
         />
       ) : null}
 
-      {/* Results — key change on data arrival triggers fade-in animation */}
+      {/* Results: key change on data arrival triggers fade-in animation */}
       <div key={showLoadingSkeleton ? 'loading' : 'loaded'} className={showLoadingSkeleton ? undefined : 'animate-fade-in'}>
       {viewMode === 'table' ? (
         <EntityTable
@@ -322,10 +317,10 @@ export function BrowseProducerTab({ isActive = true }: BrowseProducerTabProps) {
                   { label: 'VN Count', value: item.vn_count.toLocaleString() },
                 ]}
                 rightContent={
-                  <span className="text-lg font-bold text-primary-600 dark:text-primary-400">{item.vn_count.toLocaleString()}</span>
+                  <span className="bw-num text-lg text-[color:var(--ai)]">{item.vn_count.toLocaleString()}</span>
                 }
                 badges={item.type ? (
-                  <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${TYPE_COLORS[item.type] || ''}`}>
+                  <span className="bw-badge">
                     {TYPE_LABELS[item.type] || item.type}
                   </span>
                 ) : undefined}

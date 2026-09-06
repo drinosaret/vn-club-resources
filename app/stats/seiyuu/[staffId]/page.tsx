@@ -15,13 +15,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: 'Voice Actor Stats',
       description: 'Visual novel voice actor statistics and voiced characters on VN Club.',
+      // Nothing was found under this id. The page still renders, because the id may be
+      // real and the lookup merely unavailable, but a placeholder describing nothing is
+      // not worth indexing and the id space is unbounded.
+      robots: { index: false, follow: true },
     };
   }
 
   const displayName = staff.original || staff.name;
   const description = staff.description
     ? truncateDescription(staff.description)
-    : `${displayName} — voice actor statistics, voiced characters, and career analysis on VN Club.`;
+    : `${displayName}: voice actor statistics, voiced characters, and career analysis on VN Club.`;
 
   return generatePageMetadata({
     title: `${displayName} - Voice Actor Stats`,

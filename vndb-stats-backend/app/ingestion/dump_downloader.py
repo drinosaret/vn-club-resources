@@ -5,6 +5,7 @@ import gzip
 import json
 import logging
 import os
+import shutil
 import tarfile
 import time
 from pathlib import Path
@@ -211,14 +212,117 @@ def iter_gzipped_lines(path: str):
             yield line.strip()
 
 
+def _tree_stats(path: str) -> tuple[float, int]:
+    """Return the newest mtime and total byte size under a path.
+
+    A directory is judged by its contents rather than by its own mtime, which on most
+    filesystems only reflects the last entry added to it directly.
+    """
+    if os.path.isfile(path):
+        stat = os.stat(path)
+        return stat.st_mtime, stat.st_size
+
+    newest = os.path.getmtime(path)
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                stat = os.stat(os.path.join(root, name))
+            except OSError:
+                continue
+            newest = max(newest, stat.st_mtime)
+            total += stat.st_size
+    return newest, total
+
+
 async def cleanup_old_dumps(output_dir: str, keep_days: int = 7):
-    """Remove dumps older than keep_days."""
-    now = time.time()
-    cutoff = now - (keep_days * 24 * 60 * 60)
+    """Remove downloaded dump archives older than keep_days.
+
+    Scoped to the archive filenames this module writes. The dump directory is a shared
+    volume, so anything else living beside them is left alone.
+    """
+    if not os.path.isdir(output_dir):
+        return 0
+
+    cutoff = time.time() - (keep_days * 24 * 60 * 60)
+    prefixes = tuple(f"{name}_latest" for name in DUMP_URLS)
+    freed = 0
 
     for filename in os.listdir(output_dir):
+        if not filename.startswith(prefixes):
+            continue
         filepath = os.path.join(output_dir, filename)
-        if os.path.isfile(filepath):
-            if os.path.getmtime(filepath) < cutoff:
-                logger.info(f"Removing old dump: {filename}")
-                os.remove(filepath)
+        if not os.path.isfile(filepath):
+            continue
+        try:
+            stat = os.stat(filepath)
+            if stat.st_mtime >= cutoff:
+                continue
+            os.remove(filepath)
+        except OSError as e:
+            logger.warning(f"Could not remove old dump {filename}: {e}")
+            continue
+        logger.info(f"Removed old dump archive: {filename}")
+        freed += stat.st_size
+
+    return freed
+
+
+async def cleanup_extracted_dumps(extract_dir: str, keep_days: int = 7):
+    """Remove entries under the extracted dump tree that no import still refreshes.
+
+    Every import re-extracts the archive over the same paths, so anything in the tree that
+    has gone untouched for keep_days belongs to a layout the dump no longer ships or to an
+    extraction path the importer has moved off. The most recently refreshed entry is always
+    retained, whatever its age: an import that reuses an existing extraction leaves the tree
+    untouched, and the readers that look up single dump files between imports need it.
+    """
+    if not os.path.isdir(extract_dir):
+        return 0
+
+    cutoff = time.time() - (keep_days * 24 * 60 * 60)
+    entries = []
+    for name in os.listdir(extract_dir):
+        path = os.path.join(extract_dir, name)
+        try:
+            entries.append((path, name) + _tree_stats(path))
+        except OSError as e:
+            logger.warning(f"Could not inspect extracted dump entry {name}: {e}")
+
+    if not entries:
+        return 0
+
+    newest_path = max(entries, key=lambda entry: entry[2])[0]
+    freed = 0
+
+    for path, name, mtime, size in entries:
+        if path == newest_path or mtime >= cutoff:
+            continue
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+        except OSError as e:
+            logger.warning(f"Could not remove extracted dump entry {name}: {e}")
+            continue
+        logger.info(f"Removed stale extracted dump entry: {name} ({size / 1024 / 1024:.1f} MB)")
+        freed += size
+
+    return freed
+
+
+async def cleanup_dump_storage(dump_dir: str, keep_days: int = 7):
+    """Sweep both the downloaded archives and the extracted tree.
+
+    Call only once an import has finished successfully. A run that failed part-way may still
+    need every file it extracted, and the archives are the only copy on disk.
+    """
+    freed = await cleanup_old_dumps(dump_dir, keep_days=keep_days)
+    freed += await cleanup_extracted_dumps(
+        os.path.join(dump_dir, "extracted"), keep_days=keep_days
+    )
+
+    if freed:
+        logger.info(f"Dump storage cleanup reclaimed {freed / 1024 / 1024:.1f} MB")
+    return freed

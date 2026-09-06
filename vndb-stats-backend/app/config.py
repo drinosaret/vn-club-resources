@@ -109,8 +109,21 @@ class Settings(BaseSettings):
     cf_factors: int = 64  # Latent factors for collaborative filtering
     cf_iterations: int = 50
     cf_regularization: float = 0.1
+    # Confidence a full-marks vote adds over a bare interaction in the collaborative
+    # model. Votes below the floor are not interactions the model should learn from.
+    cf_alpha: float = 15.0
+    cf_min_vote: int = 60
     tag_weight: float = 0.4
     cf_weight: float = 0.6
+
+    # Scoring switches for the hybrid recommender. Each defaults to the behaviour it
+    # replaces, so a deployment that sets none of them is unaffected and an evaluation
+    # run can attribute a movement to exactly one of them. app/services/
+    # hybrid_recommender.py binds these to module constants at import; read that module
+    # for what each one does to the scoring.
+    rec_entity_desaturation: bool = False
+    rec_entity_desaturation_top_n: int = 3  # No effect while the switch above is off
+    rec_mmr_normalize_relevance: bool = False
 
     # Twitter/X integration (for news aggregation)
     twitter_auth_token: str | None = None  # Session cookie auth_token from twitter.com
@@ -128,6 +141,12 @@ class Settings(BaseSettings):
     # Concurrency limits
     max_concurrent_precompute: int = 20  # Max concurrent DB ops in precompute
     precompute_batch_size: int = 100  # Users per batch in precompute
+    # Readers the nightly recommendation refresh will rewrite pages for, most recently
+    # seen first. A refreshed page is never old enough for the retention sweep to reach,
+    # so this number times the page size is the floor the cache table settles at on a
+    # disk-constrained host. Raise it only against measured table size.
+    precompute_max_users: int = 500
+    precompute_timeout: int = 7200  # 2 hours max for the nightly refresh
     max_concurrent_user_stats: int = 5  # Max concurrent heavy user stats calculations
     user_stats_timeout: int = 60  # Timeout for user stats calculation (seconds)
     max_user_vns: int = 2000  # Maximum VNs to process per user (prevents extreme cases)

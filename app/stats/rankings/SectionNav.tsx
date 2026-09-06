@@ -72,10 +72,8 @@ export function SectionRail({ sections, total }: { sections: SectionCount[]; tot
   return (
     <nav aria-label="Ranking categories" className="hidden lg:block">
       <div className="sticky top-24">
-        <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          {total} rankings
-        </p>
-        <ul className="space-y-0.5">
+        <p className="fig-label pb-2">{total} rankings</p>
+        <ul className="tabs flex-col">
           {sections.map(({ section, count }) => {
             const isActive = active === section.key;
             return (
@@ -83,17 +81,10 @@ export function SectionRail({ sections, total }: { sections: SectionCount[]; tot
                 <a
                   href={`#section-${section.key}`}
                   aria-current={isActive ? 'true' : undefined}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
+                  className={`tab w-full justify-between ${isActive ? 'tab--on' : ''}`}
                 >
-                  <section.Icon className="w-4 h-4 shrink-0" />
-                  <span className="flex-1 min-w-0 truncate">{section.label}</span>
-                  <span className="shrink-0 text-xs tabular-nums text-gray-400 dark:text-gray-500">
-                    {count}
-                  </span>
+                  <span className="min-w-0 flex-1 truncate text-left">{section.label}</span>
+                  <span className="tab-count">{count}</span>
                 </a>
               </li>
             );
@@ -117,9 +108,9 @@ export function SectionStrip({ sections }: { sections: SectionCount[] }) {
   return (
     <nav
       aria-label="Ranking categories"
-      className="lg:hidden sticky top-[68px] z-20 -mx-4 mb-4 px-4 py-2 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/60"
+      className="sticky top-[68px] z-20 -mx-4 mb-4 border-b border-[color:var(--rule)] bg-[color:var(--surface)] px-4 py-2 lg:hidden"
     >
-      <ul className="flex gap-1.5 overflow-x-auto">
+      <ul className="tabs rc-tabs-scroll">
         {sections.map(({ section, count }) => {
           const isActive = active === section.key;
           return (
@@ -127,16 +118,10 @@ export function SectionStrip({ sections }: { sections: SectionCount[] }) {
               <a
                 href={`#section-${section.key}`}
                 aria-current={isActive ? 'true' : undefined}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  isActive
-                    ? 'bg-primary-600 text-white border-primary-600'
-                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                }`}
+                className={`tab ${isActive ? 'tab--on' : ''}`}
               >
                 {section.label}
-                <span className={`tabular-nums ${isActive ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'}`}>
-                  {count}
-                </span>
+                <span className="tab-count">{count}</span>
               </a>
             </li>
           );

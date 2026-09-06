@@ -34,7 +34,7 @@ export function LazyImage({ src, alt, className = '', style }: LazyImageProps) {
         {/* Placeholder shown while loading */}
         {!loaded && (
           <span
-            className="absolute inset-0 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse block"
+            className="image-placeholder absolute inset-0 block rounded-[1px]"
             style={{ minHeight: '300px' }}
           />
         )}

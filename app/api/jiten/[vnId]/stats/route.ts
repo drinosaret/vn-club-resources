@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveDeckId } from '../../resolve-deck';
 import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
-// Language stats change rarely — cache aggressively
+// Language stats change rarely, so cache aggressively
 const CACHE_CONTROL = 'public, max-age=21600, stale-while-revalidate=21600';
 
 export async function GET(
@@ -23,13 +23,13 @@ export async function GET(
     });
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     const deckId = await resolveDeckId(vnId, controller.signal);
-    if (!deckId) {
-      clearTimeout(timeoutId);
+    if (!deckId) {
       return NextResponse.json(null, {
         headers: { 'Cache-Control': CACHE_CONTROL },
       });
@@ -38,8 +38,7 @@ export async function GET(
     const res = await fetch(
       `https://api.jiten.moe/api/media-deck/${deckId}/stats`,
       { signal: controller.signal }
-    );
-    clearTimeout(timeoutId);
+    );
 
     if (!res.ok) {
       return NextResponse.json(null, {
@@ -57,5 +56,7 @@ export async function GET(
       status: 502,
       headers: { 'Cache-Control': 'no-store' },
     });
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

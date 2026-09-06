@@ -52,6 +52,17 @@ def _month_bounds(start_ym: str, end_ym: str) -> tuple[datetime, datetime]:
     return start_at, nxt - timedelta(minutes=1)
 
 
+def usable_winners(rows: list[tuple]) -> list[tuple]:
+    """Winner rows the calendar can date: a known status and both month bounds.
+
+    Row shape is the _QUERY select list, so start/end month and status sit at
+    indexes 1..3. A row missing either bound cannot be placed on a calendar and a
+    status outside the map has no event type, so neither is a winner as far as
+    the import is concerned.
+    """
+    return [r for r in rows if r[1] and r[2] and r[3] in _STATUS_TO_TYPE]
+
+
 def _read_winners(path: str, guild_id: int) -> list[tuple]:
     # Read-only: never modifies hikaru's database.
     con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
@@ -66,7 +77,9 @@ async def run_import() -> dict:
 
     Best-effort and idempotent: upsert by a stable external_key, then prune any
     hikaru-sourced events whose winner row is gone. VN-linked rows store vndb_id
-    so the API composes the internal /vn/<id> link itself.
+    so the API composes the internal /vn/<id> link itself. A read that yields no
+    usable winner at all is treated as no news rather than as a source that has
+    emptied, so it neither writes nor prunes.
     """
     s = get_settings()
     if not is_enabled():
@@ -80,12 +93,25 @@ async def run_import() -> dict:
         logger.exception("Hikaru import: failed reading %s", s.hikaru_db_path)
         return {"enabled": True, "error": "read_failed"}
 
+    winners = usable_winners(rows)
+    if not winners:
+        # A configured import that mirrors nothing is otherwise indistinguishable
+        # from a club with no picks: the mount can be readable while the source
+        # guild holds no monthly or seasonal pool rows, which is what an override
+        # naming the wrong guild looks like. Changing nothing is also the safe
+        # answer here, since pruning against an empty read would clear every pick
+        # already mirrored.
+        logger.warning(
+            "Hikaru import: source guild has no monthly/seasonal winners in %s; "
+            "calendar left unchanged (check the source guild id)",
+            s.hikaru_db_path,
+        )
+        return {"enabled": True, "upserted": 0, "removed": 0, "source_empty": True}
+
     lanes: dict[str, set[str]] = {"monthly": set(), "seasonal": set()}
     upserted = 0
     async with async_session_maker() as db:
-        for vndb_id, start_m, end_m, status, title_cache, title_ja, title_en, thumb, is_nsfw in rows:
-            if not start_m or not end_m or status not in _STATUS_TO_TYPE:
-                continue
+        for vndb_id, start_m, end_m, status, title_cache, title_ja, title_en, thumb, is_nsfw in winners:
             start_at, end_at = _month_bounds(start_m, end_m)
             label = _STATUS_LABEL[status]
             # Default title is romaji/latin (matches the site's default title pref);

@@ -3,6 +3,8 @@
  * Uses Next.js ISR for automatic revalidation.
  */
 
+import { unstable_cache } from 'next/cache';
+
 import { getBackendUrlOptional } from './config';
 
 export interface FeaturedVNData {
@@ -13,6 +15,19 @@ export interface FeaturedVNData {
   imageUrl: string | null;
   image_sexual?: number;
 }
+
+/** The subset of a VN record the batch endpoint answers with. */
+interface BatchItemBrief {
+  id: string;
+  title: string;
+  title_jp?: string | null;
+  title_romaji?: string | null;
+  image_url?: string | null;
+  image_sexual?: number | null;
+}
+
+const REVALIDATE_SECONDS = 3600;
+const REQUEST_TIMEOUT_MS = 10000;
 
 // Recommended First VNs from /guide page
 export const FEATURED_VN_IDS = [
@@ -30,8 +45,60 @@ export const FEATURED_VN_IDS = [
 ];
 
 /**
- * Fetch all featured VN data server-side with ISR caching.
- * Returns all VNs so client can shuffle for variety.
+ * One request for the whole list, holding the cover fields the shelf reads.
+ *
+ * The batch endpoint answers in database order and omits an id it holds no row for, so the
+ * list order is reimposed here: callers take the leading few and depend on the order.
+ *
+ * A transport or server failure throws rather than resolving empty, so that the hour-long
+ * cache below never stores the outcome of a backend that was briefly unreachable. A POST is
+ * outside the fetch data cache, which is why the caching is explicit.
+ */
+const loadFeaturedVNs = unstable_cache(
+  async (backendUrl: string): Promise<FeaturedVNData[]> => {
+    const res = await fetch(`${backendUrl}/api/v1/vn/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: FEATURED_VN_IDS }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Featured VN batch responded ${res.status}`);
+    }
+
+    const rows: unknown = await res.json();
+    if (!Array.isArray(rows)) {
+      throw new Error('Featured VN batch returned an unexpected shape');
+    }
+
+    const byId = new Map<string, BatchItemBrief>();
+    for (const row of rows as BatchItemBrief[]) {
+      if (row && typeof row.id === 'string') byId.set(row.id, row);
+    }
+
+    return FEATURED_VN_IDS.reduce<FeaturedVNData[]>((acc, id) => {
+      const row = byId.get(id);
+      if (row) {
+        acc.push({
+          id,
+          title: row.title,
+          title_jp: row.title_jp ?? undefined,
+          title_romaji: row.title_romaji ?? undefined,
+          imageUrl: row.image_url || null,
+          image_sexual: row.image_sexual ?? 0,
+        });
+      }
+      return acc;
+    }, []);
+  },
+  ['featured-vns-batch'],
+  { revalidate: REVALIDATE_SECONDS, tags: ['featured-vns'] }
+);
+
+/**
+ * Featured VN data for the shelf, in the order `FEATURED_VN_IDS` declares.
+ * An unreachable backend yields an empty shelf rather than failing the page.
  */
 export async function getFeaturedVNsData(): Promise<FeaturedVNData[]> {
   const backendUrl = getBackendUrlOptional();
@@ -40,33 +107,7 @@ export async function getFeaturedVNsData(): Promise<FeaturedVNData[]> {
   }
 
   try {
-    const vnPromises = FEATURED_VN_IDS.map(
-      async (id): Promise<FeaturedVNData | null> => {
-        try {
-          const res = await fetch(`${backendUrl}/api/v1/vn/${id}`, {
-            next: { revalidate: 3600 }, // ISR: revalidate every hour
-            signal: AbortSignal.timeout(10000),
-          });
-
-          if (!res.ok) return null;
-
-          const data = await res.json();
-          return {
-            id,
-            title: data.title,
-            title_jp: data.title_jp,
-            title_romaji: data.title_romaji,
-            imageUrl: data.image_url || null,
-            image_sexual: data.image_sexual ?? 0,
-          };
-        } catch {
-          return null;
-        }
-      }
-    );
-
-    const results = await Promise.all(vnPromises);
-    return results.filter((vn): vn is FeaturedVNData => vn !== null);
+    return await loadFeaturedVNs(backendUrl);
   } catch {
     return [];
   }

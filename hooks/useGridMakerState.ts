@@ -477,13 +477,20 @@ export function useGridMakerState(shareId?: string) {
       const newItemMap: Record<string, GridItem> = {};
 
       if (toPool) {
-        // All items go to pool
+        // All items go to pool. The grid is left as it is, so the entries its cells point at
+        // have to survive: a cell whose item is missing renders empty while still counting as
+        // occupied, and an id already on the grid is not offered again in the pool.
+        const kept: Record<string, GridItem> = {};
+        for (const id of prev.cells) {
+          if (id && prev.itemMap[id]) kept[id] = prev.itemMap[id];
+        }
         const newPool: string[] = [];
         for (const item of sorted) {
+          if (kept[item.id]) continue;
           newPool.push(item.id);
           newItemMap[item.id] = vndbItemToGridItem(item, pref);
         }
-        return { ...prev, pool: newPool, itemMap: newItemMap };
+        return { ...prev, pool: newPool, itemMap: { ...kept, ...newItemMap } };
       }
 
       // Auto-fill grid, overflow goes to pool
@@ -560,14 +567,19 @@ export function useGridMakerState(shareId?: string) {
         const imageUrl = item.image_url
           ? getProxiedImageUrl(item.image_url, { width: 256, vnId: item.id })
           : null;
-        const title = mode === 'characters'
-          ? (pref === 'japanese' && item.title_jp ? item.title_jp : item.title)
+        // A character batch row carries the Japanese name in `title` and its romanization
+        // in `title_jp`, the reverse of a visual novel row, so the fields are assigned by
+        // kind: swapped, the display helper reads a romanization as the Japanese name and
+        // every name resolves to the script the reader did not ask for.
+        const isCharacter = mode === 'characters';
+        const title = isCharacter
+          ? (pref === 'japanese' ? item.title : (item.title_jp || item.title))
           : getDisplayTitle({ title: item.title, title_jp: item.title_jp ?? undefined, title_romaji: item.title_romaji ?? undefined }, pref);
         newItemMap[item.id] = {
           id: item.id,
           title: title || item.id,
-          titleJp: item.title_jp ?? undefined,
-          titleRomaji: item.title_romaji ?? undefined,
+          titleJp: isCharacter ? item.title : (item.title_jp ?? undefined),
+          titleRomaji: isCharacter ? (item.title_jp ?? undefined) : (item.title_romaji ?? undefined),
           imageUrl,
           imageSexual: item.image_sexual ?? null,
           defaultImageUrl: imageUrl,
@@ -587,9 +599,10 @@ export function useGridMakerState(shareId?: string) {
         }
       }
 
-      // Pad/trim cells to match grid size
+      // Pad/trim cells to match grid size. An id the batch fetch did not return has nothing to
+      // render, so the cell is emptied rather than left occupied by an item that cannot appear.
       const total = gridSize * gridSize;
-      const finalCells = cells.slice(0, total);
+      const finalCells: (string | null)[] = cells.slice(0, total).map(id => (id && newItemMap[id]) ? id : null);
       while (finalCells.length < total) finalCells.push(null);
 
       const loadedState: GridMakerState = {

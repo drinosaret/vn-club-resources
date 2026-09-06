@@ -190,11 +190,7 @@ async def clear_import_progress(table_name: str):
 
 def _find_staff_alias_file(extract_dir: str) -> str | None:
     """Find the staff_alias file in extracted directory."""
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "staff_alias":
-                return os.path.join(root, f)
-    return None
+    return _find_dump_file(extract_dir, "staff_alias")
 
 
 def _load_staff_name_aliases(staff_alias_file: str | None) -> dict[str, tuple[str, str | None]]:
@@ -873,10 +869,7 @@ async def import_length_votes(extract_dir: str, force: bool = False):
     """
     length_votes_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "vn_length_votes":
-                length_votes_file = os.path.join(root, f)
+    length_votes_file = _find_dump_file(extract_dir, "vn_length_votes")
 
     if not length_votes_file:
         logger.warning("vn_length_votes file not found in extracted files")
@@ -1632,11 +1625,22 @@ async def _update_vn_minage_from_releases(releases_file: str, releases_vn_file: 
 
 
 def _find_dump_file(extract_dir: str, name: str) -> str | None:
-    """Locate a named file anywhere under the extracted dump directory."""
-    for root, dirs, files in os.walk(extract_dir):
-        if name in files:
-            return os.path.join(root, name)
-    return None
+    """Locate a named file anywhere under the extracted dump directory.
+
+    An extraction whose archive changed layout between releases leaves the previous run's
+    files behind at their old depth, so a directory walk can offer several copies of the
+    same name. The newest is the one belonging to the archive just extracted; choosing by
+    walk order instead silently pins a table to whichever copy the walk happened to reach
+    last, and an unchanged mtime then makes every later import skip it.
+    """
+    candidates = [
+        os.path.join(root, name)
+        for root, _dirs, files in os.walk(extract_dir)
+        if name in files
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=os.path.getmtime)
 
 
 def _read_dump_rows(path: str):
@@ -2410,11 +2414,7 @@ async def import_producers(extract_dir: str, force: bool = False):
     producers_file = None
 
     # Find the producers file in extracted directory
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "producers":
-                producers_file = os.path.join(root, f)
-                break
+    producers_file = _find_dump_file(extract_dir, "producers")
 
     if not producers_file:
         logger.warning("Producers file not found in extracted files")
@@ -2514,10 +2514,7 @@ async def import_staff(extract_dir: str, force: bool = False):
     staff_file = None
 
     # Find the staff file in extracted directory
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "staff":
-                staff_file = os.path.join(root, f)
+    staff_file = _find_dump_file(extract_dir, "staff")
 
     if not staff_file:
         logger.warning("Staff file not found in extracted files")
@@ -2623,10 +2620,7 @@ async def import_vn_staff(extract_dir: str, force: bool = False):
     """
     vn_staff_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "vn_staff":
-                vn_staff_file = os.path.join(root, f)
+    vn_staff_file = _find_dump_file(extract_dir, "vn_staff")
 
     if not vn_staff_file:
         logger.warning("VN staff file not found in extracted files")
@@ -2766,10 +2760,7 @@ async def import_seiyuu(extract_dir: str, force: bool = False):
     """
     vn_seiyuu_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "vn_seiyuu":
-                vn_seiyuu_file = os.path.join(root, f)
+    vn_seiyuu_file = _find_dump_file(extract_dir, "vn_seiyuu")
 
     if not vn_seiyuu_file:
         logger.warning("VN seiyuu file not found in extracted files")
@@ -2920,10 +2911,7 @@ async def import_vn_relations(extract_dir: str, force: bool = False):
     """
     vn_relations_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "vn_relations":
-                vn_relations_file = os.path.join(root, f)
+    vn_relations_file = _find_dump_file(extract_dir, "vn_relations")
 
     if not vn_relations_file:
         logger.warning("VN relations file not found in extracted files")
@@ -3058,14 +3046,9 @@ async def import_characters(extract_dir: str, force: bool = False):
     chars_names_file = None
     images_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "chars":
-                chars_file = os.path.join(root, f)
-            if f == "chars_names":
-                chars_names_file = os.path.join(root, f)
-            if f == "images":
-                images_file = os.path.join(root, f)
+    chars_file = _find_dump_file(extract_dir, "chars")
+    chars_names_file = _find_dump_file(extract_dir, "chars_names")
+    images_file = _find_dump_file(extract_dir, "images")
 
     if not chars_file:
         logger.warning("Characters file not found in extracted files")
@@ -3311,11 +3294,7 @@ async def import_character_vns(extract_dir: str, force: bool = False):
     """
     chars_vns_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "chars_vns":
-                chars_vns_file = os.path.join(root, f)
-                break
+    chars_vns_file = _find_dump_file(extract_dir, "chars_vns")
 
     if not chars_vns_file:
         logger.warning("Character-VN file not found in extracted files")
@@ -3454,11 +3433,7 @@ async def import_character_traits(extract_dir: str, force: bool = False):
     """
     chars_traits_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "chars_traits":
-                chars_traits_file = os.path.join(root, f)
-                break
+    chars_traits_file = _find_dump_file(extract_dir, "chars_traits")
 
     if not chars_traits_file:
         logger.warning("Character traits file not found in extracted files")
@@ -3581,12 +3556,8 @@ async def import_releases(extract_dir: str, force: bool = False):
     releases_file = None
     releases_titles_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "releases":
-                releases_file = os.path.join(root, f)
-            if f == "releases_titles":
-                releases_titles_file = os.path.join(root, f)
+    releases_file = _find_dump_file(extract_dir, "releases")
+    releases_titles_file = _find_dump_file(extract_dir, "releases_titles")
 
     if not releases_file:
         logger.warning("Releases file not found in extracted files")
@@ -3838,11 +3809,7 @@ async def import_release_vns(extract_dir: str, force: bool = False):
     """
     release_vn_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "releases_vn":
-                release_vn_file = os.path.join(root, f)
-                break
+    release_vn_file = _find_dump_file(extract_dir, "releases_vn")
 
     if not release_vn_file:
         logger.warning("Release-VN file not found in extracted files")
@@ -3960,11 +3927,7 @@ async def import_release_producers(extract_dir: str, force: bool = False):
     """
     release_prod_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "releases_producers":
-                release_prod_file = os.path.join(root, f)
-                break
+    release_prod_file = _find_dump_file(extract_dir, "releases_producers")
 
     if not release_prod_file:
         logger.warning("Release-producers file not found in extracted files")
@@ -4084,11 +4047,7 @@ async def import_release_platforms(extract_dir: str, force: bool = False):
     """
     platforms_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "releases_platforms":
-                platforms_file = os.path.join(root, f)
-                break
+    platforms_file = _find_dump_file(extract_dir, "releases_platforms")
 
     if not platforms_file:
         logger.warning("Release platforms file not found in extracted files")
@@ -4195,11 +4154,7 @@ async def import_release_media(extract_dir: str, force: bool = False):
     """
     media_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "releases_media":
-                media_file = os.path.join(root, f)
-                break
+    media_file = _find_dump_file(extract_dir, "releases_media")
 
     if not media_file:
         logger.warning("Release media file not found in extracted files")
@@ -4308,11 +4263,7 @@ async def import_release_extlinks(extract_dir: str, force: bool = False):
     """
     extlinks_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "releases_extlinks":
-                extlinks_file = os.path.join(root, f)
-                break
+    extlinks_file = _find_dump_file(extract_dir, "releases_extlinks")
 
     if not extlinks_file:
         logger.warning("Release extlinks file not found in extracted files")
@@ -4422,11 +4373,7 @@ async def import_extlinks_master(extract_dir: str, force: bool = False):
     """
     extlinks_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "extlinks":
-                extlinks_file = os.path.join(root, f)
-                break
+    extlinks_file = _find_dump_file(extract_dir, "extlinks")
 
     if not extlinks_file:
         logger.warning("Extlinks master file not found in extracted files")
@@ -4532,11 +4479,7 @@ async def import_vn_extlinks(extract_dir: str, force: bool = False):
     """
     extlinks_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "vn_extlinks":
-                extlinks_file = os.path.join(root, f)
-                break
+    extlinks_file = _find_dump_file(extract_dir, "vn_extlinks")
 
     if not extlinks_file:
         logger.warning("VN extlinks file not found in extracted files")
@@ -4643,11 +4586,7 @@ async def import_wikidata_entries(extract_dir: str, force: bool = False):
     """
     wikidata_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "wikidata":
-                wikidata_file = os.path.join(root, f)
-                break
+    wikidata_file = _find_dump_file(extract_dir, "wikidata")
 
     if not wikidata_file:
         logger.warning("Wikidata file not found in extracted files")
@@ -4786,10 +4725,7 @@ async def import_ulist_vns(extract_dir: str, force: bool = False):
     """
     ulist_file = None
 
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "ulist_vns":
-                ulist_file = os.path.join(root, f)
+    ulist_file = _find_dump_file(extract_dir, "ulist_vns")
 
     if not ulist_file:
         logger.warning("ulist_vns file not found in extracted files")
@@ -4952,10 +4888,7 @@ async def import_vndb_users(extract_dir: str, force: bool = False):
         force: If True, import regardless of file modification time
     """
     users_file = None
-    for root, dirs, files in os.walk(extract_dir):
-        for f in files:
-            if f == "users":
-                users_file = os.path.join(root, f)
+    users_file = _find_dump_file(extract_dir, "users")
 
     if not users_file:
         logger.warning("users file not found in extracted files")
@@ -5297,6 +5230,15 @@ async def _run_full_import_inner(
     logger.info(f"{'=' * 50}")
     logger.info(f"IMPORT COMPLETE - Total time: {int(total_time // 60)}m {int(total_time % 60)}s")
     logger.info(f"{'=' * 50}")
+
+    # Reached only when every step above succeeded, and still under the advisory lock, so
+    # no other import can be relying on the files being swept.
+    try:
+        from app.ingestion.dump_downloader import cleanup_dump_storage
+
+        await cleanup_dump_storage(dump_dir)
+    except Exception as e:
+        logger.warning(f"Dump storage cleanup failed: {e}")
 
 
 # ==================== Progress Tracking for Admin UI ====================
@@ -5649,6 +5591,15 @@ async def run_import_with_tracking(run_id: int, force_download: bool = False):
             await db.commit()
 
         logger.info(f"Import tracking complete - run_id={run_id}")
+
+        # Reached only when every step above succeeded, and still under the advisory lock, so
+        # no other import can be relying on the files being swept.
+        try:
+            from app.ingestion.dump_downloader import cleanup_dump_storage
+
+            await cleanup_dump_storage(dump_dir)
+        except Exception as e:
+            logger.warning(f"Dump storage cleanup failed: {e}")
 
     except Exception as e:
         error_msg = str(e)

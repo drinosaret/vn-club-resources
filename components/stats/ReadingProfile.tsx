@@ -1,6 +1,5 @@
 'use client';
 
-import { Compass } from 'lucide-react';
 
 import Link from '@/components/Link';
 
@@ -117,15 +116,15 @@ function Line({
   // size themselves independently and the figures would not line up across them.
   return (
     <div className="grid grid-cols-[6rem_1fr] items-baseline gap-x-3">
-      <span className="text-right text-lg font-semibold tabular-nums text-gray-900 dark:text-white">
+      <span className="st-num text-right text-lg text-[color:var(--ink)]">
         {figure}
       </span>
       <div className="min-w-0">
-        <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{children}</p>
+        <p className="text-xs leading-relaxed text-[color:var(--nezu)]">{children}</p>
         {/* Its own line. Run on after the sentence it qualifies, it wraps on most widths
             and reads as a fragment left over from the line above. */}
         {aside ? (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-[color:var(--text-faint)]">
             {aside}
           </p>
         ) : null}
@@ -141,7 +140,7 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
   const { profile: data, loading } = useReadingProfile(uid);
   const { preference } = useTitlePreference();
 
-  if (loading) return <div className="h-96 rounded-xl image-placeholder" />;
+  if (loading) return <div className="h-96 rounded-xs image-placeholder" />;
   // A reader with no public votes has nothing to compare, which is a real state rather than
   // a failure, and an empty card would only take up room.
   if (!data || !data.rated) return null;
@@ -158,12 +157,11 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
     : null;
 
   return (
-    <div className="rounded-xl border border-gray-200/60 bg-white p-5 shadow-md shadow-gray-200/50 dark:border-gray-700/80 dark:bg-gray-800 dark:shadow-none">
-      <h2 className="mb-1 flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-        <Compass className="h-4 w-4 text-gray-400" />
+    <div className="st-card p-5">
+      <h2 className="st-card-title mb-1">
         Against everyone else
       </h2>
-      <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
+      <p className="st-card-sub mb-4">
         Answered from every public vote on VNDB, not just your own list.
       </p>
 
@@ -212,7 +210,7 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-x-8 gap-y-4 border-t border-gray-200/70 pt-3 dark:border-gray-700/70 lg:grid-cols-2">
+      <div className="mt-4 grid gap-x-8 gap-y-4 border-t border-[color:var(--rule)] pt-3 lg:grid-cols-2">
       {data.drift
         ? (() => {
             const moved = DRIFT_AXES.map((axis) => {
@@ -232,10 +230,8 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
 
             return (
               <div>
-                <p className="mb-2 text-xs font-medium text-gray-700 dark:text-gray-300">
-                  How this changed
-                </p>
-                <p className="mb-2 text-[11px] text-gray-400 dark:text-gray-500">
+                <p className="fig-label mb-2">How this changed</p>
+                <p className="st-card-sub mb-2">
                   Your first {data.drift!.early.titles.toLocaleString()} ratings against your
                   most recent {data.drift!.late.titles.toLocaleString()}. Only measures that
                   moved are listed.
@@ -244,17 +240,17 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
                   {moved.map((axis) => (
                     <li
                       key={axis.label}
-                      className="flex flex-wrap items-baseline gap-x-2 text-xs text-gray-500 dark:text-gray-400"
+                      className="flex flex-wrap items-baseline gap-x-2 text-xs text-[color:var(--nezu)]"
                     >
-                      <span className="text-gray-700 dark:text-gray-300">{axis.label}</span>
-                      <span className="tabular-nums">
+                      <span className="text-[color:var(--text-secondary)]">{axis.label}</span>
+                      <span className="st-num">
                         {fmt(axis.from, axis.unit)} &rarr; {fmt(axis.to, axis.unit)}
                       </span>
                       <span
                         className={
                           axis.delta > 0
-                            ? 'tabular-nums text-emerald-600 dark:text-emerald-400'
-                            : 'tabular-nums text-amber-600 dark:text-amber-400'
+                            ? 'st-num text-[color:var(--ink)]'
+                            : 'st-num text-[color:var(--nezu)]'
                         }
                       >
                         {axis.delta > 0 ? '+' : ''}
@@ -269,7 +265,7 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
         : null}
 
       {data.milestones?.first && data.milestones.latest ? (
-        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="space-y-1 text-xs text-[color:var(--nezu)]">
           <p>
             {data.milestones.first.href === data.milestones.latest.href &&
             data.milestones.first.date === data.milestones.latest.date ? (
@@ -279,7 +275,7 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
                 Your only rating so far is{' '}
                 <Link
                   href={data.milestones.first.href}
-                  className="text-primary-600 hover:underline dark:text-primary-400"
+                  className="underline decoration-dotted underline-offset-2 hover:text-[color:var(--ai)]"
                 >
                   {milestoneTitle(data.milestones.first, preference)}
                 </Link>
@@ -290,14 +286,14 @@ export function ReadingProfile({ uid }: ReadingProfileProps) {
                 You started on {shortDate(data.milestones.first.date)} with{' '}
                 <Link
                   href={data.milestones.first.href}
-                  className="text-primary-600 hover:underline dark:text-primary-400"
+                  className="underline decoration-dotted underline-offset-2 hover:text-[color:var(--ai)]"
                 >
                   {milestoneTitle(data.milestones.first, preference)}
                 </Link>
                 , and your most recent was{' '}
                 <Link
                   href={data.milestones.latest.href}
-                  className="text-primary-600 hover:underline dark:text-primary-400"
+                  className="underline decoration-dotted underline-offset-2 hover:text-[color:var(--ai)]"
                 >
                   {milestoneTitle(data.milestones.latest, preference)}
                 </Link>{' '}

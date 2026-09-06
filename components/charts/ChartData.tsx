@@ -29,41 +29,34 @@ export function ChartData({ caption, columns, rows }: ChartDataProps) {
   // scrollable area and the whole document scrolls sideways. A block container clips properly.
   return (
     <details className="mt-2 group">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1 py-1.5 text-[11px] font-medium text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors">
+      <summary className="sw-disclose">
         <span className="transition-transform group-open:rotate-90">&rsaquo;</span>
         {rows.length} values
       </summary>
       {/* The table is the widest thing in a chart card and its column count follows the
           series, so it gets its own scroll container rather than widening the card. */}
-      <div className="mt-1 max-h-56 overflow-auto rounded-md border border-gray-200/70 dark:border-gray-700/70">
-        <table aria-label={caption} className="w-full text-left text-[11px] tabular-nums">
-          <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900/80">
+      <div className="sw-panel mt-1 max-h-56 overflow-auto">
+        <table aria-label={caption} className="sw-table w-full text-left">
+          <thead className="sticky top-0">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column}
                   scope="col"
-                  className="whitespace-nowrap px-2 py-1 font-semibold text-gray-500 dark:text-gray-400"
                 >
                   {column}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          <tbody>
             {rows.map((cells) => (
               <tr key={cells[0]}>
-                <th
-                  scope="row"
-                  className="whitespace-nowrap px-2 py-1 font-medium text-gray-600 dark:text-gray-300"
-                >
+                <th scope="row">
                   {cells[0]}
                 </th>
                 {cells.slice(1).map((cell, index) => (
-                  <td
-                    key={columns[index + 1] ?? index}
-                    className="whitespace-nowrap px-2 py-1 text-gray-500 dark:text-gray-400"
-                  >
+                  <td key={columns[index + 1] ?? index}>
                     {cell}
                   </td>
                 ))}

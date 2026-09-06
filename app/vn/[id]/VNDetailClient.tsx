@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo, type ComponentType } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { ArrowLeft, ExternalLink, AlertCircle, RefreshCw, Globe } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import {
   vndbStatsApi,
@@ -18,6 +18,7 @@ import { VNTitle } from '@/components/vn/VNTitle';
 import { VNSidebar, RatingArc } from '@/components/vn/VNSidebar';
 import { VNDescription } from '@/components/vn/VNDescription';
 import { VNTags } from '@/components/vn/VNTags';
+import { VNLanguageSummary } from '@/components/vn/VNLanguageSummary';
 import { VNTabs, VNTabId } from '@/components/vn/VNTabs';
 import { VNSimilar } from '@/components/vn/VNSimilar';
 import { VNContentSimilar } from '@/components/vn/VNContentSimilar';
@@ -26,6 +27,7 @@ import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 import JitenLink, { useJitenDeck } from '@/components/vn/JitenLink';
 import { VNVoteStats } from '@/components/vn/VNVoteStats';
+import type { LanguageLookup } from '@/lib/jiten-server';
 
 
 
@@ -35,7 +37,7 @@ function TabContentSkeleton({ rows }: { rows: number }) {
       {Array.from({ length: rows }).map((_, index) => (
         <div
           key={index}
-          className="h-10 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/80"
+          className="h-10 rounded-xs bg-[color:var(--surface-inset)] border border-[color:var(--rule)]"
         />
       ))}
     </div>
@@ -44,7 +46,7 @@ function TabContentSkeleton({ rows }: { rows: number }) {
 
 // ─── Lazy tab components with module-level cache ───
 // When a chunk has been prefetched (via idle or hover), the cached module
-// renders immediately — no skeleton flash.
+// renders immediately, no skeleton flash.
 
 function lazyTab<P extends Record<string, unknown>>(
   loader: () => Promise<Record<string, unknown>>,
@@ -88,9 +90,17 @@ interface VNDetailClientProps {
   initialCharacters?: VNCharacter[] | null;
   initialSimilar?: SimilarVNsResponse | null;
   initialJitenDeckId?: number | null;
+  /** Measurements read during the server pass; null when the lookup did not resolve. */
+  languageLookup?: LanguageLookup | null;
+  /**
+   * The cast and credits panel, rendered on the server and handed in whole.
+   * It carries the page's only links to the people behind a title, so it is mounted with
+   * the rest of the page and hidden by CSS rather than waiting for its tab to be opened.
+   */
+  creditsSlot?: React.ReactNode;
 }
 
-const VALID_TABS: VNTabId[] = ['summary', 'language', 'tags', 'traits', 'characters', 'stats'];
+const VALID_TABS: VNTabId[] = ['summary', 'language', 'tags', 'traits', 'characters', 'credits', 'stats'];
 
 export default function VNDetailClient({
   vnId,
@@ -98,12 +108,19 @@ export default function VNDetailClient({
   initialCharacters,
   initialSimilar,
   initialJitenDeckId,
+  languageLookup = null,
+  creditsSlot = null,
 }: VNDetailClientProps) {
   // Subscribe to title preference to ensure re-render when user changes language setting
   const { preference } = useTitlePreference();
 
+  // The VN route accepts both `11` and `v11`, but the jiten endpoints only serve the
+  // prefixed form, and their cache keys have to match the ones the language tab builds
+  // from the API's own prefixed `vn.id`.
+  const jitenVnId = vnId.startsWith('v') ? vnId : `v${vnId}`;
+
   // jiten.moe deck ID lookup (shared with JitenLink header button)
-  const clientJitenDeckId = useJitenDeck(initialJitenDeckId !== undefined ? undefined : vnId);
+  const clientJitenDeckId = useJitenDeck(initialJitenDeckId !== undefined ? undefined : jitenVnId);
   const jitenDeckId = initialJitenDeckId !== undefined ? initialJitenDeckId : clientJitenDeckId;
 
   // URL-based tab state
@@ -123,7 +140,7 @@ export default function VNDetailClient({
   // Track which tabs have been visited so we can lazy-mount but keep-alive
   const [visitedTabs, setVisitedTabs] = useState<Set<VNTabId>>(() => new Set([initialTab]));
 
-  // Ref for tab content container — used to lock height during tab switches
+  // Ref for tab content container, used to lock height during tab switches
   const tabContentRef = useRef<HTMLDivElement>(null);
 
   // Similar VNs
@@ -197,12 +214,13 @@ export default function VNDetailClient({
   // and Suspense re-mounts where the tab state comes from the URL, not a click)
   useEffect(() => {
     void loadTabModule(activeTab);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps — run once on mount for deep-links, not on every tab change
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount for deep-links, not on every tab change
 
-  // Vote stats (SWR — pre-fetches on page load, cached across tab switches)
+  // Vote stats (SWR, pre-fetches on page load, cached across tab switches)
   const {
     data: voteStats,
     error: voteStatsError,
+    isLoading: voteStatsLoading,
   } = useVNVoteStats(vnId);
 
   const loadSimilarVNs = useCallback(async () => {
@@ -249,16 +267,16 @@ export default function VNDetailClient({
       void loadSimilarVNs();
     }
     if (tabId === 'language' && jitenDeckId) {
-      prefetchJitenData(vnId);
+      prefetchJitenData(jitenVnId);
     }
     if (tabId === 'stats') {
       prefetchVoteStats(vnId);
     }
     void loadTabModule(tabId);
-  }, [jitenDeckId, loadSimilarVNs, loadTabModule, similarData, similarLoading, vnId]);
+  }, [jitenDeckId, jitenVnId, loadSimilarVNs, loadTabModule, similarData, similarLoading, vnId]);
 
   // Sync tab state when URL changes (back/forward navigation).
-  // Depends only on tabFromUrl — NOT activeTab — to avoid a race condition:
+  // Depends only on tabFromUrl, NOT activeTab, to avoid a race condition:
   // handleTabChange sets activeTab immediately, but replaceState triggers
   // Next.js to update searchParams asynchronously. If activeTab were in deps,
   // the effect would fire with stale tabFromUrl and "correct" activeTab back.
@@ -342,7 +360,7 @@ export default function VNDetailClient({
         setGlobalTraitCounts(null);
       }
     } catch {
-      // Don't replace the page — VN data is already displayed
+      // Don't replace the page: VN data is already displayed
     } finally {
       setIsRefreshing(false);
     }
@@ -420,7 +438,7 @@ export default function VNDetailClient({
           .catch(() => {});
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps — preload IDF counts once when server-provided characters are available
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- preload IDF counts once when server-provided characters are available
 
   const visibleTagCount = useMemo(() => {
     if (!vn) return undefined;
@@ -445,7 +463,8 @@ export default function VNDetailClient({
 
     const id = schedule(() => {
       prefetchVoteStats(vnId);
-      prefetchJitenData(vnId);
+      // A VN with no deck has nothing to warm, so the request is left unmade.
+      if (jitenDeckId) prefetchJitenData(jitenVnId);
 
       Promise.all([
         LazyVNTagsTable.load(),
@@ -463,7 +482,7 @@ export default function VNDetailClient({
     });
 
     return () => cancel(id);
-  }, [vn, vnId]);
+  }, [vn, vnId, jitenDeckId, jitenVnId]);
 
   if (isLoading) {
     return <LoadingState />;
@@ -478,10 +497,10 @@ export default function VNDetailClient({
   return (
     <div className="relative max-w-6xl mx-auto px-4 pt-6 pb-12">
       {isRefreshing && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-xs">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <RefreshCw className="w-4 h-4 animate-spin text-primary-500" />
-            <span className="text-sm text-gray-700 dark:text-gray-200">Refreshing...</span>
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-[color:var(--ground)]/70 backdrop-blur-xs">
+          <div className="vn-sec flex items-center gap-2 px-4 py-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-[color:var(--ai)]" />
+            <span className="text-sm text-[color:var(--ink)]">Refreshing...</span>
           </div>
         </div>
       )}
@@ -490,10 +509,10 @@ export default function VNDetailClient({
       <div className="flex items-center justify-between gap-2 mb-4">
         <button
           onClick={() => window.history.back()}
-          className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0"
+          className="sec-more"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="hidden sm:inline text-sm">Back</span>
+          <span aria-hidden>←</span>
+          Back
         </button>
         <div className="flex items-center gap-2 shrink-0">
           <JitenLink vnId={vn.id} deckId={jitenDeckId} />
@@ -501,19 +520,18 @@ export default function VNDetailClient({
             href={vndbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="tab"
           >
             <span><span className="hidden sm:inline">View on </span>VNDB</span>
-            <ExternalLink className="w-4 h-4" />
+            <span aria-hidden>↗</span>
           </a>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            className="tab disabled:opacity-50"
             aria-label="Refresh data"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            Refresh
           </button>
         </div>
       </div>
@@ -530,7 +548,7 @@ export default function VNDetailClient({
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
-        {/* Left column — Cover + Sidebar */}
+        {/* Left column: Cover + Sidebar */}
         <div className="lg:sticky lg:top-20 lg:self-start lg:flex lg:flex-col lg:max-h-[calc(100vh-5rem)] z-10">
           <div className="max-w-[280px] mx-auto lg:max-w-none lg:mx-0 shrink-0">
             <VNCover
@@ -545,7 +563,7 @@ export default function VNDetailClient({
               <RatingArc rating={vn.rating} votecount={vn.votecount} />
             </div>
           )}
-          <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3 lg:overflow-y-auto lg:min-h-0 scrollbar-hover">
+          <div className="vn-sec mt-3 p-3 lg:overflow-y-auto lg:min-h-0 scrollbar-hover">
             <VNSidebar
               developers={vn.developers}
               released={vn.released}
@@ -559,14 +577,14 @@ export default function VNDetailClient({
           </div>
         </div>
 
-        {/* Right column — Description + Tabs + Content */}
+        {/* Right column: description, tabs and content */}
         <div className="space-y-4 min-w-0">
           {/* Description always visible */}
           <VNDescription description={vn.description} bare />
 
-          {/* Sticky tabs — negative margin + padding extends the frosted background
+          {/* Sticky tabs: negative margin + padding extends the frosted background
              upward to cover the space-y-4 gap between this and the previous sibling */}
-          <div className="sticky top-16 lg:top-[71px] z-20 -mt-4 pt-4 bg-white dark:bg-(--background)">
+          <div className="sticky top-16 lg:top-[71px] z-20 -mt-4 pt-4 bg-[color:var(--ground)]">
             <VNTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -574,10 +592,11 @@ export default function VNDetailClient({
               tagCount={visibleTagCount}
               traitCount={charactersLoaded ? (traitsReadyCount ?? 0) : undefined}
               characterCount={visibleCharacterCount}
+              hasCredits={Boolean(creditsSlot)}
             />
           </div>
 
-          {/* Tab Content — lazy-mount / keep-alive: tabs mount on first visit,
+          {/* Tab Content, lazy-mount / keep-alive: tabs mount on first visit,
              then stay in the DOM (hidden via CSS) for instant re-visits. */}
           <div ref={tabContentRef} className="relative min-h-[400px]">
           <div
@@ -587,31 +606,26 @@ export default function VNDetailClient({
             aria-labelledby="vn-tab-summary"
           >
             <div className="space-y-4">
+              <VNLanguageSummary
+                lookup={languageLookup}
+                onOpenAnalysis={() => handleTabChange('language')}
+              />
               <VNTags tags={vn.tags} />
               {/* Language filter - applies to relations and similar VNs */}
               {((vn.relations && vn.relations.length > 0) || similarLoading || similarError || (similarData?.content_similar?.length || 0) > 0 || (similarData?.users_also_read?.length || 0) > 0) && (
-                <div className="flex items-center justify-end gap-2 text-sm">
-                  <Globe className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-600 dark:text-gray-400">Show:</span>
+                <div className="flex items-center justify-end gap-2">
+                  <span className="fig-label">Show</span>
                   <button
                     onClick={() => setJapaneseOnly(true)}
                     aria-pressed={japaneseOnly}
-                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                      japaneseOnly
-                        ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`tab${japaneseOnly ? ' tab--on' : ''}`}
                   >
                     Japanese Only
                   </button>
                   <button
                     onClick={() => setJapaneseOnly(false)}
                     aria-pressed={!japaneseOnly}
-                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                      !japaneseOnly
-                        ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                    className={`tab${!japaneseOnly ? ' tab--on' : ''}`}
                   >
                     All Languages
                   </button>
@@ -702,6 +716,21 @@ export default function VNDetailClient({
             </div>
           )}
 
+          {/* Not gated on having been visited, unlike its neighbours. The panel is server
+              rendered and holds this page's only links to the characters, staff and voice
+              actors behind the title, so it belongs in the delivered markup whether or not
+              anyone opens the tab. */}
+          {creditsSlot && (
+            <div
+              className={activeTab === 'credits' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
+              role="tabpanel"
+              id="vn-tabpanel-credits"
+              aria-labelledby="vn-tab-credits"
+            >
+              {creditsSlot}
+            </div>
+          )}
+
           {visitedTabs.has('stats') && (
             <div
               className={activeTab === 'stats' ? 'vn-tabpanel-active' : 'vn-tabpanel-hidden'}
@@ -712,7 +741,7 @@ export default function VNDetailClient({
             >
               <VNVoteStats
                 data={voteStats ?? null}
-                isLoading={!voteStats && !voteStatsError}
+                isLoading={voteStatsLoading}
                 error={!!voteStatsError}
                 totalVotecount={vn.votecount}
                 vnRating={vn.rating}
@@ -734,33 +763,33 @@ function LoadingState() {
     <div className="max-w-6xl mx-auto px-4 pt-6">
       {/* Header skeleton */}
       <div className="flex items-center justify-between mb-4">
-        <div className="w-16 h-8 rounded-lg image-placeholder" />
+        <div className="w-16 h-8 rounded-xs image-placeholder" />
         <div className="flex items-center gap-2">
-          <div className="w-28 h-9 rounded-lg image-placeholder" />
-          <div className="w-20 h-9 rounded-lg image-placeholder" />
+          <div className="w-28 h-9 rounded-xs image-placeholder" />
+          <div className="w-20 h-9 rounded-xs image-placeholder" />
         </div>
       </div>
       {/* Title skeleton */}
       <div className="mb-4">
-        <div className="w-3/4 h-7 rounded-sm image-placeholder" />
-        <div className="w-1/2 h-5 rounded-sm image-placeholder mt-1.5" />
+        <div className="w-3/4 h-7 rounded-xs image-placeholder" />
+        <div className="w-1/2 h-5 rounded-xs image-placeholder mt-1.5" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8">
         {/* Left column: cover + sidebar */}
         <div>
-          <div className="aspect-3/4 max-w-[280px] mx-auto lg:mx-0 rounded-xl image-placeholder" />
+          <div className="aspect-3/4 max-w-[280px] mx-auto lg:mx-0 rounded-[1px] image-placeholder" />
           <div className="mt-4 space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-[52px] h-[52px] rounded-full image-placeholder" />
+              <div className="w-[52px] h-[52px] rounded-xs image-placeholder" />
               <div className="space-y-1">
-                <div className="w-20 h-3.5 rounded-sm image-placeholder" />
-                <div className="w-16 h-3 rounded-sm image-placeholder" />
+                <div className="w-20 h-3.5 rounded-xs image-placeholder" />
+                <div className="w-16 h-3 rounded-xs image-placeholder" />
               </div>
             </div>
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i}>
-                <div className="w-16 h-3 rounded-sm image-placeholder mb-1" />
-                <div className="h-4 rounded-sm image-placeholder" style={{ width: `${60 + i * 15}px` }} />
+                <div className="w-16 h-3 rounded-xs image-placeholder mb-1" />
+                <div className="h-4 rounded-xs image-placeholder" style={{ width: `${60 + i * 15}px` }} />
               </div>
             ))}
           </div>
@@ -768,15 +797,15 @@ function LoadingState() {
         {/* Right column: description + tabs + content */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <div className="h-4 w-full rounded-sm image-placeholder" />
-            <div className="h-4 w-full rounded-sm image-placeholder" />
-            <div className="h-4 w-3/4 rounded-sm image-placeholder" />
+            <div className="h-4 w-full rounded-xs image-placeholder" />
+            <div className="h-4 w-full rounded-xs image-placeholder" />
+            <div className="h-4 w-3/4 rounded-xs image-placeholder" />
           </div>
-          <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700 pb-1">
+          <div className="flex gap-1 border-b border-[color:var(--rule)] pb-1">
             {['Overview', 'Stats', 'Language', 'Tags', 'Traits', 'Characters'].map((tab) => (
               <div
                 key={tab}
-                className="h-7 rounded-lg image-placeholder"
+                className="h-7 rounded-xs image-placeholder"
                 style={{ width: `${tab.length * 9 + 24}px` }}
               />
             ))}
@@ -785,7 +814,7 @@ function LoadingState() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div
                 key={i}
-                className="h-6 rounded-full image-placeholder"
+                className="h-6 rounded-xs image-placeholder"
                 style={{ width: `${55 + (i % 3) * 18}px` }}
               />
             ))}
@@ -801,40 +830,31 @@ function ErrorState({ error, vnId, onRetry }: { error: string | null; vnId: stri
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-        <AlertCircle className="w-8 h-8 text-red-500" />
-      </div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <span className="nameplate">Not loaded</span>
+      <h1 className="font-display text-2xl font-bold text-[color:var(--ink)] mt-4 mb-2">
         Unable to Load Visual Novel
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-[color:var(--nezu)] mb-6">
         {error || 'Something went wrong while loading the visual novel.'}
       </p>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      <div className="tabs justify-center">
         {onRetry && (
-          <button
-            onClick={onRetry}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
+          <button onClick={onRetry} className="tab">
             Try Again
           </button>
         )}
-        <button
-          onClick={() => window.history.back()}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
+        <button onClick={() => window.history.back()} className="tab">
+          <span aria-hidden>←</span>
           Go Back
         </button>
         <a
           href={vndbUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="tab"
         >
           Try on VNDB
-          <ExternalLink className="w-4 h-4" />
+          <span aria-hidden>↗</span>
         </a>
       </div>
     </div>

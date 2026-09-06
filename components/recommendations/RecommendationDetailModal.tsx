@@ -3,129 +3,54 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from '@/components/Link';
-import { X, ExternalLink, Tag, Users, BookOpen, ImageOff, Mic, Heart, Building2, Pen, Star, LucideIcon } from 'lucide-react';
+import { X, ExternalLink, ImageOff } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
-import { SIGNAL_WEIGHTS } from '@/lib/recommendation-weights';
+import {
+  RECOMMENDATION_LISTS,
+  SIGNAL_LABELS,
+  SignalKey,
+  RecommendationList,
+  listByName,
+} from '@/lib/recommendation-weights';
+import type { Recommendation } from '@/lib/recommendation-types';
 import { useTitlePreference, getDisplayTitle, getEntityDisplayName, TitlePreference } from '@/lib/title-preference';
 import { NSFWNextImage } from '@/components/NSFWImage';
 
-interface MatchedTag {
-  id: number;
-  name: string;
-  user_weight: number;
-  vn_score: number;
-  contribution: number;  // user_weight * vn_score
-  weighted_score: number;  // Stats page weighted score (0-100 scale)
-  count: number;  // Number of user's VNs with this tag
-}
+const COMBINED_LIST: RecommendationList = listByName('combined') ?? RECOMMENDATION_LISTS[0];
 
-interface MatchedStaff {
-  id: string;
-  name: string;
-  name_original?: string | null;  // Romanized name
-  user_avg_rating: number;
-  weight: number;  // Delta from user's average
-  weighted_score: number;  // Stats page weighted score (0-100 scale)
-  count: number;  // Number of user's VNs with this staff
-}
+/** Every signal list, which is what the agreement figure counts out of when the page does not say. */
+const DEFAULT_TOTAL_LISTS = RECOMMENDATION_LISTS.filter((entry) => entry.signal !== null).length;
 
-interface MatchedDeveloper {
-  name: string;
-  name_original?: string | null;  // Romanized name
-  user_avg_rating: number;
-  weight: number;  // Delta from user's average
-  weighted_score: number;  // Stats page weighted score (0-100 scale)
-  count: number;  // Number of user's VNs from this developer
-}
-
-interface ContributingVN {
-  id: string;
-  title: string;
-  similarity: number;
-}
-
-interface MatchedSeiyuu {
-  id: string;
-  name: string;
-  name_original?: string | null;  // Romanized name
-  weighted_score: number;
-  count: number;
-}
-
-interface MatchedTrait {
-  id: number;
-  name: string;
-  weighted_score: number;
-  count: number;
-}
-
-interface SimilarGamesDetail {
-  source_vn_id: string;
-  source_title?: string;
-  source_title_jp?: string | null;      // Original Japanese title (kanji/kana)
-  source_title_romaji?: string | null;  // Romanized title
-  similarity: number;
-}
-
-interface UsersAlsoReadDetail {
-  source_vn_id: string;
-  source_title?: string;
-  source_title_jp?: string | null;      // Original Japanese title (kanji/kana)
-  source_title_romaji?: string | null;  // Romanized title
-  co_score: number;
-  user_count: number;
-}
-
-interface RecommendationDetails {
-  matched_tags: MatchedTag[];
-  matched_staff: MatchedStaff[];
-  matched_developers: MatchedDeveloper[];
-  matched_seiyuu?: MatchedSeiyuu[];
-  matched_traits?: MatchedTrait[];
-  contributing_vns: ContributingVN[];
-  similar_games: SimilarGamesDetail[];
-  users_also_read: UsersAlsoReadDetail[];
-}
-
-interface Recommendation {
-  vn_id: string;
-  title: string;
-  title_jp?: string;       // Original Japanese title (kanji/kana)
-  title_romaji?: string;   // Romanized title
-  score: number;
-  normalized_score: number;  // 0-100 match percentage, always computed by the backend
-  match_reasons: string[];
-  image_url: string | null;
-  image_sexual: number | null;  // For NSFW blur (0=safe, 1=suggestive, 2=explicit)
-  rating: number | null;
-  scores: {
-    tag: number;
-    similar_games: number;
-    users_also_read: number;
-    developer?: number;
-    staff: number;
-    seiyuu?: number;
-    trait?: number;
-    quality?: number;
-  };
-  details?: RecommendationDetails;
-}
+// Wording the page uses for a list whose ranking signal gave every title on it the same
+// score, kept identical here so the breakdown does not contradict the page it was opened from.
+const UNSEPARATED_SIGNAL_NOTE =
+  'The score behind this order is the same for every title here, so it separated ' +
+  'nothing. They are ordered by how much of your reading the matched entries account ' +
+  'for: read this tab as a set rather than a ranking.';
 
 interface RecommendationDetailModalProps {
   recommendation: Recommendation;
   onClose: () => void;
   isLoading?: boolean;
+  /** The details request failed; the breakdown cannot be shown. */
+  failed?: boolean;
+  /** The list the card was opened from, which decides what its number means. */
+  list?: RecommendationList;
+  /** Whether the list's ranking signal separated the page at all. */
+  signalRanks?: boolean;
+  /** How many signal lists the agreement figure is out of. */
+  totalLists?: number;
 }
 
-// Category configuration type
+/**
+ * One signal's evidence. The category is named in words rather than coded into a colour:
+ * nine of them share this list, and nine hues would make the breakdown harder to read than
+ * the numbers it exists to explain.
+ */
 interface CategoryConfig {
-  key: string;
-  name: string;
-  Icon: LucideIcon;
-  iconColorClass: string;
-  barColorClass: string;
-  textColorClass: string;
-  percent: number;
+  key: SignalKey;
+  /** Whether the details carry anything to show under the heading. */
+  hasEvidence: boolean;
   renderContent: () => React.ReactNode;
 }
 
@@ -151,7 +76,33 @@ function getSourceTitle(
   return displayed || match.source_vn_id;
 }
 
-export function RecommendationDetailModal({ recommendation, onClose, isLoading = false }: RecommendationDetailModalProps) {
+/** One matched entity: its name, and the mark the reader's own ratings put on it. */
+function MatchRow({ name, score, count, countLabel }: {
+  name: string;
+  score: number;
+  count: number;
+  countLabel: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="min-w-0 truncate text-sm text-[color:var(--ink)]">{name}</span>
+      <span className="rc-num shrink-0 text-sm text-[color:var(--nezu)]" title={countLabel}>
+        <span className="font-semibold text-[color:var(--ink)]">{score.toFixed(0)}</span>
+        <span className="ml-1 text-[color:var(--text-faint)]">({count})</span>
+      </span>
+    </div>
+  );
+}
+
+export function RecommendationDetailModal({
+  recommendation,
+  onClose,
+  isLoading = false,
+  failed = false,
+  list = COMBINED_LIST,
+  signalRanks = true,
+  totalLists = DEFAULT_TOTAL_LISTS,
+}: RecommendationDetailModalProps) {
   const { vn_id, title, title_jp, title_romaji, image_url, image_sexual, rating, scores, details } = recommendation;
   const { preference: titlePreference } = useTitlePreference();
   const displayTitle = getDisplayTitle({ title, title_jp, title_romaji }, titlePreference);
@@ -172,18 +123,40 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  // Prevent body scroll when modal is open + manage focus
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     previousActiveElement.current = document.activeElement;
-    // Focus the modal container on mount
+    // Everything behind the scrim leaves the tab order and the accessibility tree while
+    // the dialog is up. The portal renders the dialog root straight into body, so its
+    // siblings are the page.
+    const dialogRoot = modalRef.current?.closest('[role="dialog"]') ?? null;
+    const siblings = Array.from(document.body.children).filter((node) => node !== dialogRoot);
+    siblings.forEach((node) => node.setAttribute('inert', ''));
     modalRef.current?.focus();
+
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !modalRef.current) return;
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', trap);
+
     return () => {
       document.body.style.overflow = 'unset';
-      // Restore focus to previously active element on unmount
-      if (previousActiveElement.current instanceof HTMLElement) {
-        previousActiveElement.current.focus();
-      }
+      siblings.forEach((node) => node.removeAttribute('inert'));
+      document.removeEventListener('keydown', trap);
+      if (previousActiveElement.current instanceof HTMLElement) previousActiveElement.current.focus();
     };
   }, []);
 
@@ -203,276 +176,226 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
     return () => clearTimeout(timer);
   }, [isLoading, details, loadingTimedOut]);
 
-  // Weighted contribution of each signal, using the shared weight table.
-  const tagContribution = scores.tag * SIGNAL_WEIGHTS.tag;
-  const similarGamesContribution = scores.similar_games * SIGNAL_WEIGHTS.similar_games;
-  const usersAlsoReadContribution = scores.users_also_read * SIGNAL_WEIGHTS.users_also_read;
-  const qualityContribution = (scores.quality || 0) * SIGNAL_WEIGHTS.quality;
-  const developerContribution = (scores.developer || 0) * SIGNAL_WEIGHTS.developer;
-  const staffContribution = scores.staff * SIGNAL_WEIGHTS.staff;
-  const seiyuuContribution = (scores.seiyuu || 0) * SIGNAL_WEIGHTS.seiyuu;
-  const traitContribution = (scores.trait || 0) * SIGNAL_WEIGHTS.trait;
-  const totalContribution = tagContribution + similarGamesContribution + usersAlsoReadContribution + qualityContribution + developerContribution + staffContribution + seiyuuContribution + traitContribution;
-
-  // Calculate percentage of total score each component contributes
-  const tagPercent = totalContribution > 0 ? Math.round((tagContribution / totalContribution) * 100) : 0;
-  const similarGamesPercent = totalContribution > 0 ? Math.round((similarGamesContribution / totalContribution) * 100) : 0;
-  const usersAlsoReadPercent = totalContribution > 0 ? Math.round((usersAlsoReadContribution / totalContribution) * 100) : 0;
-  const qualityPercent = totalContribution > 0 ? Math.round((qualityContribution / totalContribution) * 100) : 0;
-  const developerPercent = totalContribution > 0 ? Math.round((developerContribution / totalContribution) * 100) : 0;
-  const staffPercent = totalContribution > 0 ? Math.round((staffContribution / totalContribution) * 100) : 0;
-  const seiyuuPercent = totalContribution > 0 ? Math.round((seiyuuContribution / totalContribution) * 100) : 0;
-  const traitPercent = totalContribution > 0 ? Math.round((traitContribution / totalContribution) * 100) : 0;
-
-  const overallPercent = recommendation.normalized_score;
-
-  // Build sortable categories array
+  // Signal evidence, strongest signal first. A signal that scored nothing and has nothing
+  // to show is left out rather than listed as empty.
   const categories = useMemo<CategoryConfig[]>(() => {
     if (!details) return [];
 
     const cats: CategoryConfig[] = [
       {
         key: 'tag',
-        name: 'Tag Matching',
-        Icon: Tag,
-        iconColorClass: 'text-blue-500',
-        barColorClass: 'bg-blue-500',
-        textColorClass: 'text-blue-600 dark:text-blue-400',
-        percent: tagPercent,
+        hasEvidence: details.matched_tags.length > 0,
         renderContent: () => (
           details.matched_tags.length > 0 ? (
-            <div className="space-y-2 pl-7">
+            <div className="space-y-2">
               {details.matched_tags.slice(0, 8).map((tag) => {
                 const barWidth = Math.max(10, tag.weighted_score);
                 return (
-                  <div key={tag.id} className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 w-36 truncate" title={tag.name}>
+                  <div key={tag.id} className="flex items-center gap-3">
+                    <span className="w-36 truncate text-sm text-[color:var(--ink)]" title={tag.name}>
                       {tag.name}
                     </span>
-                    <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${barWidth}%` }}
-                      />
+                    <div className="rc-meter flex-1 h-2">
+                      <div className="rc-meter-fill" style={{ width: `${barWidth}%` }} />
                     </div>
                     <span
-                      className="text-xs text-gray-500 dark:text-gray-400 w-20 text-right"
+                      className="rc-num w-20 text-right text-xs text-[color:var(--nezu)]"
                       title={`Weighted score based on ${tag.count} VN(s) with this tag`}
                     >
-                      <span className="text-blue-600 dark:text-blue-400 font-medium">
+                      <span className="font-semibold text-[color:var(--ink)]">
                         {tag.weighted_score.toFixed(0)}
                       </span>
-                      <span className="text-gray-400 dark:text-gray-500 ml-1">
-                        ({tag.count})
-                      </span>
+                      <span className="ml-1 text-[color:var(--text-faint)]">({tag.count})</span>
                     </span>
                   </div>
                 );
               })}
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+              <p className="rc-why mt-2">
                 Weighted score (0-100) based on your ratings of VNs with this tag
               </p>
             </div>
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 pl-7">
-              No significant tag matches
-            </p>
+            <p className="rc-why">No significant tag matches</p>
           )
         ),
       },
       {
         key: 'developer',
-        name: 'Developer Match',
-        Icon: Building2,
-        iconColorClass: 'text-orange-500',
-        barColorClass: 'bg-orange-500',
-        textColorClass: 'text-orange-600 dark:text-orange-400',
-        percent: developerPercent,
+        hasEvidence: details.matched_developers.length > 0,
         renderContent: () => (
-          <div className="pl-7 space-y-2">
+          <div className="space-y-2">
             {details.matched_developers.length > 0 ? (
               <>
                 {details.matched_developers.slice(0, 5).map((dev, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      <span className="font-medium">{getEntityDisplayName({ name: dev.name, original: dev.name_original }, titlePreference)}</span>
-                    </span>
-                    <span
-                      className="text-sm font-medium text-orange-600 dark:text-orange-400 ml-2 shrink-0"
-                      title={`Based on ${dev.count} VN(s) from this developer`}
-                    >
-                      {dev.weighted_score.toFixed(0)}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
-                        ({dev.count})
-                      </span>
-                    </span>
-                  </div>
+                  <MatchRow
+                    key={i}
+                    name={getEntityDisplayName({ name: dev.name, original: dev.name_original }, titlePreference)}
+                    score={dev.weighted_score}
+                    count={dev.count}
+                    countLabel={`Based on ${dev.count} VN(s) from this developer`}
+                  />
                 ))}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                <p className="rc-why mt-2">
                   Weighted score (0-100) based on your ratings of their VNs
                 </p>
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Based on your preferred developers/publishers
-              </p>
+              <p className="rc-why">Based on your preferred developers/publishers</p>
             )}
           </div>
         ),
       },
       {
         key: 'staff',
-        name: 'Staff Match',
-        Icon: Pen,
-        iconColorClass: 'text-amber-500',
-        barColorClass: 'bg-amber-500',
-        textColorClass: 'text-amber-600 dark:text-amber-400',
-        percent: staffPercent,
+        hasEvidence: details.matched_staff.length > 0,
         renderContent: () => (
-          <div className="pl-7 space-y-2">
+          <div className="space-y-2">
             {details.matched_staff.length > 0 ? (
               <>
                 {details.matched_staff.slice(0, 5).map((staff) => (
-                  <div key={staff.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      <span className="font-medium">{getEntityDisplayName({ name: staff.name, original: staff.name_original }, titlePreference)}</span>
-                    </span>
-                    <span
-                      className="text-sm font-medium text-amber-600 dark:text-amber-400 ml-2 shrink-0"
-                      title={`Based on ${staff.count} VN(s) with this staff member`}
-                    >
-                      {staff.weighted_score.toFixed(0)}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
-                        ({staff.count})
-                      </span>
-                    </span>
-                  </div>
+                  <MatchRow
+                    key={staff.id}
+                    name={getEntityDisplayName({ name: staff.name, original: staff.name_original }, titlePreference)}
+                    score={staff.weighted_score}
+                    count={staff.count}
+                    countLabel={`Based on ${staff.count} VN(s) with this staff member`}
+                  />
                 ))}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                <p className="rc-why mt-2">
                   Weighted score (0-100) based on your ratings of their VNs
                 </p>
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Based on your preferred writers and artists
-              </p>
+              <p className="rc-why">Based on your preferred writers and artists</p>
             )}
           </div>
         ),
       },
       {
         key: 'seiyuu',
-        name: 'Voice Actors',
-        Icon: Mic,
-        iconColorClass: 'text-pink-500',
-        barColorClass: 'bg-pink-500',
-        textColorClass: 'text-pink-600 dark:text-pink-400',
-        percent: seiyuuPercent,
+        hasEvidence: (details.matched_seiyuu?.length ?? 0) > 0,
         renderContent: () => (
-          <div className="pl-7 space-y-2">
+          <div className="space-y-2">
             {details.matched_seiyuu && details.matched_seiyuu.length > 0 ? (
               <>
                 {details.matched_seiyuu.map((seiyuu) => (
-                  <div key={seiyuu.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      {getEntityDisplayName({ name: seiyuu.name, original: seiyuu.name_original }, titlePreference)}
-                    </span>
-                    <span
-                      className="text-sm font-medium text-pink-600 dark:text-pink-400 ml-2 shrink-0"
-                      title={`Based on ${seiyuu.count} VN(s) with this voice actor`}
-                    >
-                      {seiyuu.weighted_score.toFixed(0)}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
-                        ({seiyuu.count})
-                      </span>
-                    </span>
-                  </div>
+                  <MatchRow
+                    key={seiyuu.id}
+                    name={getEntityDisplayName({ name: seiyuu.name, original: seiyuu.name_original }, titlePreference)}
+                    score={seiyuu.weighted_score}
+                    count={seiyuu.count}
+                    countLabel={`Based on ${seiyuu.count} VN(s) with this voice actor`}
+                  />
                 ))}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                <p className="rc-why mt-2">
                   Weighted score (0-100) based on your ratings of their VNs
                 </p>
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Based on your preferred voice actors
-              </p>
+              <p className="rc-why">Based on your preferred voice actors</p>
             )}
           </div>
         ),
       },
       {
         key: 'trait',
-        name: 'Character Traits',
-        Icon: Heart,
-        iconColorClass: 'text-rose-500',
-        barColorClass: 'bg-rose-500',
-        textColorClass: 'text-rose-600 dark:text-rose-400',
-        percent: traitPercent,
+        hasEvidence: (details.matched_traits?.length ?? 0) > 0,
         renderContent: () => (
-          <div className="pl-7 space-y-2">
+          <div className="space-y-2">
             {details.matched_traits && details.matched_traits.length > 0 ? (
               <>
                 {details.matched_traits.map((trait) => (
-                  <div key={trait.id} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                      {trait.name}
-                    </span>
-                    <span
-                      className="text-sm font-medium text-rose-600 dark:text-rose-400 ml-2 shrink-0"
-                      title={`Based on ${trait.count} VN(s) with this character trait`}
-                    >
-                      {trait.weighted_score.toFixed(0)}
-                      <span className="text-gray-400 dark:text-gray-500 font-normal ml-1">
-                        ({trait.count})
-                      </span>
-                    </span>
-                  </div>
+                  <MatchRow
+                    key={trait.id}
+                    name={trait.name}
+                    score={trait.weighted_score}
+                    count={trait.count}
+                    countLabel={`Based on ${trait.count} VN(s) with this character trait`}
+                  />
                 ))}
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                <p className="rc-why mt-2">
                   Weighted score (0-100) based on your ratings of VNs with these traits
                 </p>
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Based on your preferred character archetypes
-              </p>
+              <p className="rc-why">Based on your preferred character archetypes</p>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'description',
+        hasEvidence: (details.description_matches?.length ?? 0) > 0,
+        renderContent: () => (
+          <div className="space-y-2">
+            {details.description_matches && details.description_matches.length > 0 ? (
+              <>
+                <p className="rc-why mb-2">Reads like VNs you&apos;ve rated highly:</p>
+                {details.description_matches.slice(0, 5).map((match, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3">
+                    <Link
+                      href={`/vn/${match.source_vn_id}/`}
+                      className="rc-name min-w-0 truncate"
+                      onClick={onClose}
+                    >
+                      {getSourceTitle(match, titlePreference)}
+                    </Link>
+                    <span className="rc-num shrink-0 text-sm text-[color:var(--nezu)]">
+                      {(match.similarity * 100).toFixed(0)}% alike
+                    </span>
+                  </div>
+                ))}
+                <p className="rc-why mt-2">
+                  How closely this title describes itself the way those do
+                </p>
+              </>
+            ) : (
+              <p className="rc-why">No description on record to compare</p>
             )}
           </div>
         ),
       },
       {
         key: 'similar_games',
-        name: 'Similar Games',
-        Icon: BookOpen,
-        iconColorClass: 'text-green-500',
-        barColorClass: 'bg-green-500',
-        textColorClass: 'text-green-600 dark:text-green-400',
-        percent: similarGamesPercent,
+        hasEvidence: details.similar_games.length > 0 || details.contributing_vns.length > 0,
         renderContent: () => (
-          <div className="pl-7 space-y-2">
-            {details.similar_games && details.similar_games.length > 0 ? (
+          <div className="space-y-2">
+            {details.similar_games.length > 0 ? (
               <>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  Similar to VNs you&apos;ve rated highly:
-                </p>
+                <p className="rc-why mb-2">Similar to VNs you&apos;ve rated highly:</p>
                 {details.similar_games.slice(0, 5).map((match, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                  <div key={i} className="flex items-center justify-between gap-3">
                     <Link
                       href={`/vn/${match.source_vn_id}/`}
-                      className="text-sm text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 truncate"
+                      className="rc-name min-w-0 truncate"
                       onClick={onClose}
                     >
                       {getSourceTitle(match, titlePreference)}
                     </Link>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400 ml-2 shrink-0">
+                    <span className="rc-num shrink-0 text-sm text-[color:var(--nezu)]">
                       {(match.similarity * 100).toFixed(0)}% similar
                     </span>
                   </div>
                 ))}
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                No similar games data available
+              <p className="rc-why">No similar titles on record</p>
+            )}
+            {details.contributing_vns.length > 0 && (
+              <p className="rc-why mt-2">
+                Because you liked{' '}
+                {details.contributing_vns.map((vn, i) => (
+                  <span key={vn.id}>
+                    {i > 0 && ', '}
+                    <Link href={`/vn/${vn.id.replace('v', '')}`} className="rc-name" onClick={onClose}>
+                      {getDisplayTitle(
+                        { title: vn.title, title_jp: vn.title_jp ?? undefined, title_romaji: vn.title_romaji ?? undefined },
+                        titlePreference,
+                      )}
+                    </Link>{' '}
+                    <span className="rc-num">({Math.round(vn.similarity)}%)</span>
+                  </span>
+                ))}
               </p>
             )}
           </div>
@@ -480,59 +403,48 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
       },
       {
         key: 'users_also_read',
-        name: 'Users Also Read',
-        Icon: Users,
-        iconColorClass: 'text-teal-500',
-        barColorClass: 'bg-teal-500',
-        textColorClass: 'text-teal-600 dark:text-teal-400',
-        percent: usersAlsoReadPercent,
+        hasEvidence: details.users_also_read.length > 0,
         renderContent: () => (
-          <div className="pl-7 space-y-2">
-            {details.users_also_read && details.users_also_read.length > 0 ? (
+          <div className="space-y-2">
+            {details.users_also_read.length > 0 ? (
               <>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  Popular among fans of your favorites:
-                </p>
+                <p className="rc-why mb-2">Popular among fans of your favorites:</p>
                 {details.users_also_read.slice(0, 5).map((match, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                  <div key={i} className="flex items-center justify-between gap-3">
                     <Link
                       href={`/vn/${match.source_vn_id}/`}
-                      className="text-sm text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 truncate"
+                      className="rc-name min-w-0 truncate"
                       onClick={onClose}
                     >
                       {getSourceTitle(match, titlePreference)}
                     </Link>
-                    <span className="text-sm text-teal-600 dark:text-teal-400 ml-2 shrink-0">
-                      <span className="font-medium">{match.user_count}</span> in common
+                    <span className="rc-num shrink-0 text-sm text-[color:var(--nezu)]">
+                      <span className="font-semibold text-[color:var(--ink)]">{match.user_count}</span> in common
                     </span>
                   </div>
                 ))}
               </>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                No co-reading data available
-              </p>
+              <p className="rc-why">No co-reading data available</p>
             )}
           </div>
         ),
       },
       {
         key: 'quality',
-        name: 'Quality',
-        Icon: Star,
-        iconColorClass: 'text-yellow-500',
-        barColorClass: 'bg-yellow-500',
-        textColorClass: 'text-yellow-600 dark:text-yellow-400',
-        percent: qualityPercent,
+        hasEvidence: false,
         renderContent: () => {
           // Convert quality score (0-1) back to rating (5-10)
-          const estimatedRating = ((scores.quality || 0) * 5) + 5;
+          const estimatedRating = ((scores.quality ?? 0) * 5) + 5;
           return (
-            <div className="pl-7 space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Based on VNDB average rating: <span className="font-medium text-yellow-600 dark:text-yellow-400">{estimatedRating.toFixed(2)}</span>
+            <div className="space-y-2">
+              <p className="text-sm text-[color:var(--nezu)]">
+                Based on VNDB average rating:{' '}
+                <span className="rc-num font-semibold text-[color:var(--ink)]">
+                  {estimatedRating.toFixed(2)}
+                </span>
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
+              <p className="rc-why">
                 Higher-rated VNs receive a quality bonus. Formula: (rating - 5) / 5
               </p>
             </div>
@@ -541,122 +453,136 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
       },
     ];
 
-    // Sort by percentage (highest first) - show all categories for debugging
-    return cats.sort((a, b) => b.percent - a.percent);
-  }, [details, titlePreference, tagPercent, similarGamesPercent, usersAlsoReadPercent, qualityPercent, developerPercent, staffPercent, seiyuuPercent, traitPercent, scores.quality]);
+    return cats
+      .filter((cat) => (scores[cat.key] ?? 0) > 0 || cat.hasEvidence)
+      .sort((a, b) => (scores[b.key] ?? 0) - (scores[a.key] ?? 0));
+  }, [details, titlePreference, scores, onClose]);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="rec-detail-modal-title">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60"
+    <div className="rc-scrim" role="dialog" aria-modal="true" aria-labelledby="rec-detail-modal-title">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="Close breakdown"
         onClick={onClose}
+        tabIndex={-1}
       />
 
       {/* Modal */}
-      <div ref={modalRef} tabIndex={-1} className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden outline-hidden">
+      <div ref={modalRef} tabIndex={-1} className="rc-modal outline-hidden">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 z-10">
-          <div className="flex items-start gap-4">
-            {/* Cover Image */}
-            <div className="relative w-16 h-20 shrink-0 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
-              {image_url ? (
-                <NSFWNextImage
-                  src={getProxiedImageUrl(image_url, { width: 128, vnId: vn_id }) ?? image_url}
-                  alt={title}
-                  imageSexual={image_sexual}
-                  fill
-                  className="object-cover object-top"
-                  sizes="64px"
-                  unoptimized // Proxied images already optimized as WebP
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <ImageOff className="w-6 h-6 text-gray-400" />
-                </div>
-              )}
-            </div>
-
-            {/* Title and rating */}
-            <div className="flex-1 min-w-0">
-              <h2 id="rec-detail-modal-title" className="text-lg font-bold text-gray-900 dark:text-white line-clamp-2">
-                {displayTitle}
-              </h2>
-              {rating && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  VNDB Rating: {rating.toFixed(2)}
-                </p>
-              )}
-            </div>
-
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+        <div className="flex items-start gap-4 px-6 py-4 border-b border-[color:var(--rule)]">
+          {/* Cover Image */}
+          <div className="rc-art w-16 h-20 shrink-0">
+            {image_url ? (
+              <NSFWNextImage
+                src={getProxiedImageUrl(image_url, { width: 128, vnId: vn_id }) ?? image_url}
+                alt={title}
+                imageSexual={image_sexual}
+                fill
+                className="object-cover object-top"
+                sizes="64px"
+                unoptimized // Proxied images already optimized as WebP
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-[color:var(--text-faint)]">
+                <ImageOff aria-hidden className="w-6 h-6" />
+              </div>
+            )}
           </div>
+
+          {/* Title and rating */}
+          <div className="flex-1 min-w-0">
+            <h2 id="rec-detail-modal-title" className="rc-name rc-name--lg font-bold line-clamp-2">
+              {displayTitle}
+            </h2>
+            {rating && (
+              <p className="rc-why mt-1">
+                VNDB rating <span className="rc-num">{rating.toFixed(2)}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rc-btn rc-btn--icon shrink-0"
+            aria-label="Close breakdown"
+          >
+            <X aria-hidden className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(85vh-120px)] p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Loading State */}
           {isLoading || !details ? (
-            loadingTimedOut ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-red-500 dark:text-red-400 text-sm mb-4">
-                  Failed to load details. The request timed out.
-                </p>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                >
+            failed || loadingTimedOut ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-12">
+                <p className="rc-caution text-sm">Could not load the breakdown. Close and try again.</p>
+                <button type="button" onClick={onClose} className="rc-btn">
                   Close
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-600 mb-4" />
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Loading details...</p>
+              <div className="flex flex-col items-center justify-center gap-4 py-12">
+                <span aria-hidden className="rc-spin w-6 h-6" />
+                <p className="rc-why">Loading details...</p>
               </div>
             )
           ) : (
             <>
-          {/* Overall Match Score */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Overall Match Score
+            <h3 className="rc-label mb-2">
+              {list.name === 'combined' ? 'Agreement across lists' : `${SIGNAL_LABELS[list.signal!]} signal`}
             </h3>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-linear-to-r from-violet-500 to-violet-600 rounded-full transition-all"
-                  style={{ width: `${Math.min(overallPercent, 100)}%` }}
-                />
+            {list.signal && !signalRanks ? (
+              <p className="rc-why rc-caution">{UNSEPARATED_SIGNAL_NOTE}</p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="rc-meter flex-1 h-4">
+                  <div className="rc-meter-fill" style={{ width: `${Math.min(recommendation.normalized_score, 100)}%` }} />
+                </div>
+                <span className="rc-num w-14 text-right text-lg font-bold text-[color:var(--ink)]">
+                  {recommendation.normalized_score}%
+                </span>
               </div>
-              <span className="text-lg font-bold text-violet-600 dark:text-violet-400 w-14 text-right">
-                {overallPercent}%
-              </span>
-            </div>
+            )}
+            {list.name === 'combined' && recommendation.signals_ranked !== undefined && (
+              <p className="rc-why mt-1">
+                In {recommendation.signals_ranked} of {totalLists} lists. 100% would be first in every one.
+              </p>
+            )}
+            {recommendation.predicted_rating && (
+              <p className="rc-why mt-1">
+                Predicted {recommendation.predicted_rating.mean.toFixed(1)}
+                {recommendation.predicted_rating.low !== null && recommendation.predicted_rating.high !== null &&
+                  ` (${recommendation.predicted_rating.low.toFixed(1)} to ${recommendation.predicted_rating.high.toFixed(1)})`}
+              </p>
+            )}
           </div>
 
-          {/* Score Breakdown - Dynamic sorted categories */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-              Score Breakdown
-            </h3>
+          <div className="border-t border-[color:var(--rule)] pt-6">
+            <h3 className="rc-label mb-4">Where each list placed it</h3>
+
+            {recommendation.ranked_in && Object.keys(recommendation.ranked_in).length > 0 && (
+              <ul className="rc-why grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mb-4">
+                {Object.entries(recommendation.ranked_in)
+                  .sort((a, b) => a[1] - b[1])
+                  .map(([signal, position]) => (
+                    <li key={signal} className="flex justify-between gap-2">
+                      <span>{SIGNAL_LABELS[signal as SignalKey] ?? signal}</span>
+                      <span className="rc-num">#{Math.round(position)}</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
 
             {categories.map((cat) => (
               <div key={cat.key} className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <cat.Icon className={`w-5 h-5 ${cat.iconColorClass}`} />
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {cat.name}
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
-                    {cat.percent}% of score
-                  </span>
+                <div className="flex items-baseline gap-2 mb-3">
+                  <span className="font-medium text-[color:var(--ink)]">{SIGNAL_LABELS[cat.key]}</span>
                 </div>
                 {cat.renderContent()}
               </div>
@@ -672,9 +598,9 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
               href={`https://vndb.org/${vn_id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-medium transition-colors"
+              className="rc-btn rc-btn--go rc-btn--wide"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink aria-hidden className="w-4 h-4" />
               View on VNDB
             </a>
           </div>
@@ -684,3 +610,4 @@ export function RecommendationDetailModal({ recommendation, onClose, isLoading =
     document.body
   );
 }
+

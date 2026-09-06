@@ -6,7 +6,7 @@ export type TranslationDict = Record<string, string>;
  * Simple string interpolation for translation strings.
  * Replaces {key} placeholders with values from the vars object.
  *
- * Usage: t(dict, 'import.loading', { user: 'zakamutt' })
+ * Usage: t(dict, 'import.loadingBanner', { user: 'example-user' })
  */
 export function t(
   dict: TranslationDict,

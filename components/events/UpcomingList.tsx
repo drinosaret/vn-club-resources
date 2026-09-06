@@ -6,12 +6,7 @@ import { eventMeta, formatTime } from './event-meta';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
 import { getCoverSrc } from '@/lib/vndb-image-cache';
-
-// /vn/123/ -> "v123", for per-VN NSFW reveal persistence.
-function vnIdFromUrl(url: string | null): string | undefined {
-  const m = url?.match(/^\/vn\/(\d+)\/?$/);
-  return m ? `v${m[1]}` : undefined;
-}
+import { vnIdFromUrl } from '@/lib/club-history';
 
 function dateLabel(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -34,7 +29,7 @@ export default function UpcomingList({ events }: { events: EventItem[] }) {
   const { preference } = useTitlePreference();
   if (events.length === 0) {
     return (
-      <p className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+      <p className="panel p-6 text-center text-sm text-[color:var(--nezu)]">
         No upcoming events yet. Check back soon.
       </p>
     );
@@ -46,42 +41,37 @@ export default function UpcomingList({ events }: { events: EventItem[] }) {
         const meta = eventMeta(e.event_type);
         const cover = e.cover_url || e.image_url;
         const row = (
-          <div
-            className={`flex items-center gap-3 rounded-xl border border-gray-200 border-l-4 ${meta.accent} bg-white p-3 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800/60`}
-          >
-            {cover ? (
-              <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-800">
+          <div className="rel-row">
+            <span className="rel-art">
+              {cover && (
                 <NSFWImage
                   src={getCoverSrc(cover, { width: 128 }) || cover}
                   alt=""
                   imageSexual={e.image_sexual}
-                  vnId={vnIdFromUrl(e.url)}
+                  vnId={vnIdFromUrl(e.url) ?? undefined}
                   className="h-full w-full object-cover"
                   compact
                 />
-              </div>
-            ) : (
-              <div className="flex h-14 w-10 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-800">
-                <meta.Icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.chip}`}>
-                  {meta.label}
-                </span>
-              </div>
-              <p className="mt-0.5 truncate font-medium text-gray-900 dark:text-gray-100">
+              )}
+              {!cover && (
+                // A club session has no cover of its own until a title is picked, and an empty
+                // frame reads as a failed image rather than as a session without one.
+                <meta.Icon className="rel-art-icon" aria-hidden />
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={meta.chip}>{meta.label}</span>
+              <span className="rel-title mt-1 truncate">
                 {getDisplayTitle(
                   { title: e.title, title_jp: e.title_jp ?? undefined, title_romaji: e.title_romaji ?? undefined },
                   preference,
                 )}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              </span>
+              <span className="rel-meta font-mono">
                 {whenLabel(e)}
                 {e.location ? ` · ${e.location}` : ''}
-              </p>
-            </div>
+              </span>
+            </span>
           </div>
         );
         return (

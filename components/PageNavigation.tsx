@@ -32,7 +32,7 @@ export function PageNavigation({ currentSlug }: PageNavigationProps) {
   return (
     <nav className="sticky top-24 z-10 max-h-[calc(100vh-8rem)] overflow-y-auto sidebar-scroll">
       <div className="mb-3">
-        <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">VN Club Resources</h2>
+        <h2 className="sw-card-title">VN Club Resources</h2>
       </div>
 
       <div className="space-y-4">
@@ -46,8 +46,8 @@ export function PageNavigation({ currentSlug }: PageNavigationProps) {
             <div key={section.title}>
               {!isHomeSection && (
                 <h3
-                  className={`flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5 px-1.5 ${
-                    isCollapsible ? 'cursor-pointer hover:text-gray-700 dark:hover:text-gray-300' : ''
+                  className={`sw-plate flex items-center gap-1.5 mb-1.5 px-1.5 ${
+                    isCollapsible ? 'cursor-pointer' : ''
                   }`}
                   onClick={() => {
                     if (isCollapsible) {
@@ -77,11 +77,7 @@ export function PageNavigation({ currentSlug }: PageNavigationProps) {
                       <li key={item.slug}>
                         <Link
                           href={item.slug === '' ? '/' : `/${item.slug}`}
-                          className={`flex items-center gap-1.5 py-1 px-1.5 rounded text-sm transition-colors ${
-                            isActive
-                              ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium'
-                              : 'text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
-                          }`}
+                          className={`sw-nav-link ${isActive ? 'sw-nav-link--on' : ''}`}
                         >
                           {ItemIcon && <ItemIcon className="w-3.5 h-3.5" />}
                           {item.title}
@@ -93,7 +89,7 @@ export function PageNavigation({ currentSlug }: PageNavigationProps) {
               )}
 
               {!isExpanded && isCollapsible && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 px-1.5">
+                <p className="text-xs text-[color:var(--text-faint)] px-1.5">
                   {section.items.length} {section.items.length === 1 ? 'page' : 'pages'}
                 </p>
               )}

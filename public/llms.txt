@@ -1,13 +1,14 @@
 # VN Club
 
-> Learn Japanese with visual novels. Comprehensive guides, tools, VNDB browser, and community resources for immersion-based Japanese learning through VNs.
+> The site for people serious about Japanese visual novels: a full VNDB-derived catalogue, statistics and rankings, a reading club, and free guides for reading them in the original Japanese.
 
-VN Club is a resource site for learning Japanese through visual novels (VNs). It provides step-by-step guides for text hooking, popup dictionaries, Anki mining, and other tools needed to read Japanese VNs. The site also features a VNDB browser, personalized recommendations, quizzes, and aggregated VN news.
+VN Club is a site about Japanese visual novels, for readers who read them in Japanese. It provides step-by-step guides for text hooking, popup dictionaries, Anki mining, and other tools needed to read Japanese VNs. The site also features a VNDB browser, personalized recommendations, a kana quiz, and aggregated VN news.
 
 The philosophy is immersion-first: read the original Japanese text from the start, using tools to assist comprehension rather than relying on translations.
 
 ## Guides
 
+- [All Guides](https://vnclub.org/guides/): Index of every guide on the site, grouped by what it sets up: getting the text out of the game, dictionaries and vocabulary, running visual novels anywhere, picture quality, and finding and tracking.
 - [Learning Japanese with Visual Novels](https://vnclub.org/guide/): Complete beginner's guide covering kana, Textractor, JL dictionary, Anki mining, and immersion strategies for reading VNs in Japanese.
 - [FAQ](https://vnclub.org/faq/): Frequently asked questions about learning Japanese with visual novels, covering costs, progress, difficulty, dictionaries, and reading philosophy.
 - [Textractor Setup Guide](https://vnclub.org/textractor-guide/): Text hooking setup for extracting Japanese text from visual novels with WebSocket extension and regex patterns.
@@ -36,10 +37,13 @@ The philosophy is immersion-first: read the original Japanese text from the star
 
 - [Browse VNs](https://vnclub.org/browse/): Search and filter VNDB's visual novel database with difficulty ratings and detailed info.
 - [VN Recommendations](https://vnclub.org/recommendations/): Personalized visual novel recommendations based on your preferences and reading level.
-- [Stats & Rankings](https://vnclub.org/stats/): Visual novel statistics — staff, producers, tags, traits, seiyuu, and rankings.
+- [Upcoming Releases](https://vnclub.org/news/upcoming/): Japanese visual novels with a release date still ahead, grouped by month.
+- [Stats & Rankings](https://vnclub.org/stats/): Visual novel statistics: staff, producers, tags, traits, seiyuu, and rankings.
 - [VN News](https://vnclub.org/news/all/): Aggregated Japanese visual novel news from VNDB, Twitter, and RSS feeds.
-- [Japanese Quiz](https://vnclub.org/quiz/): Test your Japanese knowledge with visual novel-themed quizzes.
+- [Kana Quiz](https://vnclub.org/quiz/): Hiragana and katakana recognition practice with a running streak.
+- [Word of the Day](https://vnclub.org/word-of-the-day/): A Japanese word a day, with readings, pitch accent, conjugations, and example sentences taken from visual novels.
 
 ## Community
 
 - [Join Discord](https://vnclub.org/join/): VN Club Resurrection community for Japanese learners reading visual novels.
+- [Past Club Picks](https://vnclub.org/events/history/): Everything the club has picked together, newest first: the monthly and seasonal visual novels, the weekly read-aloud and Movie Night.

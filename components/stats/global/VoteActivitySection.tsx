@@ -91,9 +91,9 @@ export function VoteActivitySection() {
   if (loading) {
     return (
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
-        <div className="image-placeholder h-56 rounded-xl lg:col-span-2" />
-        <div className="image-placeholder h-52 rounded-xl" />
-        <div className="image-placeholder h-52 rounded-xl" />
+        <div className="image-placeholder h-56 rounded-xs lg:col-span-2" />
+        <div className="image-placeholder h-52 rounded-xs" />
+        <div className="image-placeholder h-52 rounded-xs" />
       </div>
     );
   }
@@ -104,7 +104,7 @@ export function VoteActivitySection() {
   // and an empty payload when the job has not run, and those want different answers.
   if (activity === null) {
     return (
-      <p className="text-sm italic text-gray-500 dark:text-gray-400">
+      <p className="st-card-sub italic">
         These could not be loaded. The stats service did not answer, which is usually brief.
       </p>
     );
@@ -112,7 +112,7 @@ export function VoteActivitySection() {
 
   if (!activity.by_year.length) {
     return (
-      <p className="text-sm italic text-gray-500 dark:text-gray-400">
+      <p className="st-card-sub italic">
         Not available until the nightly rebuild has run.
       </p>
     );
@@ -135,7 +135,7 @@ export function VoteActivitySection() {
           <select
             value={mode}
             onChange={(event) => setMode(event.target.value as VoteMode)}
-            className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            className="rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface)] px-2 py-1 text-xs text-[color:var(--nezu)]"
             aria-label="Vote chart mode"
           >
             {(Object.keys(VOTE_MODES) as VoteMode[]).map((key) => (
@@ -146,7 +146,7 @@ export function VoteActivitySection() {
           </select>
         }
         footer={
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-[color:var(--text-faint)]">
             {/* The running total stops one year short of the stated total, so the two figures
                 are given separately rather than leaving the difference to be noticed. */}
             {mode === 'cumulative' && completeYears.length ? (
@@ -170,7 +170,7 @@ export function VoteActivitySection() {
         }
         empty={completeYears.length === 0}
       >
-        <LineChart points={completeYears} color="#4f46e5" valueSuffix="votes" />
+        <LineChart points={completeYears} color="var(--kohaku)" valueSuffix="votes" />
       </ChartFrame>
 
       <ChartFrame
@@ -182,7 +182,7 @@ export function VoteActivitySection() {
           data={monthBars}
           formatValue={percent}
           highlightMax
-          color="#06b6d4"
+          color="var(--ai)"
           // The shares add up to a whole year, so one twelfth is exactly the average
           // month. Naming it that rather than describing the arithmetic: a reader should be
           // able to see which months are busier without working out what the line is.
@@ -199,7 +199,7 @@ export function VoteActivitySection() {
           data={weekdayBars}
           formatValue={percent}
           highlightMax
-          color="#f59e0b"
+          color="var(--kohaku)"
           baseline={{ value: 1 / 7, label: 'average day' }}
         />
       </ChartFrame>

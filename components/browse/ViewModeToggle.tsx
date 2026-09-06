@@ -14,9 +14,9 @@ interface ViewModeToggleProps {
   onViewChange?: (view: BrowseView) => void;
 }
 
-const BUTTON_BASE = 'p-2 rounded transition-colors';
-const SELECTED = 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs';
-const UNSELECTED = 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300';
+const BUTTON_BASE = 'tab';
+const SELECTED = 'tab--on';
+const UNSELECTED = '';
 
 export function ViewModeToggle({ size, onChange, view = 'grid', onViewChange }: ViewModeToggleProps) {
   // The grid sizes only mean anything while the grid is showing, so selecting one also
@@ -36,10 +36,10 @@ export function ViewModeToggle({ size, onChange, view = 'grid', onViewChange }: 
   );
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-      {gridButton('small', 'Small grid (7 per row)', Grid3x3)}
+    <div className="tabs">
+      {gridButton('small', 'Small grid (6 per row)', Grid3x3)}
       {gridButton('medium', 'Medium grid (5 per row)', LayoutGrid)}
-      {gridButton('large', 'Large grid (3 per row)', Square)}
+      {gridButton('large', 'Large grid (4 per row)', Square)}
       {onViewChange && (
         <button
           onClick={() => onViewChange('ranked')}
@@ -53,14 +53,6 @@ export function ViewModeToggle({ size, onChange, view = 'grid', onViewChange }: 
     </div>
   );
 }
-
-// Grid CSS classes for each size
-// Column counts are chosen to work well with ITEMS_PER_PAGE values for complete rows
-export const gridSizeClasses: Record<GridSize, string> = {
-  small: 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6',
-  medium: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5',
-  large: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4',
-};
 
 // Item width classes for flexbox layout (centers last row)
 // Formula: for N cols with gap G, item_w = (100/N)% - ((N-1)*G/N)px

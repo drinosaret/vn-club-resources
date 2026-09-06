@@ -1,7 +1,5 @@
 'use client';
 
-import { Clock } from 'lucide-react';
-
 export type LengthFilterValue = 'any' | 'very_short' | 'short' | 'medium' | 'long' | 'very_long';
 
 const LENGTH_OPTIONS: { value: LengthFilterValue; label: string }[] = [
@@ -22,11 +20,12 @@ interface LengthFilterProps {
 export function LengthFilter({ value, onChange, className = '' }: LengthFilterProps) {
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
-      <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+      <span className="fig-label" id="length-filter-label">Length</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as LengthFilterValue)}
-        className="text-xs font-medium px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-0 focus:ring-2 focus:ring-primary-500 cursor-pointer"
+        aria-labelledby="length-filter-label"
+        className="st-select px-2 py-1.5 text-xs"
       >
         {LENGTH_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>

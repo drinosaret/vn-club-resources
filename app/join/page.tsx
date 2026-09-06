@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from '@/components/Link';
-import { CalendarDays } from 'lucide-react';
 import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumbJsonLd } from '@/lib/metadata-utils';
 
 export const metadata: Metadata = generatePageMetadata({
@@ -48,9 +47,11 @@ const features = [
   'Custom immersion tracking bot, leaderboards, and monthly events',
 ];
 
+// The banner artwork is an image of text, so each alt repeats the wording the image shows.
+// The same string is the alt attribute of the embed snippet other sites paste.
 const banners = [
-  { src: '/assets/vnclub-banner-200x40.png', alt: 'VN Club - Learn Japanese with VNs' },
-  { src: '/assets/vnclub-resurrection-banner-200x40.png', alt: 'VN Club Resurrection - Learn Japanese with VNs' },
+  { src: '/assets/vnclub-banner-200x40.png', alt: 'VN Club: Learn Japanese with VNs' },
+  { src: '/assets/vnclub-resurrection-banner-200x40.png', alt: 'VN Club Resurrection' },
 ];
 
 function bannerSnippet(banner: { src: string; alt: string }) {
@@ -77,32 +78,32 @@ export default function JoinPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(communityJsonLd) }}
       />
-      <div className="w-full min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-72px)] flex items-center justify-center py-12 md:py-16">
-        <div className="max-w-md mx-auto px-4 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full overflow-hidden mb-5">
+      <div className="flex w-full min-h-[calc(100vh-4rem)] items-center justify-center py-12 md:min-h-[calc(100vh-72px)] md:py-16">
+        <div className="mx-auto max-w-md px-4 text-center">
+          <div className="mb-5 inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-xs border border-[color:var(--rule)]">
             <Image
               src="/assets/servericon.webp"
               alt="VN Club Resurrection"
               width={80}
               height={80}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
               unoptimized
             />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
+          <h1 className="sec-title">
             Visual Novel Discord Server
           </h1>
 
-          <p className="text-base text-gray-500 dark:text-gray-400 font-medium mb-3">
+          <p className="nameplate nameplate--plain mt-3 mb-3">
             VN Club Resurrection
           </p>
 
-          <p className="text-gray-600 dark:text-gray-400 mb-2">
+          <p className="sec-sub">
             A community for reading visual novels in Japanese.
           </p>
 
-          <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
+          <p className="op-label mt-3">
             1,500+ members reading together
           </p>
 
@@ -110,33 +111,30 @@ export default function JoinPage() {
             href="https://discord.gg/Ze7dYKVTHf"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+            className="toy-btn toy-btn--go mt-6"
           >
-            <DiscordIcon className="w-5 h-5" />
+            <DiscordIcon className="h-4 w-4" />
             Join Server
           </a>
 
-          <div className="mt-4">
-            <Link
-              href="/events"
-              className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
-            >
-              <CalendarDays className="w-4 h-4" />
+          <div className="mt-4 flex justify-center">
+            <Link href="/events/" className="sec-more">
               See upcoming events &amp; group reads
+              <span aria-hidden>&rarr;</span>
             </Link>
           </div>
 
-          <ul className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 text-left text-sm text-gray-600 dark:text-gray-400 space-y-2">
+          <ul className="mt-8 space-y-2 border-t border-[color:var(--rule)] pt-8 text-left text-sm text-[color:var(--nezu)]">
             {features.map((feature) => (
               <li key={feature} className="flex items-start gap-2">
-                <span className="text-gray-400 dark:text-gray-500 mt-0.5 shrink-0">·</span>
+                <span className="mt-0.5 shrink-0 text-[color:var(--text-faint)]">·</span>
                 {feature}
               </li>
             ))}
           </ul>
 
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Partner servers</p>
+          <div className="mt-8 border-t border-[color:var(--rule)] pt-6">
+            <p className="op-label mb-3">Partner servers</p>
             <div className="flex items-center justify-center gap-4">
               {partners.map((partner) => (
                 <a
@@ -144,14 +142,14 @@ export default function JoinPage() {
                   href={partner.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
+                  className="op-out"
                 >
                   <Image
                     src={partner.icon}
                     alt={partner.name}
                     width={24}
                     height={24}
-                    className="w-6 h-6 rounded-md shrink-0"
+                    className="h-6 w-6 shrink-0 rounded-xs"
                     unoptimized
                   />
                   {partner.name}
@@ -160,8 +158,8 @@ export default function JoinPage() {
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          <div className="mt-8 border-t border-[color:var(--rule)] pt-6">
+            <p className="mb-3 text-xs text-[color:var(--nezu)]">
               Link to us: add one of these banners to your site
             </p>
             <div className="space-y-5">
@@ -175,7 +173,7 @@ export default function JoinPage() {
                     className="mx-auto mb-3"
                     unoptimized
                   />
-                  <code className="block text-left text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-md px-3 py-2 break-all select-all">
+                  <code className="block select-all rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)] px-3 py-2 text-left font-mono text-[0.6875rem] leading-relaxed break-all text-[color:var(--nezu)]">
                     {bannerSnippet(banner)}
                   </code>
                 </div>

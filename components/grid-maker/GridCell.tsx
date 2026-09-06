@@ -10,10 +10,12 @@ import { NSFW_THRESHOLD, useNSFWRevealContext } from '@/lib/nsfw-reveal';
 import type { GridItem } from '@/hooks/useGridMakerState';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { gridMakerStrings } from '@/lib/i18n/translations/grid-maker';
+import { t } from '@/lib/i18n/types';
 
 interface GridCellProps {
   id: string;
   index: number;
+  gridSize: number;
   item: GridItem | null;
   cropSquare: boolean;
   showTitles: boolean;
@@ -85,7 +87,7 @@ function generateCropPreview(
 }
 
 export const GridCell = memo(function GridCell({
-  id, index, item, cropSquare, showTitles, showScores, titleMaxH, isDropTarget, isTargeted, nsfwRevealed, onCellClick, onRemove, onCropEdit, cropPreviewMap,
+  id, index, gridSize, item, cropSquare, showTitles, showScores, titleMaxH, isDropTarget, isTargeted, nsfwRevealed, onCellClick, onRemove, onCropEdit, cropPreviewMap,
 }: GridCellProps) {
   const { preference } = useTitlePreference();
   const locale = useLocale();
@@ -170,7 +172,7 @@ export const GridCell = memo(function GridCell({
   // Must be declared before the early return to satisfy Rules of Hooks
   // When crop data exists but canvas preview isn't ready yet, apply crop via CSS
   // so the uncropped original is never visible.
-  // Use object-position to center on the crop region — not pixel-perfect but eliminates flash.
+  // Use object-position to center on the crop region, not pixel-perfect but eliminates flash.
   const hasPendingCrop = !!item?.cropData && !previewUrl;
   const cssCropImgStyle = useMemo<React.CSSProperties | undefined>(() => {
     if (!hasPendingCrop || !item?.cropData) return undefined;
@@ -188,12 +190,21 @@ export const GridCell = memo(function GridCell({
   if (displaySrc !== prevDisplaySrc.current) {
     prevDisplaySrc.current = displaySrc;
     // Only reset when going from an image to no image.
-    // When swapping cells (src→src), keep imageLoaded true — the browser has
+    // When swapping cells (src→src), keep imageLoaded true: the browser has
     // the image cached and will display it immediately. Resetting causes a
     // visible flash in Firefox where the cache probe fails for proxy URLs.
     if (!displaySrc && imageLoaded) setImageLoaded(false);
   }
   const handleImageLoad = useCallback(() => setImageLoaded(true), []);
+
+  // An empty cell is the board's main action, so it answers the keys a button answers.
+  // Space is prevented to stop the page scrolling under the board.
+  const handleEmptyKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onCellClick();
+    }
+  }, [onCellClick]);
 
   // Memoize title resolution (must be above early return for Rules of Hooks)
   const displayTitle = useMemo(() => {
@@ -205,15 +216,26 @@ export const GridCell = memo(function GridCell({
   }, [item, preference]);
 
   if (!item) {
+    // The sortable attributes are not spread here: an empty cell is never draggable, and they
+    // would announce it as a disabled sortable rather than as the button it is. The droppable
+    // ref stays, so a drag can still land on it.
+    const emptyLabel = t(s, 'cell.empty', {
+      n: index + 1,
+      row: Math.floor(index / gridSize) + 1,
+      col: (index % gridSize) + 1,
+    });
     return (
       <div
         ref={setNodeRef}
         style={style}
-        className={`${cropSquare ? 'aspect-square' : 'aspect-[2/3]'} bg-gray-100 dark:bg-gray-800 border-2 border-dashed ${isTargeted ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : isDropTarget ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-300 dark:border-gray-600'} rounded-sm flex items-center justify-center cursor-pointer hover:border-purple-400 dark:hover:border-purple-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group/empty`}
+        className={`toy-slot ${cropSquare ? 'aspect-square' : 'aspect-[2/3]'} cursor-pointer ${isTargeted || isDropTarget ? 'toy-slot--on' : ''}`}
+        role="button"
+        tabIndex={0}
+        aria-label={emptyLabel}
         onClick={onCellClick}
-        {...attributes}
+        onKeyDown={handleEmptyKeyDown}
       >
-        <Plus className={`w-6 h-6 transition-colors ${isTargeted ? 'text-purple-500' : 'text-gray-400 dark:text-gray-500 group-hover/empty:text-purple-500'}`} />
+        <Plus className="w-6 h-6" aria-hidden="true" />
       </div>
     );
   }
@@ -224,7 +246,7 @@ export const GridCell = memo(function GridCell({
       style={{ ...style, touchAction: 'manipulation' }}
       {...attributes}
       {...listeners}
-      className={`${cropSquare ? 'aspect-square' : 'aspect-[2/3]'} rounded-sm overflow-hidden cursor-grab active:cursor-grabbing touch-manipulation select-none group/cell bg-gray-200 dark:bg-gray-700 relative ${isDropTarget ? 'ring-2 ring-purple-500' : ''}`}
+      className={`toy-tile ${cropSquare ? 'aspect-square' : 'aspect-[2/3]'} cursor-grab active:cursor-grabbing touch-manipulation select-none group/cell ${isDropTarget ? 'outline-2 outline-offset-[-2px] outline-[color:var(--kohaku)]' : ''}`}
       title={displayTitle}
     >
       {displaySrc ? (
@@ -239,8 +261,8 @@ export const GridCell = memo(function GridCell({
                 loading="lazy"
                 decoding="async"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover/nsfw:bg-black/30 transition-colors pointer-events-none">
-                <div className="flex flex-col items-center gap-1 text-white text-xs sm:text-[10px] font-medium drop-shadow-lg text-center px-2">
+              <div className="toy-veil">
+                <div className="flex flex-col items-center gap-1 px-2 text-center text-xs font-medium sm:text-[10px]">
                   <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
                   <span className="sm:hidden">Tap to reveal</span>
                   <span className="hidden sm:inline">Click to reveal</span>
@@ -261,7 +283,7 @@ export const GridCell = memo(function GridCell({
           {!isNsfw && !imageLoaded && <div className="absolute inset-0 image-placeholder" />}
         </>
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500 dark:text-gray-400 text-center p-1 leading-tight">
+        <div className="w-full h-full flex items-center justify-center text-[10px] text-[color:var(--nezu)] text-center p-1 leading-tight">
           {displayTitle}
         </div>
       )}
@@ -270,9 +292,9 @@ export const GridCell = memo(function GridCell({
       {!isDragging && showTitles && displayTitle && displaySrc && (() => {
         const maxLines = Math.max(1, Math.floor(titleMaxH / (cropSquare ? 14 : 10)));
         return (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 pointer-events-none">
+          <div className="toy-cap">
             <p
-              className="text-[10px] sm:text-xs font-bold text-white text-center leading-tight"
+              className="text-[10px] sm:text-xs"
               style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: maxLines, overflow: 'hidden' }}
             >
               {displayTitle}
@@ -283,7 +305,7 @@ export const GridCell = memo(function GridCell({
 
       {/* Score badge */}
       {!isDragging && showScores && item.vote && (
-        <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full pointer-events-none min-w-[24px] text-center z-10">
+        <div className="toy-mark top-1 left-1 text-[10px] sm:text-xs px-1.5 py-0.5 min-w-[24px]">
           {item.vote}
         </div>
       )}
@@ -292,7 +314,7 @@ export const GridCell = memo(function GridCell({
       {!isDragging && <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onCropEdit(); }}
-        className="touch-action-btn absolute top-7 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity z-10 hover:bg-black/80"
+        className="toy-act touch-action-btn top-7 right-1 w-5 h-5 toy-act--reveal"
         title={s['cell.edit']}
         aria-label={s['cell.edit']}
       >
@@ -303,7 +325,7 @@ export const GridCell = memo(function GridCell({
       {!isDragging && <button
         onPointerDown={e => e.stopPropagation()}
         onClick={e => { e.stopPropagation(); onRemove(); }}
-        className="touch-action-btn absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity z-10 hover:bg-red-600"
+        className="toy-act toy-act--drop touch-action-btn top-1 right-1 w-5 h-5 toy-act--reveal"
         title={s['cell.remove']}
         aria-label={s['cell.remove']}
       >

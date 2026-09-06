@@ -2,7 +2,7 @@
 
 import { useReducer, useCallback, useEffect, useRef, useState } from 'react';
 import Link from '@/components/Link';
-import { Dices, Users, User, RotateCcw, Trash2, Globe, Rows3, Grid3X3 } from 'lucide-react';
+import { Users, User, RotateCcw, Trash2, Rows3, Grid3X3 } from 'lucide-react';
 import { useTitlePreference } from '@/lib/title-preference';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { rouletteStrings } from '@/lib/i18n/translations/roulette';
@@ -60,7 +60,8 @@ type Action =
   | { type: 'RESET_ASSIGNMENTS' }
   | { type: 'CLEAR_ENTRIES' }
   | { type: 'TOGGLE_REMOVE_ON_PICK' }
-  | { type: 'TOGGLE_PLAYER_ORDER' };
+  | { type: 'TOGGLE_PLAYER_ORDER' }
+  | { type: 'RESTORE'; state: RouletteState };
 
 const MAX_ENTRIES = 15;
 const MAX_PLAYERS = 15;
@@ -68,6 +69,9 @@ const STORAGE_KEY = 'vn-roulette-state';
 
 function reducer(state: RouletteState, action: Action): RouletteState {
   switch (action.type) {
+    case 'RESTORE': {
+      return action.state;
+    }
     case 'ADD_ENTRY': {
       if (state.entries.length >= MAX_ENTRIES) return state;
       if (state.entries.some(e => e.id === action.entry.id)) return state;
@@ -202,37 +206,45 @@ const initialState: RouletteState = {
 
 // ── Component ──
 
-function getInitialState(): RouletteState {
-  if (typeof window === 'undefined') return initialState;
+// Stored state is read after mount, never during render: the server has no access to
+// localStorage, so a saved wheel used as the initial state would not match the markup
+// the server sent.
+function readStoredState(): RouletteState | null {
+  if (typeof window === 'undefined') return null;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        ...initialState,
-        mode: parsed.mode || 'solo',
-        entries: parsed.entries || [],
-        players: parsed.players || [],
-        remainingPlayers: parsed.remainingPlayers || parsed.players || [],
-        assignments: parsed.assignments || [],
-        round: parsed.round || 0,
-        removeOnPick: parsed.removeOnPick || false,
-        playerOrder: parsed.playerOrder || 'random',
-      };
-    }
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    return {
+      ...initialState,
+      mode: parsed.mode || 'solo',
+      entries: parsed.entries || [],
+      players: parsed.players || [],
+      remainingPlayers: parsed.remainingPlayers || parsed.players || [],
+      assignments: parsed.assignments || [],
+      round: parsed.round || 0,
+      removeOnPick: parsed.removeOnPick || false,
+      playerOrder: parsed.playerOrder || 'random',
+    };
   } catch { /* ignore */ }
-  return initialState;
+  return null;
 }
 
 export default function RoulettePageClient() {
-  const [state, dispatch] = useReducer(reducer, initialState, getInitialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const { preference, setPreference } = useTitlePreference();
   const locale = useLocale();
   const s = rouletteStrings[locale];
   const [isHydrated, setIsHydrated] = useState(false);
   const playerInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setIsHydrated(true); }, []);
+  // The restore and the flag land in one commit, so the persist effect below cannot
+  // overwrite the saved wheel with the empty one before it has been read.
+  useEffect(() => {
+    const stored = readStoredState();
+    if (stored) dispatch({ type: 'RESTORE', state: stored });
+    setIsHydrated(true);
+  }, []);
 
   // Persist to localStorage
   useEffect(() => {
@@ -326,69 +338,56 @@ export default function RoulettePageClient() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-900/30 mb-4">
-            <Dices className="w-8 h-8 text-violet-600 dark:text-violet-400" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {s['page.title']}
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-            {s['page.subtitle']}
-          </p>
+          <h1 className="sec-title">{s['page.title']}</h1>
+          <p className="sec-sub max-w-md mx-auto">{s['page.subtitle']}</p>
           <Link
             href={locale === 'en' ? '/ja/roulette/' : '/roulette/'}
-            className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="toy-btn mt-4"
             onClick={() => setPreference(locale === 'en' ? 'japanese' : 'romaji')}
           >
-            <Globe className="w-3.5 h-3.5" />
             {locale === 'en' ? '日本語' : 'English'}
           </Link>
 
-          {/* Mode toggle */}
-          <div className="flex items-center justify-center gap-1 mt-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit mx-auto">
+          {/* Mode toggle, on its own row. The language link above is inline, and a segmented
+              control placed beside it reads as a third segment of the same control. */}
+          <div className="mt-4 flex justify-center">
+          <div className="rc-seg">
             <button
               onClick={() => dispatch({ type: 'SET_MODE', mode: 'solo' })}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                state.mode === 'solo'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+              className={`rc-seg-item gap-1.5 ${state.mode === 'solo' ? 'rc-seg-item--on' : ''}`}
             >
               <User className="w-3.5 h-3.5" />
               {s['mode.solo']}
             </button>
             <button
               onClick={() => dispatch({ type: 'SET_MODE', mode: 'users' })}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                state.mode === 'users'
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+              className={`rc-seg-item gap-1.5 ${state.mode === 'users' ? 'rc-seg-item--on' : ''}`}
             >
               <Users className="w-3.5 h-3.5" />
               {s['mode.group']}
             </button>
           </div>
+          </div>
 
           <div className="flex flex-col items-center gap-1.5 mt-3">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
+            <label className="toy-check-row">
               <input
                 type="checkbox"
                 checked={state.removeOnPick}
                 onChange={() => dispatch({ type: 'TOGGLE_REMOVE_ON_PICK' })}
-                className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
+                className="bw-check"
               />
-              <span className="text-xs text-gray-500 dark:text-gray-400">{s['settings.removeOnPick']}</span>
+              <span>{s['settings.removeOnPick']}</span>
             </label>
             {state.mode === 'users' && (
-              <label className="flex items-center gap-2 cursor-pointer select-none">
+              <label className="toy-check-row">
                 <input
                   type="checkbox"
                   checked={state.playerOrder === 'sequential'}
                   onChange={() => dispatch({ type: 'TOGGLE_PLAYER_ORDER' })}
-                  className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
+                  className="bw-check"
                 />
-                <span className="text-xs text-gray-500 dark:text-gray-400">{s['settings.playerOrder']}</span>
+                <span>{s['settings.playerOrder']}</span>
               </label>
             )}
           </div>
@@ -400,7 +399,7 @@ export default function RoulettePageClient() {
           <div className="max-lg:w-full lg:w-56 shrink-0 space-y-3">
             {/* VN Search */}
             <div>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <h2 className="toy-label mb-2 block">
                 {s['sidebar.vnCount'].replace('{count}', String(state.entries.length)).replace('{max}', String(MAX_ENTRIES))}
               </h2>
               <VNSearchAdd
@@ -416,7 +415,7 @@ export default function RoulettePageClient() {
 
             {/* Entry list */}
             {state.entries.length > 0 && (
-              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 overflow-hidden">
+              <div className="toy-panel overflow-hidden">
                 <div className="max-h-64 overflow-y-auto">
                   {state.entries.map((entry, i) => (
                     <EntryRow
@@ -430,11 +429,11 @@ export default function RoulettePageClient() {
                   ))}
                 </div>
                 {state.entries.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-1.5">
+                  <div className="border-t border-[color:var(--rule)] p-1.5">
                     <button
                       onClick={() => dispatch({ type: 'CLEAR_ENTRIES' })}
                       disabled={state.spinState === 'spinning'}
-                      className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                      className="toy-cmd toy-cmd--drop"
                     >
                       {s['sidebar.clearAll']}
                     </button>
@@ -444,7 +443,7 @@ export default function RoulettePageClient() {
             )}
 
             {state.entries.length === 0 && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+              <p className="text-xs text-[color:var(--nezu)] text-center py-4">
                 {s['sidebar.emptyHint']}
               </p>
             )}
@@ -480,8 +479,8 @@ export default function RoulettePageClient() {
             {/* Current player indicator (users mode, during spin) */}
             {state.mode === 'users' && state.currentPlayer && state.spinState === 'spinning' && (
               <div className="mt-4 text-center animate-fade-in">
-                <span className="text-sm text-gray-500 dark:text-gray-400">{s['spin.spinningFor']} </span>
-                <span className="font-semibold text-violet-600 dark:text-violet-400">{state.currentPlayer}</span>
+                <span className="text-sm text-[color:var(--nezu)]">{s['spin.spinningFor']} </span>
+                <span className="font-mono text-sm font-medium text-[color:var(--kohaku-text)]">{state.currentPlayer}</span>
               </div>
             )}
 
@@ -490,7 +489,7 @@ export default function RoulettePageClient() {
               lastPairAutoAssign ? (
                 <button
                   onClick={handleAutoAssign}
-                  className="mt-6 px-8 py-3 text-lg font-semibold rounded-xl bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 transition-colors shadow-lg shadow-violet-600/20 hover:shadow-violet-600/30"
+                  className="toy-btn toy-btn--go toy-btn--wide mt-6"
                 >
                   {s['spin.assignLast']}
                 </button>
@@ -498,7 +497,7 @@ export default function RoulettePageClient() {
                 <button
                   onClick={handleSpin}
                   disabled={!canSpin}
-                  className="mt-6 px-8 py-3 text-lg font-semibold rounded-xl bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-violet-600/20 hover:shadow-violet-600/30"
+                  className="toy-btn toy-btn--go toy-btn--wide mt-6"
                 >
                   {state.spinState === 'spinning' ? s['spin.spinning'] : s['spin.button']}
                 </button>
@@ -508,10 +507,10 @@ export default function RoulettePageClient() {
             {/* All assigned message */}
             {allAssigned && state.spinState === 'idle' && (
               <div className="mt-6 text-center">
-                <p className="text-green-600 dark:text-green-400 font-medium mb-2">{s['result.allAssigned']}</p>
+                <p className="mb-2 text-sm font-medium text-[color:var(--ai)]">{s['result.allAssigned']}</p>
                 <button
                   onClick={() => dispatch({ type: 'RESET_ASSIGNMENTS' })}
-                  className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 dark:text-gray-400 dark:hover:text-violet-400 transition-colors"
+                  className="toy-btn"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   {s['result.resetAndGoAgain']}
@@ -523,7 +522,7 @@ export default function RoulettePageClient() {
           {/* Right sidebar: Player queue (users mode only) */}
           {state.mode === 'users' && (
             <div className="max-lg:w-full lg:w-52 shrink-0">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <h2 className="toy-label mb-2 block">
                 {s['players.title'].replace('{remaining}', String(state.remainingPlayers.length)).replace('{total}', String(state.players.length))}
               </h2>
 
@@ -535,12 +534,12 @@ export default function RoulettePageClient() {
                   placeholder={s['players.addPlaceholder']}
                   onKeyDown={handlePlayerKeyDown}
                   disabled={state.spinState === 'spinning' || state.players.length >= MAX_PLAYERS}
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 disabled:opacity-50"
+                  className="toy-field flex-1 min-w-0"
                 />
                 <button
                   onClick={handleAddPlayerClick}
                   disabled={state.spinState === 'spinning' || state.players.length >= MAX_PLAYERS}
-                  className="px-3 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  className="toy-btn toy-btn--go"
                 >
                   {s['players.addButton']}
                 </button>
@@ -548,7 +547,7 @@ export default function RoulettePageClient() {
 
               {/* Player list */}
               {state.players.length > 0 && (
-                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 overflow-hidden">
+                <div className="toy-panel overflow-hidden">
                   <div className="max-h-64 overflow-y-auto">
                     {state.players.map(player => {
                       const isRemaining = state.remainingPlayers.includes(player);
@@ -556,26 +555,16 @@ export default function RoulettePageClient() {
                       return (
                         <div
                           key={player}
-                          className={`flex items-center gap-2 px-3 py-2 text-sm border-b border-gray-100 dark:border-gray-700/50 last:border-0 ${
-                            isCurrent
-                              ? 'bg-violet-50 dark:bg-violet-900/20'
-                              : !isRemaining
-                                ? 'opacity-50'
-                                : ''
-                          }`}
+                          className={`toy-row ${isCurrent ? 'toy-row--now' : !isRemaining ? 'toy-row--spent' : ''}`}
                         >
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${
-                            isCurrent ? 'bg-violet-500' : isRemaining ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                          }`} />
-                          <span className={`flex-1 min-w-0 truncate ${
-                            !isRemaining ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'
-                          }`}>
+                          <div className={`toy-dot ${isCurrent ? 'toy-dot--now' : isRemaining ? 'toy-dot--on' : ''}`} />
+                          <span className={`flex-1 min-w-0 truncate ${!isRemaining ? 'line-through' : ''}`}>
                             {player}
                           </span>
                           <button
                             onClick={() => handleRemovePlayer(player)}
                             disabled={state.spinState === 'spinning'}
-                            className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
+                            className="toy-x"
                             aria-label={`Remove ${player}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -585,11 +574,11 @@ export default function RoulettePageClient() {
                     })}
                   </div>
                   {state.assignments.length > 0 && (
-                    <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-1.5">
+                    <div className="border-t border-[color:var(--rule)] p-1.5">
                       <button
                         onClick={() => dispatch({ type: 'RESET_ASSIGNMENTS' })}
                         disabled={state.spinState === 'spinning'}
-                        className="text-xs text-gray-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-50"
+                        className="toy-cmd"
                       >
                         {s['players.resetAssignments']}
                       </button>
@@ -599,7 +588,7 @@ export default function RoulettePageClient() {
               )}
 
               {state.players.length === 0 && (
-                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
+                <p className="text-xs text-[color:var(--nezu)] text-center py-4">
                   {s['players.emptyHint']}
                 </p>
               )}
@@ -619,14 +608,14 @@ export default function RoulettePageClient() {
         <div className="mt-6 flex justify-center gap-4">
           <Link
             href={locale === 'ja' ? '/ja/tierlist/' : '/tierlist/'}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+            className="toy-btn"
           >
             <Rows3 className="w-4 h-4" />
             {s['crosslink.tryTierList']}
           </Link>
           <Link
             href={locale === 'ja' ? '/ja/3x3-maker/' : '/3x3-maker/'}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+            className="toy-btn"
           >
             <Grid3X3 className="w-4 h-4" />
             {s['crosslink.try3x3']}
@@ -643,9 +632,11 @@ import { getDisplayTitle, type TitlePreference } from '@/lib/title-preference';
 import { getTinySrc } from '@/lib/vndb-image-cache';
 import { NSFW_THRESHOLD } from '@/lib/nsfw-reveal';
 
+// Kept in step with the wheel: an entry row names the wedge its title sits on, so the
+// two lists have to read as one.
 const WHEEL_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
-  '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7',
+  '#235C66', '#3C4046', '#9C6D10', '#A62432', '#2E6E5E',
+  '#17181A', '#4A5A6B', '#7A4A1E', '#1C4A53', '#5A5F66',
 ];
 
 function EntryRow({ entry, index, onRemove, disabled, preference }: {
@@ -661,20 +652,20 @@ function EntryRow({ entry, index, onRemove, disabled, preference }: {
   const coverSrc = entry.imageUrl ? (isNsfw ? getTinySrc(entry.imageUrl) : entry.imageUrl) : null;
 
   return (
-    <div className="flex items-start gap-2 px-3 py-1.5 text-sm border-b border-gray-100 dark:border-gray-700/50 last:border-0">
-      <div className="w-1 h-6 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: color }} />
+    <div className="toy-row">
+      <div className="w-1 h-6 shrink-0 mt-0.5" style={{ backgroundColor: color }} />
       {coverSrc && (
-        <div className="w-6 h-8 shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+        <div className="toy-thumb w-6 h-8">
           <img src={coverSrc} alt="" className="w-full h-full object-cover" style={isNsfw ? { imageRendering: 'pixelated' } : undefined} />
         </div>
       )}
-      <span className="flex-1 min-w-0 text-gray-900 dark:text-white break-words">
+      <span className="flex-1 min-w-0 break-words">
         {title}
       </span>
       <button
         onClick={() => onRemove(entry.id)}
         disabled={disabled}
-        className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
+        className="toy-x"
         aria-label={`Remove ${title}`}
       >
         <Trash2 className="w-3.5 h-3.5" />

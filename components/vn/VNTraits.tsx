@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from '@/components/Link';
-import { Eye, EyeOff, ArrowUpDown, ArrowUp, ArrowDown, User } from 'lucide-react';
 import { vndbStatsApi, type VNCharacter, type AggregatedTrait } from '@/lib/vndb-stats-api';
 
 interface VNTraitsProps {
@@ -73,7 +72,7 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
 
     const total = characters.length;
     // Use global total characters for IDF (inverse document frequency).
-    // Fallback ~500K is the approximate total characters in VNDB — rough constant
+    // Fallback ~500K is the approximate total characters in VNDB; rough constant
     // is fine since IDF is only used for relative ranking within this VN's traits.
     const globalTotal = globalCounts?.total_characters || 500000;
     let aggregated: AggregatedTrait[] = [];
@@ -140,63 +139,53 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
     }
   };
 
-  const SortIcon = ({ field }: { field: SortField }) =>
-    sortField === field
-      ? sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-      : <ArrowUpDown className="w-3 h-3" />;
+  // Direction is carried by the glyph, so a sorted column reads the same without colour.
+  const SortMark = ({ field }: { field: SortField }) => (
+    <span aria-hidden className={sortField === field ? '' : 'opacity-30'}>
+      {sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : '▽'}
+    </span>
+  );
 
   const isReady = !isLoading;
   const isEmpty = isReady && traits.length === 0;
 
   return (
-    <div
-      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xs overflow-hidden ${isReady ? '' : 'opacity-0'}`}
-    >
+    <section className={`vn-sec overflow-hidden ${isReady ? '' : 'opacity-0'}`}>
       {isEmpty ? (
-        <div className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <User className="w-5 h-5 text-gray-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Traits</h2>
+        <div className="p-4 sm:p-6">
+          <div className="vn-sec-head">
+            <h2 className="vn-sec-title">Traits</h2>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-[color:var(--nezu)] text-center py-4">
             No character traits available.
           </p>
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between flex-wrap gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary-500" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Traits</h2>
-              <span className="text-sm text-gray-400">({filteredTraits.length})</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-[color:var(--rule)]">
+            <div className="flex items-baseline gap-2">
+              <h2 className="vn-sec-title">Traits</h2>
+              <span className="vn-num text-sm text-[color:var(--text-faint)]">{filteredTraits.length}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {sexualCount > 0 && (
                 <button
                   onClick={() => onShowSexualChange(!showSexual)}
                   aria-pressed={showSexual}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
-                    showSexual
-                      ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}
+                  className={`tab${showSexual ? ' tab--on' : ''}`}
                 >
-                  {showSexual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  <span><span className="hidden sm:inline">{showSexual ? 'Hide' : 'Show'} </span>sexual ({sexualCount})</span>
+                  <span><span className="hidden sm:inline">{showSexual ? 'Hide' : 'Show'} </span>sexual</span>
+                  <span className="tab-count">{sexualCount}</span>
                 </button>
               )}
               {spoilerCount > 0 && (
                 <button
                   onClick={() => onShowSpoilersChange(!showSpoilers)}
                   aria-pressed={showSpoilers}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors shrink-0 ${
-                    showSpoilers
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}
+                  className={`tab${showSpoilers ? ' tab--on' : ''}`}
                 >
-                  {showSpoilers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  <span><span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers ({spoilerCount})</span>
+                  <span><span className="hidden sm:inline">{showSpoilers ? 'Hide' : 'Show'} </span>spoilers</span>
+                  <span className="tab-count">{spoilerCount}</span>
                 </button>
               )}
             </div>
@@ -204,56 +193,56 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <thead className="bg-[color:var(--surface-inset)]">
                 <tr>
                   <th className="px-3 sm:px-4 py-3 text-left" aria-sort={sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
-                    <button onClick={() => handleSort('name')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                      Name <SortIcon field="name" />
+                    <button onClick={() => handleSort('name')} className="flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--nezu)]">
+                      Name <SortMark field="name" />
                     </button>
                   </th>
                   <th className="px-2 sm:px-4 py-3 text-right whitespace-nowrap" aria-sort={sortField === 'characters' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
-                    <button onClick={() => handleSort('characters')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      <span className="sm:hidden">Chars</span><span className="hidden sm:inline">Characters</span> <SortIcon field="characters" />
+                    <button onClick={() => handleSort('characters')} className="flex items-center gap-1 ml-auto font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--nezu)]">
+                      <span className="sm:hidden">Chars</span><span className="hidden sm:inline">Characters</span> <SortMark field="characters" />
                     </button>
                   </th>
                   <th className="hidden sm:table-cell px-2 sm:px-4 py-3 text-right whitespace-nowrap" aria-sort={sortField === 'importance' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
-                    <button onClick={() => handleSort('importance')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      Importance <SortIcon field="importance" />
+                    <button onClick={() => handleSort('importance')} className="flex items-center gap-1 ml-auto font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--nezu)]">
+                      Importance <SortMark field="importance" />
                     </button>
                   </th>
                   <th className="px-2 sm:px-4 py-3 text-right whitespace-nowrap" aria-sort={sortField === 'weight' ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}>
-                    <button onClick={() => handleSort('weight')} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ml-auto">
-                      Weight <SortIcon field="weight" />
+                    <button onClick={() => handleSort('weight')} className="flex items-center gap-1 ml-auto font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--nezu)]">
+                      Weight <SortMark field="weight" />
                     </button>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-[color:var(--rule)]">
                 {filteredTraits.map((trait) => (
-                  <tr key={trait.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 ${trait.spoiler > 0 ? 'bg-red-50/50 dark:bg-red-900/10' : trait.group_name?.includes('(Sexual)') ? 'bg-pink-50/50 dark:bg-pink-900/10' : ''}`}>
+                  <tr key={trait.id} className="hover:bg-[color:var(--surface-inset)]">
                     <td className="px-3 sm:px-4 py-2">
                       <div>
                         <Link
                           href={`/stats/trait/${trait.id}`}
-                          className="text-sm text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                          className="text-sm text-[color:var(--ink)] hover:text-[color:var(--ai)] transition-colors"
                           title={trait.name}
                         >
                           {trait.name}
-                          {trait.spoiler > 0 && <span className="ml-1 text-red-500">!</span>}
-                          {trait.group_name?.includes('(Sexual)') && <span className="ml-1 text-pink-500">&#9829;</span>}
+                          {trait.spoiler > 0 && <span className="ml-1 font-mono text-[color:var(--beni-text)]">!</span>}
+                          {trait.group_name?.includes('(Sexual)') && <span className="ml-1 font-mono text-[color:var(--beni-text)]">&#9829;</span>}
                         </Link>
                         {trait.group_name && (
-                          <span className="ml-2 text-xs text-gray-400 hidden sm:inline">{trait.group_name}</span>
+                          <span className="ml-2 text-xs text-[color:var(--text-faint)] hidden sm:inline">{trait.group_name}</span>
                         )}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <td className="vn-num px-2 sm:px-4 py-2 text-right text-sm text-[color:var(--nezu)] whitespace-nowrap">
                       {trait.character_count}
                     </td>
-                    <td className="hidden sm:table-cell px-2 sm:px-4 py-2 text-right text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <td className="vn-num hidden sm:table-cell px-2 sm:px-4 py-2 text-right text-sm text-[color:var(--nezu)] whitespace-nowrap">
                       {trait.importance.toFixed(2)}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 text-right text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                    <td className="vn-num px-2 sm:px-4 py-2 text-right text-sm text-[color:var(--ink)] whitespace-nowrap">
                       {trait.weight.toFixed(2)}
                     </td>
                   </tr>
@@ -263,6 +252,6 @@ export function VNTraits({ characters, isLoading, globalCounts: globalCountsProp
           </div>
         </>
       )}
-    </div>
+    </section>
   );
 }

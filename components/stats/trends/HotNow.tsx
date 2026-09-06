@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from '@/components/Link';
-import { ArrowDown, ArrowUp, Minus, Sparkles } from 'lucide-react';
 
 import { NSFWImage } from '@/components/NSFWImage';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -52,8 +51,7 @@ function displayName(entry: HotTitle, preference: TitlePreference): string {
 function PlaceChange({ entry }: { entry: HotTitle }) {
   if (entry.previous_place === null) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400">
-        <Sparkles className="w-3 h-3" />
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[color:var(--ai)]">
         new
       </span>
     );
@@ -65,23 +63,20 @@ function PlaceChange({ entry }: { entry: HotTitle }) {
 
   if (moved === 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-        <Minus className="w-3 h-3" />
-        held
-      </span>
+      <span className="fig-label">held</span>
     );
   }
 
   const climbing = moved > 0;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${
-        climbing
-          ? 'text-emerald-600 dark:text-emerald-400'
-          : 'text-rose-600 dark:text-rose-400'
+      className={`st-num inline-flex items-center gap-0.5 text-[11px] ${
+        climbing ? 'text-[color:var(--ink)]' : 'text-[color:var(--beni-text)]'
       }`}
     >
-      {climbing ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+      <span aria-hidden className={climbing ? 'text-[color:var(--kohaku)]' : ''}>
+        {climbing ? '▲' : '▼'}
+      </span>
       {Math.abs(moved)}
     </span>
   );
@@ -102,15 +97,13 @@ function HotRow({ entry, showPlace }: RowProps) {
     <li>
       <Link
         href={entry.href}
-        className="group flex items-center gap-3 rounded-lg p-2 -m-0.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        className="dg-row st-mid group"
       >
         {showPlace ? (
-          <span className="w-5 shrink-0 text-right text-sm font-bold tabular-nums text-gray-500 dark:text-gray-400">
-            {entry.place}
-          </span>
+          <span className="dg-rank">{entry.place}</span>
         ) : null}
 
-        <span className="relative w-9 h-12 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-700">
+        <span className="relative h-12 w-9 shrink-0 overflow-hidden rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
           {entry.image_url ? (
             <NSFWImage
               src={getProxiedImageUrl(entry.image_url, 128)}
@@ -124,13 +117,13 @@ function HotRow({ entry, showPlace }: RowProps) {
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          <span className="dg-name block">
             {name}
           </span>
-          <span className="mt-0.5 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <span className="tabular-nums">{entry.current.toLocaleString()} votes</span>
+          <span className="st-num mt-0.5 flex items-center gap-2 text-xs text-[color:var(--text-faint)]">
+            <span>{entry.current.toLocaleString()} votes</span>
             {entry.previous > 0 ? (
-              <span className="tabular-nums text-gray-500 dark:text-gray-400">
+              <span>
                 {delta >= 0 ? '+' : ''}
                 {delta.toLocaleString()}
               </span>
@@ -141,7 +134,7 @@ function HotRow({ entry, showPlace }: RowProps) {
         <span className="shrink-0 text-right">
           <PlaceChange entry={entry} />
           {entry.lift > 1 && !showPlace ? (
-            <span className="mt-0.5 block text-[11px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+            <span className="st-num mt-0.5 block text-[11px] text-[color:var(--text-faint)]">
               {entry.lift.toFixed(1)}x
             </span>
           ) : null}
@@ -160,17 +153,11 @@ function PeriodHeadline({ period }: { period: HotPeriod }) {
   const window = PERIOD_LABELS[period.key]?.window ?? 'the period before';
 
   return (
-    <p className="text-sm text-gray-600 dark:text-gray-400">
-      <span className="font-semibold text-gray-900 dark:text-white tabular-nums">
-        {period.votes.toLocaleString()}
-      </span>{' '}
+    <p className="text-sm text-[color:var(--nezu)]">
+      <span className="st-num text-[color:var(--ink)]">{period.votes.toLocaleString()}</span>{' '}
       votes cast,{' '}
       <span
-        className={`font-semibold tabular-nums ${
-          climbing
-            ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-rose-600 dark:text-rose-400'
-        }`}
+        className={`st-num ${climbing ? 'text-[color:var(--ink)]' : 'text-[color:var(--beni-text)]'}`}
       >
         {climbing ? 'up' : 'down'} {Math.abs(share)}%
       </span>{' '}
@@ -201,7 +188,7 @@ export function HotNow({ language }: { language: LanguageFilterValue }) {
 
   if (loading) {
     // Sized to the loaded card, so the page does not grow under a reader who scrolls mid-load.
-    return <div className="h-[80rem] sm:h-[42rem] rounded-xl image-placeholder" />;
+    return <div className="h-[80rem] sm:h-[42rem] rounded-xs image-placeholder" />;
   }
 
   // Null means the request failed; an empty period would still be an object.
@@ -210,14 +197,14 @@ export function HotNow({ language }: { language: LanguageFilterValue }) {
   if (!period) return <TrendsUnavailable what="What is being read now" reason="not-built" />;
 
   return (
-    <div className="rounded-xl border border-gray-200/60 dark:border-gray-700/80 bg-white dark:bg-gray-800 overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-gray-200/60 dark:border-gray-700/80">
+    <div className="st-card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-[color:var(--rule)]">
         <PeriodHeadline period={period} />
 
         <div
           role="tablist"
           aria-label="Period"
-          className="flex flex-wrap shrink-0 rounded-lg bg-gray-100 dark:bg-gray-900/50 p-0.5"
+          className="tabs shrink-0"
         >
           {periods.map((entry) => {
             const selected = entry.key === period.key;
@@ -228,11 +215,7 @@ export function HotNow({ language }: { language: LanguageFilterValue }) {
                 role="tab"
                 aria-selected={selected}
                 onClick={() => setActive(entry.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                  selected
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`tab ${selected ? 'tab--on' : ''}`}
               >
                 {PERIOD_LABELS[entry.key]?.label ?? entry.key}
               </button>
@@ -241,10 +224,10 @@ export function HotNow({ language }: { language: LanguageFilterValue }) {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/60 dark:divide-gray-700/80">
+      <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-[color:var(--rule)]">
         <section className="min-w-0 p-4 sm:p-5">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Most read</h2>
-          <p className="mt-0.5 mb-3 text-xs text-gray-500 dark:text-gray-400">
+          <h2 className="st-card-title">Most read</h2>
+          <p className="st-card-sub mb-3 mt-0.5">
             The arrow is the change in place, not in votes.
           </p>
           <ol className="space-y-0.5">
@@ -255,10 +238,10 @@ export function HotNow({ language }: { language: LanguageFilterValue }) {
         </section>
 
         <section className="min-w-0 p-4 sm:p-5">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <h2 className="st-card-title">
             Climbing fastest
           </h2>
-          <p className="mt-0.5 mb-3 text-xs text-gray-500 dark:text-gray-400">
+          <p className="st-card-sub mb-3 mt-0.5">
             Measured against each title&apos;s own previous{' '}
             {PERIOD_LABELS[period.key]?.span ?? `${period.days} days`}, so a steady favourite
             never appears.
@@ -270,7 +253,7 @@ export function HotNow({ language }: { language: LanguageFilterValue }) {
               ))}
             </ol>
           ) : (
-            <p className="text-sm italic text-gray-500 dark:text-gray-400">
+            <p className="st-card-sub italic">
               Nothing rose clearly above its usual rate.
             </p>
           )}

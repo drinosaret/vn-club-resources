@@ -38,7 +38,7 @@ export function TrendLineChart<T extends Record<string, any>>({
   xAxisKey,
   title,
   subtitle,
-  color = '#8b5cf6',
+  color = 'var(--kohaku)',
   areaFill = true,
   yAxisLabel,
   formatValue = (v) => v.toLocaleString(),

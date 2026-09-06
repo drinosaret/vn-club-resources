@@ -2,7 +2,15 @@
 
 import { BrowseFilters } from '@/lib/vndb-stats-api';
 import { DropdownSelect, SelectedValue } from './DropdownSelect';
-import { LANGUAGES, PLATFORMS, LENGTHS, AGE_RATINGS, DEV_STATUS } from './filter-constants';
+import {
+  LANGUAGES,
+  PLATFORMS,
+  LENGTHS,
+  AGE_RATINGS,
+  DEV_STATUS,
+  parseSelected,
+  toFilterStrings,
+} from './filter-constants';
 
 interface CompactFilterBarProps {
   filters: BrowseFilters;
@@ -10,42 +18,6 @@ interface CompactFilterBarProps {
   layout?: 'horizontal' | 'vertical';
   /** Compact mode: tighter gaps, passed through to DropdownSelect */
   compact?: boolean;
-}
-
-/**
- * Parse comma-separated include/exclude strings into SelectedValue array
- */
-function parseSelected(includeStr: string | undefined, excludeStr: string | undefined): SelectedValue[] {
-  const result: SelectedValue[] = [];
-
-  if (includeStr) {
-    includeStr.split(',').forEach(v => {
-      const trimmed = v.trim();
-      if (trimmed) result.push({ value: trimmed, mode: 'include' });
-    });
-  }
-
-  if (excludeStr) {
-    excludeStr.split(',').forEach(v => {
-      const trimmed = v.trim();
-      if (trimmed) result.push({ value: trimmed, mode: 'exclude' });
-    });
-  }
-
-  return result;
-}
-
-/**
- * Convert SelectedValue array back to include/exclude strings
- */
-function toFilterStrings(selected: SelectedValue[]): { include: string | undefined; exclude: string | undefined } {
-  const includes = selected.filter(s => s.mode === 'include').map(s => s.value);
-  const excludes = selected.filter(s => s.mode === 'exclude').map(s => s.value);
-
-  return {
-    include: includes.length > 0 ? includes.join(',') : undefined,
-    exclude: excludes.length > 0 ? excludes.join(',') : undefined,
-  };
 }
 
 export function CompactFilterBar({ filters, onChange, layout = 'horizontal', compact }: CompactFilterBarProps) {

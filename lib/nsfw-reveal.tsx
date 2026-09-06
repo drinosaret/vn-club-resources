@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 interface NSFWRevealContextType {
   isRevealed: (vnId: string) => boolean;
   revealVN: (vnId: string) => void;
-  /** Changes on every route change — consumers use this to reset local state */
+  /** Changes on every route change; consumers use this to reset local state */
   pathname: string;
   /** When true, all NSFW images are shown uncensored */
   allRevealed: boolean;
@@ -24,7 +24,7 @@ export function NSFWRevealProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [allRevealed, setAllRevealedState] = useState(false);
 
-  // Read persisted preference on mount (avoids hydration mismatch — SSR always renders blurred)
+  // Read persisted preference on mount (avoids hydration mismatch, SSR always renders blurred)
   useEffect(() => {
     try {
       setAllRevealedState(localStorage.getItem(NSFW_UNCENSORED_KEY) === 'true');
@@ -42,7 +42,7 @@ export function NSFWRevealProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // Derive revealed IDs from pathname — new pathname = new empty Set
+  // Derive revealed IDs from pathname: new pathname = new empty Set
   const [revealState, setRevealState] = useState<{ pathname: string; ids: Set<string> }>({
     pathname,
     ids: new Set(),

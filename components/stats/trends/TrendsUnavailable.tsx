@@ -31,7 +31,7 @@ export function TrendsUnavailable({
   return (
     <p
       role="status"
-      className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400"
+      className="rounded-xs border border-dashed border-[color:var(--rule)] px-4 py-8 text-center text-sm text-[color:var(--nezu)]"
     >
       {reason === 'not-built'
         ? `${what} is not available until the nightly rebuild has run.`

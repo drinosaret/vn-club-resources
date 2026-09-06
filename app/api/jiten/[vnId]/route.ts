@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveDeckId } from '../resolve-deck';
+import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
-// Deck ID mappings essentially never change — cache aggressively
+// Deck ID mappings essentially never change, so cache aggressively
 const CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=86400';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ vnId: string }> }
 ) {
   const { vnId } = await params;
@@ -18,10 +19,21 @@ export async function GET(
     });
   }
 
+  const rateLimitResult = checkRateLimit(`jiten:${getClientIp(request)}`, RATE_LIMITS.externalProxy);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(null, {
+      status: 429,
+      headers: { ...createRateLimitHeaders(rateLimitResult), 'Cache-Control': 'no-store' },
+    });
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
     // resolveDeckId has its own 24-hour server-side cache,
     // so this won't spam the upstream jiten.moe API.
-    const deckId = await resolveDeckId(vnId);
+    const deckId = await resolveDeckId(vnId, controller.signal);
     const data = deckId ? [deckId] : [];
 
     return NextResponse.json(data, {
@@ -32,5 +44,7 @@ export async function GET(
       status: 502,
       headers: { 'Cache-Control': 'no-store' },
     });
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

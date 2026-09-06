@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Calendar, Building2 } from 'lucide-react';
 import type { NewsItem } from '@/lib/sample-news-data';
 import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
@@ -87,10 +86,8 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
   const contentTags = vnTags.length > 0 ? vnTags : (item.tags || []);
 
   return (
-    <div
-      className="relative flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-[box-shadow,border-color] duration-150 group h-full"
-    >
-      {/* Stretched link — makes entire card clickable */}
+    <div className="nw-card group">
+      {/* Stretched link: makes entire card clickable */}
       {safeUrl && (
         <a
           href={safeUrl}
@@ -101,35 +98,24 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
         />
       )}
 
-      {/* Cover Image */}
-      <div className="relative w-full h-40 shrink-0">
-        {/* Gradient placeholder — always rendered behind the image */}
-        <div className="absolute inset-0 bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/50 dark:via-purple-950/50 dark:to-pink-950/50 flex items-center justify-center overflow-hidden">
-          <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full bg-white/30 dark:bg-white/5" />
-          <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/30 dark:bg-white/5" />
-          {!faviconError ? (
-            <div className="flex flex-col items-center gap-2">
-              <img
-                src="https://icons.duckduckgo.com/ip3/vndb.org.ico"
-                alt=""
-                width={48}
-                height={48}
-                className="rounded-lg shadow-sm"
-                style={{ imageRendering: 'auto' }}
-                onError={() => setFaviconError(true)}
-              />
-              <span className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/50">
-                {item.sourceLabel}
-              </span>
-            </div>
-          ) : (
-            <span className="text-sm font-medium text-indigo-400/70 dark:text-indigo-500/50">
-              {item.sourceLabel}
-            </span>
+      <div className="nw-art">
+        {/* The source's own mark, standing behind the cover and showing through when the
+            entry brought none. */}
+        <div className="nw-art-none">
+          {!faviconError && (
+            <img
+              src="https://icons.duckduckgo.com/ip3/vndb.org.ico"
+              alt=""
+              width={32}
+              height={32}
+              style={{ imageRendering: 'auto' }}
+              onError={() => setFaviconError(true)}
+            />
           )}
+          <span>{item.sourceLabel}</span>
         </div>
 
-        {/* Actual image — layered on top */}
+        {/* Actual image: layered on top */}
         {hasImage && (
           <NSFWNextImage
             src={getProxiedImageUrl(item.imageUrl, { width: 512 })}
@@ -145,34 +131,25 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
         )}
       </div>
 
-      <div className="p-4 flex flex-col grow">
-        {/* Developer & Release Date */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
-          {developers.length > 0 && (
-            <span className="flex items-center gap-1">
-              <Building2 className="w-3 h-3" />
-              {developers.slice(0, 2).join(', ')}
-            </span>
-          )}
-          {formattedDate && (
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {formattedDate}
-            </span>
-          )}
+      <div className="nw-body">
+        <div className="nw-meta flex-wrap">
+          {developers.length > 0 && <span>{developers.slice(0, 2).join(', ')}</span>}
+          {formattedDate && <span>{formattedDate}</span>}
           {safeUrl && (
-            <ExternalLink className="w-3 h-3 text-gray-400 dark:text-gray-500 ml-auto sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+            <span
+              className="ml-auto sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+              aria-hidden="true"
+            >
+              ↗
+            </span>
           )}
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
-          {displayTitle}
-        </h3>
+        <h3 className="nw-title line-clamp-2">{displayTitle}</h3>
 
-        {/* Release Editions — clickable links above the stretched card link */}
+        {/* Release Editions: clickable links above the stretched card link */}
         {releases.length > 0 && (
-          <div className="relative z-10 flex flex-wrap gap-1.5 mb-2">
+          <div className="relative z-10 mb-2 flex flex-wrap items-center gap-1.5">
             {releases.slice(0, 3).map((release) => {
               const vndbUrl = getVndbUrl(release.id);
               if (!vndbUrl) return null;
@@ -182,15 +159,14 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
                   href={vndbUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                  className="rounded-xs border border-[color:var(--rule)] px-2 py-0.5 text-xs text-[color:var(--nezu)] transition-colors hover:border-[color:var(--kohaku)] hover:text-[color:var(--ink)]"
                 >
-                  <ExternalLink className="w-2.5 h-2.5" />
                   {getDisplayTitle({ title: release.title, title_jp: release.alttitle }, preference) || release.id}
                 </a>
               );
             })}
             {releases.length > 3 && (
-              <span className="text-xs text-gray-400 self-center">
+              <span className="self-center font-mono text-xs tabular-nums text-[color:var(--text-faint)]">
                 +{releases.length - 3} more
               </span>
             )}
@@ -199,11 +175,11 @@ export function DigestItemCard({ item }: { item: NewsItem }) {
 
         {/* Content Tags */}
         {contentTags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-auto">
+          <div className="mt-auto flex flex-wrap gap-1">
             {contentTags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                className="rounded-xs border border-[color:var(--rule)] px-2 py-0.5 text-xs text-[color:var(--nezu)]"
               >
                 {tag}
               </span>

@@ -81,25 +81,27 @@ function WotdCalendar({
   };
 
   return (
-    <div
-      ref={ref}
-      className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-[280px]"
-    >
+    <div ref={ref} className="wd-cal">
       <div className="flex items-center justify-between mb-2">
-        <button onClick={goToPrevMonth} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Previous month">
-          <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+        <button onClick={goToPrevMonth} className="wd-step" aria-label="Previous month">
+          <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+        <span className="wd-cal-month">
           {new Date(viewYear, viewMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </span>
-        <button onClick={goToNextMonth} disabled={isNextDisabled} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next month">
-          <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+        <button
+          onClick={goToNextMonth}
+          disabled={isNextDisabled}
+          className={isNextDisabled ? 'wd-step wd-step--off' : 'wd-step'}
+          aria-label="Next month"
+        >
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-1">{d}</div>
+          <div key={d} className="wd-cal-dow">{d}</div>
         ))}
       </div>
 
@@ -119,17 +121,15 @@ function WotdCalendar({
               key={day}
               onClick={() => { if (!isFutureCal) { onSelectDate(dateStr); onClose(); } }}
               disabled={isFutureCal}
-              className={`
-                flex items-center justify-center w-full aspect-square rounded-lg text-sm transition-all
-                ${isSelected
-                  ? 'bg-emerald-500 text-white font-semibold'
+              className={`wd-cal-day ${
+                isSelected
+                  ? 'wd-cal-day--on'
                   : isTodayCal
-                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
+                    ? 'wd-cal-day--now'
                     : isFutureCal
-                      ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }
-              `}
+                      ? 'wd-cal-day--off'
+                      : ''
+              }`}
             >
               {day}
             </button>
@@ -160,46 +160,32 @@ export function WotdDateNav({ currentDate, latestDate }: { currentDate: string; 
   });
 
   function goTo(date: string) {
-    router.push(`/word-of-the-day?date=${date}`);
+    router.push(`/word-of-the-day/?date=${date}`);
   }
 
   return (
     <>
-    <div className="relative flex items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+    <div className="wd-nav">
       {/* Prev day */}
-      <Link
-        href={dateHref(prevDate)}
-        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-        aria-label="Previous day"
-      >
+      <Link href={dateHref(prevDate)} className="wd-step" aria-label="Previous day">
         <ChevronLeft className="w-5 h-5" />
       </Link>
 
       {/* Date display + calendar toggle */}
-      <button
-        onClick={() => setCalendarOpen(!calendarOpen)}
-        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      >
-        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <button onClick={() => setCalendarOpen(!calendarOpen)} className="wd-step">
+        <Calendar className="w-4 h-4" />
+        <span className="wd-date">
           {formattedDate}
         </span>
       </button>
 
       {/* Next day */}
       {isLatest ? (
-        <span
-          className="p-1.5 rounded-lg opacity-30 cursor-not-allowed text-gray-500 dark:text-gray-400"
-          aria-label="Next day"
-        >
+        <button type="button" disabled className="wd-step wd-step--off" aria-label="Next day">
           <ChevronRight className="w-5 h-5" />
-        </span>
+        </button>
       ) : (
-        <Link
-          href={dateHref(nextDate)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-          aria-label="Next day"
-        >
+        <Link href={dateHref(nextDate)} className="wd-step" aria-label="Next day">
           <ChevronRight className="w-5 h-5" />
         </Link>
       )}
@@ -216,11 +202,9 @@ export function WotdDateNav({ currentDate, latestDate }: { currentDate: string; 
     </div>
     {!isLatest && (
       <div className="text-center mt-2">
-        <Link
-          href="/word-of-the-day"
-          className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline transition-colors"
-        >
+        <Link href="/word-of-the-day/" className="sec-more wd-focus">
           Jump to today&rsquo;s word
+          <span aria-hidden> →</span>
         </Link>
       </div>
     )}

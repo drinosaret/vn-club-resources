@@ -45,7 +45,7 @@ export function parseBBCode(text: string, options: BBCodeOptions = {}): React.Re
   const parts: React.ReactNode[] = [];
   let keyCounter = 0;
 
-  // Split by spoiler tags — handles both [/spoiler] and [spoiler] as closing tag
+  // Split by spoiler tags: handles both [/spoiler] and [spoiler] as closing tag
   // Create new regex each call to avoid global flag state issues
   const spoilerRegex = new RegExp('\\[spoiler\\]([\\s\\S]*?)\\[\\/?spoiler\\]', 'gi');
   let lastIndex = 0;

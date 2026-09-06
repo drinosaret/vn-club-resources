@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowUp, Flame, Sparkles } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 
 import { PreviewPanel, PreviewRow } from '@/components/stats/PreviewPanel';
 import { getDisplayTitle, useTitlePreference } from '@/lib/title-preference';
@@ -41,7 +41,7 @@ export function TrendsHighlight() {
   }, []);
 
   if (loading) {
-    return <div className="h-[26rem] rounded-xl image-placeholder" />;
+    return <div className="h-[26rem] rounded-xs image-placeholder" />;
   }
 
   // Absent while the nightly job rebuilds. The page reads fine without it.
@@ -49,7 +49,6 @@ export function TrendsHighlight() {
 
   return (
     <PreviewPanel
-      icon={<Flame className="h-4 w-4 text-orange-500" />}
       title="Climbing this week"
       href="/stats/trends/"
       linkLabel="All trends"
@@ -81,17 +80,19 @@ export function TrendsHighlight() {
             figure={
               <>
                 {climbed !== null && climbed > 0 ? (
-                  <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    <ArrowUp className="h-3 w-3" />
+                  <span className="st-num inline-flex items-center gap-0.5 text-[11px] text-[color:var(--ink)]">
+                    <ArrowUp className="h-3 w-3 text-[color:var(--kohaku)]" aria-hidden="true" />
                     {climbed}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400">
-                    <Sparkles className="h-3 w-3" />
+                  // Set inline because the label primitive carries its own colour, which a
+                  // utility class cannot outrank. The accent is the one the climb arrow uses,
+                  // in the step of the ramp that stays readable as text on both grounds.
+                  <span className="fig-label" style={{ color: 'var(--kohaku-text)' }}>
                     new
                   </span>
                 )}
-                <span className="mt-0.5 block text-[11px] font-semibold tabular-nums text-gray-400 dark:text-gray-500">
+                <span className="st-num mt-0.5 block text-[11px] text-[color:var(--text-faint)]">
                   {entry.lift.toFixed(1)}x
                 </span>
               </>

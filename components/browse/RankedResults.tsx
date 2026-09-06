@@ -57,8 +57,8 @@ export function RankedResults({ results, startRank, metric, isLoading }: RankedR
   return (
     <div className="relative">
       {isLoading && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-white/60 dark:bg-gray-900/60">
-          <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+        <div className="bw-veil absolute inset-0 z-10 grid place-items-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[color:var(--ai)]" />
         </div>
       )}
       <LeaderboardTable

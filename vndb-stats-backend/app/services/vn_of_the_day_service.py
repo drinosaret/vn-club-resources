@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 # Selection criteria for smart random
 MIN_RATING = 6.0
 MIN_VOTES = 20
-MAX_IMAGE_SEXUAL = 1.0  # Stricter than general threshold — VOTD shows on front page
+# The front page blurs a cover at or above this, so a pick above it would be shown censored.
+# Keep in step with HOMEPAGE_COVER_THRESHOLD in the site's lib/safe-cover.ts and with the bot's
+# own cover bar, which are both 0.7.
+MAX_IMAGE_SEXUAL = 0.7
 NO_REPEAT_DAYS = 365
 # Fallback windows tried in order when no VN found
 FALLBACK_WINDOWS = [180, 90, 0]
@@ -169,7 +172,9 @@ async def get_history(db: AsyncSession, limit: int = 30) -> list[VNOfTheDay]:
     return list(result.unique().scalars().all())
 
 
-def build_votd_response(pick: VNOfTheDay, tags: list[dict] | None = None, developers: list[str] | None = None) -> dict:
+def build_votd_response(
+    pick: VNOfTheDay, tags: list[dict] | None = None, developers: list[dict] | None = None
+) -> dict:
     """Build the API response dict from a VNOfTheDay record."""
     vn = pick.visual_novel
     if not vn:
@@ -193,7 +198,13 @@ def build_votd_response(pick: VNOfTheDay, tags: list[dict] | None = None, develo
         "rating": vn.rating,
         "votecount": vn.votecount,
         "released": vn.released.isoformat() if vn.released else None,
-        "developers": developers if developers is not None else (vn.developers or []),
+        # The denormalised column on the VN row holds names alone, so a credit from it
+        # carries no romanisation to offer.
+        "developers": (
+            developers
+            if developers is not None
+            else [{"name": name, "original": None} for name in (vn.developers or [])]
+        ),
         "tags": tags or [],
         "length_minutes": vn.length_minutes,
     }
@@ -217,17 +228,21 @@ async def get_vn_tags(db: AsyncSession, vn_id: str, limit: int = 5) -> list[dict
     return [{"name": row.name, "category": row.category} for row in result.all()]
 
 
-async def get_vn_developers(db: AsyncSession, vn_id: str) -> list[str]:
-    """Get developer names for a VN via release-producer join."""
+async def get_vn_developers(db: AsyncSession, vn_id: str) -> list[dict]:
+    """Developer credits for a VN, via the release-producer join.
+
+    Both scripts are carried because which one is shown is a reader's setting rather than
+    a property of the credit.
+    """
     result = await db.execute(
-        select(Producer.name)
+        select(Producer.name, Producer.original)
         .distinct()
         .join(ReleaseProducer, Producer.id == ReleaseProducer.producer_id)
         .join(ReleaseVN, ReleaseProducer.release_id == ReleaseVN.release_id)
         .where(ReleaseVN.vn_id == vn_id)
         .where(ReleaseProducer.developer == True)  # noqa: E712
     )
-    return [row[0] for row in result.all()]
+    return [{"name": name, "original": original} for name, original in result.all() if name]
 
 
 # ============ Scheduled Task ============

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from '@/components/Link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
+import { RotateCcw, X } from 'lucide-react';
 
 import { BoardHeader } from '@/components/rankings/BoardHeader';
 import { BoardHeaderSkeleton } from '@/components/rankings/BoardHeaderSkeleton';
@@ -53,15 +53,9 @@ import type { SliceState } from './slice-options';
  * under 16px makes mobile Safari zoom the viewport on focus and leave it zoomed, and this pane
  * holds eight of them.
  */
-const SELECT_CLASS =
-  'w-full min-h-11 rounded-lg border border-gray-200 bg-white px-3 py-2 text-base ' +
-  'text-gray-800 transition-colors hover:border-gray-300 sm:min-h-0 sm:text-sm ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 ' +
-  'dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-gray-500 ' +
-  'dark:focus-visible:outline-primary-400';
+const SELECT_CLASS = 'st-select w-full min-h-11 px-3 py-2 text-base sm:min-h-0 sm:text-sm';
 
-const LABEL_CLASS =
-  'mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400';
+const LABEL_CLASS = 'fig-label mb-1.5';
 
 /** What an empty result means, in the terms that are true for this slice and question. */
 function emptyMessage(slice: SliceState, titles: number | null): string {
@@ -199,19 +193,14 @@ export default function RankingBuilderClient() {
     <div className="mx-auto max-w-7xl px-4 py-10">
       <Link
         href="/stats/rankings/"
-        className="mb-6 -my-1.5 inline-flex min-h-6 items-center gap-1.5 py-1.5 text-sm text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+        className="sec-more mb-6 min-h-6 py-1.5"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <span aria-hidden>&larr;</span>
         All rankings
       </Link>
 
-      <div className="mb-3 flex items-center gap-3">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30">
-          <SlidersHorizontal className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-        </span>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Build a ranking</h1>
-      </div>
-      <p className="mb-6 max-w-2xl text-gray-600 dark:text-gray-400">
+      <h1 className="sec-title">Build a ranking</h1>
+      <p className="sec-sub mb-6 max-w-2xl">
         Choose which titles you mean and what you want to know about them. Every combination
         is worked out when you ask for it, so there is no fixed list of slices, and the
         result is a link you can send to somebody.
@@ -220,16 +209,10 @@ export default function RankingBuilderClient() {
       {/* Grouped behind tabs rather than laid out as five rows of chips. The full set is
           thirty-odd starting points, and printed all at once they read as a wall with no
           structure; one group at a time is scannable and says what kind of thing is on offer. */}
-      <section className="mb-6 rounded-xl border border-gray-200/60 bg-white p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-800">
+      <section className="mb-6 st-card p-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Start from
-          </p>
-          <div
-            role="tablist"
-            aria-label="Preset groups"
-            className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900/40"
-          >
+          <p className="fig-label">Start from</p>
+          <div role="tablist" aria-label="Preset groups" className="tabs">
             {PRESETS.map((group) => (
               <button
                 key={group.group}
@@ -237,11 +220,7 @@ export default function RankingBuilderClient() {
                 role="tab"
                 aria-selected={presetGroup === group.group}
                 onClick={() => setPresetGroup(group.group)}
-                className={`min-h-8 rounded-md px-3 text-xs font-medium transition-colors ${
-                  presetGroup === group.group
-                    ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
+                className={`tab min-h-8 ${presetGroup === group.group ? 'tab--on' : ''}`}
               >
                 {group.group}
               </button>
@@ -256,7 +235,7 @@ export default function RankingBuilderClient() {
                 key={preset.label}
                 type="button"
                 onClick={() => applyPreset(preset.slice)}
-                className="inline-flex min-h-8 items-center rounded-full border border-gray-200 px-3 text-xs text-gray-700 transition-colors hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-600 dark:text-gray-300 dark:hover:border-primary-500 dark:hover:bg-primary-900/20 dark:hover:text-primary-300"
+                className="st-act min-h-8"
               >
                 {preset.label}
               </button>
@@ -272,26 +251,18 @@ export default function RankingBuilderClient() {
         {/* Scrolls within itself once the controls outrun the window, so the pane can stay
             pinned without the last axis becoming unreachable. */}
         <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
-        <div className="mb-6 space-y-5 rounded-xl border border-gray-200/60 bg-white p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-800 sm:p-5 lg:mb-0">
+        <div className="mb-6 space-y-5 st-card p-4 sm:p-5 lg:mb-0">
           <div className="flex flex-wrap items-end gap-4">
             <div>
               <span className={LABEL_CLASS}>Rank</span>
-              <div
-                role="group"
-                aria-label="What to rank"
-                className="inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-600"
-              >
+              <div role="group" aria-label="What to rank" className="tabs">
                 {(['vns', 'readers'] as const).map((option) => (
                   <button
                     key={option}
                     type="button"
                     onClick={() => update({ subject: option })}
                     aria-pressed={slice.subject === option}
-                    className={`min-h-9 rounded-md px-3 text-sm font-medium transition-colors ${
-                      slice.subject === option
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
-                    }`}
+                    className={`tab min-h-9 ${slice.subject === option ? 'tab--on' : ''}`}
                   >
                     {option === 'vns' ? 'Titles' : 'Readers'}
                   </button>
@@ -344,15 +315,11 @@ export default function RankingBuilderClient() {
           {question ? (
             // The short form only. The full explanation is on the ranking itself, and printing
             // it twice on one screen reads as a mistake rather than as emphasis.
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Top of the ranking: {question.high_means}.
-            </p>
+            <p className="st-card-sub">Top of the ranking: {question.high_means}.</p>
           ) : null}
 
-          <div className="border-t border-gray-200/70 pt-4 dark:border-gray-700/70">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Narrow it to
-            </p>
+          <div className="border-t border-[color:var(--rule)] pt-4">
+            <p className="fig-label mb-3">Narrow it to</p>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <div className="sm:col-span-2 lg:col-span-1">
@@ -554,13 +521,13 @@ export default function RankingBuilderClient() {
 
             {slice.difficulty !== 'any' ||
             question?.needs_difficulty ? (
-              <p className="mt-3 text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+              <p className="st-card-sub mt-3">
                 Difficulty comes from{' '}
                 <a
                   href="https://jiten.moe/decks/media?mediaType=7"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline decoration-dotted underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="underline decoration-dotted underline-offset-2 hover:text-[color:var(--nezu)]"
                 >
                   jiten.moe
                 </a>
@@ -572,16 +539,18 @@ export default function RankingBuilderClient() {
           </div>
 
           {axes.length ? (
-            <div className="flex flex-wrap items-center gap-1.5 border-t border-gray-200/70 pt-4 dark:border-gray-700/70">
-              <span className="mr-1 text-xs text-gray-500 dark:text-gray-400">Narrowed by</span>
+            <div className="flex flex-wrap items-center gap-1.5 border-t border-[color:var(--rule)] pt-4">
+              <span className="fig-label mr-1">Narrowed by</span>
               {axes.map((axis) => (
                 <button
                   key={axis.key}
                   type="button"
                   onClick={() => clearAxis(axis.key)}
-                  className="inline-flex min-h-8 items-center gap-1 rounded-full border border-gray-200 px-2.5 text-xs text-gray-700 transition-colors hover:border-red-300 hover:text-red-600 dark:border-gray-600 dark:text-gray-300 dark:hover:border-red-700 dark:hover:text-red-400"
+                  className="st-act min-h-8 max-w-full"
                 >
-                  {axis.label}
+                  {/* A tag name runs to any length the database holds, and the control it sits
+                      in does not wrap, so the label is bounded and clipped instead. */}
+                  <span className="min-w-0 truncate">{axis.label}</span>
                   <X className="h-3 w-3" aria-hidden="true" />
                   <span className="sr-only">Remove</span>
                 </button>
@@ -589,7 +558,7 @@ export default function RankingBuilderClient() {
               <button
                 type="button"
                 onClick={() => setSlice(EMPTY_SLICE)}
-                className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className="st-act ml-auto min-h-8"
               >
                 <RotateCcw className="h-3 w-3" aria-hidden="true" />
                 Reset
@@ -608,7 +577,7 @@ export default function RankingBuilderClient() {
 
         <div aria-busy={loading}>
         {slice.question === 'as-of' && !slice.asOf ? (
-          <p className="rounded-xl border border-dashed border-gray-300 px-4 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          <p className="st-card px-4 py-10 text-center text-sm text-[color:var(--nezu)]">
             Pick the year to judge by.
           </p>
         ) : loading ? (
@@ -616,14 +585,14 @@ export default function RankingBuilderClient() {
             <BoardHeaderSkeleton />
             <div className="space-y-2">
               {Array.from({ length: 10 }).map((_, index) => (
-                <div key={index} className="image-placeholder h-14 rounded-lg" />
+                <div key={index} className="image-placeholder h-14 rounded-xs" />
               ))}
             </div>
           </>
         ) : !board ? (
           // Three different absences with three different causes. Reporting them the same
           // way would make an outage read as routine.
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-[color:var(--nezu)]">
             {result?.state === 'missing'
               ? 'No tag with that id exists. Try searching for it by name.'
               : result?.state === 'rebuilding'

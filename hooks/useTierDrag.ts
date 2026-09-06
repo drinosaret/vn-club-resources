@@ -80,13 +80,13 @@ export function useTierDrag(
     let lastClientY = 0;
     let autoScrollRaf = 0;
 
-    // Cached drop zone elements + rects — refreshed on activate and scroll.
-    // Caching elements avoids querySelector calls in the pointermove hot path.
+    // Cached drop zone elements + rects, refreshed on activate and on every scroll.
+    // Caching elements avoids querySelector calls in the pointermove hot path. The rects are
+    // viewport coordinates, and a pinned pool is placed against the viewport rather than the
+    // document, so a scroll is answered by re-reading them and never by an offset.
     let dropZoneCache: { id: string; el: HTMLElement; rect: DOMRect }[] = [];
-    let scrollOffset = 0; // window.scrollY at cache time
 
     function refreshDropZoneCache() {
-      scrollOffset = window.scrollY;
       const zones = document.querySelectorAll<HTMLElement>('[data-tier-drop]');
       dropZoneCache = [];
       for (let i = zones.length - 1; i >= 0; i--) {
@@ -95,12 +95,8 @@ export function useTierDrag(
     }
 
     function hitTestDropZone(cx: number, cy: number): string | null {
-      // Adjust rects if page has scrolled since last cache
-      const scrollDelta = window.scrollY - scrollOffset;
       for (const { id, rect } of dropZoneCache) {
-        const top = rect.top - scrollDelta;
-        const bottom = rect.bottom - scrollDelta;
-        if (cx >= rect.left && cx <= rect.right && cy >= top && cy <= bottom) {
+        if (cx >= rect.left && cx <= rect.right && cy >= rect.top && cy <= rect.bottom) {
           return id;
         }
       }
@@ -113,6 +109,30 @@ export function useTierDrag(
         if (zone.id === id) return zone.el;
       }
       return undefined;
+    }
+
+    /**
+     * Move the highlight and the drop target to the zone under the given viewport point.
+     * The zone under a still pointer changes whenever the page scrolls, so this runs on
+     * scroll as well as on pointer input.
+     */
+    function updateHover(cx: number, cy: number) {
+      const hitContainer = hitTestDropZone(cx, cy);
+      if (hitContainer === currentOverContainer) return;
+      if (currentOverContainer) {
+        getDropZoneEl(currentOverContainer)?.classList.remove('tier-drop-highlight');
+      }
+      if (hitContainer) {
+        getDropZoneEl(hitContainer)?.classList.add('tier-drop-highlight');
+      }
+      currentOverContainer = hitContainer;
+    }
+
+    /** A scroll from any source moves every cached rect, so they are read again. */
+    function onWindowScroll() {
+      if (phase !== 'active') return;
+      refreshDropZoneCache();
+      updateHover(lastClientX, lastClientY);
     }
 
     // --- Helpers ---
@@ -201,6 +221,7 @@ export function useTierDrag(
 
       // Cache drop zone rects for fast hit-testing
       refreshDropZoneCache();
+      window.addEventListener('scroll', onWindowScroll, { passive: true });
 
       // Start auto-scroll loop
       startAutoScroll();
@@ -228,9 +249,12 @@ export function useTierDrag(
 
         if (scrollDelta !== 0) {
           window.scrollBy(0, scrollDelta);
-          // Only refresh the scroll offset — element positions relative to
-          // the document haven't changed, just the viewport shifted.
-          scrollOffset = window.scrollY;
+          // Read back straight away rather than waiting for the scroll event, which is
+          // dispatched a frame later and after the next hit test has already run.
+          refreshDropZoneCache();
+          // Auto-scroll runs off the last pointer position, so a held pointer produces no
+          // further input while the zones travel underneath it.
+          updateHover(lastClientX, lastClientY);
         }
 
         autoScrollRaf = requestAnimationFrame(tick);
@@ -310,18 +334,7 @@ export function useTierDrag(
       overlay.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.04)`;
 
       // Hit-test drop containers using cached rects
-      const hitContainer = hitTestDropZone(e.clientX, e.clientY);
-
-      if (hitContainer !== currentOverContainer) {
-        // Use cached elements instead of querySelector in the hot path
-        if (currentOverContainer) {
-          getDropZoneEl(currentOverContainer)?.classList.remove('tier-drop-highlight');
-        }
-        if (hitContainer) {
-          getDropZoneEl(hitContainer)?.classList.add('tier-drop-highlight');
-        }
-        currentOverContainer = hitContainer;
-      }
+      updateHover(e.clientX, e.clientY);
     }
 
     function onPointerUp(e: PointerEvent) {
@@ -434,6 +447,7 @@ export function useTierDrag(
       document.removeEventListener('dragstart', onDragStart);
       document.removeEventListener('selectstart', onSelectStart);
       document.removeEventListener('contextmenu', onContextMenu);
+      window.removeEventListener('scroll', onWindowScroll);
 
       phase = 'idle';
       sourceEl = null;

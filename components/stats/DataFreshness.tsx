@@ -1,7 +1,5 @@
 'use client';
 
-import { Database } from 'lucide-react';
-
 /**
  * States which VNDB dump the surrounding page is showing, and when the next one lands.
  *
@@ -124,16 +122,15 @@ export function DataFreshness({
 
   return (
     <p
-      className={`flex flex-wrap items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 ${className}`}
+      className={`flex flex-wrap items-center gap-1.5 font-mono text-xs text-[color:var(--nezu)] ${className}`}
     >
-      <Database className="w-3.5 h-3.5 shrink-0" />
       <span>VNDB data from {label}</span>
-      <span className="text-gray-400 dark:text-gray-600">· updated daily</span>
-      <span className="text-gray-400 dark:text-gray-600">
+      <span className="text-[color:var(--text-faint)]">· updated daily</span>
+      <span className="text-[color:var(--text-faint)]">
         · next update {getNextUpdateCountdown()}
       </span>
       {vnCount ? (
-        <span className="text-gray-400 dark:text-gray-600">
+        <span className="text-[color:var(--text-faint)]">
           · {vnCount.toLocaleString()} VNs
         </span>
       ) : null}

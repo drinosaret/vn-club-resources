@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, Tag as TagIcon, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
 
@@ -149,14 +149,13 @@ export function TagPicker({
     <div ref={containerRef} className="relative">
       {selected ? (
         <div className="flex items-center gap-2">
-          <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-            <TagIcon className="h-3.5 w-3.5 shrink-0" />
+          <span className="nameplate min-w-0">
             <span className="truncate">{selected.name}</span>
           </span>
           <button
             type="button"
             onClick={() => onSelect(null)}
-            className="inline-flex min-h-9 items-center gap-1 rounded px-2 text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            className="st-act min-h-9"
           >
             <X className="h-3.5 w-3.5" />
             Change tag
@@ -165,7 +164,7 @@ export function TagPicker({
       ) : (
         <>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-faint)]" />
             <input
               type="search"
               value={query}
@@ -184,7 +183,7 @@ export function TagPicker({
               aria-activedescendant={
                 open && results[highlighted] ? `tag-option-${results[highlighted].id}` : undefined
               }
-              className="w-full min-h-11 rounded-lg border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:min-h-0 sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="st-field w-full min-h-11 py-2.5 pl-9 pr-3 text-base sm:min-h-0 sm:text-sm"
             />
           </div>
 
@@ -192,15 +191,13 @@ export function TagPicker({
             <ul
               id="tag-picker-results"
               role="listbox"
-              className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              className="st-card absolute z-20 mt-1 max-h-72 w-full overflow-auto"
             >
               {searching && !results.length ? (
-                <li className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                  Searching
-                </li>
+                <li className="px-3 py-2.5 text-sm text-[color:var(--nezu)]">Searching</li>
               ) : null}
               {!searching && !results.length ? (
-                <li className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400">
+                <li className="px-3 py-2.5 text-sm text-[color:var(--nezu)]">
                   No tags match that.
                 </li>
               ) : null}
@@ -215,25 +212,18 @@ export function TagPicker({
                     type="button"
                     onClick={() => choose(tag)}
                     onMouseEnter={() => setHighlighted(index)}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
-                      index === highlighted
-                        ? 'bg-gray-100 dark:bg-gray-700/60'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
-                    }`}
+                    className={`st-opt ${index === highlighted ? 'st-opt--on' : ''}`}
                   >
-                    <TagIcon className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                    <span className="min-w-0 flex-1 truncate text-gray-900 dark:text-white">
+                    <span className="min-w-0 flex-1 truncate text-[color:var(--ink)]">
                       {tag.name}
                     </span>
                     {tag.category ? (
-                      <span className="shrink-0 text-[11px] text-gray-400 dark:text-gray-500">
-                        {tag.category}
-                      </span>
+                      <span className="st-badge shrink-0">{tag.category}</span>
                     ) : null}
                     {/* VNDB's own count for the tag, as a sense of size while choosing. The
                         ranking states its own population, which counts child tags and so
                         does not match this. */}
-                    <span className="shrink-0 text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+                    <span className="st-num shrink-0 text-[11px] text-[color:var(--text-faint)]">
                       {tag.count.toLocaleString()}
                     </span>
                   </button>

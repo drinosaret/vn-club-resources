@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from '@/components/Link';
-import { ExternalLink, Languages } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 import { useReadingProfile } from '@/lib/use-reading-profile';
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
@@ -59,7 +59,7 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
     setOpened(false);
   }, [uid]);
 
-  if (loading) return <div className="image-placeholder h-48 rounded-xl" />;
+  if (loading) return <div className="image-placeholder h-48 rounded-xs" />;
 
   const japanese = data?.japanese;
   // Nothing measured means nothing honest to say, and a zero would read as a fact about the
@@ -67,19 +67,16 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
   if (!japanese || !japanese.measured || !japanese.characters) return null;
 
   return (
-    <div className="rounded-xl border border-gray-200/60 bg-white p-5 shadow-md shadow-gray-200/50 dark:border-gray-700/80 dark:bg-gray-800 dark:shadow-none">
-      <h2 className="mb-1 flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-        <Languages className="h-4 w-4 text-gray-400" />
-        Japanese in what you have read
-      </h2>
-      <p className="mb-4 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
+    <div className="st-card p-5">
+      <h2 className="st-card-title mb-1">Japanese in what you have read</h2>
+      <p className="st-card-sub mb-4">
         How much Japanese text is in the titles you have finished, if you read them in the
         original. Character counts come from{' '}
         <a
           href="https://jiten.moe/decks/media?mediaType=7"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline decoration-dotted underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+          className="underline decoration-dotted underline-offset-2 hover:text-[color:var(--nezu)]"
         >
           jiten.moe
         </a>
@@ -87,18 +84,18 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
       </p>
 
       <div className="grid items-center gap-x-8 gap-y-4 sm:grid-cols-[auto_1fr]">
-        <p className="text-4xl font-semibold tabular-nums text-gray-900 dark:text-white">
+        <p className="fig-value">
           {readable(japanese.characters)}
         </p>
 
         <div className="min-w-0">
-          <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+          <p className="text-xs leading-relaxed text-[color:var(--nezu)]">
             characters of Japanese, across the {japanese.measured.toLocaleString()} of your{' '}
             {japanese.finished.toLocaleString()} finished titles jiten has measured
             {japanese.difficulty !== null ? (
               <>
                 , at an average difficulty of{' '}
-                <span className="font-medium text-gray-800 dark:text-gray-200">
+                <span className="font-medium text-[color:var(--ink)]">
                   {japanese.difficulty.toFixed(2)}
                 </span>
               </>
@@ -110,21 +107,21 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
               much of a list it stands on, and a bar says that faster than a percentage. */}
           <div className="mt-3 flex items-center gap-3">
             <div
-              className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700"
+              className="st-bar h-2 min-w-0 flex-1"
               role="img"
               aria-label={`${japanese.coverage.toFixed(0)}% of your finished titles have been measured`}
             >
               <div
-                className="h-full rounded-full bg-primary-500"
+                className="st-bar-fill"
                 style={{ width: `${Math.max(2, Math.min(100, japanese.coverage))}%` }}
               />
             </div>
-            <span className="shrink-0 text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
+            <span className="st-num shrink-0 text-[11px] text-[color:var(--nezu)]">
               {japanese.coverage.toFixed(0)}% measured
             </span>
           </div>
 
-          <p className="mt-2 text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+          <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--text-faint)]">
             A floor rather than a total: the rest has no character count yet. Your list does not
             record which language you read a title in, so this counts what is there to read
             rather than what you read in Japanese.
@@ -139,32 +136,32 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
         className="group mt-4"
         onToggle={(event) => setOpened((event.target as HTMLDetailsElement).open)}
       >
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1 py-1.5 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1 py-1.5 text-[11px] font-medium text-[color:var(--text-faint)] transition-colors hover:text-[color:var(--nezu)]">
           <span className="transition-transform group-open:rotate-90">&rsaquo;</span>
           The {japanese.measured.toLocaleString()} titles behind this
         </summary>
 
         {titles === null ? (
-          <div className="image-placeholder mt-1 h-40 rounded-md" />
+          <div className="image-placeholder mt-1 h-40 rounded-xs" />
         ) : (
-          <div className="mt-1 max-h-72 overflow-y-auto overflow-x-hidden rounded-md border border-gray-200/70 pr-3 dark:border-gray-700/70 [scrollbar-gutter:stable]">
-            <table className="w-full text-left text-[11px] tabular-nums">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900/80">
+          <div className="mt-1 max-h-72 overflow-y-auto overflow-x-hidden rounded-xs border border-[color:var(--rule)] pr-3 [scrollbar-gutter:stable]">
+            <table className="st-table st-num w-full text-left text-[11px]">
+              <thead className="sticky top-0 bg-[color:var(--surface)]">
                 <tr>
                   {/* The title claims the slack and the figures take only what they need.
                       Left to itself the table hands the spare width to the numeric columns,
                       which need none of it, and a name is the one thing here that cannot be
                       read at the width left over. `max-w-0` is what lets a cell truncate at
                       all inside a table. */}
-                  <th scope="col" className="w-full max-w-0 px-2 py-1 font-semibold text-gray-500 dark:text-gray-400">
+                  <th scope="col" className="w-full max-w-0 px-2 py-1">
                     Title
                   </th>
-                  <th scope="col" className="w-px whitespace-nowrap px-2 py-1 text-right font-semibold text-gray-500 dark:text-gray-400">
+                  <th scope="col" className="w-px whitespace-nowrap px-2 py-1 text-right">
                     Characters
                   </th>
                   {/* Dropped on a phone. It is the least load-bearing of the three and its
                       heading is the widest word in the row. */}
-                  <th scope="col" className="hidden w-px whitespace-nowrap px-2 py-1 text-right font-semibold text-gray-500 sm:table-cell dark:text-gray-400">
+                  <th scope="col" className="hidden w-px whitespace-nowrap px-2 py-1 text-right sm:table-cell">
                     Difficulty
                   </th>
                   <th scope="col" className="w-px px-2 py-1">
@@ -172,13 +169,13 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody>
                 {titles.map((title) => (
                   <tr key={title.vn_id}>
                     <th scope="row" className="w-full max-w-0 px-2 py-1 font-normal">
                       <Link
                         href={title.href}
-                        className="block truncate text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400"
+                        className="block truncate text-[color:var(--nezu)] hover:text-[color:var(--ai)]"
                       >
                         {getDisplayTitle(
                           {
@@ -190,10 +187,10 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
                         )}
                       </Link>
                     </th>
-                    <td className="w-px whitespace-nowrap px-2 py-1 text-right text-gray-500 dark:text-gray-400">
+                    <td className="w-px whitespace-nowrap px-2 py-1 text-right text-[color:var(--nezu)]">
                       {title.characters.toLocaleString()}
                     </td>
-                    <td className="hidden w-px whitespace-nowrap px-2 py-1 text-right text-gray-500 sm:table-cell dark:text-gray-400">
+                    <td className="hidden w-px whitespace-nowrap px-2 py-1 text-right text-[color:var(--nezu)] sm:table-cell">
                       {title.difficulty === null ? '' : title.difficulty.toFixed(2)}
                     </td>
                     <td className="w-px px-2 py-1">
@@ -201,7 +198,7 @@ export function JapaneseRead({ uid }: JapaneseReadProps) {
                         href={title.source_href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400"
+                        className="text-[color:var(--text-faint)] hover:text-[color:var(--ai)]"
                       >
                         <ExternalLink className="h-3 w-3" aria-hidden="true" />
                         <span className="sr-only">This title on jiten.moe</span>

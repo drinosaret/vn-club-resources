@@ -4,10 +4,48 @@ import { useRef, useEffect, useCallback } from 'react';
 import { getDisplayTitle, type TitlePreference } from '@/lib/title-preference';
 import type { WheelEntry, SpinState } from './RoulettePageClient';
 
+// The wheel is drawn on a canvas, so its fills cannot be tokens. They are the site
+// palette written out: teal, amber and crimson at the weights that carry white type,
+// with neutral inks between them so adjacent wedges stay told apart.
 const WHEEL_COLORS = [
-  '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
-  '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7',
+  '#235C66', '#3C4046', '#9C6D10', '#A62432', '#2E6E5E',
+  '#17181A', '#4A5A6B', '#7A4A1E', '#1C4A53', '#5A5F66',
 ];
+
+const MAX_CANVAS_SIZE = 520;
+const MIN_CANVAS_SIZE = 120;
+const FALLBACK_CANVAS_SIZE = 320;
+
+/**
+ * The parts of the wheel that sit against the page rather than on a wedge: the empty disc and
+ * the hairlines around the rim and the hub. Painted pixels do not follow a stylesheet, so the
+ * tokens are resolved where the canvas sits and re-resolved when the theme changes. The
+ * fallbacks are the light theme's values, which is what an element reporting nothing shows.
+ */
+interface WheelTheme {
+  inset: string;
+  rule: string;
+  faint: string;
+  ink: string;
+}
+
+const LIGHT_THEME: WheelTheme = {
+  inset: '#F6F7F8',
+  rule: '#E3E5E8',
+  faint: '#70767F',
+  ink: '#17181A',
+};
+
+function readTheme(el: Element): WheelTheme {
+  const style = getComputedStyle(el);
+  const token = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
+  return {
+    inset: token('--surface-inset', LIGHT_THEME.inset),
+    rule: token('--rule', LIGHT_THEME.rule),
+    faint: token('--text-faint', LIGHT_THEME.faint),
+    ink: token('--ink', LIGHT_THEME.ink),
+  };
+}
 
 interface RouletteWheelProps {
   entries: WheelEntry[];
@@ -40,34 +78,39 @@ export function RouletteWheel({
   prefRef.current = titlePreference;
   const emptyTextRef = useRef(emptyText || 'Add VNs to start');
   emptyTextRef.current = emptyText || 'Add VNs to start';
+  const themeRef = useRef<WheelTheme>(LIGHT_THEME);
 
+  // A container that has not been laid out yet reports a width of zero, and a canvas
+  // sized from that gives the wheel a negative radius, which the arc call rejects.
   const getCanvasSize = useCallback(() => {
-    if (!containerRef.current) return 320;
-    const containerWidth = containerRef.current.clientWidth;
-    return Math.min(containerWidth, 520);
+    const containerWidth = containerRef.current?.clientWidth ?? 0;
+    if (containerWidth <= 0) return FALLBACK_CANVAS_SIZE;
+    return Math.max(MIN_CANVAS_SIZE, Math.min(containerWidth, MAX_CANVAS_SIZE));
   }, []);
 
   const drawWheel = useCallback((ctx: CanvasRenderingContext2D, size: number, rotation: number) => {
     const currentEntries = entriesRef.current;
     const pref = prefRef.current;
+    const theme = themeRef.current;
     const centerX = size / 2;
     const centerY = size / 2;
     const radius = size / 2 - 6;
+    if (radius <= 0) return;
 
     ctx.clearRect(0, 0, size, size);
 
     if (currentEntries.length === 0) {
-      // Empty state: draw a gray circle with text
+      // Empty state: an inset disc with the prompt on it
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = '#f3f4f6';
+      ctx.fillStyle = theme.inset;
       ctx.fill();
-      ctx.strokeStyle = '#d1d5db';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = theme.rule;
+      ctx.lineWidth = 1;
       ctx.stroke();
 
       ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#9ca3af';
+      ctx.fillStyle = theme.faint;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(emptyTextRef.current, centerX, centerY);
@@ -80,12 +123,12 @@ export function RouletteWheel({
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
       ctx.fillStyle = WHEEL_COLORS[0];
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
       ctx.stroke();
 
       ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#F2F3F4';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const title = getDisplayTitle(currentEntries[0], pref);
@@ -94,7 +137,7 @@ export function RouletteWheel({
       // Center dot
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius * 0.06, 0, 2 * Math.PI);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#E8A317';
       ctx.fill();
       return;
     }
@@ -116,8 +159,8 @@ export function RouletteWheel({
       ctx.fill();
 
       // Segment border
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 1;
       ctx.stroke();
 
       // Title text (clipped to segment)
@@ -135,7 +178,7 @@ export function RouletteWheel({
         : currentEntries.length <= 8 ? 13
         : currentEntries.length <= 14 ? 11 : 10;
       ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#F2F3F4';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
 
@@ -145,21 +188,26 @@ export function RouletteWheel({
       ctx.restore();
     }
 
-    // Outer ring
+    // Outer ring. Drawn in the ink of whichever theme is showing, so the rim reads against
+    // the ground behind it rather than sinking into it.
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = theme.ink;
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = 1;
     ctx.stroke();
+    ctx.globalAlpha = 1;
 
     // Center circle
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius * 0.07, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#E8A317';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = theme.ink;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = 1;
     ctx.stroke();
+    ctx.globalAlpha = 1;
   }, []);
 
   // Set up canvas and draw
@@ -177,6 +225,9 @@ export function RouletteWheel({
     canvas.style.height = `${size}px`;
     ctx.scale(dpr, dpr);
 
+    // Resolved once per setup rather than once per frame: a spin redraws sixty times a second
+    // and the tokens cannot change without the effect below running.
+    themeRef.current = readTheme(canvas);
     drawWheel(ctx, size, angleRef.current);
   }, [getCanvasSize, drawWheel]);
 
@@ -185,8 +236,24 @@ export function RouletteWheel({
     setupCanvas();
   }, [entries, titlePreference, setupCanvas]);
 
-  // Handle resize
+  // Painted pixels do not follow a stylesheet, so the theme is repainted rather than
+  // recascaded. The root element's class is where the theme is recorded.
   useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(() => setupCanvas());
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, [setupCanvas]);
+
+  // Observing the container rather than the window catches the first measurable width,
+  // which the initial draw can miss, as well as every later resize.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => setupCanvas());
+      observer.observe(container);
+      return () => observer.disconnect();
+    }
     const handleResize = () => setupCanvas();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -257,11 +324,11 @@ export function RouletteWheel({
       {/* Pointer */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-0.5 z-10">
         <div
-          className="w-0 h-0 drop-shadow-md"
+          className="w-0 h-0"
           style={{
             borderLeft: '10px solid transparent',
             borderRight: '10px solid transparent',
-            borderTop: '18px solid #7c3aed',
+            borderTop: '18px solid var(--kohaku)',
           }}
         />
       </div>

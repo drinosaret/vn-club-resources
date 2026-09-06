@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from '@/components/Link';
-import { Pencil, Clock } from 'lucide-react';
 
 import { ChartFrame } from '@/components/charts/ChartFrame';
 import { LineChart } from '@/components/charts/LineChart';
@@ -68,11 +67,11 @@ export function DatabaseGrowthSection() {
     // One box of the wrong height moves everything below the section when its data arrives.
     return (
       <div className="space-y-4">
-        <div className="image-placeholder h-10 w-64 rounded-lg" />
-        <div className="image-placeholder h-64 rounded-xl" />
+        <div className="image-placeholder h-10 w-64 rounded-xs" />
+        <div className="image-placeholder h-64 rounded-xs" />
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="image-placeholder h-80 rounded-xl" />
-          <div className="image-placeholder h-80 rounded-xl" />
+          <div className="image-placeholder h-80 rounded-xs" />
+          <div className="image-placeholder h-80 rounded-xs" />
         </div>
       </div>
     );
@@ -84,7 +83,7 @@ export function DatabaseGrowthSection() {
     // Rendering nothing would leave the section heading and its explanation standing over a
     // gap. A stated absence is shorter than the content and still accounts for the heading.
     return (
-      <p className="text-sm italic text-gray-500 dark:text-gray-400">
+      <p className="st-card-sub italic">
         Not available until an import has populated the catalogue dates.
       </p>
     );
@@ -100,7 +99,7 @@ export function DatabaseGrowthSection() {
           <select
             value={showCumulative ? 'total' : 'monthly'}
             onChange={(event) => setShowCumulative(event.target.value === 'total')}
-            className="text-xs rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-1"
+            className="text-xs rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface)] text-[color:var(--nezu)] px-2 py-1"
             aria-label="Growth chart mode"
           >
             <option value="total">Cumulative</option>
@@ -108,7 +107,7 @@ export function DatabaseGrowthSection() {
           </select>
         }
         footer={
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-[color:var(--text-faint)]">
             {stats.summary.entries_with_dates.toLocaleString()} entries with a recorded
             creation date
             {stats.summary.first_entry
@@ -121,7 +120,7 @@ export function DatabaseGrowthSection() {
       >
         <LineChart
           points={points}
-          color="#10b981"
+          color="var(--ai)"
           formatX={formatMonthLabel}
           valueSuffix="entries"
         />
@@ -131,7 +130,7 @@ export function DatabaseGrowthSection() {
           counts every entry ever catalogued, which the filter would misrepresent. */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <LanguageFilter value={language} onChange={setLanguage} />
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-[color:var(--nezu)]">
           {language === 'ja'
             ? 'The two lists below cover titles originally written in Japanese.'
             : 'The two lists below cover titles in any original language.'}
@@ -139,23 +138,22 @@ export function DatabaseGrowthSection() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 [&>*]:min-w-0">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-          <h3 className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-1">
-            <Pencil className="w-4 h-4 text-gray-400" />
+        <div className="st-card p-5">
+          <h3 className="st-card-title mb-1">
             Most edited entries
           </h3>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          <p className="st-card-sub mb-3">
             Usually the largest series, the most argued over, or both
           </p>
           <ol className="space-y-1.5">
             {stats.most_edited.slice(0, 10).map((entry, i) => (
               <li key={entry.id} className="flex items-center gap-2 text-sm">
-                <span className="w-5 shrink-0 text-xs text-gray-400 tabular-nums">
+                <span className="w-5 shrink-0 text-xs text-[color:var(--text-faint)] st-num">
                   {i + 1}
                 </span>
                 <Link
                   href={`/vn/${entry.id.replace('v', '')}`}
-                  className="flex-1 min-w-0 truncate text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400"
+                  className="flex-1 min-w-0 truncate text-[color:var(--text-secondary)] hover:text-[color:var(--ai)]"
                 >
                   {getDisplayTitle(
                     {
@@ -166,7 +164,7 @@ export function DatabaseGrowthSection() {
                     preference,
                   )}
                 </Link>
-                <span className="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                <span className="shrink-0 text-xs st-num text-[color:var(--nezu)]">
                   {entry.edits.toLocaleString()} edits
                 </span>
               </li>
@@ -174,12 +172,11 @@ export function DatabaseGrowthSection() {
           </ol>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/80 shadow-md shadow-gray-200/50 dark:shadow-none">
-          <h3 className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-1">
-            <Clock className="w-4 h-4 text-gray-400" />
+        <div className="st-card p-5">
+          <h3 className="st-card-title mb-1">
             Recently updated
           </h3>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          <p className="st-card-sub mb-3">
             Entries edited most recently in the latest dump
           </p>
           <ol className="space-y-1.5">
@@ -187,7 +184,7 @@ export function DatabaseGrowthSection() {
               <li key={entry.id} className="flex items-center gap-2 text-sm">
                 <Link
                   href={`/vn/${entry.id.replace('v', '')}`}
-                  className="flex-1 min-w-0 truncate text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400"
+                  className="flex-1 min-w-0 truncate text-[color:var(--text-secondary)] hover:text-[color:var(--ai)]"
                 >
                   {getDisplayTitle(
                     {
@@ -198,7 +195,7 @@ export function DatabaseGrowthSection() {
                     preference,
                   )}
                 </Link>
-                <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                <span className="shrink-0 text-xs text-[color:var(--nezu)]">
                   {formatDate(entry.last_edited)}
                 </span>
               </li>

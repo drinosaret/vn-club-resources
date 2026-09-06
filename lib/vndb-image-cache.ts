@@ -125,7 +125,7 @@ export function getProxiedImageUrl(
 
   const cachePath = getCachePathFromUrl(vndbUrl);
   if (!cachePath) {
-    // Not a valid VNDB URL — return null to avoid passing untrusted URLs through
+    // Not a valid VNDB URL; return null to avoid passing untrusted URLs through
     return null;
   }
 
@@ -273,10 +273,33 @@ export function getCoverSrc(
 }
 
 /**
+ * Candidate widths for one cover, for a `srcSet` alongside a `sizes` that mirrors the layout.
+ * Lets a narrow or non-retina viewport take the small variant instead of the largest one the
+ * widest breakpoint needs.
+ *
+ * Returns null for anything without per-width variants, since listing one URL under several
+ * width descriptors would have the browser pick between identical bytes.
+ */
+export function getCoverSrcSet(
+  imageUrl: string | null | undefined,
+  widths: readonly ImageWidth[],
+  options?: Omit<ProxiedImageOptions, 'width'>,
+): string | undefined {
+  if (!imageUrl) return undefined;
+  const entries: string[] = [];
+  for (const width of widths) {
+    const url = getProxiedImageUrl(imageUrl, { ...options, width });
+    if (!url) return undefined;
+    entries.push(`${url} ${width}w`);
+  }
+  return entries.length > 0 ? entries.join(', ') : undefined;
+}
+
+/**
  * Gets the appropriate image URL for news items.
  * - VNDB images: routes through /img/ for caching
  * - Twitter images: routes through /api/proxy-image/ to avoid CORS
- * - Other URLs: returned as-is
+ * - Other URLs: proxied through this app
  */
 export function getNewsImageUrl(imageUrl: string | null | undefined): string | null {
   if (!imageUrl) {
@@ -292,9 +315,9 @@ export function getNewsImageUrl(imageUrl: string | null | undefined): string | n
 
   // Check for Twitter CDN URLs
   if (isTwitterImageUrl(imageUrl)) {
-    return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    return `/api/proxy-image/?url=${encodeURIComponent(imageUrl)}`;
   }
 
   // Route other external URLs through proxy to avoid CSP issues
-  return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+  return `/api/proxy-image/?url=${encodeURIComponent(imageUrl)}`;
 }

@@ -17,12 +17,12 @@ import { BrowseMetric, formatMetricValue } from '@/lib/browse-metrics';
 // picks the optimal variant per viewport. This "primary" width is used
 // by the Image() preload objects and as the default src.
 export const GRID_IMAGE_WIDTHS: Record<GridSize, ImageWidth> = {
-  small: 256,   // 3 cols on mobile (~120px) — 256px fine for 2x retina
-  medium: 512,  // 2 cols on mobile (~195px) — needs 512px for retina
-  large: 512,   // 2 cols on mobile (~195px) — needs 512px for retina
+  small: 256,   // 3 cols on mobile (~120px): 256px fine for 2x retina
+  medium: 512,  // 2 cols on mobile (~195px): needs 512px for retina
+  large: 512,   // 2 cols on mobile (~195px): needs 512px for retina
 };
 
-// srcset widths per grid size — lets the browser pick the smallest
+// srcset widths per grid size: lets the browser pick the smallest
 // sufficient image for the actual CSS layout width + device pixel ratio.
 // Smaller grid = smaller max image; larger grid = needs bigger images.
 const GRID_SRCSET_WIDTHS: Record<GridSize, ImageWidth[]> = {
@@ -31,7 +31,7 @@ const GRID_SRCSET_WIDTHS: Record<GridSize, ImageWidth[]> = {
   large:  [256, 512],       // max ~260px CSS → 512 covers 2x DPR
 };
 
-// Per-grid sizes attribute — matches actual rendered widths per breakpoint
+// Per-grid sizes attribute: matches actual rendered widths per breakpoint
 // so the browser picks the smallest sufficient image variant
 const IMAGE_SIZES: Record<GridSize, string> = {
   small:  '(max-width: 640px) calc(33vw - 8px), (max-width: 1024px) calc(25vw - 10px), 170px',
@@ -74,8 +74,8 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
     return urls;
   }, [gridSize]);
 
-  // Preload buffer — keeps old grid visible while new images load in background.
-  // Pagination (skipPreload=true) disables the buffer for instant swap — prefetched
+  // Preload buffer: keeps old grid visible while new images load in background.
+  // Pagination (skipPreload=true) disables the buffer for instant swap: prefetched
   // images are already decoded in browser cache, per-card shimmers handle stragglers.
   // Filter/search changes go through preload for a polished batch swap.
   const preloadCount = PRELOAD_COUNTS[gridSize] ?? 12;
@@ -87,9 +87,9 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
   // Show empty state when query completes with no results
   if (!isLoading && !isSwapping && displayResults.length === 0 && results.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
-        <p className="text-lg font-medium">No visual novels found</p>
-        <p className="text-sm">Try adjusting your search or filters</p>
+      <div className="bw-empty">
+        <p className="bw-empty-title">No visual novels found</p>
+        <p className="mt-1">Try adjusting your search or filters</p>
       </div>
     );
   }
@@ -100,12 +100,12 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-6 my-6">
         {Array.from({ length: skeletonCount }).map((_, i) => (
           <div key={i} className={flexItemClasses[gridSize]}>
-            <div className="aspect-3/4 rounded-lg overflow-hidden">
+            <div className="shelf-art">
               <div className="w-full h-full image-placeholder" />
             </div>
-            <div className="mt-1.5 px-0.5 space-y-1">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-sm w-3/4 animate-pulse" />
-              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-sm w-1/2 animate-pulse" />
+            <div className="mt-2 px-0.5 space-y-1">
+              <div className="h-4 rounded-xs w-3/4 image-placeholder" />
+              <div className="h-3 rounded-xs w-1/2 image-placeholder" />
             </div>
           </div>
         ))}
@@ -115,18 +115,17 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
 
   const isBusy = isLoading || isSwapping;
 
-  // Show grid — keeps old results visible during loading and image preloading
+  // Show grid: keeps old results visible during loading and image preloading
   return (
     <div className="browse-vn-grid relative" style={{ contain: 'content' }}>
       {/* Loading overlay for filter/search changes (delayed, NOT shown for pagination) */}
       {hasMounted && (
         <div
-          className={`absolute inset-0 z-10 flex items-center justify-center
-            bg-gray-50/50 dark:bg-gray-900/50
+          className={`bw-veil absolute inset-0 z-10 flex items-center justify-center
             transition-opacity duration-150 ease-out loading-overlay
             ${showOverlay ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
-          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-[color:var(--ai)] animate-spin" />
         </div>
       )}
       {/* Flexbox layout centers incomplete last row like VNDB */}
@@ -140,7 +139,7 @@ export const VNGrid = memo(function VNGrid({ results, isLoading, showOverlay = f
 });
 
 // Above-fold images use loading="eager" on SSR (before hydration) so the browser
-// starts downloading them during HTML parse — before React hydrates and the
+// starts downloading them during HTML parse, before React hydrates and the
 // preload buffer kicks in. After hydration (hasMounted=true), aboveFold is false
 // for all items, so subsequent renders use loading="lazy" to avoid React 19's
 // <link rel="preload"> accumulation across SWR re-renders.
@@ -152,7 +151,7 @@ interface VNCoverProps {
   srcsetWidths?: ImageWidth[];
   imageSizes?: string;
   itemClass?: string;
-  /** True for above-fold images on SSR — uses loading="eager" for faster LCP */
+  /** True for above-fold images on SSR: uses loading="eager" for faster LCP */
   aboveFold?: boolean;
   metric?: BrowseMetric | null;
 }
@@ -190,11 +189,11 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
   return (
     <Link
       href={`/vn/${vnId}`}
-      className={`group block ${itemClass || ''}`}
+      className={`group shelf-item block ${itemClass || ''}`}
     >
       {/* Cover image container */}
-      <div className="browse-vn-card relative aspect-3/4 rounded-lg overflow-hidden shadow-xs group-hover:shadow-lg group-hover:-translate-y-0.5 transition-[box-shadow,transform] duration-150 bg-gray-200 dark:bg-gray-700">
-        {/* Cover Image — preloaded images display instantly from browser cache */}
+      <div className="browse-vn-card shelf-art">
+        {/* Cover Image: preloaded images display instantly from browser cache */}
         {showImage ? (
           <NSFWImage
             src={imageUrl}
@@ -209,12 +208,12 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
             onError={handleImageError}
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500">
+          <div className="absolute inset-0 flex items-center justify-center text-[color:var(--text-faint)]">
             <BookOpen className="w-8 h-8" />
           </div>
         )}
 
-        {/* Shimmer placeholder — rendered AFTER image so it stacks on top of NSFWOverlay,
+        {/* Shimmer placeholder: rendered AFTER image so it stacks on top of NSFWOverlay,
             preventing NSFW tiny thumbnails from appearing before non-NSFW covers load */}
         {showImage && !imageLoaded && (
           <div className="absolute inset-0 image-placeholder" />
@@ -222,7 +221,7 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
 
         {/* NSFW badge */}
         {isNsfw && (
-          <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-sm z-10">
+          <div className="bw-mark bw-mark--age absolute top-1 right-1 px-1.5 py-0.5 font-bold z-10">
             18+
           </div>
         )}
@@ -231,21 +230,21 @@ const VNCover = memo(function VNCover({ vn, preference, imageWidth, srcsetWidths
             take the order on trust, and the ordering column is not one of the two shown below
             the cover. */}
         {metricValue && (
-          <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-gray-900/80 text-white text-[10px] font-semibold rounded-sm z-10 backdrop-blur-xs">
+          <div className="bw-mark absolute top-1 left-1 px-1.5 py-0.5 z-10 backdrop-blur-xs">
             {metricValue}
           </div>
         )}
       </div>
 
       {/* Info section below the cover - always visible */}
-      <div className="mt-1.5 px-0.5">
-        <p className="browse-vn-title text-sm font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" title={title}>
+      <div className="px-0.5">
+        <p className="browse-vn-title line-clamp-2" title={title}>
           {title}
         </p>
-        <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+        <div className="browse-vn-meta flex items-center gap-2">
           {vn.rating && (
             <span className="flex items-center gap-0.5">
-              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+              <Star className="w-3 h-3 text-[color:var(--kohaku)] fill-current" />
               {vn.rating.toFixed(2)}
             </span>
           )}

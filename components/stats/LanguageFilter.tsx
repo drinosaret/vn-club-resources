@@ -1,7 +1,5 @@
 'use client';
 
-import { Languages } from 'lucide-react';
-
 export type LanguageFilterValue = 'ja' | 'all';
 
 interface LanguageFilterProps {
@@ -17,31 +15,19 @@ interface LanguageFilterProps {
 export function LanguageFilter({ value, onChange, className = '' }: LanguageFilterProps) {
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
-      <Languages className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-      <div
-        role="group"
-        aria-label="Original language filter"
-        className="inline-flex rounded-lg bg-gray-100 dark:bg-gray-800 p-0.5"
-      >
+      <span className="fig-label" id="language-filter-label">Language</span>
+      <div role="group" aria-labelledby="language-filter-label" className="tabs">
         <button
           onClick={() => onChange('ja')}
           aria-pressed={value === 'ja'}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            value === 'ja'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
+          className={`tab ${value === 'ja' ? 'tab--on' : ''}`}
         >
           Japanese
         </button>
         <button
           onClick={() => onChange('all')}
           aria-pressed={value === 'all'}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            value === 'all'
-              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
+          className={`tab ${value === 'all' ? 'tab--on' : ''}`}
         >
           All
         </button>

@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getVNForMetadata, getVNCharactersServer, getSimilarVNsServer } from '@/lib/vndb-server';
+import { getVNForMetadata, getVNCharactersServer, getSimilarVNsServer, getVNCreditsServer } from '@/lib/vndb-server';
 import {
   generatePageMetadata,
   generateVNJsonLd,
@@ -11,7 +11,8 @@ import {
 } from '@/lib/metadata-utils';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { platformLabel } from '@/lib/platforms';
-import { resolveDeckId } from '@/app/api/jiten/resolve-deck';
+import { fetchLanguageLookup } from '@/lib/jiten-server';
+import { VNCreditsSection } from '@/components/vn/VNCreditsSection';
 import VNDetailClient from './VNDetailClient';
 
 export const revalidate = 3600; // ISR: cache pages for 1 hour
@@ -60,13 +61,19 @@ export default async function VNDetailPage({ params }: PageProps) {
 
   const vnId = id.startsWith('v') ? id : `v${id}`;
 
-  // Fetch VN metadata, characters, similar VNs, and jiten deck ID in parallel
-  const [vn, characters, similar, jitenDeckId] = await Promise.all([
+  // Fetch VN metadata, characters, similar VNs, credits and the jiten language
+  // measurements in parallel. The measurements carry the deck id, so the page resolves it
+  // once.
+  const [vn, characters, similar, language, credits] = await Promise.all([
     getVNForMetadata(id),
     getVNCharactersServer(id),
     getSimilarVNsServer(id),
-    resolveDeckId(vnId).catch(() => undefined as undefined),
+    fetchLanguageLookup(vnId).catch(() => null),
+    getVNCreditsServer(id),
   ]);
+
+  // undefined leaves the client free to resolve the deck itself; null is a settled "no deck".
+  const jitenDeckId = language ? language.deckId : undefined;
 
   const metaTitle = vn
     ? ((vn.title_romaji && !/[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/.test(vn.title_romaji)) ? vn.title_romaji : vn.title)
@@ -107,6 +114,16 @@ export default async function VNDetailPage({ params }: PageProps) {
         initialCharacters={characters}
         initialSimilar={similar}
         initialJitenDeckId={jitenDeckId}
+        languageLookup={language}
+        creditsSlot={
+          vn ? (
+            <VNCreditsSection
+              vnTitle={metaTitle || vn.title}
+              characters={characters}
+              credits={credits}
+            />
+          ) : null
+        }
       />
     </>
   );

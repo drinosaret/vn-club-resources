@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DateCalendarProps {
   currentDate: string; // YYYY-MM-DD
@@ -82,86 +81,74 @@ export function DateCalendar({ currentDate, availableDates, onSelectDate, onClos
   });
 
   return (
-    <div
-      ref={ref}
-      className="absolute top-full right-0 mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 w-[280px]"
-    >
-      {/* Month header */}
-      <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={goToPrevMonth}
-          className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          aria-label="Previous month"
-        >
-          <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        </button>
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-          {monthLabel}
-        </span>
-        <button
-          onClick={goToNextMonth}
-          disabled={isNextDisabled}
-          className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          aria-label="Next month"
-        >
-          <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        </button>
-      </div>
+    <div ref={ref} className="absolute right-0 top-full z-50 mt-2 w-[280px]">
+      <div className="panel p-3">
+        {/* Month header */}
+        <div className="mb-2 flex items-center justify-between">
+          <button onClick={goToPrevMonth} className="nw-step" aria-label="Previous month">
+            ←
+          </button>
+          <span className="font-display text-sm font-bold text-[color:var(--ink)]">
+            {monthLabel}
+          </span>
+          <button
+            onClick={goToNextMonth}
+            disabled={isNextDisabled}
+            className="nw-step"
+            aria-label="Next month"
+          >
+            →
+          </button>
+        </div>
 
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {WEEKDAYS.map((d) => (
-          <div key={d} className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-1">
-            {d}
-          </div>
-        ))}
-      </div>
-
-      {/* Day grid */}
-      <div className="grid grid-cols-7 gap-0.5">
-        {/* Empty cells for days before the 1st */}
-        {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-          <div key={`empty-${i}`} />
-        ))}
-
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const dateStr = formatDateStr(viewYear, viewMonth, day);
-          const isSelected = dateStr === currentDate;
-          const isToday = dateStr === todayStr;
-          const hasContent = availableDates?.has(dateStr);
-          const isFuture = new Date(dateStr) > today;
-
-          return (
-            <button
-              key={day}
-              onClick={() => {
-                if (!isFuture) {
-                  onSelectDate(dateStr);
-                  onClose();
-                }
-              }}
-              disabled={isFuture}
-              className={`
-                relative flex items-center justify-center w-full aspect-square rounded-lg text-sm transition-all
-                ${isSelected
-                  ? 'bg-rose-500 text-white font-semibold'
-                  : isToday
-                    ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 font-medium'
-                    : isFuture
-                      ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }
-              `}
+        {/* Weekday headers */}
+        <div className="mb-1 grid grid-cols-7 gap-0.5">
+          {WEEKDAYS.map((d) => (
+            <div
+              key={d}
+              className="py-1 text-center font-mono text-[0.625rem] uppercase tracking-wider text-[color:var(--text-faint)]"
             >
-              {day}
-              {/* Content indicator dot */}
-              {hasContent && !isSelected && (
-                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-rose-400 dark:bg-rose-500" />
-              )}
-            </button>
-          );
-        })}
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Day grid */}
+        <div className="grid grid-cols-7 gap-0.5">
+          {/* Empty cells for days before the 1st */}
+          {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+            <div key={`empty-${i}`} />
+          ))}
+
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1;
+            const dateStr = formatDateStr(viewYear, viewMonth, day);
+            const isSelected = dateStr === currentDate;
+            const isToday = dateStr === todayStr;
+            const hasContent = availableDates?.has(dateStr);
+            const isFuture = new Date(dateStr) > today;
+
+            return (
+              <button
+                key={day}
+                onClick={() => {
+                  if (!isFuture) {
+                    onSelectDate(dateStr);
+                    onClose();
+                  }
+                }}
+                disabled={isFuture}
+                className={`nw-cal-day${isSelected ? ' nw-cal-day--on' : isToday ? ' nw-cal-day--now' : ''}`}
+              >
+                {day}
+                {/* A day the aggregator filed something for */}
+                {hasContent && !isSelected && (
+                  <span className="absolute bottom-[3px] left-1/2 h-1 w-1 -translate-x-1/2 bg-[color:var(--kohaku)]" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

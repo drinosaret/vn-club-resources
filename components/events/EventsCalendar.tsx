@@ -9,12 +9,7 @@ import { useTitlePreference, getDisplayTitle } from '@/lib/title-preference';
 import { NSFWImage } from '@/components/NSFWImage';
 import { getCoverSrc } from '@/lib/vndb-image-cache';
 import DayOverview from './DayOverview';
-
-// /vn/123/ -> "v123", for per-VN NSFW reveal persistence.
-function vnIdFromUrl(url: string | null): string | undefined {
-  const m = url?.match(/^\/vn\/(\d+)\/?$/);
-  return m ? `v${m[1]}` : undefined;
-}
+import { vnIdFromUrl } from '@/lib/club-history';
 
 // Week starts on Sunday.
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -30,8 +25,8 @@ function renderDescription(text: string) {
     /^Discord$/i.test(part) ? (
       <Link
         key={i}
-        href="/join"
-        className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+        href="/join/"
+        className="text-[color:var(--ai)] underline underline-offset-2"
       >
         {part}
       </Link>
@@ -274,24 +269,20 @@ export default function EventsCalendar({
     d.getUTCDate() === todayParts.d;
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+    <section className="rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface)] p-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-bold text-[color:var(--ink)]">
           {monthLabel(year, month)}
         </h2>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={today}
-            className="mr-1 rounded-md border border-gray-200 px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-          >
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={today} className="toy-btn">
             Today
           </button>
           <button
             type="button"
             onClick={() => go(-1)}
             aria-label="Previous month"
-            className="rounded-md border border-gray-200 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="toy-btn toy-btn--icon"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -299,19 +290,19 @@ export default function EventsCalendar({
             type="button"
             onClick={() => go(1)}
             aria-label="Next month"
-            className="rounded-md border border-gray-200 p-1.5 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="toy-btn toy-btn--icon"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800">
-        <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50/60 dark:border-gray-800 dark:bg-gray-800/20">
+      <div className="overflow-hidden rounded-xs border border-[color:var(--rule)]">
+        <div className="grid grid-cols-7 border-b border-[color:var(--rule)] bg-[color:var(--surface-inset)]">
           {WEEKDAYS.map((d) => (
             <div
               key={d}
-              className="py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+              className="py-2 text-center font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--nezu)]"
             >
               {d}
             </div>
@@ -329,7 +320,7 @@ export default function EventsCalendar({
           return (
             <div
               key={wi}
-              className="relative min-h-[92px] border-b border-gray-200 last:border-b-0 dark:border-gray-800"
+              className="relative min-h-[92px] border-b border-[color:var(--rule)] last:border-b-0"
             >
               {/* Cell backdrop: full-height column dividers + out-of-month/today tints,
                   behind the day numbers and bars (which are positioned above). */}
@@ -337,11 +328,11 @@ export default function EventsCalendar({
                 {days.map((d, i) => {
                   const inMonth = d.getUTCMonth() === monthIdx;
                   // Out-of-month days recede; today is marked by its number, not a fill.
-                  const tint = !inMonth ? 'bg-gray-50 dark:bg-gray-950' : '';
+                  const tint = !inMonth ? 'bg-[color:var(--surface-inset)]' : '';
                   return (
                     <div
                       key={i}
-                      className={`${i < 6 ? 'border-r border-gray-200 dark:border-gray-800' : ''} ${tint}`}
+                      className={`${i < 6 ? 'border-r border-[color:var(--rule)]' : ''} ${tint}`}
                     />
                   );
                 })}
@@ -361,12 +352,12 @@ export default function EventsCalendar({
                       className="group flex w-full justify-start px-1.5 pt-1.5 text-left"
                     >
                       <span
-                        className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-xs transition-colors ${
+                        className={`inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-xs px-1 font-mono text-xs tabular-nums transition-colors ${
                           isTodayCell(d)
-                            ? 'bg-indigo-600 font-semibold text-white'
+                            ? 'ev-today font-medium'
                             : inMonth
-                              ? 'text-gray-700 group-hover:bg-gray-200 dark:text-gray-200 dark:group-hover:bg-gray-700'
-                              : 'text-gray-300 group-hover:bg-gray-100 dark:text-gray-600 dark:group-hover:bg-gray-800'
+                              ? 'text-[color:var(--nezu)] group-hover:bg-[color:var(--surface-inset)]'
+                              : 'text-[color:var(--text-faint)] group-hover:bg-[color:var(--surface-inset)]'
                         }`}
                       >
                         {d.getUTCDate()}
@@ -389,7 +380,7 @@ export default function EventsCalendar({
                   const showLabel = !labeledIds.has(b.e.id);
                   if (showLabel) labeledIds.add(b.e.id);
                   const t = dtitle(b.e);
-                  const rounding = `${b.clipLeft ? 'rounded-l-none' : ''} ${b.clipRight ? 'rounded-r-none' : ''}`;
+                  const rounding = `${b.clipLeft ? 'ev-bar--clip-l' : ''} ${b.clipRight ? 'ev-bar--clip-r' : ''}`;
                   const singleDay = b.span === 1;
                   // A single-day cell is ~45-50px on a phone, too narrow for a title
                   // without chopping a word, so on mobile it shows the icon alone,
@@ -413,7 +404,7 @@ export default function EventsCalendar({
                           reads as a solid band over the grid. */}
                       <span
                         aria-hidden
-                        className={`pointer-events-none rounded bg-white dark:bg-gray-900 ${rounding}`}
+                        className={`pointer-events-none rounded-xs bg-[color:var(--surface)] ${rounding}`}
                         style={cell}
                       />
                       <button
@@ -421,7 +412,7 @@ export default function EventsCalendar({
                         onClick={() => setSelected(b.e)}
                         title={t}
                         aria-label={t}
-                        className={`flex min-h-5 overflow-hidden rounded px-1 py-0.5 text-[9px] font-medium ${meta.chip} ${rounding} ${layout} hover:brightness-95 sm:px-1.5 sm:text-[10px]`}
+                        className={`${meta.bar} ${rounding} ${layout}`}
                         style={cell}
                       >
                         {/* Only the first week of a multi-week bar is labeled;
@@ -450,32 +441,29 @@ export default function EventsCalendar({
             const name = dtitle(e).replace(/^VN of the (Month|Season): /, '');
             const cover = e.cover_url || e.image_url;
             const inner = (
-              <div
-                className={`flex items-center gap-3 rounded-lg border border-gray-200 border-l-4 ${meta.accent} bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50`}
-              >
-                {cover ? (
-                  <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded bg-gray-100 dark:bg-gray-800">
+              <div className="rel-row">
+                <span className="rel-art">
+                  {cover && (
                     <NSFWImage
                       src={getCoverSrc(cover, { width: 128 }) || cover}
                       alt=""
                       imageSexual={e.image_sexual}
-                      vnId={vnIdFromUrl(e.url)}
+                      vnId={vnIdFromUrl(e.url) ?? undefined}
                       className="h-full w-full object-cover"
                       compact
                     />
-                  </div>
-                ) : (
-                  <div className="flex h-14 w-10 shrink-0 items-center justify-center rounded bg-gray-100 dark:bg-gray-800">
-                    <meta.Icon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${meta.chip}`}>
-                    {meta.label}
-                  </span>
-                  <p className="mt-0.5 truncate font-medium text-gray-900 dark:text-gray-100">{name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{whenLabel(e)}</p>
-                </div>
+                  )}
+                  {!cover && (
+                    // A club session has no cover of its own until a title is picked, and an empty
+                    // frame reads as a failed image rather than as a session without one.
+                    <meta.Icon className="rel-art-icon" aria-hidden />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={meta.chip}>{meta.label}</span>
+                  <span className="rel-title mt-1 truncate">{name}</span>
+                  <span className="rel-meta font-mono">{whenLabel(e)}</span>
+                </span>
               </div>
             );
             return <div key={e.id}>{e.url ? <Link href={e.url}>{inner}</Link> : inner}</div>;
@@ -484,35 +472,32 @@ export default function EventsCalendar({
       )}
 
       {loading && (
-        <p className="mt-2 text-center text-xs text-gray-400 dark:text-gray-500">Loading…</p>
+        <p className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-faint)]">
+          Loading…
+        </p>
       )}
 
       {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setSelected(null)}
-        >
+        <div className="ev-scrim" onClick={() => setSelected(null)}>
           <div
-            className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+            className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xs border border-[color:var(--rule)] bg-[color:var(--surface)] p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <span
-                className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${eventMeta(selected.event_type).chip}`}
-              >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <span className={eventMeta(selected.event_type).chip}>
                 {eventMeta(selected.event_type).label}
               </span>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
                 aria-label="Close"
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="toy-btn toy-btn--icon shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             {(selected.cover_url || selected.image_url) && (
-              <div className="relative mb-2 h-32 w-full overflow-hidden rounded bg-gray-100 dark:bg-gray-800">
+              <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xs bg-[color:var(--surface-inset)]">
                 <NSFWImage
                   src={
                     getCoverSrc(selected.cover_url || selected.image_url, { width: 256 }) ||
@@ -522,27 +507,27 @@ export default function EventsCalendar({
                   }
                   alt=""
                   imageSexual={selected.image_sexual}
-                  vnId={vnIdFromUrl(selected.url)}
+                  vnId={vnIdFromUrl(selected.url) ?? undefined}
                   className="h-full w-full object-cover"
                 />
               </div>
             )}
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{dtitle(selected)}</h3>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            <h3 className="font-display text-base font-bold text-[color:var(--ink)]">
+              {dtitle(selected)}
+            </h3>
+            <p className="mt-1 font-mono text-xs text-[color:var(--nezu)]">
               {whenLabel(selected)}
               {selected.location ? ` · ${selected.location}` : ''}
             </p>
             {selected.description && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">
                 {renderDescription(selected.description)}
               </p>
             )}
             {selected.url && (
-              <Link
-                href={selected.url}
-                className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-              >
-                View details →
+              <Link href={selected.url} className="sec-more mt-3">
+                View details
+                <span aria-hidden>&rarr;</span>
               </Link>
             )}
           </div>

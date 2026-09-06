@@ -32,15 +32,15 @@ export const markdownComponents: Components = {
   h1: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h1 id={id} className="group text-3xl font-bold mb-6" {...props}>
+      <h1 id={id} className="group font-display text-3xl font-bold mb-6 text-[color:var(--ink)]" {...props}>
         {children}
         <a
           href={`#${id}`}
-          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="md-anchor"
           title="Permanent link"
           aria-label="Link to this section"
         >
-          <Link className="inline h-5 w-5" />
+          <Link className="inline h-4 w-4" />
         </a>
       </h1>
     );
@@ -48,11 +48,11 @@ export const markdownComponents: Components = {
   h2: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h2 id={id} className="group text-2xl font-bold mt-12 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700" {...props}>
+      <h2 id={id} className="group font-display text-2xl font-bold mt-12 mb-4 pb-2 border-b border-[color:var(--rule)] text-[color:var(--ink)]" {...props}>
         {children}
         <a
           href={`#${id}`}
-          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="md-anchor"
           title="Permanent link"
           aria-label="Link to this section"
         >
@@ -64,11 +64,11 @@ export const markdownComponents: Components = {
   h3: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h3 id={id} className="group text-xl font-semibold mt-8 mb-3" {...props}>
+      <h3 id={id} className="group font-display text-xl font-semibold mt-8 mb-3 text-[color:var(--ink)]" {...props}>
         {children}
         <a
           href={`#${id}`}
-          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="md-anchor"
           title="Permanent link"
           aria-label="Link to this section"
         >
@@ -80,11 +80,11 @@ export const markdownComponents: Components = {
   h4: ({ children, ...props }) => {
     const id = generateId(children);
     return (
-      <h4 id={id} className="group text-lg font-semibold mt-6 mb-2" {...props}>
+      <h4 id={id} className="group font-display text-lg font-semibold mt-6 mb-2 text-[color:var(--ink)]" {...props}>
         {children}
         <a
           href={`#${id}`}
-          className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="md-anchor"
           title="Permanent link"
           aria-label="Link to this section"
         >
@@ -103,12 +103,12 @@ export const markdownComponents: Components = {
     if (hasImage) {
       return <div className="my-4 leading-relaxed">{children}</div>;
     }
-    return <p className="my-4 leading-relaxed">{children}</p>;
+    return <p className="my-4 leading-relaxed text-[color:var(--text-secondary)]">{children}</p>;
   },
 
   // Horizontal rule - clean divider
   hr: () => {
-    return <hr className="my-8 border-0 border-t border-gray-200 dark:border-gray-700" />;
+    return <hr className="my-8 border-0 border-t border-[color:var(--rule)]" />;
   },
 
   // Images with lightbox support and lazy loading
@@ -125,7 +125,7 @@ export const markdownComponents: Components = {
         <img
           src={src}
           alt={alt}
-          className="rounded-lg shadow-xs mx-auto"
+          className="rounded-xs mx-auto"
           decoding="async"
           style={props.style}
         />
@@ -137,7 +137,7 @@ export const markdownComponents: Components = {
       <LazyImage
         src={src}
         alt={alt}
-        className="rounded-lg shadow-xs mx-auto my-4"
+        className="rounded-xs mx-auto my-4"
         style={{ maxWidth: '600px', width: '100%' }}
       />
     );
@@ -151,17 +151,18 @@ export const markdownComponents: Components = {
   // Tables
   table: (props) => {
     return (
-      <div className="overflow-x-auto my-6 rounded-lg border border-gray-200 dark:border-gray-700">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="overflow-x-auto my-6 rounded-xs border border-[color:var(--rule)]">
+        <table className="min-w-full">
           {props.children}
         </table>
       </div>
     );
   },
 
+  // The rule under the header is what separates it from the rows, so it carries no fill.
   thead: (props) => {
     return (
-      <thead className="bg-gray-50 dark:bg-gray-800">
+      <thead className="border-b border-[color:var(--rule)]">
         {props.children}
       </thead>
     );
@@ -169,7 +170,7 @@ export const markdownComponents: Components = {
 
   tbody: (props) => {
     return (
-      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+      <tbody className="divide-y divide-[color:var(--rule)]">
         {props.children}
       </tbody>
     );
@@ -177,7 +178,7 @@ export const markdownComponents: Components = {
 
   th: (props) => {
     return (
-      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+      <th className="px-4 py-3 text-left font-mono text-xs font-medium uppercase tracking-wider text-[color:var(--nezu)]">
         {props.children}
       </th>
     );
@@ -185,7 +186,7 @@ export const markdownComponents: Components = {
 
   td: (props) => {
     return (
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-3 text-sm text-[color:var(--text-secondary)]">
         {props.children}
       </td>
     );
@@ -194,7 +195,7 @@ export const markdownComponents: Components = {
   // Lists
   ul: (props) => {
     return (
-      <ul className="my-4 ml-4 space-y-2 list-disc list-outside">
+      <ul className="my-4 ml-4 space-y-2 list-disc list-outside text-[color:var(--text-secondary)]">
         {props.children}
       </ul>
     );
@@ -202,7 +203,7 @@ export const markdownComponents: Components = {
 
   ol: (props) => {
     return (
-      <ol className="my-4 ml-4 space-y-2 list-decimal list-outside">
+      <ol className="my-4 ml-4 space-y-2 list-decimal list-outside text-[color:var(--text-secondary)]">
         {props.children}
       </ol>
     );
@@ -222,7 +223,7 @@ export const markdownComponents: Components = {
     return (
       <a
         href={href}
-        className="text-indigo-600 dark:text-indigo-400 hover:underline"
+        className="text-[color:var(--ai)] hover:underline"
         {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
       >
         {children}
@@ -232,7 +233,7 @@ export const markdownComponents: Components = {
 
   // Strong/Bold
   strong: ({ children }) => {
-    return <strong className="font-semibold">{children}</strong>;
+    return <strong className="font-semibold text-[color:var(--ink)]">{children}</strong>;
   },
 
   // Code
@@ -242,7 +243,7 @@ export const markdownComponents: Components = {
 
     if (isInline) {
       return (
-        <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-sm text-sm font-mono text-pink-600 dark:text-pink-400 break-all">
+        <code className="bg-[color:var(--surface-inset)] px-1.5 py-0.5 rounded-xs text-sm font-mono text-[color:var(--beni-text)] break-all">
           {props.children}
         </code>
       );

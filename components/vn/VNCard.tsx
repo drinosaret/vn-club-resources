@@ -1,7 +1,6 @@
 'use client';
 
 import Link from '@/components/Link';
-import { BookOpen, Star } from 'lucide-react';
 import { getProxiedImageUrl } from '@/lib/vndb-image-cache';
 import { CARD_IMAGE_WIDTH, CARD_IMAGE_SIZES, buildCardSrcSet } from './card-image-utils';
 import { useDisplayTitle } from '@/lib/title-preference';
@@ -30,10 +29,10 @@ export function VNCard({ id, title, titleJp, titleRomaji, imageUrl, imageSexual,
   return (
     <Link
       href={`/vn/${id}`}
-      className="group block bg-gray-50 dark:bg-gray-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-primary-500 transition-[box-shadow,ring-color] duration-150"
+      className="shelf-item block"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '0 280px' }}
     >
-      <div className="relative aspect-3/4 bg-gray-200 dark:bg-gray-700">
+      <div className="shelf-art">
         {imageUrl ? (
           <>
             <div className={shimmerClass} />
@@ -50,26 +49,23 @@ export function VNCard({ id, title, titleJp, titleRomaji, imageUrl, imageSexual,
             />
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            <BookOpen className="w-8 h-8" />
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-faint)]">
+            No cover
           </div>
         )}
 
         {rating != null && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded-sm">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+          <span className="vn-mark top-1.5 right-1.5">
             {rating.toFixed(1)}
-          </div>
+          </span>
         )}
 
         {badge}
       </div>
 
-      <div className="p-2">
-        <h3 className="font-medium text-xs text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-          {displayTitle}
-        </h3>
-      </div>
+      {/* A card is an entry in a list of works, so its name is a heading. The level suits a
+          card sitting under a section heading, which is where every consumer puts it. */}
+      <h3 className="shelf-name">{displayTitle}</h3>
     </Link>
   );
 }

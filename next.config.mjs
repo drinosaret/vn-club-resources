@@ -43,12 +43,12 @@ const nextConfig = {
   ...(allowedDevOrigins.length ? { allowedDevOrigins } : {}),
   trailingSlash: true,
   poweredByHeader: false,
-  compress: false, // nginx handles gzip — no need for Node.js to double-compress
+  compress: false, // nginx handles gzip, no need for Node.js to double-compress
   // Security and caching headers
   async headers() {
     return [
       // Security headers for all routes
-      // CSP is production-only — dev mode needs 'unsafe-eval' for
+      // CSP is production-only: dev mode needs 'unsafe-eval' for
       // Turbopack/webpack source maps which breaks a strict CSP
       {
         source: '/:path*',

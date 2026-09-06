@@ -1,10 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from '@/components/Link';
 
 import { useTitlePreference } from '@/lib/title-preference';
 import { lengthLabels, platformNames, formatReleaseDate, formatUpdatedAt } from './vn-utils';
+
+// The timestamp arrives without an offset, which Date reads as local time. Anchoring it to
+// UTC keeps a server and a reader in another zone measuring from the same instant.
+const asUtcInstant = (value: string) =>
+  /[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`;
 
 interface VNSidebarProps {
   developers?: Array<{ id: string; name: string; original?: string }>;
@@ -34,16 +39,23 @@ export function VNSidebar({
   const [showAllShops, setShowAllShops] = useState(false);
   const lengthInfo = length ? lengthLabels[length] : null;
   const formattedDate = released ? formatReleaseDate(released) : null;
-  const formattedUpdatedAt = updatedAt ? formatUpdatedAt(updatedAt) : null;
+  // This string is measured against the clock at render time, and the page is served from a
+  // cache that outlives several of its buckets. The value rendered on the server is left in
+  // place through hydration and replaced once the reader's own clock is available.
+  const [clientUpdatedAt, setClientUpdatedAt] = useState<string | null>(null);
+  useEffect(() => {
+    setClientUpdatedAt(updatedAt ? formatUpdatedAt(asUtcInstant(updatedAt)) : null);
+  }, [updatedAt]);
+  const formattedUpdatedAt = clientUpdatedAt ?? (updatedAt ? formatUpdatedAt(asUtcInstant(updatedAt)) : null);
 
   return (
     <div className="space-y-3">
-      {/* Metadata items — compact grid */}
+      {/* Metadata items: compact grid */}
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2.5 text-sm items-baseline">
         {developers && developers.length > 0 && (
           <>
-            <SidebarLabel>Developer</SidebarLabel>
-            <div className="text-gray-800 dark:text-gray-200">
+            <span className="fig-label">Developer</span>
+            <div className="text-[color:var(--ink)]">
               {developers.map((dev, i) => {
                 const displayName = (preference === 'romaji' && dev.original)
                   ? dev.original
@@ -53,7 +65,7 @@ export function VNSidebar({
                     {i > 0 && ', '}
                     <Link
                       href={`/stats/producer/${dev.id}`}
-                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                      className="hover:text-[color:var(--ai)] hover:underline transition-colors"
                     >
                       {displayName}
                     </Link>
@@ -66,29 +78,29 @@ export function VNSidebar({
 
         {formattedDate && (
           <>
-            <SidebarLabel>Released</SidebarLabel>
-            <div className="text-gray-800 dark:text-gray-200">{formattedDate}</div>
+            <span className="fig-label">Released</span>
+            <div className="vn-num text-[color:var(--ink)]">{formattedDate}</div>
           </>
         )}
 
         {lengthInfo && (
           <>
-            <SidebarLabel>Length</SidebarLabel>
-            <div className="text-gray-800 dark:text-gray-200">
+            <span className="fig-label">Length</span>
+            <div className="text-[color:var(--ink)]">
               {lengthInfo.label}
-              <span className="text-gray-400 dark:text-gray-500 ml-1">({lengthInfo.hours})</span>
+              <span className="vn-num text-[color:var(--text-faint)] ml-1">({lengthInfo.hours})</span>
             </div>
           </>
         )}
 
         {platforms && platforms.length > 0 && (
           <div className="col-span-2">
-            <SidebarLabel>Platforms</SidebarLabel>
-            <div className="flex flex-wrap gap-1 mt-0.5">
+            <span className="fig-label">Platforms</span>
+            <div className="flex flex-wrap gap-1 mt-1">
               {(showAllPlatforms ? platforms : platforms.slice(0, 5)).map(p => (
                 <span
                   key={p}
-                  className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded-sm"
+                  className="px-1.5 py-0.5 rounded-xs border border-[color:var(--rule)] font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--nezu)]"
                 >
                   {platformNames[p] || p}
                 </span>
@@ -96,7 +108,7 @@ export function VNSidebar({
               {!showAllPlatforms && platforms.length > 5 && (
                 <button
                   onClick={() => setShowAllPlatforms(true)}
-                  className="text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                  className="vn-num text-xs text-[color:var(--ai)] hover:underline hit-24"
                 >
                   +{platforms.length - 5}
                 </button>
@@ -107,12 +119,12 @@ export function VNSidebar({
 
         {languages && languages.length > 0 && (
           <div className="col-span-2">
-            <SidebarLabel>Languages</SidebarLabel>
-            <div className="flex flex-wrap gap-1 mt-0.5">
+            <span className="fig-label">Languages</span>
+            <div className="flex flex-wrap gap-1 mt-1">
               {(showAllLanguages ? languages : languages.slice(0, 8)).map(lang => (
                 <span
                   key={lang}
-                  className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700/80 text-gray-600 dark:text-gray-300 rounded-sm uppercase"
+                  className="px-1.5 py-0.5 rounded-xs border border-[color:var(--rule)] font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--nezu)]"
                 >
                   {lang}
                 </span>
@@ -120,7 +132,7 @@ export function VNSidebar({
               {!showAllLanguages && languages.length > 8 && (
                 <button
                   onClick={() => setShowAllLanguages(true)}
-                  className="text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                  className="vn-num text-xs text-[color:var(--ai)] hover:underline hit-24"
                 >
                   +{languages.length - 8}
                 </button>
@@ -132,26 +144,26 @@ export function VNSidebar({
       </div>
 
       {links && links.length > 0 && (
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-          <SidebarLabel>Links</SidebarLabel>
-          <p className="text-xs leading-relaxed mt-0.5">
+        <div className="pt-3 border-t border-[color:var(--rule)]">
+          <span className="fig-label">Links</span>
+          <p className="text-xs leading-relaxed mt-1">
             {(showAllLinks ? links : links.slice(0, 5)).map((link, i, arr) => (
               <span key={`${link.site}-${i}`}>
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors"
+                  className="text-[color:var(--ai)] hover:underline transition-colors"
                 >
                   {link.label}
                 </a>
-                {i < arr.length - 1 && <span className="text-gray-400 dark:text-gray-500">, </span>}
+                {i < arr.length - 1 && <span className="text-[color:var(--text-faint)]">, </span>}
               </span>
             ))}
             {!showAllLinks && links.length > 5 && (
               <button
                 onClick={() => setShowAllLinks(true)}
-                className="ml-0.5 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 hover:underline transition-colors"
+                className="ml-0.5 text-[color:var(--ai)] hover:underline transition-colors"
               >
                 +{links.length - 5} more
               </button>
@@ -162,25 +174,25 @@ export function VNSidebar({
 
       {shops && shops.length > 0 && (
         <div className="mt-3">
-          <SidebarLabel>Shops</SidebarLabel>
-          <p className="text-xs leading-relaxed mt-0.5">
+          <span className="fig-label">Shops</span>
+          <p className="text-xs leading-relaxed mt-1">
             {(showAllShops ? shops : shops.slice(0, 5)).map((shop, i, arr) => (
               <span key={`${shop.site}-${i}`}>
                 <a
                   href={shop.url}
                   target="_blank"
                   rel="noopener noreferrer nofollow"
-                  className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors"
+                  className="text-[color:var(--ai)] hover:underline transition-colors"
                 >
                   {shop.label}
                 </a>
-                {i < arr.length - 1 && <span className="text-gray-400 dark:text-gray-500">, </span>}
+                {i < arr.length - 1 && <span className="text-[color:var(--text-faint)]">, </span>}
               </span>
             ))}
             {!showAllShops && shops.length > 5 && (
               <button
                 onClick={() => setShowAllShops(true)}
-                className="ml-0.5 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 hover:underline transition-colors"
+                className="ml-0.5 text-[color:var(--ai)] hover:underline transition-colors"
               >
                 +{shops.length - 5} more
               </button>
@@ -190,19 +202,14 @@ export function VNSidebar({
       )}
 
       {formattedUpdatedAt && (
-        <p className="mt-3 text-[11px] text-gray-400 dark:text-gray-500">
+        <p
+          suppressHydrationWarning
+          className="mt-3 font-mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-faint)]"
+        >
           Updated {formattedUpdatedAt.toLowerCase()}
         </p>
       )}
 
-    </div>
-  );
-}
-
-function SidebarLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">
-      {children}
     </div>
   );
 }
@@ -212,28 +219,23 @@ function SidebarLabel({ children }: { children: React.ReactNode }) {
 export function RatingArc({ rating, votecount }: { rating: number; votecount: number }) {
   const progress = Math.max(0, Math.min((rating - 1) / 9, 1)) * 100;
 
-  let barColor = 'bg-gray-400';
-  if (rating >= 8) barColor = 'bg-emerald-500';
-  else if (rating >= 7) barColor = 'bg-blue-500';
-  else if (rating >= 6) barColor = 'bg-amber-500';
-  else if (rating >= 5) barColor = 'bg-orange-500';
-  else if (rating > 0) barColor = 'bg-red-500';
-
   return (
     <div>
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
+        <span className="vn-num text-2xl font-medium text-[color:var(--ink)]">
           {rating.toFixed(2)}
         </span>
-        <span className="text-xs text-gray-400 dark:text-gray-500">
+        <span className="vn-num text-xs text-[color:var(--text-faint)]">
           / 10
         </span>
-        <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
+        <span className="vn-num ml-auto text-xs text-[color:var(--nezu)]">
           {votecount.toLocaleString()} votes
         </span>
       </div>
+      {/* Amber carries the live figure. Where the fill stops reports the rating, so it is one
+          colour at every value rather than a band the reader has to decode. */}
       <div
-        className="mt-1.5 h-1 rounded-full bg-gray-200 dark:bg-gray-700"
+        className="mt-1.5 h-1.5 bg-[color:var(--surface-inset)] border border-[color:var(--rule)]"
         role="progressbar"
         aria-valuenow={rating}
         aria-valuemin={1}
@@ -241,7 +243,7 @@ export function RatingArc({ rating, votecount }: { rating: number; votecount: nu
         aria-label={`Rating: ${rating.toFixed(2)} out of 10`}
       >
         <div
-          className={`h-full rounded-full ${barColor}`}
+          className="h-full bg-[color:var(--kohaku)]"
           style={{ width: `${progress}%` }}
         />
       </div>

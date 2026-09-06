@@ -13,18 +13,47 @@ from app.db.models import (
     Character, CharacterVN, CharacterTrait, Trait,
     VisualNovel, VNSeiyuu, Staff
 )
+from app.db.query_utils import in_ids
 from app.core.cache import get_cache
 from app.core.concurrency import Ceiling
-from app.core.search_utils import relevance_rank
+from app.core.search_utils import escape_like, relevance_rank
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
+#: Character ids a word's title lookup may contribute before the word stops constraining
+#: the search at all.
+#:
+#: The ids are bound into the search as an array parameter. Past roughly a thousand of them
+#: the planner stops using the trigram indexes on the name columns and filters every
+#: character row instead. A word carried by that many titles says little about which
+#: character is meant, so it is dropped from the search; holding it against the name
+#: columns alone would instead require the character to be named after the title.
+_TITLE_MATCH_CAP = 5000
+
+#: Shortest word written in letters that is resolved against titles. Two Latin letters carry
+#: no trigram, so the lookup cannot use the title index and the ids it returns are far too
+#: broad to narrow anything. Two characters of Japanese are a whole title, so the minimum
+#: applies only to words spelled out in letters.
+_MIN_TITLE_WORD = 3
+
+#: Words a search is cut to. Each one costs a round trip of its own, and past a handful
+#: nothing further is being narrowed.
+_MAX_SEARCH_WORDS = 6
+
+#: Character searches run at once.
+#:
+#: A word too short to carry a trigram is answered by walking the character table, and the
+#: short cache above spares only a repeat of the same query string while a typeahead sends
+#: a different one on every keystroke.
+_SEARCH_CEILING = Ceiling(slots=4, wait_seconds=5.0, what="character searches")
+
+
 @router.get("/search/", response_model=schemas.CharacterSearchResponse)
 async def search_characters(
-    q: str = Query(min_length=2, description="Search query for character name"),
+    q: str = Query(min_length=2, max_length=100, description="Search query for character name"),
     limit: int = Query(default=10, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
 ):
@@ -40,30 +69,101 @@ async def search_characters(
     # Search name and original (Japanese name)
     # Note: Character.aliases is never populated by the importer, so we skip it.
     # GIN trigram indexes on name/original (migration 032) enable fast ILIKE.
-    search_pattern = f"%{q}%"
     relevance = relevance_rank(q, [Character.name, Character.original])
 
-    # Popularity tiebreaker: characters appearing in more VNs rank higher
-    vn_count_sq = (
-        select(func.count(CharacterVN.vn_id.distinct()))
-        .where(CharacterVN.character_id == Character.id)
-        .correlate(Character)
-        .scalar_subquery()
-    )
+    # Each word has to match somewhere: the character's name in either script, or the
+    # name of a title they appear in. A given name alone is shared by dozens of
+    # characters and the list is cut short, so the title is the only other thing a
+    # reader can add to say which one they mean; a title typed alone lists its cast, as
+    # long as the word is not carried by more titles than _TITLE_MATCH_CAP admits.
+    #
+    # The title side is resolved to character ids of its own before the search runs, and
+    # bound back in as an id set. An OR branch the planner cannot answer from an index
+    # turns the whole disjunction into a filter applied to every character row, and the
+    # trigram indexes on name and original go unused; a small id set keeps all three
+    # branches index-eligible, which is what _TITLE_MATCH_CAP holds it to. The set travels
+    # as a single array parameter, so what bounds its size is the plan it buys rather than
+    # the driver's parameter limit.
+    words = [word for word in q.split() if word][:_MAX_SEARCH_WORDS]
+    # A query of nothing but separators leaves no word to match on. Every row would
+    # qualify, which is a whole-table scan answering a question nobody asked.
+    if not words:
+        return schemas.CharacterSearchResponse(results=[])
+    patterns = [f"%{escape_like(word)}%" for word in words]
 
-    query = (
-        select(Character)
-        .where(
-            or_(
-                Character.name.ilike(search_pattern),
-                Character.original.ilike(search_pattern),
+    async with _SEARCH_CEILING.hold():
+        # None marks a word whose title side was not resolved, which is not the same as a
+        # word whose titles came back empty: the first constrains nothing, the second still
+        # has to be met by the character's own name.
+        title_matches: list[set[str] | None] = []
+        for word, pattern in zip(words, patterns):
+            if len(word) < _MIN_TITLE_WORD and any(c.isascii() and c.isalpha() for c in word):
+                title_matches.append(None)
+                continue
+            matched = await db.execute(
+                select(CharacterVN.character_id)
+                .join(VisualNovel, VisualNovel.id == CharacterVN.vn_id)
+                .where(
+                    or_(
+                        VisualNovel.title.ilike(pattern),
+                        VisualNovel.title_jp.ilike(pattern),
+                        VisualNovel.title_romaji.ilike(pattern),
+                    )
+                )
+                .distinct()
+                # One more than the cap is enough to tell a usable set from an oversized
+                # one, and stops a broad word shipping its whole result back.
+                .limit(_TITLE_MATCH_CAP + 1)
             )
+            ids = set(matched.scalars().all())
+            title_matches.append(None if len(ids) > _TITLE_MATCH_CAP else ids)
+
+        def matches_word(pattern: str, character_ids: set[str]):
+            return or_(
+                Character.name.ilike(pattern),
+                Character.original.ilike(pattern),
+                in_ids(Character.id, character_ids),
+            )
+
+        # A word with no title side of its own drops out of the conjunction. When that
+        # leaves nothing behind, the words are asked of the names alone: a conjunction of
+        # nothing matches every row, which is the whole-table scan ruled out above.
+        conjuncts = [
+            matches_word(pattern, character_ids)
+            for pattern, character_ids in zip(patterns, title_matches)
+            if character_ids is not None
+        ]
+        if not conjuncts:
+            conjuncts = [matches_word(pattern, set()) for pattern in patterns]
+
+        # Ties between equally good name matches are common: a short given name is shared by
+        # dozens of characters. They are broken by how well known the character's best title
+        # is, since the one a reader is typing is far more often the heroine of a title with
+        # thousands of votes than a bit part in one with a handful. The number of titles a
+        # character appears in comes next, and the name last, so the order is stable.
+        top_votes_sq = (
+            select(func.coalesce(func.max(VisualNovel.votecount), 0))
+            .select_from(CharacterVN)
+            .join(VisualNovel, VisualNovel.id == CharacterVN.vn_id)
+            .where(CharacterVN.character_id == Character.id)
+            .correlate(Character)
+            .scalar_subquery()
         )
-        .order_by(relevance.asc(), vn_count_sq.desc(), Character.name.asc())
-        .limit(limit)
-    )
-    result = await db.execute(query)
-    characters = result.scalars().all()
+        vn_count_sq = (
+            select(func.count(CharacterVN.vn_id.distinct()))
+            .where(CharacterVN.character_id == Character.id)
+            .correlate(Character)
+            .scalar_subquery()
+        )
+
+        query = (
+            select(Character)
+            .where(and_(*conjuncts))
+            .order_by(relevance.asc(), top_votes_sq.desc(), vn_count_sq.desc(), Character.name.asc())
+            .limit(limit)
+        )
+        result = await db.execute(query)
+        characters = result.scalars().all()
 
     if not characters:
         return schemas.CharacterSearchResponse(results=[])

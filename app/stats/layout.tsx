@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { generatePageMetadata } from '@/lib/metadata-utils';
-import { StatsCrossLinks } from '@/components/stats/StatsCrossLinks';
 import { StatsSectionNav } from '@/components/stats/StatsSectionNav';
 import { VNDBAttribution } from '@/components/VNDBAttribution';
 

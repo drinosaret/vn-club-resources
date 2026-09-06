@@ -275,71 +275,6 @@ export interface TagAnalytics {
   };
 }
 
-export interface Recommendation {
-  vn_id: string;
-  title: string;
-  image_url: string | null;
-  image_sexual?: number;
-  rating: number | null;
-  released: string | null;
-  score: number;
-  reasons: string[];
-  tag_match_score: number | null;
-  cf_score: number | null;
-  olang?: string;
-  length?: number; // 1-5 scale
-  // Method-specific matched entities
-  matched_tags?: string[];
-  matched_traits?: string[];
-  matched_staff?: string[];
-  matched_seiyuu?: string[];  // Voice actors (separate from staff)
-  matched_producer?: string;
-  // Source traceability for specific methods
-  similar_to_titles?: string[]; // For Similar Novels: which favorites this is similar to
-  similar_user_count?: number;  // For Similar Users: how many similar users liked this
-  // Multi-signal combined recommendations
-  methods_matched?: number;  // How many recommendation methods scored this VN (0-9)
-  signal_scores?: Record<string, number>;  // Individual scores from each method
-}
-
-export interface RecommendationsResponse {
-  method: string;
-  recommendations: Recommendation[];
-  excluded_count: number;
-  dropped_count?: number;
-  blacklisted_count?: number;
-  total_excluded_message?: string;
-}
-
-export type RecommendationMethod =
-  | 'hybrid'
-  | 'combined'
-  | 'tag'
-  | 'collaborative'
-  | 'tags_affinity'
-  | 'traits_affinity'
-  | 'staff_affinity'
-  | 'seiyuu_affinity'
-  | 'producer_affinity'
-  | 'similar_novels'
-  | 'similar_users';
-
-export interface RecommendationFilters {
-  method?: RecommendationMethod;
-  limit?: number;
-  lengthFilter?: string;
-  spoilerLevel?: number;
-  minRating?: number;
-  skipExplanations?: boolean;
-  /** Optional abort signal for UI-driven cancellation (tab switches, etc.). */
-  signal?: AbortSignal;
-  /**
-   * Allow falling back to the slow/limited direct VNDB client when the backend is unavailable.
-   * Defaults to false because the direct client is rate-limited and often too slow for UI tabs.
-   */
-  allowClientFallback?: boolean;
-}
-
 export interface UserLookup {
   uid: string;
   username: string;
@@ -542,6 +477,27 @@ export interface VNCharacter {
   role: string; // "main", "primary", "side", "appears"
   spoiler: number; // 0=none, 1=minor, 2=major
   traits: CharacterTrait[];
+}
+
+export interface VNStaffCredit {
+  id: string;
+  name: string;
+  original?: string | null;
+  roles: string[];
+}
+
+export interface VNSeiyuuCredit {
+  id: string;
+  name: string;
+  original?: string | null;
+  characters: Array<{ id: string; name: string; original?: string | null }>;
+}
+
+export interface VNCredits {
+  staff: VNStaffCredit[];
+  seiyuu: VNSeiyuuCredit[];
+  staff_total: number;
+  seiyuu_total: number;
 }
 
 export interface CharacterDetail {
@@ -1023,6 +979,8 @@ export interface LeaderboardCatalogueEntry {
   facet_kind?: string;
   total_ranked: number;
   generated_at?: string | null;
+  /** Label and link crediting a source outside this site, where the board uses one. */
+  attribution?: { label: string; href: string } | null;
 }
 
 /** How the community's reading has moved through the medium's history. */
@@ -1710,6 +1668,44 @@ export interface ReadingYear {
   } | null;
 }
 
+/**
+ * Split trait ids into query strings short enough to survive the request path.
+ *
+ * A title with a large cast can carry over a thousand distinct traits, and a reverse proxy
+ * caps the request line well below the length that many ids would need. The ids are sent in
+ * their bare numeric form with literal separators, which is what the endpoint parses and is
+ * about half the length of the prefixed and percent-encoded form; whatever is still too long
+ * for one request is split across several. The per-batch item ceiling matches the endpoint's
+ * own, so a long list is never silently truncated.
+ */
+export function batchTraitIds(traitIds: string[]): string[] {
+  const MAX_QUERY_CHARS = 4000;
+  const MAX_BATCH_ITEMS = 1200;
+
+  const batches: string[] = [];
+  let current = '';
+  let count = 0;
+
+  for (const raw of traitIds) {
+    // The endpoint accepts either form and always answers with the prefixed one.
+    const id = /^i\d+$/.test(raw) ? raw.slice(1) : raw;
+    const piece = encodeURIComponent(id);
+    const separator = current ? 1 : 0;
+
+    if (current && (count >= MAX_BATCH_ITEMS || current.length + separator + piece.length > MAX_QUERY_CHARS)) {
+      batches.push(current);
+      current = '';
+      count = 0;
+    }
+
+    current = current ? `${current},${piece}` : piece;
+    count++;
+  }
+
+  if (current) batches.push(current);
+  return batches;
+}
+
 class VNDBStatsAPI {
   private baseUrl: string;
 
@@ -1852,97 +1848,9 @@ class VNDBStatsAPI {
     });
   }
 
-  async getTagAnalytics(uid: string): Promise<TagAnalytics> {
-    return await this.fetch<TagAnalytics>(`/api/v1/stats/${uid}/tags`);
-  }
-
-  async getRecommendations(
-    uid: string,
-    filters: RecommendationFilters = {}
-  ): Promise<RecommendationsResponse> {
-    const backendUp = await this.checkBackendAvailable();
-    const externalSignal = filters.signal;
-
-    const createAbortControllerWithTimeout = (timeoutMs: number, externalSignal?: AbortSignal) => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      if (externalSignal) {
-        if (externalSignal.aborted) {
-          controller.abort();
-        } else {
-          externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
-        }
-      }
-
-      return {
-        signal: controller.signal,
-        cancel: () => clearTimeout(timeoutId),
-        abort: () => controller.abort(),
-      };
-    };
-
-    const fetchBackendRecommendations = async (
-      methodOverride?: RecommendationMethod,
-      timeoutMs: number = 6000,
-      signalOverride?: AbortSignal
-    ) => {
-      const { signal, cancel } = createAbortControllerWithTimeout(timeoutMs, signalOverride);
-      const params = new URLSearchParams();
-      params.set('method', methodOverride || filters.method || 'hybrid');
-      params.set('limit', String(filters.limit || 20));
-      if (filters.lengthFilter) params.set('length_filter', filters.lengthFilter);
-      if (filters.spoilerLevel !== undefined) params.set('spoiler_level', String(filters.spoilerLevel));
-      if (filters.minRating !== undefined) params.set('min_rating', String(filters.minRating));
-      if (filters.skipExplanations) params.set('skip_explanations', 'true');
-
-      const url = `${this.getBaseUrl()}/api/v1/recommendations/${uid}?${params.toString()}`;
-      const response = await fetch(url, {
-        cache: 'no-store',
-        signal,
-      });
-
-      cancel();
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      return await response.json();
-    };
-
-    const requestedMethod = filters.method || 'hybrid';
-    const allowClientFallback = filters.allowClientFallback === true;
-
-    const backendTimeoutMs =
-      requestedMethod === 'combined' ? 45000 :
-      requestedMethod === 'similar_novels' ? 25000 :
-      requestedMethod === 'similar_users' ? 25000 :
-      20000;
-
-    if (backendUp) {
-      try {
-        return await fetchBackendRecommendations(undefined, backendTimeoutMs, externalSignal);
-      } catch {
-        // For combined, try a lighter backend method before giving up.
-        // Don't try fallback if the request was explicitly cancelled (e.g., by component unmount)
-        if (requestedMethod === 'combined' && !externalSignal?.aborted) {
-          try {
-            return await fetchBackendRecommendations('hybrid', 20000, externalSignal);
-          } catch {
-            // Hybrid fallback also failed
-          }
-        }
-      }
-    }
-
-    // If backend failed, return empty recommendations
-    return {
-      method: requestedMethod,
-      recommendations: [],
-      excluded_count: 0,
-      total_excluded_message: 'Recommendations are temporarily unavailable. Please try again later.',
-    };
+  async getTagAnalytics(uid: string, forceRefresh = false): Promise<TagAnalytics> {
+    const query = forceRefresh ? '?force_refresh=true' : '';
+    return await this.fetch<TagAnalytics>(`/api/v1/stats/${uid}/tags${query}`);
   }
 
   async refreshUserData(uid: string): Promise<boolean> {
@@ -2314,19 +2222,35 @@ class VNDBStatsAPI {
       return { counts: {}, total_characters: 0 };
     }
 
-    try {
-      const ids = traitIds.join(',');
-      const response = await fetch(`${this.getBaseUrl()}/api/v1/vn/traits/counts?ids=${encodeURIComponent(ids)}`, {
-        method: 'GET',
-        cache: 'no-store',
-        signal: AbortSignal.timeout(5000),
-      });
+    const batches = batchTraitIds(traitIds);
 
-      if (!response.ok) {
+    try {
+      const results = await Promise.all(
+        batches.map(async (ids) => {
+          const response = await fetch(`${this.getBaseUrl()}/api/v1/vn/traits/counts?ids=${ids}`, {
+            method: 'GET',
+            cache: 'no-store',
+            signal: AbortSignal.timeout(5000),
+          });
+
+          if (!response.ok) return null;
+          return (await response.json()) as { counts: Record<string, number>; total_characters: number };
+        })
+      );
+
+      if (results.some((r) => r === null)) {
         return { counts: {}, total_characters: 0 };
       }
 
-      return await response.json();
+      // The character total is a property of the dump rather than of the batch, so every
+      // batch reports the same figure.
+      const counts: Record<string, number> = {};
+      let total = 0;
+      for (const result of results) {
+        Object.assign(counts, result!.counts);
+        total = result!.total_characters || total;
+      }
+      return { counts, total_characters: total };
     } catch {
       return { counts: {}, total_characters: 0 };
     }

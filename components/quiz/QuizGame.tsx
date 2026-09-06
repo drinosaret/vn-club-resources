@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { RotateCcw } from 'lucide-react';
 import {
   type KanaCharacter,
   type QuizSettings as QuizSettingsType,
@@ -147,35 +146,29 @@ export function QuizGame() {
   return (
     <div className="space-y-6">
       {/* Main Quiz Area */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid gap-6 md:grid-cols-3">
         {/* Settings Panel */}
-        <div className="md:col-span-1 space-y-4">
+        <div className="space-y-4 md:col-span-1">
           <QuizSettings settings={settings} onSettingsChange={setSettings} />
           <QuizScore correct={score.correct} total={score.total} streak={streak} />
 
           {/* Reset Button */}
-          <button
-            onClick={handleReset}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
+          <button onClick={handleReset} className="toy-btn toy-btn--wide">
             Reset Score
           </button>
         </div>
 
         {/* Quiz Display */}
         <div className="md:col-span-2">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 relative overflow-hidden min-h-[320px] flex flex-col items-center justify-center">
+          <div className="panel quiz-stage">
             {hasValidPool && currentKana ? (
               <>
                 {/* Kana Display */}
-                <div className="text-center mb-8">
-                  <div className="text-8xl sm:text-9xl font-medium text-gray-900 dark:text-white mb-2 select-none">
+                <div className="mb-8 text-center">
+                  <span className="quiz-kana" lang="ja">
                     {currentKana.kana}
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Type the romaji reading
-                  </p>
+                  </span>
+                  <span className="fig-label mt-3">Type the romaji reading</span>
                 </div>
 
                 {/* Answer Input */}
@@ -195,13 +188,13 @@ export function QuizGame() {
                     spellCheck={false}
                     placeholder="Type romaji..."
                     aria-label="Type the romaji reading for the displayed kana character"
-                    className={`w-full text-center text-2xl px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${feedback.show ? 'opacity-50' : ''}`}
+                    className={`quiz-input ${feedback.show ? 'opacity-50' : ''}`}
                   />
                   <button
                     type="submit"
                     disabled={!userAnswer.trim() || feedback.show}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="w-full mt-3 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="toy-btn toy-btn--go toy-btn--wide mt-3"
                   >
                     Check Answer
                   </button>
@@ -214,10 +207,22 @@ export function QuizGame() {
                   show={feedback.show}
                 />
               </>
+            ) : hasValidPool ? (
+              // The first character is drawn after mount, so the stage is empty in the
+              // server-rendered markup even when the pool is full. A placeholder holds the
+              // layout rather than asking for settings that are already correct.
+              <div aria-hidden className="flex w-full flex-col items-center">
+                <div className="image-placeholder h-24 w-28 rounded-xs" />
+                <div className="image-placeholder mt-3 h-3 w-40 rounded-xs" />
+                <div className="image-placeholder mt-8 h-11 w-full max-w-xs rounded-xs" />
+                <div className="image-placeholder mt-3 h-10 w-full max-w-xs rounded-xs" />
+              </div>
             ) : (
-              <div className="text-center text-gray-500 dark:text-gray-400">
-                <p className="text-lg mb-2">No kana selected</p>
-                <p className="text-sm">
+              <div className="text-center">
+                <p className="font-display text-lg font-bold text-[color:var(--ink)]">
+                  No kana selected
+                </p>
+                <p className="mt-2 text-sm text-[color:var(--nezu)]">
                   Enable at least one kana type and character set in the settings
                 </p>
               </div>
@@ -226,7 +231,7 @@ export function QuizGame() {
 
           {/* Pool info */}
           {hasValidPool && (
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-3">
+            <p className="mt-3 text-center font-mono text-xs tabular-nums text-[color:var(--nezu)]">
               {pool.length} characters in current quiz pool
             </p>
           )}
