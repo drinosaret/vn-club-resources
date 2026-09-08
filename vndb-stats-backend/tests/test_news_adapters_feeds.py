@@ -275,11 +275,12 @@ def test_rss_drops_record_keeping_and_threads_aimed_at_one_member():
     feed = RssFeed(
         "Test",
         "https://example.test/feed",
+        source="forum",
         title_exclude_pattern=THREAD_FEED_CONFIG.title_exclude_pattern,
         summary_exclude_pattern=THREAD_FEED_CONFIG.summary_exclude_pattern,
     )
     kept = [d.title for d in parse_feed(THREAD_FEED, feed, NOW)]
-    assert kept == ["To split, or not to split? General Thread (#1)"]
+    assert kept == ["To split, or not to split? General Thread"]
 
 
 def test_rss_summary_rule_reads_only_the_opening_words():

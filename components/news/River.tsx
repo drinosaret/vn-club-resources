@@ -155,7 +155,7 @@ export function River({
   lang?: Lang | null;
   /** The UTC day the markup was built for; day labels are read against it. */
   today: string;
-  /** Promote the newest illustrated item of the last day to a lead story. */
+  /** Promote the newest illustrated press story or title-tied post of the last day to a lead story. */
   lead?: boolean;
   dividers?: boolean;
   modules?: RiverModules | null;
@@ -201,16 +201,18 @@ export function River({
   }
 
   const todayStart = Date.parse(`${today}T00:00:00Z`);
-  const leadIndex = lead
-    ? items.findIndex(
-        (i) =>
-          i.imageUrl &&
-          !i.imageIsNsfw &&
-          !isReleaseSource(i.source) &&
-          i.source !== 'youtube' &&
-          Date.parse(i.publishedAt) > todayStart - LEAD_WINDOW_MS,
-      )
-    : -1;
+  const canLead = (i: NewsItem) =>
+    Boolean(i.imageUrl) &&
+    !i.imageIsNsfw &&
+    !isReleaseSource(i.source) &&
+    i.source !== 'youtube' &&
+    Date.parse(i.publishedAt) > todayStart - LEAD_WINDOW_MS;
+  // A press story or a post about a catalogue title leads before an account's own
+  // side content: a brand's comic strip or radio notice belongs in the river, not at
+  // its head.
+  const weighty = (i: NewsItem) => i.source === 'rss' || Boolean(i.vnId);
+  const firstLead = lead ? items.findIndex((i) => canLead(i) && weighty(i)) : -1;
+  const leadIndex = firstLead >= 0 || !lead ? firstLead : items.findIndex(canLead);
   const rest = leadIndex >= 0 ? items.filter((_, i) => i !== leadIndex) : items;
   const entries = foldBursts(rest);
   const pickModule = makeModulePicker(modules, new Set(items.map((i) => i.id)));

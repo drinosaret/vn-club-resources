@@ -118,8 +118,9 @@ async def _rss_feeds() -> list[RssFeed]:
 
 # Sources whose English rows are about one work, where the catalogue can say whether that
 # work is Japanese in origin. Thread openers are included: the board a thread sits on is
-# not published, so the title it names is what places it.
-_ORIGIN_CHECKED_SOURCES = ("rss", "review", "forum")
+# not published, so the title it names is what places it. The English press accounts are
+# included for the same reason: they announce whatever the outlet covers.
+_ORIGIN_CHECKED_SOURCES = ("rss", "review", "forum", "bluesky", "twitter")
 
 
 # What reaches most of the registry is already selected: a hashtag or search feed, a
@@ -134,8 +135,9 @@ def _reads_loosely(draft) -> bool:
     """Whether a draft comes from a source that carries more than this medium."""
     if draft.extra.get("broad") or draft.extra.get("channel_id") in _BROAD_CHANNELS:
         return True
-    # A post search matches the words, not the subject, so its hits are read.
-    if draft.source == "bsky_search":
+    # A post search matches the words, not the subject, so its hits are read. A forum
+    # opener names no board, so what it says is all that places it.
+    if draft.source in ("bsky_search", "forum"):
         return True
     return draft.source == "board" and draft.source_label not in _PER_WORK_BOARDS
 

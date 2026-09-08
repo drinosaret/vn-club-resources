@@ -188,3 +188,14 @@ async def test_article_origin_ignores_a_short_common_phrase():
             "I wish you would treat developers with a little more care, a solo developer said",
         )
     assert origin is None
+
+
+def test_origin_titles_must_keep_their_capitalisation_in_prose():
+    from app.services.news.matching import _stands_alone
+
+    prose = "The site says the server would need support from readers overseas"
+    assert not _stands_alone("The Server", prose, as_written=True)
+    assert _stands_alone("The Server", prose)
+    assert _stands_alone("The Server", 'A review of "The Server" is out', as_written=True)
+    # Japanese titles have no case to keep.
+    assert _stands_alone("架空の恋物語", "『架空の恋物語』が発売", as_written=True)

@@ -16,6 +16,8 @@ from app.services.news.text import clean_html, extract_og_image, matches_keyword
 
 # Some feeds append a rights notice to every description; it is not part of the article.
 _FOOTER = re.compile(r"\s*(?:\.\.\.\s*)?Copyright\s*©.*$", re.S)
+# A forum's feed numbers each post within its thread at the end of the title.
+_POST_NUMBER = re.compile(r"\s*\(#\d+\)\s*$")
 # A forum's feed wraps each post in a byline and link trailer that is not the post.
 _FORUM_TRAILER = re.compile(r"\s*submitted by\s+/u/\S+.*$", re.S)
 # A platform's excerpt ends in its own "read more" link text.
@@ -109,6 +111,8 @@ def parse_feed(payload: str, feed: RssFeed, now: datetime) -> list[NewsDraft]:
         label, title, outlet_site = _entry_label(entry, feed)
         if label in _SKIP_OUTLETS:
             continue
+        if feed.source == "forum":
+            title = _POST_NUMBER.sub("", title)
         # A search feed repeats its own title as a first, linkless entry.
         if not entry.get("link") or (feed_title and title == feed_title):
             continue

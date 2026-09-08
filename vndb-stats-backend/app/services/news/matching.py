@@ -65,15 +65,18 @@ _ORIGIN_QUERIES = (
 )
 
 
-def _stands_alone(candidate: str, body: str) -> bool:
+def _stands_alone(candidate: str, body: str, *, as_written: bool = False) -> bool:
     """Whether the title appears as itself rather than inside a longer word.
 
     The boundary is asserted only at an end that is a word character; a title that opens
-    or closes on punctuation has no word edge to assert there.
+    or closes on punctuation has no word edge to assert there. With `as_written`, a Latin
+    title must also keep the capitalisation the catalogue gives it: a short title made of
+    everyday words otherwise turns up inside plain prose.
     """
     left = r"\b" if candidate[:1].isalnum() else ""
     right = r"\b" if candidate[-1:].isalnum() else ""
-    return re.search(left + re.escape(candidate) + right, body, re.I) is not None
+    flags = 0 if as_written and re.search(r"[A-Za-z]", candidate) else re.I
+    return re.search(left + re.escape(candidate) + right, body, flags) is not None
 
 
 async def article_origin(db: AsyncSession, body: str) -> str | None:
@@ -92,7 +95,7 @@ async def article_origin(db: AsyncSession, body: str) -> str | None:
         for row in (await db.execute(text(query), params)).all():
             if not row.candidate or not row.olangs:
                 continue
-            if not _stands_alone(row.candidate, body):
+            if not _stands_alone(row.candidate, body, as_written=True):
                 continue
             found.setdefault(row.candidate.lower(), set()).update(o for o in row.olangs if o)
     if not found:

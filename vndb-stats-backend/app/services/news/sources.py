@@ -275,7 +275,7 @@ RSS_FEEDS: list[RssFeed] = [
         source="forum",
         key_pattern=r"\.1$",
         title_exclude_pattern=r"(?i)^(regarding [a-z]{1,2}\d+|about\b|where (to|can i) (get|buy|find|download)|how (to|do i) (get|buy|install|run|play)|crash|doesn't (work|start|run)|won't (work|start|run)|error\b)",
-        summary_exclude_pattern=r"(?i)^\s*(hi|hey|hello|yo)?[,!. ]*\s*(i saw (that )?you|you (edited|added|removed|changed)|do you (have|know|own)|can you|could you|thanks for)",
+        summary_exclude_pattern=r"(?i)^\s*(hi|hey|hello|yo)?[,!. ]*\s*(i saw (that )?you|you (edited|added|removed|changed)|do you (have|know|own)|can you|could you|thanks for)|\b(notic(e|ed) you|you on your|your (profile|page|list|votes))\b",
     ),
     RssFeed(
         "r/visualnovels",

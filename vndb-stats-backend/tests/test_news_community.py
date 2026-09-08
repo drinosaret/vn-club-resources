@@ -1,3 +1,4 @@
+import pytest
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -82,3 +83,44 @@ def test_feed_thumbnail_is_used_before_any_page_fetch():
     assert len(drafts) == 1
     assert drafts[0].image_url.startswith("https://assets.st-note.com/")
     assert drafts[0].source == "note"
+
+
+@pytest.mark.asyncio
+async def test_english_account_posts_are_placed_by_the_catalogue(monkeypatch):
+    from datetime import datetime, timezone
+
+    from app.ingestion import news_aggregator
+    from app.services.news.drafts import NewsDraft
+
+    async def origin(db, body):
+        return "en" if "Other Origin" in body else "ja"
+
+    monkeypatch.setattr(news_aggregator, "article_origin", origin)
+    now = datetime(2026, 9, 8, tzinfo=timezone.utc)
+
+    def post(source, title, lang):
+        return NewsDraft(source=source, source_label="s", key=title, title=title, published_at=now, extra={"lang": lang})
+
+    drafts = [
+        post("bluesky", "Other Origin has released", "en"),
+        post("twitter", "Other Origin gets a sequel", "en"),
+        post("bluesky", "Some Japanese Work announced", "en"),
+        post("twitter", "Other Origin の話", "ja"),
+    ]
+    kept = await news_aggregator._drop_other_origins(None, drafts)
+    assert [d.title for d in kept] == ["Some Japanese Work announced", "Other Origin の話"]
+
+
+def test_forum_openers_lose_their_post_number_and_member_threads_are_dropped():
+    from app.ingestion.news_aggregator import _reads_loosely
+    from app.services.news.sources import RSS_FEEDS
+
+    forum = next(f for f in RSS_FEEDS if f.source == "forum")
+    feed_text = (FIX / "vndb_posts.atom").read_text(encoding="utf-8").replace(
+        "<summary type=\"html\">Where should a newcomer start?</summary>",
+        "<summary type=\"html\">Hi there ^^ Couldn't help but notice you on your page</summary>",
+    )
+    assert parse_feed(feed_text, forum, NOW) == []
+    drafts = parse_feed((FIX / "vndb_posts.atom").read_text(encoding="utf-8"), forum, NOW)
+    assert [d.title for d in drafts] == ["Reading order question"]
+    assert _reads_loosely(drafts[0])
