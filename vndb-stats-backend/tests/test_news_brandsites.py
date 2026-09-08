@@ -76,7 +76,7 @@ def test_circus_dates_and_window():
     assert d.url == "https://circus-co.jp/product/example-a/"
     # JST midnight, as UTC.
     assert d.published_at == datetime(2026, 9, 2, 15, 0, tzinfo=timezone.utc)
-    assert d.extra == {"feed_name": "CIRCUS", "lang": "ja"}
+    assert d.extra == {"feed_name": "CIRCUS", "lang": "ja", "brand": True}
     assert d.key.startswith("circus-") and d.item_id.startswith("rss-circus-")
     assert not d.image_is_nsfw
     # A relative link is resolved against the page.

@@ -124,3 +124,11 @@ def test_forum_openers_lose_their_post_number_and_member_threads_are_dropped():
     drafts = parse_feed((FIX / "vndb_posts.atom").read_text(encoding="utf-8"), forum, NOW)
     assert [d.title for d in drafts] == ["Reading order question"]
     assert _reads_loosely(drafts[0])
+
+
+def test_a_brand_feed_marks_its_rows():
+    brand = RssFeed("A Brand", "https://brand.example.test/feed/", brand=True)
+    outlet = RssFeed("An Outlet", "https://outlet.example.test/feed/")
+    page = (FIX / "rss.xml").read_text(encoding="utf-8")
+    assert all(d.extra.get("brand") is True for d in parse_feed(page, brand, NOW))
+    assert all("brand" not in d.extra for d in parse_feed(page, outlet, NOW))

@@ -98,6 +98,9 @@ class RssFeed:
     lang: str = JA
     # The row source, which decides the section the feed lands in.
     source: str = "rss"
+    # A maker's own feed: everything it posts is on topic, but it speaks for itself rather
+    # than reporting, so the page does not lead with it.
+    brand: bool = False
     # Some hosts answer a plain library client with a refusal and expect a named one.
     headers: dict[str, str] | None = None
     # Entries filed under one of these categories are dropped, each term matched as a
@@ -190,21 +193,21 @@ RSS_FEEDS: list[RssFeed] = [
     RssFeed("BugBug", "https://www.bugbug.news/tag/campaign/feed/", nsfw_images=True),
     RssFeed("BugBug", "https://www.bugbug.news/tag/post_tag-229/feed/", nsfw_images=True),
     RssFeed("萌えゲー.net", "https://moe-gameaward.com/media/feed/", nsfw_images=True),
-    RssFeed("Otomate", "https://www.otomate-p.jp/feed/"),
-    RssFeed("MAGES.", "https://mages.co.jp/feed"),
+    RssFeed("Otomate", "https://www.otomate-p.jp/feed/", brand=True),
+    RssFeed("MAGES.", "https://mages.co.jp/feed", brand=True),
     # Brands' own news feeds.
-    RssFeed("Nitroplus", "https://www.nitroplus.co.jp/index.xml"),
-    RssFeed("August", "https://august-soft.com/news/feed/"),
-    RssFeed("Madosoft", "https://madosoft.net/news/feed/"),
-    RssFeed("Alicesoft", "https://www.alicesoft.com/atom.xml", nsfw_images=True),
-    RssFeed("Key", "https://key.visualarts.gr.jp/feed"),
-    RssFeed("VisualArts", "https://visual-arts.jp/news/feed/"),
-    RssFeed("TYPE-MOON", "https://typemoon.com/atom.xml"),
-    RssFeed("Hulotte", "https://hulotte.jp/pc/feed"),
-    RssFeed("Frontwing", "http://frontwing.jp/news/feed/"),
-    RssFeed("ninetail", "https://ninetail.info/blog2/feed/", nsfw_images=True),
+    RssFeed("Nitroplus", "https://www.nitroplus.co.jp/index.xml", brand=True),
+    RssFeed("August", "https://august-soft.com/news/feed/", brand=True),
+    RssFeed("Madosoft", "https://madosoft.net/news/feed/", brand=True),
+    RssFeed("Alicesoft", "https://www.alicesoft.com/atom.xml", nsfw_images=True, brand=True),
+    RssFeed("Key", "https://key.visualarts.gr.jp/feed", brand=True),
+    RssFeed("VisualArts", "https://visual-arts.jp/news/feed/", brand=True),
+    RssFeed("TYPE-MOON", "https://typemoon.com/atom.xml", brand=True),
+    RssFeed("Hulotte", "https://hulotte.jp/pc/feed", brand=True),
+    RssFeed("Frontwing", "http://frontwing.jp/news/feed/", brand=True),
+    RssFeed("ninetail", "https://ninetail.info/blog2/feed/", nsfw_images=True, brand=True),
     RssFeed("変人窟", "https://henjinkutsu.com/feed/", VN_TERMS),
-    RssFeed("TEAM Entertainment", "https://www.team-e.co.jp/feed/"),
+    RssFeed("TEAM Entertainment", "https://www.team-e.co.jp/feed/", brand=True),
     RssFeed("VNDB", "https://vndb.org/feeds/announcements.atom", exclude=LOCALISATION_TERMS, exclude_categories=LOCALISATION_CATEGORIES + NON_JP_ORIGIN_CATEGORIES, lang=EN),
     RssFeed("この青空に、エロゲを求めて", "https://bluesky-erg.com/feed/", nsfw_images=True, source="review"),
     RssFeed("エロゲエム", "https://erogame.mhx.jp/feed", nsfw_images=True, source="review"),
@@ -238,9 +241,9 @@ RSS_FEEDS: list[RssFeed] = [
     RssFeed("Siliconera", "https://www.siliconera.com/?s=visual+novel&feed=rss2", ["visual novel", "otome", "eroge", "galge", "bishoujo"], LOCALISATION_TERMS, exclude_categories=LOCALISATION_CATEGORIES + NON_JP_ORIGIN_CATEGORIES, lang=EN),
     RssFeed("かーずSP", "https://www.karzusp.net/feed", VN_TERMS),
     # Retro and the store's own corporate releases.
-    RssFeed("D4 Enterprise", "https://www.d4e.co.jp/feed"),
+    RssFeed("D4 Enterprise", "https://www.d4e.co.jp/feed", brand=True),
     RssFeed("RetroPC NEWS", "https://retropcnews.com/feed", VN_TERMS + ["アドベンチャー", "PC-98", "PC98"]),
-    RssFeed("PR TIMES (エイシス)", "https://prtimes.jp/companyrdf.php?company_id=42966"),
+    RssFeed("PR TIMES (エイシス)", "https://prtimes.jp/companyrdf.php?company_id=42966", brand=True),
     # Search feeds: whatever any outlet wrote this week, each entry naming its outlet. The
     # search matches the query anywhere in an article, so the headline itself must name
     # the medium for the entry to count.

@@ -444,7 +444,7 @@ def parse_site(page: str, site: BrandSite, now: datetime, page_url: str | None =
                 image_is_nsfw=site.nsfw_images,
                 published_at=published,
                 tags=["news"],
-                extra={"feed_name": site.name, "lang": site.lang},
+                extra={"feed_name": site.name, "lang": site.lang, "brand": True},
             )
         )
     drafts.sort(key=lambda d: d.published_at, reverse=True)

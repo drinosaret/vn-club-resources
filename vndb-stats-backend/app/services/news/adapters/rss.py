@@ -151,6 +151,7 @@ def parse_feed(payload: str, feed: RssFeed, now: datetime) -> list[NewsDraft]:
                     "original_id": key,
                     "lang": feed.lang,
                     **({"broad": True} if feed.broad else {}),
+                    **({"brand": True} if feed.brand else {}),
                     **({"creator": creator} if creator else {}),
                     # The outlet's own site, so the row can wear its mark; the entry's link
                     # is a redirector on the relay's host.

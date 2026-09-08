@@ -207,10 +207,10 @@ export function River({
     !isReleaseSource(i.source) &&
     i.source !== 'youtube' &&
     Date.parse(i.publishedAt) > todayStart - LEAD_WINDOW_MS;
-  // A press story or a post about a catalogue title leads before an account's own
-  // side content: a brand's comic strip or radio notice belongs in the river, not at
-  // its head.
-  const weighty = (i: NewsItem) => i.source === 'rss' || Boolean(i.vnId);
+  // An outlet's story or a post about a catalogue title leads before a maker's own
+  // posts: a brand's comic strip or radio notice belongs in the river, not at its head.
+  const weighty = (i: NewsItem) =>
+    Boolean(i.vnId) || (i.source === 'rss' && !(i.extraData as { brand?: unknown } | null)?.brand);
   const firstLead = lead ? items.findIndex((i) => canLead(i) && weighty(i)) : -1;
   const leadIndex = firstLead >= 0 || !lead ? firstLead : items.findIndex(canLead);
   const rest = leadIndex >= 0 ? items.filter((_, i) => i !== leadIndex) : items;
