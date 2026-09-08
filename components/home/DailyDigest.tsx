@@ -20,7 +20,7 @@ import { WotdSentenceSource } from './WotdSentenceSource';
 /**
  * The digest.
  *
- * Six windows onto the pages that hold the whole of each, chosen so that no two answer the same
+ * A set of windows onto the pages that hold the whole of each, chosen so that no two answer the same
  * question. Two are picks for the day; the rest are windows of a week, a month or a season that
  * the nightly import moves along, so the section is not described as a daily one. The test a panel has to pass is that it could read differently tomorrow: a ranking
  * that names the same five titles every week belongs on the rankings page, where somebody has
@@ -168,7 +168,7 @@ export function DailyDigest({
   const sentences = quotable.slice(0, kanji.length > 0 ? 1 : 2);
 
   // Every panel draws on the same source, and a source that cannot be reached resolves empty
-  // rather than failing, so all six can be absent at once. The heading and the line under it
+  // rather than failing, so every panel can be absent at once. The heading and the line under it
   // promise figures, which leaves nothing to head when no panel has any.
   const hasPanel =
     climbing.length >= 3 ||
@@ -240,7 +240,7 @@ export function DailyDigest({
           )}
 
           {news.length > 0 && (
-            <Panel plate="Just catalogued" href="/news/all/" hrefLabel="All news">
+            <Panel plate="Just catalogued" href="/news/" hrefLabel="All news">
               <p className="dg-note">
                 New entries and new editions, as VNDB&apos;s catalogue records them.
               </p>

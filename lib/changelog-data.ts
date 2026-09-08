@@ -57,6 +57,14 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-09-07',
+    project: 'site',
+    title: 'News overhaul',
+    description:
+      'The news section has been rebuilt. The front page shows the latest headlines next to the day’s releases, reviews and trailers, gathered from about two hundred Japanese and English sources. Each section has its own page: Headlines, Reviews, Releases, Community, Creators, New on VNDB and Trailers. Releases lists what came out in the last month, what is on sale and the store rankings; Upcoming lists what is still to come.',
+    links: [{ label: 'News', href: '/news/' }],
+  },
+  {
     date: '2026-09-05',
     project: 'site',
     title: 'Recommendations v2',

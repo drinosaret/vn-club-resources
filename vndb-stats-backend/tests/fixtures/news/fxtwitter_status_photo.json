@@ -1,0 +1,30 @@
+{
+  "tweet": {
+    "id": "2000000000000000001",
+    "url": "https://x.com/brand/status/2000000000000000001",
+    "text": "New key visual",
+    "author": {
+      "screen_name": "brand",
+      "name": "Brand"
+    },
+    "twitter_card": "summary_large_image",
+    "media": {
+      "all": [
+        {
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/AAAA.jpg?name=orig",
+          "width": 680,
+          "height": 481
+        }
+      ],
+      "photos": [
+        {
+          "type": "photo",
+          "url": "https://pbs.twimg.com/media/AAAA.jpg?name=orig",
+          "width": 680,
+          "height": 481
+        }
+      ]
+    }
+  }
+}

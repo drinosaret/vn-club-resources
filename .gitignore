@@ -164,3 +164,6 @@ smoke.log
 # The result files carry ids of sampled readers, so they stay local: run artefacts, not source.
 vndb-stats-backend/scripts/eval_results/
 vndb-stats-backend/scripts/_tmp_*.py
+
+# Brainstorming companion scratch files
+.superpowers/

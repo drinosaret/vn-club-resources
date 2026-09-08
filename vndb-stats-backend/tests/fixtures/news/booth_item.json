@@ -1,0 +1,34 @@
+{
+  "description": "A short adventure story.\n\nWindows only.",
+  "factory_description": null,
+  "id": 8000003,
+  "is_adult": true,
+  "is_buyee_possible": false,
+  "is_end_of_sale": false,
+  "is_placeholder": false,
+  "is_sold_out": false,
+  "name": "Third Story",
+  "published_at": "2026-09-05T14:01:04.000+09:00",
+  "price": "¥ 1,650",
+  "url": "https://shop-c.booth.pm/items/8000003",
+  "category": {"id": 62, "name": "PCゲーム", "url": "https://booth.pm/ja/browse/PC%E3%82%B2%E3%83%BC%E3%83%A0"},
+  "images": [
+    {
+      "caption": null,
+      "original": "https://booth.pximg.net/00000000-0000-0000-0000-000000000003/i/8000003/cccc_base_resized.jpg",
+      "resized": "https://booth.pximg.net/c/72x72_a2_g5/00000000-0000-0000-0000-000000000003/i/8000003/cccc_base_resized.jpg"
+    }
+  ],
+  "shop": {
+    "uuid": "00000000-0000-0000-0000-000000000003",
+    "name": "Shop C",
+    "subdomain": "shop-c",
+    "thumbnail_url": "https://booth.pximg.net/c/48x48/users/3/icon_image/c_base_resized.jpg",
+    "url": "https://shop-c.booth.pm/",
+    "verified": false
+  },
+  "tags": [
+    {"name": "Windows", "url": "https://booth.pm/ja/items?tags%5B%5D=Windows"},
+    {"name": "デジタルノベル", "url": "https://booth.pm/ja/items?tags%5B%5D=%E3%83%87%E3%82%B8%E3%82%BF%E3%83%AB%E3%83%8E%E3%83%99%E3%83%AB"}
+  ]
+}

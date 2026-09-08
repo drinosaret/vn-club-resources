@@ -15,6 +15,10 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// A crawler asks for many of these in a row, so a backend that stops answering must not
+// hold each one open.
+const FETCH_TIMEOUT_MS = 10000;
+
 // ============ API helpers ============
 
 interface SitemapIdItem {
@@ -37,7 +41,7 @@ async function fetchSitemapIds(
 
   try {
     const url = `${backendUrl}/api/v1${path}?offset=${offset}&limit=${limit}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -50,7 +54,7 @@ async function fetchLastImportDate(): Promise<string | undefined> {
   if (!backendUrl) return undefined;
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/stats/last-import-date`, { cache: 'no-store' });
+    const res = await fetch(`${backendUrl}/api/v1/stats/last-import-date`, { cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!res.ok) return undefined;
     const data = await res.json();
     return data?.last_import ? new Date(data.last_import).toISOString() : undefined;
@@ -105,7 +109,7 @@ async function fetchLeaderboardSlugs(): Promise<string[]> {
   if (!backendUrl) return [];
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/leaderboards`, { cache: 'no-store' });
+    const res = await fetch(`${backendUrl}/api/v1/leaderboards`, { cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!res.ok) return [];
     const data = await res.json();
     return (data?.boards ?? []).map((board: { slug: string }) => board.slug);
@@ -138,9 +142,8 @@ async function generateStaticEntries(): Promise<UrlEntry[]> {
     { loc: `${SITE_URL}/events/`, changefreq: 'daily', priority: 0.7 },
     { loc: `${SITE_URL}/events/history/`, changefreq: 'weekly', priority: 0.7 },
     { loc: `${SITE_URL}/changelog/`, changefreq: 'weekly', priority: 0.5 },
-    // /news/ redirects to /news/all/, so the destination stands in for the news landing page.
-    { loc: `${SITE_URL}/news/all/`, changefreq: 'daily', priority: 0.6 },
-    ...['recently-added', 'releases', 'rss', 'twitter', 'announcements'].map((slug) => ({
+    { loc: `${SITE_URL}/news/`, changefreq: 'daily', priority: 0.7 },
+    ...['headlines', 'reviews', 'releases', 'community', 'creators', 'recently-added', 'trailers'].map((slug) => ({
       loc: `${SITE_URL}/news/${slug}/`,
       changefreq: 'daily',
       priority: 0.5,
@@ -149,6 +152,12 @@ async function generateStaticEntries(): Promise<UrlEntry[]> {
     // because it is not a dated archive, and it outranks them because it is the one news
     // page whose content is worth reading before the day it covers.
     { loc: `${SITE_URL}/news/upcoming/`, changefreq: 'daily', priority: 0.7 },
+    { loc: `${SITE_URL}/ja/news/`, changefreq: 'daily', priority: 0.6 },
+    ...['headlines', 'reviews', 'releases', 'community', 'creators', 'recently-added', 'trailers', 'upcoming'].map((slug) => ({
+      loc: `${SITE_URL}/ja/news/${slug}/`,
+      changefreq: 'daily',
+      priority: 0.5,
+    })),
     { loc: `${SITE_URL}/ja/3x3-maker/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/ja/tierlist/`, changefreq: 'monthly', priority: 0.6 },
     { loc: `${SITE_URL}/ja/roulette/`, changefreq: 'monthly', priority: 0.5 },

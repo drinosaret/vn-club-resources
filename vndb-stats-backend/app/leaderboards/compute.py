@@ -120,7 +120,6 @@ from .spec import (
     Metric,
     Subject,
     Window,
-    board_cache_key,
     slug_cache_key,
 )
 
@@ -1509,12 +1508,15 @@ async def load_anticipated(db, depth: int) -> list[dict]:
 
 
 async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> list[dict]:
-    """Votes, active readers and first-time readers, week by week.
+    """Votes, active readers and first-time readers, in seven-day windows.
 
     The only figure here about the community rather than about titles, and the one that says
-    whether the rest of the page is measuring a growing room or a shrinking one. First-time
-    readers are counted by comparing each vote's week against the week of that reader's
-    earliest vote, so the series needs the whole table to place anyone.
+    whether the rest of the page is measuring a growing room or a shrinking one. The windows
+    are counted back from the last day the dump covers, so the newest one always ends on
+    that day and is always whole; a calendar week would trail the dump by up to a week and
+    date the figures to a window they do not reach. `week` names each window's first day.
+    First-time readers are counted by placing each reader's earliest vote in the same
+    windows, so the series needs the whole table to place anyone.
     """
     await db.execute(text(f"SET LOCAL work_mem = '{AGGREGATION_WORK_MEM}'"))
 
@@ -1528,11 +1530,11 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
                 WHERE date IS NOT NULL
                 GROUP BY user_hash
             )
-            SELECT date_trunc('week', gv.date)::date AS week,
+            SELECT (b.latest - ((b.latest - gv.date) / 7) * 7 - 6) AS week,
                    count(*) AS votes,
                    count(DISTINCT gv.user_hash) AS readers,
                    count(DISTINCT gv.user_hash) FILTER (
-                       WHERE date_trunc('week', f.first_vote) = date_trunc('week', gv.date)
+                       WHERE (b.latest - f.first_vote) / 7 = (b.latest - gv.date) / 7
                    ) AS new_readers
             FROM global_votes gv
             CROSS JOIN bounds b
@@ -1541,13 +1543,13 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
             WHERE gv.date > b.latest - CAST(:days AS integer)
               AND gv.date <= b.latest
               {lang_where}
-            GROUP BY date_trunc('week', gv.date)
+            GROUP BY 1
             ORDER BY week
         """),
-        {"days": (weeks + 2) * 7},
+        {"days": weeks * 7},
     )
 
-    pulse = [
+    return [
         {
             "week": row.week.isoformat(),
             "votes": row.votes,
@@ -1556,12 +1558,6 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
         }
         for row in rows
     ]
-    # Neither end of the window lands on a week boundary: the dump arrives mid-week, and
-    # the far end is a fixed number of days back from it. Both outer buckets therefore hold
-    # part of a week and would read as a collapse against the full weeks between them, which
-    # is also what the period's own growth figure would be measured from. The window is
-    # widened by a week at each end so that dropping them still leaves the number asked for.
-    return pulse[1:-1][-weeks:]
 
 
 async def load_hot_now(
@@ -2342,6 +2338,37 @@ def supports_language_variants(spec: BoardSpec) -> bool:
     return spec.subject is Subject.VN and spec.facet.olang is None
 
 
+def expected_board_keys() -> list[str]:
+    """Every stored board payload the registry implies, in registry order."""
+    keys: list[str] = []
+    for spec in BOARDS:
+        keys.append(slug_cache_key(spec.slug))
+        if supports_language_variants(spec):
+            keys.append(slug_cache_key(spec.slug, LANGUAGE_JAPANESE))
+    return keys
+
+
+async def board_census() -> dict:
+    """How much of the board set is currently readable.
+
+    Boards are written once a day and read at whatever rate each one attracts, so a
+    payload can stop being resident long after the run that stored it reported success.
+    Counting what is actually there is the only way that shows up.
+    """
+    from app.core.cache import get_cache
+
+    cache = get_cache()
+    expected = expected_board_keys()
+    missing = [key for key in expected if not await cache.exists(key)]
+    catalogue = await cache.exists(CATALOGUE_CACHE_KEY)
+    return {
+        "expected": len(expected),
+        "present": len(expected) - len(missing),
+        "missing": missing,
+        "catalogue": catalogue,
+    }
+
+
 def filter_entries_to_language(
     entries: list[RankedEntry],
     japanese_vn_ids: set,
@@ -2702,11 +2729,6 @@ async def refresh_leaderboards(dry_run: bool = False) -> dict:
             stats["boards"] += 1
         else:
             stats["unwritten"].append(spec.slug)
-        await cache.set(
-            board_cache_key(spec.subject, spec.metric, spec.facet, spec.window),
-            payload,
-            ttl=BOARD_TTL_SECONDS,
-        )
 
         # Visual novel boards are also stored Japanese-only, which is what the site asks
         # for by default. Computed as a second ranking rather than filtered in the browser

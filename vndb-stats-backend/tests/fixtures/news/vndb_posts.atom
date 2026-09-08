@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>VNDB Recent Posts</title>
+<entry><id>https://vndb.org/t99999.1</id><title>Reading order question (#1)</title><updated>2026-09-06T01:14:09Z</updated><published>2026-09-06T01:14:09Z</published><author><name>someone</name></author><link rel="alternate" type="text/html" href="https://vndb.org/t99999.1" /><summary type="html">Where should a newcomer start?</summary></entry>
+<entry><id>https://vndb.org/t99999.2</id><title>Reading order question (#2)</title><updated>2026-09-06T01:20:09Z</updated><published>2026-09-06T01:20:09Z</published><author><name>else</name></author><link rel="alternate" type="text/html" href="https://vndb.org/t99999.2" /><summary type="html">Anywhere.</summary></entry>
+</feed>

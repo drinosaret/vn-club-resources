@@ -1,4 +1,4 @@
-"""Automated daily channel posts — VN of the Day, News Summary, and DB Backups."""
+"""Automated daily channel posts: VN of the Day, News Summary, and DB Backups."""
 
 import gzip
 import io
@@ -48,8 +48,28 @@ REDIS_TTL = 48 * 3600
 SOURCE_LABELS = {
     "vndb": "VNDB New VNs",
     "vndb_release": "VNDB Releases",
-    "rss": "RSS Feeds",
-    "twitter": "Twitter",
+    "rss": "Press",
+    "twitter": "X",
+    "bluesky": "Bluesky",
+    "youtube": "Trailers",
+    "steam": "Steam",
+    "dlsite": "DLsite",
+    "getchu": "Getchu",
+    "digiket": "DiGiket",
+    "booth": "BOOTH",
+    "melonbooks": "Melonbooks",
+    "freem": "Freem",
+    "creator": "Creators",
+    "vndb_review": "VNDB reviews",
+    "review": "Reviews",
+    "bsky_search": "Bluesky",
+    "note": "note",
+    "hatena": "Hatena",
+    "forum": "VNDB discussions",
+    "reddit": "Reddit",
+    "board": "5ch",
+    "chan": "4chan",
+    "jiten": "jiten.moe",
     "announcement": "Announcements",
 }
 
@@ -114,7 +134,7 @@ class DailyPostsCog(commands.Cog):
         channel = self.bot.get_channel(self._channel_id)
         if channel is None:
             logger.warning(
-                f"Daily channel {self._channel_id} not found — "
+                f"Daily channel {self._channel_id} not found; "
                 "bot may lack access or channel doesn't exist"
             )
         return channel
@@ -186,7 +206,7 @@ class DailyPostsCog(commands.Cog):
         title = vn.title_jp or vn.title
         date_str = pick.date.strftime("%b %d, %Y")
         embed = discord.Embed(
-            title=f"VN of the Day — {date_str}: {title}",
+            title=f"VN of the Day, {date_str}: {title}",
             color=0x7C3AED,
         )
 
@@ -474,7 +494,7 @@ class DailyPostsCog(commands.Cog):
         icon_url = f"{settings.frontend_url}/assets/hikaru-icon2.webp"
 
         embed = discord.Embed(
-            title=f"\U0001f4f0 Daily News Summary — {today.strftime('%b %d, %Y')}",
+            title=f"\U0001f4f0 Daily News Summary: {today.strftime('%b %d, %Y')}",
             description=f"**{total}** news item{'s' if total != 1 else ''} today",
             color=0x3B82F6,
         )
@@ -577,7 +597,7 @@ class DailyPostsCog(commands.Cog):
 
             file = discord.File(io.BytesIO(compressed), filename=filename)
             await channel.send(
-                content=f"**Backup** — {row_count} shared layouts, {size_kb:.1f} KB",
+                content=f"**Backup**: {row_count} shared layouts, {size_kb:.1f} KB",
                 file=file,
             )
             logger.info(f"Backup uploaded: {filename} ({row_count} rows, {size_kb:.1f} KB)")

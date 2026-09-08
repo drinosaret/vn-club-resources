@@ -1,0 +1,44 @@
+{
+  "feed": [
+    {
+      "post": {
+        "uri": "at://did:plc:aaaa/app.bsky.feed.post/3abcxyz",
+        "cid": "bafy1",
+        "author": {"did": "did:plc:aaaa", "handle": "brand.test", "displayName": "Brand", "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:aaaa/bafyav"},
+        "record": {
+          "$type": "app.bsky.feed.post",
+          "createdAt": "2026-09-04T05:24:22.195Z",
+          "text": "新作タイトルを発表しました\n詳細は公式サイトへ",
+          "facets": [{"index": {"byteStart": 0, "byteEnd": 5}, "features": [{"$type": "app.bsky.richtext.facet#link", "uri": "https://example.test/article"}]}]
+        },
+        "embed": {
+          "$type": "app.bsky.embed.images#view",
+          "images": [{"thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:aaaa/bafy2", "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:aaaa/bafy2", "alt": ""}]
+        },
+        "indexedAt": "2026-09-04T05:24:23.000Z"
+      }
+    },
+    {
+      "post": {
+        "uri": "at://did:plc:bbbb/app.bsky.feed.post/3repost",
+        "cid": "bafy3",
+        "author": {"did": "did:plc:bbbb", "handle": "other.test"},
+        "record": {"$type": "app.bsky.feed.post", "createdAt": "2026-09-03T05:00:00.000Z", "text": "Reposted content"}
+      },
+      "reason": {"$type": "app.bsky.feed.defs#reasonRepost", "by": {"did": "did:plc:aaaa", "handle": "brand.test"}, "indexedAt": "2026-09-04T00:00:00.000Z"}
+    },
+    {
+      "post": {
+        "uri": "at://did:plc:aaaa/app.bsky.feed.post/3reply",
+        "cid": "bafy4",
+        "author": {"did": "did:plc:aaaa", "handle": "brand.test"},
+        "record": {
+          "$type": "app.bsky.feed.post",
+          "createdAt": "2026-09-03T05:00:00.000Z",
+          "text": "A reply",
+          "reply": {"root": {"uri": "at://x", "cid": "c"}, "parent": {"uri": "at://x", "cid": "c"}}
+        }
+      }
+    }
+  ]
+}

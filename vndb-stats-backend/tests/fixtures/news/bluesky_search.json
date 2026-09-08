@@ -1,0 +1,100 @@
+{
+ "posts": [
+  {
+   "uri": "at://did:plc:aaa/app.bsky.feed.post/3abc1",
+   "author": {
+    "handle": "reader.test",
+    "avatar": "https://cdn.bsky.app/img/avatar/x.jpg"
+   },
+   "record": {
+    "text": "架空の恋物語を読み終えた。共通ルートは長いけれど終盤の積み重ねが効いていて、静かな余韻が残る良作だった。",
+    "createdAt": "2026-09-06T10:00:00Z",
+    "langs": [
+     "ja"
+    ]
+   }
+  },
+  {
+   "uri": "at://did:plc:bbb/app.bsky.feed.post/3abc2",
+   "author": {
+    "handle": "short.test"
+   },
+   "record": {
+    "text": "最高",
+    "createdAt": "2026-09-06T11:00:00Z",
+    "langs": [
+     "ja"
+    ]
+   }
+  },
+  {
+   "uri": "at://did:plc:ccc/app.bsky.feed.post/3abc3",
+   "author": {
+    "handle": "reply.test"
+   },
+   "record": {
+    "text": "同じく読み終えたけれどこちらは途中で少しだれた気がする。それでも終盤は良かった。",
+    "createdAt": "2026-09-06T12:00:00Z",
+    "reply": {
+     "parent": {
+      "uri": "x"
+     }
+    }
+   }
+  },
+  {
+   "uri": "at://did:plc:ddd/app.bsky.feed.post/3abc4",
+   "author": {
+    "handle": "en.test"
+   },
+   "record": {
+    "text": "Finished an untranslated visual novel this week, forty hours with a text hooker and worth every one of them.",
+    "createdAt": "2026-09-06T13:00:00Z",
+    "langs": [
+     "en"
+    ]
+   }
+  },
+  {
+   "uri": "at://did:plc:eee/app.bsky.feed.post/3abc5",
+   "author": {
+    "handle": "promo.test"
+   },
+   "labels": [
+    {
+     "val": "porn"
+    }
+   ],
+   "record": {
+    "text": "新作の紹介です。あらすじはこちら。今夜だけの特別価格で配信中、詳細はリンク先をご覧ください。",
+    "createdAt": "2026-09-06T14:00:00Z",
+    "langs": [
+     "ja"
+    ]
+   }
+  },
+  {
+   "uri": "at://did:plc:fff/app.bsky.feed.post/3abc6",
+   "author": {
+    "handle": "shop.test"
+   },
+   "record": {
+    "text": "美少女ゲームの新作がセール中です。今週末までの限定価格、詳しくは販売ページをどうぞ。",
+    "createdAt": "2026-09-06T15:00:00Z",
+    "langs": [
+     "ja"
+    ],
+    "facets": [
+     {
+      "features": [
+       {
+        "$type": "app.bsky.richtext.facet#link",
+        "uri": "https://www.dlsite.com/maniax/work/=/product_id/RJ000.html"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

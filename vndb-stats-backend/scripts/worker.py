@@ -207,7 +207,7 @@ async def run_daily_update():
         logger.info(f"Created import run #{run_id}")
     except Exception as e:
         logger.error(f"Failed to create ImportRun record: {e}")
-        # Continue without tracking — import still works
+        # Continue without tracking; import still works
 
     # Stages that are allowed to fail without aborting the run record themselves
     # here, so the run can report itself as degraded instead of reporting success.
@@ -408,6 +408,33 @@ async def recompute_models_only():
         raise
 
 
+async def run_board_health_check():
+    """Report how much of the board set is still readable.
+
+    The boards are written once a night and then only read, at whatever rate each one
+    attracts. A payload can therefore stop being resident hours after the run that stored
+    it reported success, and a board that is not resident answers every request with the
+    same regenerating response it gives during a genuine rebuild. Nothing on the serving
+    path can tell those apart, so the shortfall is only visible by counting the set.
+    """
+    from app.leaderboards.compute import board_census
+
+    census = await board_census()
+    if not census["catalogue"]:
+        logger.error("Board catalogue is not in the cache; every ranking is unavailable")
+        return census
+
+    missing = census["missing"]
+    if missing:
+        logger.error(
+            f"{len(missing)} of {census['expected']} board payloads are not in the cache: "
+            f"{', '.join(missing[:5])}"
+        )
+    else:
+        logger.info(f"All {census['expected']} board payloads are in the cache")
+    return census
+
+
 async def run_description_embedding_update():
     """Top up description vectors for entries the import added or reworded.
 
@@ -606,15 +633,19 @@ async def main():
         await check_and_update_if_stale()
     except Exception as e:
         logger.error(f"Startup check/update failed: {e}")
-        logger.error("Worker will continue running — the daily scheduled job will retry.")
+        logger.error("Worker will continue running; the daily scheduled job will retry.")
 
     # Set up scheduler for all periodic jobs
     from datetime import timezone
     from app.ingestion.news_aggregator import (
         run_vndb_news_check,
+        run_community_check,
+        run_reviews_check,
         run_vndb_releases_check,
-        run_rss_check,
-        run_twitter_check,
+        run_headlines_check,
+        run_trailers_check,
+        run_storefront_check,
+        run_news_reconcile,
         run_news_cleanup,
         run_news_catch_up,
     )
@@ -656,15 +687,41 @@ async def main():
             replace_existing=True,
         )
         scheduler.add_job(
-            run_rss_check,
-            CronTrigger(hour="6,18", minute=0),
-            id="rss_check",
+            run_headlines_check,
+            CronTrigger(hour="*/2", minute=5),
+            id="news_headlines",
+            replace_existing=True,
+        )
+        # Ahead of the community job, so a post reaching both is filed as a review.
+        scheduler.add_job(
+            run_reviews_check,
+            CronTrigger(minute=20),
+            id="news_reviews",
             replace_existing=True,
         )
         scheduler.add_job(
-            run_twitter_check,
-            CronTrigger(hour="1,7,13,19", minute=0),
-            id="twitter_check",
+            run_community_check,
+            CronTrigger(hour="*/3", minute=35),
+            id="news_community",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_trailers_check,
+            CronTrigger(hour="*/6", minute=20),
+            id="news_trailers",
+            replace_existing=True,
+        )
+        # After the 04:00 dump import, so storefront ids resolve against today's catalogue.
+        scheduler.add_job(
+            run_storefront_check,
+            CronTrigger(hour=12, minute=0),
+            id="news_storefronts",
+            replace_existing=True,
+        )
+        scheduler.add_job(
+            run_news_reconcile,
+            CronTrigger(hour=5, minute=30),
+            id="news_reconcile",
             replace_existing=True,
         )
         scheduler.add_job(
@@ -715,7 +772,7 @@ async def main():
         )
 
         logger.info("Scheduler started - daily update at 4:00 AM UTC")
-        logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), RSS (06:00, 18:00), Twitter (01:00, 07:00, 13:00, 19:00)")
+        logger.info("News aggregation jobs scheduled: VNDB (10:00, 16:00), headlines (every 2h), trailers (every 6h), storefronts (12:00), reconcile (05:30)")
         logger.info("VN of the Day scheduled: 00:05 UTC daily")
         logger.info("Word of the Day scheduled: 00:10 UTC daily")
         logger.info("News catch-up job scheduled: every 2 hours from 10:30 to 22:30 UTC")
@@ -739,6 +796,17 @@ async def main():
             replace_existing=True,
         )
 
+        # Board census - 16:00 UTC daily. Placed well after the 04:00 import rather than
+        # beside it: a board is stored successfully and then stops being resident later in
+        # the day, so a check that runs with the rebuild would always find the set whole.
+        scheduler.add_job(
+            run_board_health_check,
+            CronTrigger(hour=16, minute=0),
+            id="board_health_check",
+            replace_existing=True,
+        )
+
+        logger.info("Board census scheduled: 16:00 UTC daily")
         logger.info("Recommendation cache cleanup scheduled: 02:30 UTC daily")
         logger.info("Description embedding top-up scheduled: 09:30 UTC daily")
         logger.info("Recommendation page refresh scheduled: 11:30 UTC daily")
@@ -764,24 +832,27 @@ async def main():
     scheduler.start()
 
     # Run catch-up tasks on startup (with delay to let DB warm up)
+    await asyncio.sleep(30)
+
+    # The rankings and everything drawn from them live in Redis with a TTL, so an empty
+    # cache is the normal state after a deploy, a Redis restart, or a missed night. The
+    # rebuild reads the dump already in Postgres and takes a few minutes; leaving it to
+    # the nightly cron leaves every board unavailable until then. Not gated on the mode:
+    # the nightly cron is, so this is the only thing that ever builds boards in dev, and
+    # the catalogue check below makes it a no-op once they exist.
+    try:
+        from app.core.cache import get_cache
+        from app.leaderboards.spec import CATALOGUE_CACHE_KEY
+
+        if await get_cache().get(CATALOGUE_CACHE_KEY) is None:
+            logger.info("No leaderboards in cache; building them now")
+            from app.leaderboards.compute import refresh_leaderboards
+
+            logger.info(f"Leaderboards: {await refresh_leaderboards()}")
+    except Exception as e:
+        logger.error(f"Startup leaderboard build failed: {e}", exc_info=True)
+
     if not settings.dev_mode:
-        await asyncio.sleep(30)
-        # The rankings and everything drawn from them live in Redis with a TTL, so an empty
-        # cache is the normal state after a deploy, a Redis restart, or a missed night. The
-        # rebuild reads the dump already in Postgres and takes a few minutes; leaving it to
-        # the nightly cron leaves every board unavailable until then.
-        try:
-            from app.core.cache import get_cache
-            from app.leaderboards.spec import CATALOGUE_CACHE_KEY
-
-            if await get_cache().get(CATALOGUE_CACHE_KEY) is None:
-                logger.info("No leaderboards in cache; building them now")
-                from app.leaderboards.compute import refresh_leaderboards
-
-                logger.info(f"Leaderboards: {await refresh_leaderboards()}")
-        except Exception as e:
-            logger.error(f"Startup leaderboard build failed: {e}", exc_info=True)
-
         # The difficulty mirror lives in Postgres rather than the cache, so it survives a
         # restart, but it is empty on a database that has never imported it and several
         # surfaces read it directly.

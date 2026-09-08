@@ -49,6 +49,7 @@ from app.leaderboards.reading_profile import (
 from app.leaderboards.compute import (
     PERCENTILE_KEY_PREFIX,
     RANK_INDEX_KEY_PREFIX,
+    board_census,
     latest_vote_date,
     supports_language_variants,
 )
@@ -625,6 +626,23 @@ async def get_custom_questions():
     return {
         "vns": [described(entry[0]) for entry in TITLE_QUESTIONS.values()],
         "readers": [described(question) for question in READER_QUESTIONS.values()],
+    }
+
+
+@router.get("/health", include_in_schema=False)
+async def board_health(response: Response):
+    """How much of the board set is readable right now.
+
+    Kept off the public schema, and off the served-board paths: a board answers a miss
+    the same way whether one payload is absent or all of them are, so the shortfall is
+    only visible by counting the set as a whole.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    census = await board_census()
+    healthy = census["catalogue"] and not census["missing"]
+    return {
+        "status": "healthy" if healthy else "degraded",
+        **census,
     }
 
 

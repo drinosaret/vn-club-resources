@@ -126,11 +126,13 @@ export default function LeaderboardClient({
             {fallbackTitle}
           </h1>
           {/* Three different absences, each with its own cause. Reporting them the same way
-              makes an outage look like routine maintenance. */}
+              makes an outage look like routine maintenance. The first covers both a run in
+              progress and a board the cache is no longer holding, which the response cannot
+              tell apart, so it promises no timeframe it cannot keep. */}
           {result?.state === 'rebuilding' ? (
             <p className="text-[color:var(--nezu)]">
-              This ranking is being rebuilt from the latest VNDB data. Check back in a few
-              minutes.
+              This ranking is not available right now. Rankings are rebuilt once a day from
+              the VNDB dump, so it should return after the next run.
             </p>
           ) : result?.state === 'missing' ? (
             <p className="text-[color:var(--nezu)]">

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>Test Feed</title>
+<item>
+<title>新作ノベルゲーム発表</title>
+<link>https://example.test/news/1</link>
+<guid isPermaLink="false">https://example.test/?p=1</guid>
+<pubDate>Sat, 05 Sep 2026 09:00:00 +0000</pubDate>
+<description><![CDATA[<p>A new title was announced.</p>]]></description>
+</item>
+<item>
+<title>ノベルゲームの旧ニュース</title>
+<link>https://example.test/news/2</link>
+<guid isPermaLink="false">https://example.test/?p=2</guid>
+<pubDate>Fri, 07 Aug 2026 09:00:00 +0000</pubDate>
+<description>Old.</description>
+</item>
+<item>
+<title>アクションゲーム発売</title>
+<link>https://example.test/news/3</link>
+<guid isPermaLink="false">https://example.test/?p=3</guid>
+<pubDate>Sat, 05 Sep 2026 10:00:00 +0000</pubDate>
+<description>Not this medium.</description>
+</item>
+</channel>
+</rss>

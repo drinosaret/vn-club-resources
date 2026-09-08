@@ -489,16 +489,6 @@ class BoardSpec:
         return (self.facet.canonical(), self.window.value, self.require_pure)
 
 
-def board_cache_key(
-    subject: Subject,
-    metric: Metric,
-    facet: Facet,
-    window: Window,
-) -> str:
-    """Redis key for a board, preset or ad-hoc."""
-    return f"lb:v1:{subject.value}:{metric.value}:{facet.hash()}:{window.value}"
-
-
 #: The Japanese-original view of a board. The site is about reading Japanese, so this is
 #: what the frontend asks for by default; "all" remains the API default so a third-party
 #: consumer is never silently handed a filtered ranking.

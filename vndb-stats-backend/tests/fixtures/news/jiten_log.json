@@ -1,0 +1,50 @@
+{
+ "data": [
+  {
+   "deckId": 900001,
+   "creationDate": "2026-09-06T00:51:03.282953+00:00",
+   "coverName": "cover.jpg",
+   "mediaType": 7,
+   "originalTitle": "架空のノベル",
+   "romajiTitle": "Kakuu no Noberu",
+   "englishTitle": null,
+   "difficulty": 5.5,
+   "characterCount": 123456,
+   "parentDeckId": null,
+   "links": [
+    {
+     "url": "https://vndb.org/v99999"
+    }
+   ]
+  },
+  {
+   "deckId": 900002,
+   "creationDate": "2026-09-06T01:00:00+00:00",
+   "coverName": "nocover.jpg",
+   "mediaType": 11,
+   "originalTitle": "配信",
+   "romajiTitle": "Haishin",
+   "parentDeckId": null,
+   "links": []
+  },
+  {
+   "deckId": 900003,
+   "creationDate": "2026-07-01T01:00:00+00:00",
+   "coverName": "cover.jpg",
+   "mediaType": 7,
+   "originalTitle": "古い作品",
+   "parentDeckId": null,
+   "links": []
+  },
+  {
+   "deckId": 900004,
+   "creationDate": "2026-09-06T02:00:00+00:00",
+   "coverName": "cover.jpg",
+   "mediaType": 7,
+   "originalTitle": "ルート",
+   "parentDeckId": 900001,
+   "links": []
+  }
+ ],
+ "totalItems": 4
+}

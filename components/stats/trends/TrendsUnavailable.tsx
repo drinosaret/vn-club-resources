@@ -34,7 +34,7 @@ export function TrendsUnavailable({
       className="rounded-xs border border-dashed border-[color:var(--rule)] px-4 py-8 text-center text-sm text-[color:var(--nezu)]"
     >
       {reason === 'not-built'
-        ? `${what} is not available until the nightly rebuild has run.`
+        ? `${what} is not available. It returns after the next nightly rebuild.`
         : `${what} could not be loaded. The stats service did not answer, which is usually brief.`}
     </p>
   );

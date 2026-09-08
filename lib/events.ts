@@ -137,14 +137,18 @@ export async function getClubPickHistory(
 
 /**
  * Soonest upcoming events. Returns [] if the backend is unavailable.
+ *
+ * Fetched fresh by default, which is right for the calendar page. A page that is otherwise
+ * served from the ISR cache passes a window instead, so this one call does not make the
+ * whole route dynamic.
  */
-export async function getUpcomingEvents(limit = 20): Promise<EventItem[]> {
+export async function getUpcomingEvents(limit = 20, revalidate?: number): Promise<EventItem[]> {
   const backendUrl = getBackendUrlOptional();
   if (!backendUrl) return [];
 
   try {
     const res = await fetch(`${backendUrl}/api/v1/events/upcoming?limit=${limit}`, {
-      cache: 'no-store',
+      ...(revalidate ? { next: { revalidate } } : { cache: 'no-store' }),
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return [];

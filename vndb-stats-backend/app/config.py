@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # Set DEV_MODE=true in docker-compose.yml for local development
     dev_mode: bool = False
 
-    # Database — always override via DATABASE_URL env var in deployment
+    # Database: always override via DATABASE_URL env var in deployment
     database_url: str = "postgresql+asyncpg://vndb:changeme@localhost:5432/vndb_stats"
     database_pool_size: int = 30   # Increased for concurrent heavy stats calculations
     database_max_overflow: int = 50  # Allow burst capacity for large user profiles
@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     # the source differs, e.g. a multi-server bot that syncs commands globally.
     vncr_guild_id: int | None = None
 
-    # CORS — production deployments MUST set CORS_ORIGINS env var explicitly.
+    # CORS: production deployments MUST set CORS_ORIGINS env var explicitly.
     # Default includes localhost for development convenience only.
     cors_origins: list[str] = [
         "http://localhost:3000",
@@ -125,8 +125,6 @@ class Settings(BaseSettings):
     rec_entity_desaturation_top_n: int = 3  # No effect while the switch above is off
     rec_mmr_normalize_relevance: bool = False
 
-    # Twitter/X integration (for news aggregation)
-    twitter_auth_token: str | None = None  # Session cookie auth_token from twitter.com
 
     # =========================================================================
     # Timeout and Resilience Settings

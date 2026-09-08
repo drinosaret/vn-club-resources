@@ -69,7 +69,7 @@ services:
       - POSTGRES_DB=vndb_stats
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Port NOT exposed to host — use `docker compose exec db psql -U vndb vndb_stats` for local access
+    # Port NOT exposed to host; use `docker compose exec db psql -U vndb vndb_stats` for local access
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vndb -d vndb_stats"]
       interval: 5s
@@ -89,7 +89,7 @@ services:
     command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy volatile-lru
     volumes:
       - redisdata:/data
-    # Port NOT exposed to host — access via docker network only
+    # Port NOT exposed to host; access via docker network only
     restart: unless-stopped
     networks:
       - vndb-net
@@ -179,6 +179,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-vndb_dev_password}@db:5432/vndb_stats
       - REDIS_URL=redis://redis:6379
       - PYTHONUNBUFFERED=1
+      - VNDB_CACHE_DIR=/data/vndb-cache
       # DEV_MODE is inherited from .env (DEV_MODE=true in dev, false in production)
       # In dev: automatic imports disabled, entrypoint password check skipped
       # In production: automatic daily updates at 4 AM UTC
@@ -208,6 +209,8 @@ services:
       # on an empty mount spec; the SQLite path then won't exist and the import
       # stays disabled.
       - ${HIKARU_DATA_DIR:-./hikaru-data}:/hikaru-data:ro
+      # The nightly reconcile removes cached covers of entries VNDB has deleted.
+      - vndb-cache:/data/vndb-cache
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     command: ["python", "scripts/worker.py"]
     restart: unless-stopped
@@ -230,6 +233,8 @@ volumes:
   redisdata:
     driver: local
   dumps:
+    driver: local
+  vndb-cache:
     driver: local
   umami-pgdata:
     driver: local

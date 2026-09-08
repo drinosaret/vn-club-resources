@@ -807,7 +807,8 @@ class NewsItem(Base):
     __tablename__ = "news_items"
 
     id = Column(String(64), primary_key=True)  # e.g., "vndb-v12345", "rss-<hash>"
-    source = Column(String(20), nullable=False)  # vndb, vndb_release, rss, twitter, announcement
+    # vndb, vndb_release, rss, twitter, bluesky, youtube, steam, dlsite, announcement
+    source = Column(String(32), nullable=False)
     source_label = Column(String(100))  # Human-readable source name
     title = Column(String(500), nullable=False)
     summary = Column(Text)  # Description/excerpt
@@ -819,9 +820,13 @@ class NewsItem(Base):
     tags = Column(ARRAY(String(50)))  # e.g., ["release", "announcement"]
     extra_data = Column(JSONB)  # Source-specific metadata (platforms, developers, etc.)
     is_hidden = Column(Boolean, default=False)  # Admin moderation flag
+    # The catalogue entry a VN-bound item describes; lets the nightly reconcile find items
+    # whose entry is gone without unpacking the free-form bag.
+    vn_id = Column(String(16))
 
     __table_args__ = (
         Index("idx_news_source", "source"),
+        Index("idx_news_vn_id", "vn_id"),
         Index("idx_news_published", published_at.desc()),
         Index("idx_news_hidden", "is_hidden"),
         Index("idx_news_source_published", "source", published_at.desc()),
@@ -850,7 +855,7 @@ class Announcement(Base):
 
 
 class VNOfTheDay(Base):
-    """Daily VN spotlight — one randomly selected quality VN per day."""
+    """Daily VN spotlight: one randomly selected quality VN per day."""
 
     __tablename__ = "vn_of_the_day"
 
@@ -1079,7 +1084,7 @@ class PostedItemsTracker(Base):
 
     __tablename__ = "posted_items_tracker"
 
-    source = Column(String(20), primary_key=True)  # vndb, rss, twitter, etc.
+    source = Column(String(32), primary_key=True)  # vndb, rss, twitter, etc.
     item_id = Column(String(100), primary_key=True)  # Source-specific ID
     posted_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 

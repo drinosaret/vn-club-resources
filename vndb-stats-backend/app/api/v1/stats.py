@@ -502,6 +502,10 @@ async def get_global_month_explorer(
     result = {
         "months": months,
         "month": wanted,
+        # A month whose figures are not held reads as a month with nothing in it, and the
+        # empty lists below are indistinguishable from a month nobody voted in. Stated so
+        # the page can tell a reader which of the two it is looking at.
+        "stored": payload is not None,
         "read": (payload or {}).get("read", []),
         "jumped": (payload or {}).get("jumped", []),
         "in_progress": (payload or {}).get("in_progress", False),

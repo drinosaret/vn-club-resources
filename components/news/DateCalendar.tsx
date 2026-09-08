@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 
 interface DateCalendarProps {
   currentDate: string; // YYYY-MM-DD
   availableDates?: Set<string>;
   onSelectDate: (date: string) => void;
   onClose: () => void;
+  /**
+   * The control that opened the calendar. A press on it is not a click outside: the
+   * control toggles the calendar itself, and closing it here first would reopen it.
+   */
+  anchorRef?: RefObject<HTMLElement | null>;
 }
 
 function getDaysInMonth(year: number, month: number): number {
@@ -19,8 +24,15 @@ function formatDateStr(year: number, month: number, day: number): string {
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-export function DateCalendar({ currentDate, availableDates, onSelectDate, onClose }: DateCalendarProps) {
+export function DateCalendar({ currentDate, availableDates, onSelectDate, onClose, anchorRef }: DateCalendarProps) {
   const ref = useRef<HTMLDivElement>(null);
+  // The panel hangs off the control's left edge unless that would run past the viewport,
+  // in which case it hangs off the right: the control can sit at either end of a row.
+  const [alignRight, setAlignRight] = useState(false);
+  useLayoutEffect(() => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect && rect.right > window.innerWidth) setAlignRight(true);
+  }, []);
   const [year, month] = currentDate.split('-').map(Number);
   const [viewYear, setViewYear] = useState(year);
   const [viewMonth, setViewMonth] = useState(month - 1); // 0-indexed
@@ -28,18 +40,18 @@ export function DateCalendar({ currentDate, availableDates, onSelectDate, onClos
   const today = new Date();
   const todayStr = formatDateStr(today.getFullYear(), today.getMonth(), today.getDate());
 
-  // Close on click outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (anchorRef?.current?.contains(target)) return;
+      if (ref.current && !ref.current.contains(target)) {
         onClose();
       }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [onClose]);
+  }, [onClose, anchorRef]);
 
-  // Close on Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -61,7 +73,7 @@ export function DateCalendar({ currentDate, availableDates, onSelectDate, onClos
   };
 
   const goToNextMonth = () => {
-    // Don't go past current month
+    // The archive has nothing after the current month.
     const now = new Date();
     if (viewYear === now.getFullYear() && viewMonth >= now.getMonth()) return;
 
@@ -81,9 +93,8 @@ export function DateCalendar({ currentDate, availableDates, onSelectDate, onClos
   });
 
   return (
-    <div ref={ref} className="absolute right-0 top-full z-50 mt-2 w-[280px]">
+    <div ref={ref} className={`absolute top-full z-50 mt-2 w-[280px] ${alignRight ? 'right-0' : 'left-0'}`}>
       <div className="panel p-3">
-        {/* Month header */}
         <div className="mb-2 flex items-center justify-between">
           <button onClick={goToPrevMonth} className="nw-step" aria-label="Previous month">
             ←
@@ -101,7 +112,6 @@ export function DateCalendar({ currentDate, availableDates, onSelectDate, onClos
           </button>
         </div>
 
-        {/* Weekday headers */}
         <div className="mb-1 grid grid-cols-7 gap-0.5">
           {WEEKDAYS.map((d) => (
             <div
@@ -113,9 +123,8 @@ export function DateCalendar({ currentDate, availableDates, onSelectDate, onClos
           ))}
         </div>
 
-        {/* Day grid */}
         <div className="grid grid-cols-7 gap-0.5">
-          {/* Empty cells for days before the 1st */}
+          {/* Pads the first row so day 1 lands on its weekday column. */}
           {Array.from({ length: firstDayOfWeek }).map((_, i) => (
             <div key={`empty-${i}`} />
           ))}

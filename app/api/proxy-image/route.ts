@@ -23,7 +23,51 @@ const ALLOWED_DOMAINS = [
   'moepedia.net',
   'www.inside-games.jp',
   'news.denfaminicogamer.jp',
+  'www.bugbug.news',
+  'www.otomate-p.jp',
+  'www.moe-gameaward.com',
+  'i.ytimg.com',
+  'cdn.bsky.app',
+  'shared.fastly.steamstatic.com',
+  'shared.akamai.steamstatic.com',
+  'img.dlsite.jp',
+  'www.getchu.com',
+  'img.digiket.net',
+  'booth.pximg.net',
+  'melonbooks.akamaized.net',
+  'fpiccdn.com',
+  'i.4cdn.org',
+  'assets.st-note.com',
+  'cdn.jiten.moe',
+  'image.gamespark.jp',
+  'www.gamespark.jp',
+  'cimg.kgl-systems.io',
+  'image.gamer.ne.jp',
 ];
+
+// Beyond the fixed list, a URL is served when the news aggregator recorded it as some
+// item's picture. Answers are held for a while so a page of thumbnails asks once each.
+const REFERENCE_CHECK_TIMEOUT_MS = 3000;
+const REFERENCE_TTL_MS = 60 * 60 * 1000;
+const referenceCache = new Map<string, { allowed: boolean; at: number }>();
+
+// Some stores serve their pictures only to requests that arrive from their own pages.
+const REFERER_HOSTS: Record<string, string> = {
+  'www.getchu.com': 'https://www.getchu.com/',
+  'booth.pximg.net': 'https://booth.pm/',
+};
+
+function refererFor(url: string): Record<string, string> {
+  try {
+    const referer = REFERER_HOSTS[new URL(url).hostname];
+    return referer ? { Referer: referer } : {};
+  } catch {
+    return {};
+  }
+}
+
+// The sizes a caller may ask for. The smallest is the pixelated stand-in behind a blur.
+const ALLOWED_WIDTHS = [20, 256, 512] as const;
 
 // Cache configuration
 const MAX_AGE_DAYS = 30;
@@ -52,10 +96,66 @@ function getCacheDir(): string {
 /**
  * Generate a cache file path from a URL using SHA-256 hash.
  */
-function getCachePath(url: string): string {
+function getCachePath(url: string, width?: number): string {
   const hash = crypto.createHash('sha256').update(url).digest('hex');
   // Use first 2 chars as subdirectory to avoid too many files in one dir
-  return path.join(getCacheDir(), hash.slice(0, 2), `${hash}.webp`);
+  const name = width ? `${hash}-w${width}.webp` : `${hash}.webp`;
+  return path.join(getCacheDir(), hash.slice(0, 2), name);
+}
+
+function backendBase(): string | null {
+  const base = process.env.API_URL_INTERNAL || process.env.NEXT_PUBLIC_VNDB_STATS_API;
+  return base ? base.replace(/\/$/, '') : null;
+}
+
+/**
+ * A public https origin on the default port. Address literals and local names are refused
+ * outright, since a feed's picture URL is third-party input and this fetch runs on the server.
+ */
+function isPublicHttpsUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    if (parsed.port !== '' && parsed.port !== '443') return false;
+    const host = parsed.hostname.toLowerCase();
+    if (!host.includes('.')) return false;
+    if (/^[\d.]+$/.test(host) || host.startsWith('[') || host.endsWith('.local') || host.endsWith('.localhost')) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isReferencedNewsImage(url: string): Promise<boolean> {
+  const hit = referenceCache.get(url);
+  if (hit && Date.now() - hit.at < REFERENCE_TTL_MS) return hit.allowed;
+  const base = backendBase();
+  if (!base) return false;
+  let allowed = false;
+  try {
+    const res = await fetch(`${base}/api/v1/news/image-check?url=${encodeURIComponent(url)}`, {
+      signal: AbortSignal.timeout(REFERENCE_CHECK_TIMEOUT_MS),
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { allowed?: boolean };
+      allowed = data.allowed === true;
+    }
+  } catch {
+    allowed = false;
+  }
+  if (referenceCache.size > 5000) referenceCache.clear();
+  referenceCache.set(url, { allowed, at: Date.now() });
+  return allowed;
+}
+
+/** The fixed host list, or a public https picture the aggregator recorded. */
+async function isPermittedUrl(url: string): Promise<boolean> {
+  if (isAllowedUrl(url)) return true;
+  if (!isPublicHttpsUrl(url)) return false;
+  return isReferencedNewsImage(url);
 }
 
 /**
@@ -120,10 +220,9 @@ async function doFetchAndCache(
   cachePath: string,
 ): Promise<Buffer | null> {
   try {
-    // Defence in depth: re-check the host allow-list at the point of use, so
-    // this server-side fetch can only ever reach an approved public image host
-    // even if an upstream caller's validation were refactored away or bypassed.
-    if (!isAllowedUrl(url)) {
+    // The check is repeated at the point of use, so this server-side fetch depends on no
+    // caller having validated the address first.
+    if (!(await isPermittedUrl(url))) {
       return null;
     }
 
@@ -134,6 +233,7 @@ async function doFetchAndCache(
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; VN-Club-Resources/1.0)',
         'Accept': 'image/*',
+        ...refererFor(url),
       },
       signal: controller.signal,
       // Don't follow redirects: an open redirect on an allowlisted host could
@@ -237,14 +337,68 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!isAllowedUrl(decodedUrl)) {
+  if (!(await isPermittedUrl(decodedUrl))) {
     return NextResponse.json(
       { error: 'Domain not allowed' },
       { status: 403 }
     );
   }
 
+  const rawWidth = request.nextUrl.searchParams.get('w');
+  const width = rawWidth ? Number(rawWidth) : undefined;
+  if (width !== undefined && !ALLOWED_WIDTHS.includes(width as (typeof ALLOWED_WIDTHS)[number])) {
+    return NextResponse.json({ error: 'Unsupported width' }, { status: 400 });
+  }
+
   const cachePath = getCachePath(decodedUrl);
+
+  // A sized variant is derived from the cached full image and cached beside it.
+  if (width) {
+    const variantPath = getCachePath(decodedUrl, width);
+    try {
+      const variant = await fs.readFile(variantPath);
+      if (!(await isCacheStale(variantPath))) {
+        return new NextResponse(new Uint8Array(variant), {
+          headers: {
+            'Content-Type': 'image/webp',
+            'Content-Disposition': 'inline',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          },
+        });
+      }
+    } catch {
+      // No variant yet
+    }
+    let base: Buffer | null = null;
+    try {
+      base = await fs.readFile(cachePath);
+    } catch {
+      const rateLimitResult = checkRateLimit(`proxy-image:${clientIp}`, RATE_LIMITS.imageProxy);
+      if (rateLimitResult.allowed) {
+        base = await fetchAndCacheImage(decodedUrl, cachePath);
+      }
+    }
+    if (!base) {
+      return NextResponse.json({ error: 'Failed to fetch image' }, { status: 502 });
+    }
+    try {
+      const resized = await sharp(base)
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: WEBP_QUALITY })
+        .toBuffer();
+      await ensureDir(variantPath);
+      await fs.writeFile(variantPath, resized);
+      return new NextResponse(new Uint8Array(resized), {
+        headers: {
+          'Content-Type': 'image/webp',
+          'Content-Disposition': 'inline',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    } catch {
+      return NextResponse.json({ error: 'Failed to resize image' }, { status: 502 });
+    }
+  }
 
   // Check disk cache
   let cachedBuffer: Buffer | null = null;

@@ -27,3 +27,26 @@ def _profile_cache_off(monkeypatch):
 
     monkeypatch.setattr(hybrid_recommender, "read_profile", _miss)
     monkeypatch.setattr(hybrid_recommender, "write_profile", _drop)
+
+
+def _database_reachable() -> bool:
+    import socket
+
+    from sqlalchemy.engine import make_url
+
+    from app.config import get_settings
+
+    url = make_url(get_settings().database_url)
+    try:
+        with socket.create_connection((url.host or "localhost", url.port or 5432), timeout=3):
+            return True
+    except OSError:
+        return False
+
+
+@pytest.fixture(scope="session")
+def live_database():
+    """Tests that read the catalogue skip where no database answers, so the suite also
+    passes on a bare runner."""
+    if not _database_reachable():
+        pytest.skip("no database reachable")

@@ -1,13 +1,18 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
-import { generatePageMetadata } from '@/lib/metadata-utils';
+import { frontMetadata } from '@/lib/news-metadata';
+import { parseLang } from '@/lib/news';
+import { FrontPage } from '@/components/news/pages/FrontPage';
 
-export const metadata: Metadata = generatePageMetadata({
-  title: 'Visual Novel News & Releases',
-  description: 'Latest visual novel news, new Japanese VN releases, and eroge industry updates. Stay informed about upcoming titles for your Japanese reading list.',
-  path: '/news/',
-});
+// The headlines job runs several times a day; a page a fraction of that interval behind is current enough.
+// A segment config must be a literal, so the value is not shared with the page body.
+export const revalidate = 600;
 
-export default function NewsPage() {
-  redirect('/news/all/');
+export const metadata: Metadata = frontMetadata('en');
+
+export default async function NewsFrontRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string | string[] }>;
+}) {
+  return <FrontPage locale="en" lang={parseLang((await searchParams).lang)} />;
 }

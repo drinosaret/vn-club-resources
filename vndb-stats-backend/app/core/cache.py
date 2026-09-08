@@ -2,6 +2,7 @@
 
 import json
 import logging
+import zlib
 from typing import Any
 
 import redis.asyncio as redis
@@ -10,6 +11,33 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+#: Marks a stored value as deflated. A NUL byte cannot begin JSON text, so a value either
+#: carries this prefix or is readable as JSON, and both forms can be read back without a
+#: separate record of which was written.
+_COMPRESSED_PREFIX = b"\x00z"
+
+#: Below this many bytes the saving is smaller than the per-key overhead it sits inside,
+#: and the smallest payloads deflate to more than they started as.
+_COMPRESS_THRESHOLD = 2048
+
+#: Deflate effort. This level costs about what serialising the same value already costs, and
+#: reading back is cheaper than parsing the JSON it yields.
+_COMPRESS_LEVEL = 6
+
+
+def _deflate(payload: bytes) -> bytes:
+    """Shrink a payload that is large enough to be worth shrinking."""
+    if len(payload) < _COMPRESS_THRESHOLD:
+        return payload
+    return _COMPRESSED_PREFIX + zlib.compress(payload, _COMPRESS_LEVEL)
+
+
+def _inflate(payload: bytes) -> bytes:
+    """Undo _deflate, passing through anything stored before it or below its threshold."""
+    if payload.startswith(_COMPRESSED_PREFIX):
+        return zlib.decompress(payload[len(_COMPRESSED_PREFIX):])
+    return payload
 
 
 class CacheService:
@@ -21,10 +49,17 @@ class CacheService:
     async def _get_redis(self) -> redis.Redis:
         """Get or create Redis connection."""
         if self._redis is None:
+            # Values are handled as bytes: a deflated payload is not text, and decoding it
+            # as UTF-8 on the way out would corrupt it.
             self._redis = redis.from_url(
                 settings.redis_url,
                 encoding="utf-8",
-                decode_responses=True,
+                decode_responses=False,
+                # A store that accepts the connection and then stops answering would
+                # otherwise hold every request that touches the cache.
+                socket_timeout=5,
+                socket_connect_timeout=5,
+                health_check_interval=30,
             )
         return self._redis
 
@@ -39,7 +74,7 @@ class CacheService:
             client = await self._get_redis()
             value = await client.get(key)
             if value:
-                return json.loads(value)
+                return json.loads(_inflate(value))
             return None
         except Exception as e:
             logger.warning(f"Cache get error for {key}: {e}")
@@ -54,7 +89,7 @@ class CacheService:
         """Set value in cache with optional TTL."""
         try:
             client = await self._get_redis()
-            serialized = json.dumps(value)
+            serialized = _deflate(json.dumps(value).encode("utf-8"))
             if ttl:
                 await client.setex(key, ttl, serialized)
             else:

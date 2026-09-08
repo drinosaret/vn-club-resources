@@ -108,7 +108,8 @@ _VN_URL_RE = re.compile(r"^/vn/(\d+)/?$")
 
 
 async def enrich_with_covers(db: AsyncSession, items: list[dict]) -> list[dict]:
-    """Attach a blur-capable cover (`cover_url`) + NSFW score (`image_sexual`) to
+    """Attach a blur-capable cover (`cover_url`), NSFW score (`image_sexual`) and the
+    catalogue title scripts (`title_jp`, `title_romaji`, where the event has none) to
     VN-linked events from the local VN data, so the website can show NSFW covers
     blurred (click-to-reveal) like the rest of the site.
 
@@ -125,15 +126,25 @@ async def enrich_with_covers(db: AsyncSession, items: list[dict]) -> list[dict]:
     if not wanted:
         return items
     rows = await db.execute(
-        select(VisualNovel.id, VisualNovel.image_url, VisualNovel.image_sexual).where(
-            VisualNovel.id.in_(list(wanted))
-        )
+        select(
+            VisualNovel.id,
+            VisualNovel.image_url,
+            VisualNovel.image_sexual,
+            VisualNovel.title_jp,
+            VisualNovel.title_romaji,
+        ).where(VisualNovel.id.in_(list(wanted)))
     )
-    for vid, image_url, image_sexual in rows.all():
+    for vid, image_url, image_sexual, title_jp, title_romaji in rows.all():
         for it in wanted.get(vid, []):
             if image_url:
                 it["cover_url"] = image_url
             it["image_sexual"] = image_sexual
+            # An event names its pick in one script; the catalogue supplies the other so
+            # the site can show the title in the reader's preferred script.
+            if not it.get("title_jp"):
+                it["title_jp"] = title_jp
+            if not it.get("title_romaji"):
+                it["title_romaji"] = title_romaji
     return items
 
 

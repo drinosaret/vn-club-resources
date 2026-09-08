@@ -1,0 +1,16 @@
+{
+  "tweet": {
+    "id": "2000000000000000004",
+    "author": {
+      "screen_name": "brand"
+    },
+    "media": {
+      "videos": [
+        {
+          "type": "video",
+          "thumbnail_url": "https://pbs.twimg.com/tweet_video_thumb/CCCC.jpg"
+        }
+      ]
+    }
+  }
+}

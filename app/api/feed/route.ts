@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
+import { getBackendUrlOptional } from '@/lib/config';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://vnclub.org';
-const API_BASE_URL = process.env.NEXT_PUBLIC_NEWS_API_URL || process.env.NEXT_PUBLIC_API_URL || '';
 
 interface FeedNewsItem {
   id: string;
@@ -12,6 +12,14 @@ interface FeedNewsItem {
   publishedAt: string;
 }
 
+// The sections a feed reader wants: what was said and what came out. Catalogue additions
+// and trailers stay on the site, where they have covers and stills to go with them.
+const SECTIONS: { slug: string; limit: number }[] = [
+  { slug: 'headlines', limit: 60 },
+  { slug: 'releases', limit: 40 },
+];
+const FEED_LIMIT = 100;
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -21,36 +29,38 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
+async function section(base: string, slug: string, limit: number): Promise<FeedNewsItem[]> {
+  try {
+    const res = await fetch(`${base}/api/v1/news/feed?section=${slug}&limit=${limit}`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function GET() {
   let items: FeedNewsItem[] = [];
 
-  if (API_BASE_URL) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/news?limit=50`, {
-        next: { revalidate: 3600 },
-        signal: AbortSignal.timeout(15000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        items = (data.items || []).flatMap((item: FeedNewsItem & { type?: string; items?: FeedNewsItem[] }) => {
-          // Flatten digest items into individual entries
-          if (item.type === 'digest' && item.items) {
-            return item.items.slice(0, 10);
-          }
-          return [item];
-        });
-      }
-    } catch {
-      // API unavailable: return feed with no items
-    }
+  const base = getBackendUrlOptional();
+  if (base) {
+    const batches = await Promise.all(SECTIONS.map((s) => section(base, s.slug, s.limit)));
+    items = batches
+      .flat()
+      .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+      .slice(0, FEED_LIMIT);
   }
 
   const lastBuildDate = items.length > 0
     ? new Date(items[0].publishedAt).toUTCString()
     : new Date().toUTCString();
 
-  const rssItems = items.slice(0, 100).map((item) => {
-    const link = item.url || `${SITE_URL}/news/all/`;
+  const rssItems = items.map((item) => {
+    const link = item.url || `${SITE_URL}/news/`;
     const pubDate = new Date(item.publishedAt).toUTCString();
     const description = item.summary
       ? `<description>${escapeXml(item.summary)}</description>`
@@ -70,8 +80,8 @@ export async function GET() {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>VN Club - Visual Novel News</title>
-    <link>${SITE_URL}/news/all/</link>
-    <description>Japanese visual novel news: new releases, VNDB additions, and community updates.</description>
+    <link>${SITE_URL}/news/</link>
+    <description>Japanese visual novel news: releases, announcements and trade press, gathered daily.</description>
     <language>en-us</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>

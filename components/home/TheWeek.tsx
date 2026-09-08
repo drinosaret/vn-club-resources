@@ -20,15 +20,15 @@ import { WeeklyChart } from './WeeklyChart';
  * project's data as a measure of this community would be wrong twice over: it takes credit for
  * the figures and it misdescribes who they count.
  *
- * The week named is the last COMPLETE week in the series, which trails the dump by up to another
- * week. Naming the dump date instead would date the figures to a window they do not cover.
+ * The figures are counted in seven-day windows ending on the dump's last day, so the newest
+ * window is always whole and always reaches the reference date; the label names its first day.
  *
  * Names follow the reader's own script setting, through the one client component the band
  * delegates them to. Choosing per title rather than per reader is what leaves a list looking
  * half translated.
  */
 
-/** Mirrors the `.shelf` grid: three columns, then four, then six. */
+/** Mirrors the `.shelf` grid's column count at each breakpoint. */
 const SHELF_IMAGE_SIZES = '(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 16vw';
 const SHELF_SRCSET_WIDTHS: readonly ImageWidth[] = [128, 256];
 

@@ -1121,6 +1121,8 @@ export interface MonthExplorer {
   in_progress?: boolean;
   /** The month this response describes, or null before the nightly job has run. */
   month: string | null;
+  /** Whether this month's figures were found. False leaves read and jumped empty. */
+  stored?: boolean;
   /** Most voted on that month. */
   read: ExplorerTitle[];
   /** Read far above their own normal rate that month. */

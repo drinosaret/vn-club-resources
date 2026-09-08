@@ -1284,14 +1284,15 @@ html.stt-restoring main {
     transform: none;
   }
   .tb-marker { animation: none; }
-  .tb-wall img { transition: none; }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
    The hero.
 
-   A wall of real cover art, a panel inset over it, the mascot standing behind
-   the panel's lower lip, and the choices beneath. Written as plain CSS rather
+   A quiet gradient ground, a panel inset over it, the mascot standing behind
+   the panel's lower lip, and the choices beneath. The ground is paint, not
+   pictures: a hero that loads two dozen covers spends bytes and time on
+   decoration before the page has said a word. Written as plain CSS rather
    than utilities for the same reason .wotd-hero-layout is: a brand new component
    cannot rely on the JIT having seen its class combinations.
    ──────────────────────────────────────────────────────────────────────────── */
@@ -1300,43 +1301,9 @@ html.stt-restoring main {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: var(--box);
-}
-
-.tb-wall {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  filter: saturate(0.45);
-}
-
-.tb-wall img {
-  width: 100%;
-  height: 100%;
-  /* Row height is derived from the column width, never from the image itself. Covers are
-     mostly portrait but not all the same shape, and a row that took its size from whichever
-     image had arrived would move every row under it as the rest came in. Once a row has its
-     height the fill takes over and the ratio no longer applies. */
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  display: block;
-  transition: opacity 300ms ease-out;
-}
-
-/* Held back only while a cover is still in flight, so a wall that never had the marker
-   applied is simply drawn as it arrives. */
-.tb-wall img[data-pending] {
-  opacity: 0;
-}
-
-/* Flat, not a gradient. The panel's own fill does the work of making text legible;
-   this only stops the art competing with it. */
-.tb-wall-veil {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in oklab, var(--box) 74%, transparent);
+  background:
+    radial-gradient(60rem 30rem at 85% 100%, color-mix(in oklab, var(--kohaku) 14%, transparent), transparent 70%),
+    linear-gradient(160deg, color-mix(in oklab, var(--box) 94%, var(--ai)) 0%, var(--box) 55%, color-mix(in oklab, var(--box) 92%, var(--kohaku)) 100%);
 }
 
 .tb-mark {
@@ -1542,7 +1509,6 @@ html.stt-restoring main {
 
 @media (min-width: 640px) {
   .tb-motto { font-size: 1.1875rem; }
-  .tb-wall { grid-template-columns: repeat(6, 1fr); }
   .tb-inner { padding: 5rem 1.5rem 14.5rem; }
   .tb-box { padding: 2.25rem 1.75rem 4rem; }
 
@@ -1554,7 +1520,6 @@ html.stt-restoring main {
 }
 
 @media (min-width: 1100px) {
-  .tb-wall { grid-template-columns: repeat(8, 1fr); }
   .tb-inner { padding: 5.5rem 2rem 3.5rem; }
   .tb-mark { bottom: 2rem; }
   /* Keeps every line of text clear of the mascot rather than flowing under her. */
@@ -2791,115 +2756,1341 @@ a:focus-visible > .rel-row {
 
 /* ─────────────────────────────────────────────────────────────────────────────
    News
-
-   The daily aggregate. Whatever fed an item, it arrives in the same frame, so a day reads
-   as one page rather than as a stack of feeds, and where an item came from is said on a
-   plate instead of being coded into the card's colour.
+   A front page: a river of rows beside a rail of panels. Whatever fed a row, it takes the
+   same frame, and where it came from is said on a plate rather than coded into a colour.
    ──────────────────────────────────────────────────────────────────────────── */
 
-.nw-card {
-  position: relative;
+/* Two columns: a rail of facts and a wide column. Three when a page has a rail of people
+   too. Rails stretch to the row so their last panel can stick beside a long river. */
+.nw-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 64rem) {
+  .nw-grid {
+    grid-template-columns: minmax(15rem, 17rem) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 1.75rem;
+  }
+
+  .nw-grid--3 { grid-template-columns: minmax(15rem, 17rem) minmax(0, 1fr) minmax(15rem, 17rem); }
+
+  .nw-rail { align-self: stretch; }
+
+  .nw-rail > .nw-fold:last-child {
+    position: sticky;
+    top: 5.5rem;
+  }
+
+  /* A fold's summary is hidden at this width, so a fold left closed by a width change
+     during load would have no control to reopen it. The panel is shown whatever the
+     open attribute says; engines without `::details-content` fall back to the script. */
+  .nw-fold::details-content {
+    content-visibility: visible !important;
+    display: block !important;
+    block-size: auto !important;
+  }
+
+  .nw-strip-mobile { display: none; }
+}
+
+.nw-main { min-width: 0; }
+
+.nw-rail {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  background: var(--surface);
-  transition: border-color 140ms ease;
+  gap: 1.75rem;
+  min-width: 0;
 }
 
-.nw-card:hover,
-.nw-card:focus-within {
-  border-color: var(--kohaku);
+/* Below the columns' width the day's releases come first as a strip, then the stream,
+   then every panel folded. The rail's box dissolves so its children can be ordered among
+   the grid's. */
+@media (max-width: 63.9375rem) {
+  .nw-grid { display: flex; flex-direction: column; gap: 1rem; }
+  .nw-rail { display: contents; }
+  .nw-rail > .nw-fold { order: 1; }
+  .nw-rail > .nw-rail--first { order: -1; }
+  .nw-rail > .nw-desktop-only { display: none; }
+  .nw-main { order: 0; }
 }
 
-/* Fixed height whether or not the item carried art, so a row of cards keeps one baseline
-   across sources that supply pictures and sources that do not. */
-.nw-art {
-  position: relative;
-  flex: none;
-  height: 10rem;
-  overflow: hidden;
-  border-bottom: 1px solid var(--rule);
-  background: color-mix(in oklab, var(--ink) 5%, var(--ground));
+/* A panel's fold. On a wide screen the fold is open and its summary hidden, so the panel
+   shows as it always has; on a narrow one the summary is the panel's heading. */
+.nw-fold { margin-top: 0.5rem; }
+
+.nw-fold > summary {
+  display: none;
+  list-style: none;
 }
 
-/* What stands in the frame when an item has no art: the source's own mark and its name, so
-   an empty frame still says where the item came from. */
-.nw-art-none {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+.nw-fold > summary::-webkit-details-marker { display: none; }
+
+@media (max-width: 63.9375rem) {
+  .nw-fold { margin-top: 0; }
+
+  .nw-fold > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .nw-fold > summary::after {
+    content: '+' / '';
+    font-family: var(--font-mono);
+    color: var(--text-faint);
+  }
+
+  .nw-fold[open] > summary::after { content: '−' / ''; }
+
+  .nw-fold[open] > summary { border-bottom-color: transparent; }
+
+  .nw-fold > .nw-panel > .dg-plate { display: none; }
 }
 
-.nw-art-none img {
-  width: 32px;
-  height: 32px;
-  border-radius: 2px;
+/* Inline-size containment keeps a panel's width from being set by what it holds: a long
+   name, a ruby run or a cover must wrap or clip inside the column, never widen it. */
+.nw-panel {
+  margin-top: 0.5rem;
+  contain: inline-size;
 }
 
-.nw-art-none span {
+/* The fold carries the room the plate needs above the panel. */
+.nw-fold > .nw-panel { margin-top: 0; }
+
+.nw-rail .dg-feature-name,
+.nw-rail .dg-word-gloss,
+.nw-rail .dg-feature-meta { overflow-wrap: anywhere; }
+
+.nw-rail-sub {
+  margin: 0.25rem 0 0.375rem;
   font-family: var(--font-sans);
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
 
-.nw-body {
+.nw-rail-sub + .nw-release-list { margin-bottom: 0.75rem; }
+
+.nw-river { display: flex; flex-direction: column; }
+
+.nw-day-rule {
   display: flex;
-  flex: 1;
-  flex-direction: column;
-  padding: 0.875rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--nezu);
 }
+
+.nw-day-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.nw-river > .nw-day-rule:first-child,
+.nw-river > .nw-pill + .nw-day-rule { margin-top: 0.25rem; }
+
+/* One item. Rows sit on hairlines rather than in boxes, so a column of them reads as a
+   list and the rails beside it keep the frame. The whole row is the link and the
+   summary's own links sit above it. */
+.nw-row,
+.nw-trailer,
+.nw-burst,
+.nw-lead {
+  position: relative;
+  margin: 0;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: border-color 140ms ease;
+}
+
+.nw-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.nw-row:hover,
+.nw-row:focus-within,
+.nw-trailer:hover,
+.nw-trailer:focus-within,
+.nw-burst:hover,
+.nw-lead:hover,
+.nw-lead:focus-within { border-color: var(--kohaku); }
+
+.nw-row-link { position: absolute; inset: 0; z-index: 0; }
+
+.nw-row-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.nw-row-body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+  pointer-events: none;
+}
+
+.nw-row-body a { pointer-events: auto; }
 
 .nw-meta {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: 0.6875rem;
   color: var(--text-faint);
 }
 
+/* The plate gives way before the time does: a long source line ends in an ellipsis inside
+   the text column instead of running on under the thumbnail. */
+.nw-meta > .nameplate {
+  display: block;
+  min-width: 0;
+  line-height: 22px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nw-meta > time { flex: none; }
+
 .nw-title {
-  margin-bottom: 0.375rem;
   font-family: var(--font-jp);
   font-size: 0.9375rem;
   font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  transition: color 140ms ease;
+}
+
+.nw-row:hover .nw-title,
+.nw-row:focus-within .nw-title,
+.nw-trailer:hover .nw-title,
+.nw-trailer:focus-within .nw-title { color: var(--ai); }
+
+.dark .nw-row:hover .nw-title,
+.dark .nw-row:focus-within .nw-title,
+.dark .nw-trailer:hover .nw-title,
+.dark .nw-trailer:focus-within .nw-title { color: var(--kohaku); }
+
+/* A summary is an excerpt, so it is held to a few lines; a title is shown whole. */
+.nw-summary {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  color: var(--nezu);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nw-summary--lead { -webkit-line-clamp: 6; }
+.nw-summary--review { -webkit-line-clamp: 3; }
+
+/* A review's meta line: who, what they gave it, how long they wrote. */
+.nw-review-by { color: var(--ink); }
+
+.nw-review-vote {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.nw-review-len { color: var(--text-faint); }
+
+.nw-thumb--cover { width: 4rem; height: 5.5rem; }
+
+.nw-row--compact .nw-title { font-size: 0.875rem; }
+
+.nw-rail-reviews { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* The title link sits in the flow under the excerpt, in the same small caps as the
+   store links on release rows. */
+.nw-review-vn {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  margin-top: 0.375rem;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ai);
+}
+
+/* Rail rows wrap rather than cut: a name is the whole point of the row. */
+.nw-rail .dg-name,
+.nw-rail .dg-feature-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.nw-thumb {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 7.5rem;
+  height: 5rem;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--ink) 5%, var(--ground));
+  /* The picture is part of the row's click target. */
+  pointer-events: none;
+}
+
+.nw-lead-art,
+.nw-trailer-art { pointer-events: none; }
+
+/* A blurred picture keeps its own click, which reveals it; once revealed the click
+   falls through to the row's link like any other picture. */
+.nw-thumb .sw-hold,
+.nw-line-thumb .sw-hold,
+.nw-lead-art .sw-hold,
+.nw-trailer-art .sw-hold { pointer-events: auto; }
+
+.nw-thumb img,
+.nw-lead-art img,
+.nw-trailer-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* When an item brought no picture, the source's own mark stands in the frame, so the
+   column of thumbnails keeps its rhythm and the frame still says where the item is from. */
+.nw-thumb--none {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-inset);
+}
+
+.nw-thumb--none img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.nw-lead-art.nw-thumb--none img { width: 3rem; height: 3rem; }
+
+/* An account's avatar is a picture in its own right, so it takes more of the frame. */
+.nw-thumb--mark img {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 2px;
+  opacity: 1;
+}
+
+.nw-lead-art.nw-thumb--mark img { width: 5rem; height: 5rem; }
+
+/* A line: one row high, for an item past a day's first illustrated few. The title is cut
+   with an ellipsis and carried whole in the row's title attribute. */
+.nw-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.4375rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: border-color 140ms ease;
+}
+
+.nw-line:hover,
+.nw-line:focus-within { border-color: var(--kohaku); }
+
+.nw-line-thumb {
+  position: relative;
+  z-index: 1;
+  /* The whole row is the link, so the picture is part of its target rather than a hole in it. */
+  pointer-events: none;
+  flex: none;
+  width: 2.25rem;
+  height: 1.625rem;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--ink) 5%, var(--ground));
+}
+
+.nw-line-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.nw-line-thumb.nw-thumb--none:not(.nw-thumb--mark) img { width: 1rem; height: 1rem; }
+
+.nw-line-thumb.nw-thumb--mark img { width: 1.375rem; height: 1.375rem; }
+
+.nw-line-title,
+.nw-line-plate,
+.nw-line-time {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.nw-line-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-jp);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+  transition: color 140ms ease;
+}
+
+.nw-line:hover .nw-line-title,
+.nw-line:focus-within .nw-line-title { color: var(--ai); }
+
+.dark .nw-line:hover .nw-line-title,
+.dark .nw-line:focus-within .nw-line-title { color: var(--kohaku); }
+
+.nw-line-plate {
+  flex: none;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nw-line-time {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+@media (max-width: 40rem) {
+  .nw-line-plate { display: none; }
+}
+
+/* In a rail a line stacks: the title above, the plate and clock beneath, the picture
+   spanning both, so a long plate never pushes past the panel's edge. */
+.nw-rail .nw-line {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  column-gap: 0.625rem;
+  row-gap: 0.125rem;
+  align-items: center;
+  padding: 0.375rem 0;
+}
+.nw-rail .nw-line-thumb { grid-row: 1 / span 2; }
+/* A rail column is narrow enough that one line often cuts the part of a name that tells
+   it apart from its neighbours, so a title there runs to two lines before it clips. */
+.nw-rail .nw-line-title {
+  grid-column: 2 / span 2;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* A plate in a rail keeps its one-line box and ends in an ellipsis when the column is
+   too narrow for the whole label; a wrapped plate would be cut off by its own height. */
+.nw-rail .nw-line-plate {
+  grid-column: 2;
+  display: block;
+  max-width: 100%;
+  justify-self: start;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nw-rail .nw-line-time { grid-column: 3; }
+
+/* In a rail a meta line wraps rather than run past the column, and a review's cover is
+   smaller so the reviewer's name keeps its width. */
+.nw-rail .nw-meta { flex-wrap: wrap; row-gap: 0.125rem; }
+.nw-rail .nw-row--compact .nw-thumb--cover { width: 3rem; height: 4.125rem; }
+.nw-rail .nw-row { gap: 0.625rem; }
+
+/* A review in a rail with a wide picture (a video still, a blog's image) stacks: the
+   picture above at full width, the words beneath. A cover stays beside the words, and a
+   review that brought no picture shows none rather than an empty frame. */
+.nw-rail .nw-row--compact:has(.nw-review-art) {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nw-rail .nw-row--compact .nw-review-art {
+  order: -1;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.nw-rail .nw-row--compact .nw-review-art.nw-thumb--none { display: none; }
+
+/* A rail has no room for the length of a review beside the reviewer and the score. */
+.nw-rail .nw-review-len { display: none; }
+
+/* A plate is a pill of one line, so in a rail it is held to the column's width instead of
+   setting it. */
+.nw-rail .nameplate,
+.nw-rail .ev-tag {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.nw-elsewhere-sec {
+  margin: 0.625rem 0 0.125rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nw-elsewhere-sec:first-child { margin-top: 0; }
+
+.nw-elsewhere-sec a { color: var(--ai); }
+
+/* A strip: tiles in one scrolling row, for the modules between days and the releases
+   above the stream on a phone. */
+.nw-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(7.5rem, 1fr);
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scroll-snap-type: x proximity;
+}
+
+.nw-strip--covers { grid-auto-columns: minmax(5.5rem, 1fr); }
+
+.nw-strip-item {
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.nw-strip-item a { display: block; }
+
+.nw-strip-art {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: var(--surface-inset);
+}
+
+.nw-strip-art--cover { aspect-ratio: 2 / 3; }
+
+.nw-strip-art img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+.nw-strip-badge {
+  position: absolute;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 2px;
+  background: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--ground);
+}
+
+.nw-strip-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0.375rem;
+  font-family: var(--font-jp);
+  font-size: 0.75rem;
   line-height: 1.35;
   color: var(--ink);
   transition: color 140ms ease;
 }
 
-.nw-card:hover .nw-title,
-.nw-card:focus-within .nw-title { color: var(--ai); }
+.nw-strip-item a:hover .nw-strip-title,
+.nw-strip-item a:focus-visible .nw-strip-title { color: var(--ai); }
 
-.dark .nw-card:hover .nw-title,
-.dark .nw-card:focus-within .nw-title { color: var(--kohaku); }
+.nw-strip-sub {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: var(--nezu);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-.nw-summary {
-  flex: 1;
-  font-size: 0.8125rem;
-  line-height: 1.5;
+/* The strip above the stream on a phone, with a label per group. */
+.nw-strip-mobile { margin-bottom: 0.5rem; }
+
+.nw-strip-label {
+  display: block;
+  margin: 0.75rem 0 0.375rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* A module: a strip or a trio set into the river after a day's rule, marked at the left
+   edge so it is read as an aside rather than as part of the day. */
+.nw-module {
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--kohaku);
+  border-radius: 2px;
+  background: var(--surface);
+}
+
+.nw-module-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.nw-module-title {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--nezu);
 }
 
-/* A run of items from one source, headed and ruled off. The count sits on the same rule as
+.nw-module-more {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ai);
+}
+
+.nw-module .nw-row:last-child { border-bottom: 0; }
+
+/* The ticker: a strip of the newest items above the tabs. Two copies of the track run
+   side by side and the pair slides one track's width, so the loop has no seam. */
+.nw-ticker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--surface);
+}
+
+.nw-ticker-plate { flex: none; }
+.nw-ticker-pause { flex: none; }
+
+.nw-ticker-window {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.nw-ticker-tracks {
+  display: flex;
+  width: max-content;
+  animation: nw-ticker var(--nw-ticker-s, 60s) linear infinite;
+}
+
+.nw-ticker:hover .nw-ticker-tracks,
+.nw-ticker:focus-within .nw-ticker-tracks { animation-play-state: paused; }
+
+/* Paused by the reader, for whom hovering is not an option. */
+.nw-ticker--paused .nw-ticker-tracks { animation-play-state: paused; }
+
+.nw-ticker-track {
+  display: flex;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nw-ticker-item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 2rem;
+  font-family: var(--font-jp);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.nw-ticker-item a { color: var(--ink); }
+
+.nw-ticker-item a,
+.nw-ticker-item > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.nw-ticker-item a:hover,
+.nw-ticker-item a:focus-visible { color: var(--ai); }
+
+.nw-ticker-src {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@keyframes nw-ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Still: no animation, one copy, and the row scrolls by hand. Taken when the reader asks
+   for less motion, and when there is too little to loop. */
+.nw-ticker--still .nw-ticker-tracks { animation: none; }
+.nw-ticker--still .nw-ticker-window { overflow-x: auto; }
+.nw-ticker--still .nw-ticker-track[aria-hidden="true"] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-ticker .nw-ticker-tracks { animation: none; }
+  .nw-ticker .nw-ticker-window { overflow-x: auto; }
+  .nw-ticker .nw-ticker-track[aria-hidden="true"] { display: none; }
+}
+
+/* On a narrow screen the plate takes width the items need, and the region is already
+   named for a reader who is not looking at it. The stop stays. */
+@media (max-width: 47.9375rem) {
+  .nw-ticker-plate { display: none; }
+  .nw-ticker { padding: 0.375rem 0.5rem; }
+}
+
+/* The offer of what arrived since the page was built. Nothing moves until it is taken. */
+.nw-pill {
+  display: block;
+  margin: 0 auto 0.75rem;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--kohaku);
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.nw-pill:hover,
+.nw-pill:focus-visible {
+  background: var(--kohaku);
+  color: #17181A;
+}
+
+/* The masthead: one row, so the ticker and the tabs sit close under the name. */
+.nw-mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.nw-mast > div { min-width: 0; }
+
+.nw-mast-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.6vw, 1.625rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.nw-mast-sub {
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+  color: var(--nezu);
+}
+
+/* Rail rows for the month's most-reviewed titles, the reviewers and the movers. */
+.nw-count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.nw-reviewers {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nw-reviewer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.nw-reviewer:last-child { border-bottom: 0; }
+
+/* A reviewer's name leads to their page on the source site where one is known. */
+.nw-reviewer-name,
+a.nw-review-by { color: var(--ink); transition: color 140ms ease; }
+
+.nw-reviewer-name:hover,
+.nw-reviewer-name:focus-visible,
+a.nw-review-by:hover,
+a.nw-review-by:focus-visible { color: var(--ai); }
+
+.nw-mover-change {
+  flex: none;
+  width: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--nezu);
+}
+
+.nw-mover-change--up { color: var(--ink); }
+.nw-mover-change--new { color: var(--ai); }
+
+/* The place a title holds this week, set off from its name. */
+.nw-mover-place {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+/* A rank tab row inside a panel. A tab keeps its label on one line, so the row wraps rather
+   than the labels: a panel column is narrower than four store names laid end to end. */
+.nw-rank-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+/* A burst: several posts from one account in a row, held in one frame as a grid of small
+   cells, so a busy relay account reads as one entry rather than as a column of its own. */
+.nw-burst .nw-meta { margin-bottom: 0.5rem; }
+
+.nw-burst-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem 1rem;
+}
+
+@media (min-width: 40rem) {
+  .nw-burst-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+/* A cell holds text of any length, including raw addresses, and must never widen the grid. */
+.nw-burst-cell { min-width: 0; }
+
+.nw-burst-link {
+  display: flex;
+  min-width: 0;
+  gap: 0.625rem;
+  align-items: flex-start;
+  padding: 0.375rem 0.375rem 0.375rem 0.25rem;
+  border-radius: 2px;
+  transition: background-color 120ms ease;
+}
+
+a.nw-burst-link:hover,
+a.nw-burst-link:focus-visible { background: var(--surface-inset); }
+
+.nw-burst-thumb {
+  position: relative;
+  flex: none;
+  width: 3.5rem;
+  height: 2.5rem;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--ink) 5%, var(--ground));
+}
+
+.nw-burst-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.nw-burst-thumb.nw-thumb--mark img { width: 1.75rem; height: 1.75rem; }
+
+.nw-burst-thumb.nw-thumb--none:not(.nw-thumb--mark) img { width: 1.125rem; height: 1.125rem; }
+
+.nw-burst-text { display: block; min-width: 0; }
+
+.nw-burst-title {
+  display: block;
+  font-family: var(--font-jp);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+a.nw-burst-link:hover .nw-burst-title { color: var(--ai); }
+.dark a.nw-burst-link:hover .nw-burst-title { color: var(--kohaku); }
+
+.nw-burst-sub {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  color: var(--nezu);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nw-burst-more {
+  margin-top: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ai);
+}
+
+.nw-burst-more:hover,
+.nw-burst-more:focus-visible { color: var(--brand-primary-hover); }
+
+/* A ranking: the place, a small square of art, the name and the maker. Two columns on the
+   store page so the commercial and doujin lists sit side by side. */
+.nw-ranks-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem 2rem;
+}
+
+@media (min-width: 48rem) {
+  .nw-ranks-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.nw-rank-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.nw-rank-row { border-bottom: 1px solid var(--border-subtle); }
+
+.nw-rank-row:last-child { border-bottom: 0; }
+
+.nw-rank-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.4375rem 0.125rem;
+  transition: background-color 120ms ease;
+}
+
+.nw-rank-link:hover,
+.nw-rank-link:focus-visible { background: var(--surface-inset); }
+
+.nw-rank-no {
+  flex: none;
+  width: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.nw-rank-art {
+  position: relative;
+  flex: none;
+  width: 2.5rem;
+  height: 3.5rem;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: var(--surface-inset);
+}
+
+.nw-rank-text { display: block; min-width: 0; }
+
+.nw-rank-name {
+  display: block;
+  font-family: var(--font-jp);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.nw-rank-link:hover .nw-rank-name { color: var(--ai); }
+.dark .nw-rank-link:hover .nw-rank-name { color: var(--kohaku); }
+
+.nw-rank-maker {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--nezu);
+}
+
+/* The lead: the newest illustrated headline, given a picture's width and a larger name. */
+.nw-lead {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 40rem) {
+  .nw-lead { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+}
+
+.nw-lead-art {
+  position: relative;
+  z-index: 1;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--ink) 5%, var(--ground));
+}
+
+.nw-lead-title {
+  font-family: var(--font-jp);
+  font-size: clamp(1.125rem, 2.2vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+  transition: color 140ms ease;
+}
+
+.nw-lead:hover .nw-lead-title,
+.nw-lead:focus-within .nw-lead-title { color: var(--ai); }
+
+.dark .nw-lead:hover .nw-lead-title,
+.dark .nw-lead:focus-within .nw-lead-title { color: var(--kohaku); }
+
+/* A video: its still at the video's own proportion, then the channel and the title. */
+.nw-trailer {
+  display: flex;
+  gap: 1rem;
+}
+
+.nw-trailer-art {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 9rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  background: var(--surface-inset);
+}
+
+/* In a rail a video stacks: the still across the column, the title beneath it, so neither
+   is squeezed to a sliver of a narrow column. */
+.nw-rail-trailers .nw-trailer {
+  margin-bottom: 0;
+  padding: 0.5rem 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.nw-rail-trailers .nw-trailer:last-child { margin-bottom: 0; }
+.nw-rail-trailers .nw-trailer-art { width: 100%; }
+
+/* Release rows in the river and the rail take the schedule's row. */
+.nw-release-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.375rem 0;
+}
+
+.nw-release { position: relative; }
+
+.nw-release > a { display: block; }
+
+.nw-release-store {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ai);
+}
+
+/* In a rail or a shelf a release row is a grid: the cover down the left, the text beside
+   it, and the date, count or change on its own line under the text. Beside the text a
+   figure of any length would take the width the name needs. */
+.nw-rail .rel-row,
+.nw-shelf .rel-row {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  column-gap: 0.625rem;
+  row-gap: 0.25rem;
+  align-items: start;
+  padding: 0.5rem;
+}
+
+.nw-rail .rel-row > .rel-art,
+.nw-shelf .rel-row > .rel-art { grid-row: 1 / span 2; }
+
+.nw-rail .rel-row > .rel-when,
+.nw-rail .rel-row > .nw-count,
+.nw-rail .rel-row > .nw-mover-change,
+.nw-shelf .rel-row > .rel-when {
+  grid-column: 2;
+  justify-self: start;
+  white-space: normal;
+}
+
+.nw-rail .rel-art,
+.nw-shelf .rel-art { width: 2.75rem; height: 4rem; }
+
+.nw-rail .rel-title,
+.nw-shelf .rel-title { overflow-wrap: anywhere; }
+
+/* A meta line breaks only where it would otherwise run past the column, so a run of
+   Japanese keeps its own break points. The plate and the maker share the line as boxes,
+   so the maker sits beside the plate and only wraps when the column runs out. */
+.nw-rail .rel-meta,
+.nw-shelf .rel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+  overflow-wrap: break-word;
+}
+
+/* The gap sets the spacing here, so the plate's own margin would double it. */
+.nw-rail .rel-meta > .nameplate,
+.nw-shelf .rel-meta > .nameplate { margin-right: 0; }
+
+.rel-maker {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nw-rail .nw-rank-maker,
+.nw-shelf .nw-rank-maker { overflow-wrap: anywhere; }
+
+/* A pick in the rail: a label above whichever of the day's two picks it is. */
+.nw-pick + .nw-pick {
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.nw-pick-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.nw-club-row { align-items: flex-start; }
+
+.nw-club-row .ev-tag { margin-bottom: 0.125rem; }
+
+/* A site announcement above the page. */
+.nw-notice {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--kohaku);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.nw-notice a { color: var(--ai); }
+
+/* The tab row: the sections at the left, the page's own controls at the right, both
+   wrapping onto their own lines when the row runs out of width. */
+.nw-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.nw-tabs-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+/* A phone has room for two or three sections at a time, and wrapping the rest onto their
+   own rows costs more height than the stream below is worth. The sections run in one row
+   that scrolls sideways; the controls fall under it at the left rather than the far edge. */
+@media (max-width: 47.9375rem) {
+  .nw-tabs-row .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 0.25rem;
+  }
+
+  .nw-tabs-row .tab { flex: none; }
+
+  .nw-tabs-controls { margin-left: 0; }
+}
+
+/* The language switch: a label and three small steps, one taken. */
+.nw-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* The way to the same page in the other language, opposite the heading. */
+/* One box for a link and a button alike: an explicit height and line box, so the two
+   chips in the masthead match whatever element each one is. */
+.nw-locale {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: center;
+  height: 1.875rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--nezu);
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.nw-locale:hover,
+.nw-locale:focus-visible {
+  border-color: var(--kohaku);
+  color: var(--ink);
+}
+
+/* The masthead's two switches, side by side; the NSFW one shows its state. */
+.nw-mast-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.nw-locale--on {
+  background: var(--kohaku);
+  border-color: var(--kohaku);
+  color: #17181A;
+}
+
+.nw-locale--on:hover,
+.nw-locale--on:focus-visible { color: #17181A; }
+
+.nw-lang-label {
+  margin-right: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.nw-notice p + p { margin-top: 0.375rem; }
+
+.nw-more { margin: 1.25rem auto 0; }
+
+.nw-empty {
+  padding: 3rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--nezu);
+}
+
+.nw-section-head { margin-bottom: 1.25rem; }
+
+.nw-section-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.nw-section-sub {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--nezu);
+}
+
+.nw-day-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.nw-day-group + .nw-day-group { margin-top: 1.5rem; }
+
+/* A run of items from one section on an archive day. The count sits on the same rule as
    the name, which is why the rule belongs to the row rather than to the heading. */
 .nw-group {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.25rem 0.625rem;
-  margin-bottom: 0.875rem;
+  margin-bottom: 0.5rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--rule);
 }
@@ -2910,6 +4101,409 @@ a:focus-visible > .rel-row {
   font-weight: 700;
   color: var(--ink);
 }
+
+/* The foot of a page: the way into the archive and the feed. */
+.nw-archive {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.nw-archive-label,
+.nw-archive-feed {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nw-archive-label { color: var(--text-faint); }
+
+.nw-archive-feed {
+  margin-left: auto;
+  color: var(--ai);
+}
+
+/* The same control beside the tabs, where the row is its frame: no spacing, no rule and no
+   label of its own. It follows the rule above so it wins on order rather than on weight. */
+.nw-archive--compact {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* The foot of every news page: the full list of what is read, folded until asked for. */
+.nw-sources {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.nw-sources-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.nw-sources-summary::-webkit-details-marker { display: none; }
+
+.nw-sources-count {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--ai);
+}
+
+.nw-sources[open] .nw-sources-count { color: var(--ink); }
+
+.nw-sources-note {
+  margin: 0.75rem 0 0;
+  max-width: 60ch;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.nw-sources-group { margin-top: 1.25rem; }
+
+.nw-sources-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.nw-sources-n {
+  font-weight: 400;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.nw-sources-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.nw-sources-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.nw-sources-link {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.nw-sources-link:hover { color: var(--ai); }
+
+.nw-sources-kind,
+.nw-sources-lang {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Releases page
+   Not a river and not blocks: a dated record of what has come out, newest day first, and
+   a shelf of panels beside it for the sales, the rankings and the doujin storefronts.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* The page carries its own furniture, so the frame gives it the whole width. */
+.nw-grid.nw-grid--solo { grid-template-columns: minmax(0, 1fr); }
+
+.nw-rel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.nw-rel-main { min-width: 0; }
+
+.nw-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  min-width: 0;
+}
+
+@media (min-width: 64rem) {
+  .nw-rel { grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); }
+
+  /* The shelf outruns the schedule only on a short schedule, so the last panel is the one
+     that follows the reader down rather than the shelf as a whole. */
+  .nw-shelf > .nw-fold:last-child {
+    position: sticky;
+    top: 5.5rem;
+  }
+}
+
+/* The dated list: a rule per day, its titles two across under it. */
+.nw-sched-day + .nw-sched-day { margin-top: 1.5rem; }
+
+/* A line under a heading, on the heading's own row. */
+.nw-block-sub {
+  margin-left: 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.nw-sched-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 48rem) {
+  .nw-sched-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.nw-sched .rel-art { width: 2.75rem; height: 4rem; }
+
+.nw-sched .rel-title { overflow-wrap: anywhere; }
+
+.nw-sched .rel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.nw-sched .rel-meta > .nameplate { margin-right: 0; }
+
+/* A meta line that carries marks rather than a sentence: a plate, a figure and a chip sit
+   as boxes with a gap between them, wherever the row is not already a grid. */
+.rel-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+}
+
+.rel-line > .nameplate { margin-right: 0; }
+
+/* A word the store attaches to a listing, set as a mark rather than as running text. */
+.rel-chip {
+  padding: 0 0.3125rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--nezu);
+}
+
+.rel-score {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--nezu);
+}
+
+.nw-shelf-more { margin-top: 0.75rem; }
+
+.nw-shelf-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.nw-shelf-stamp {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+/* Covers keep their own size rather than stretch to fill the row: a shelf of two would
+   otherwise draw them at several times the width the rest of the page shows them at. */
+.nw-shelf-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.875rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The doujin grid sits under the dated list, where the column holds a row of six tiles, each
+   tile at the shelf's size; it follows the list at the distance the list keeps between days. */
+.nw-rel-main > .nw-fold { margin-top: 2.5rem; }
+
+/* The older part of the out-now list, closed until asked for. The summary reads as the
+   same step control the page uses elsewhere, and the days inside keep their own rhythm. */
+.nw-sched-more { margin-top: 1.5rem; }
+.nw-sched-more > summary { display: inline-flex; list-style: none; cursor: pointer; }
+.nw-sched-more > summary::-webkit-details-marker { display: none; }
+.nw-sched-more[open] > summary { margin-bottom: 1rem; }
+@media (min-width: 64rem) {
+  .nw-shelf-tiles--wide { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+.nw-tile { min-width: 0; }
+
+.nw-tile-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.nw-tile-art {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--surface-inset);
+  transition: border-color 0.15s ease;
+}
+
+.nw-tile-link:hover .nw-tile-art,
+.nw-tile-link:focus-visible .nw-tile-art { border-color: var(--kohaku); }
+
+.nw-tile-blank { display: block; width: 100%; height: 100%; }
+
+/* A frame with no picture in it is hatched, so it reads as a missing cover rather than as
+   art that has yet to load. */
+.rel-art:empty,
+.nw-strip-art:not(:has(img)),
+.nw-tile-art:has(> .nw-tile-blank) {
+  background: repeating-linear-gradient(45deg, var(--surface-inset) 0 6px, var(--rule) 6px 7px);
+}
+
+/* The one figure the block is about, pinned to the cover's corner. */
+.nw-tile-badge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--surface);
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+  border-top-left-radius: 2px;
+}
+
+.nw-tile-badge--cut {
+  color: #17181A;
+  background: var(--kohaku);
+  border-color: var(--kohaku);
+  font-weight: 600;
+}
+
+.nw-tile-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--font-jp);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.nw-tile-link:hover .nw-tile-title { color: var(--ai); }
+.dark .nw-tile-link:hover .nw-tile-title { color: var(--kohaku); }
+
+.nw-tile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.nw-tile-store { color: var(--nezu); }
+
+.nw-tile-dev,
+.nw-tile-store {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nw-tile-price {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.nw-tile-price s { margin-left: 0.375rem; color: var(--text-faint); }
+
+.nw-tile-alt {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ai);
+}
+
+/* The foot's notice: what the page is, and where to write about a listing. It runs the
+   width of the frame, under both the rails and the stream, so the rule reads as the end of
+   the page rather than the end of a column. */
+.nw-sources-foot {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+}
+
+.nw-sources-disclaimer {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.nw-sources-disclaimer a { color: var(--ai); }
+
+.nw-sources-foot .nw-sources { margin-top: 0.75rem; border-top: 0; padding-top: 0; }
 
 /* The controls that move the day strip. One hairline box whether the mark inside is a glyph
    or a word, so the row reads as a single set of controls. */
@@ -2951,55 +4545,6 @@ a:focus-visible > .rel-row {
 .nw-step:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-}
-
-/* One week, seven fixed positions. The day on screen is filled rather than tinted, so which
-   day is being read survives being seen without colour. */
-.nw-day {
-  position: relative;
-  display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.3125rem 0.125rem;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-  font-family: var(--font-sans);
-  font-variant-numeric: tabular-nums;
-  font-size: 0.625rem;
-  letter-spacing: 0.035em;
-  line-height: 1.35;
-  text-transform: uppercase;
-  color: var(--nezu);
-  transition: border-color 120ms ease, color 120ms ease;
-}
-
-.nw-day:hover,
-.nw-day:focus-visible {
-  border-color: var(--kohaku);
-  color: var(--ink);
-}
-
-/* Today, when it is not the day being read. Carried by the rule, since a colour alone would
-   not separate it from the rest of the week. */
-.nw-day--now { border-color: color-mix(in oklab, var(--kohaku) 55%, var(--rule)); }
-
-.nw-day--on {
-  background: var(--kohaku);
-  border-color: var(--kohaku);
-  color: #17181A;
-}
-
-.nw-day--on:hover,
-.nw-day--on:focus-visible { color: #17181A; }
-
-/* A day that has not arrived keeps its column so the week does not reflow as it fills. */
-.nw-day[aria-disabled='true'],
-.nw-day[aria-disabled='true']:hover {
-  border-color: var(--border-subtle);
-  color: var(--text-faint);
-  cursor: default;
 }
 
 /* The month grid behind the strip. Square cells, ruled rather than washed, filled on the day

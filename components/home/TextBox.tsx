@@ -1,11 +1,8 @@
 import Image from 'next/image';
 
 import Link from '@/components/Link';
-import { getCoverSrc } from '@/lib/vndb-image-cache';
-import { HOMEPAGE_COVER_THRESHOLD } from '@/lib/safe-cover';
 
-import type { CommunityPulse, PulseTitle } from '@/lib/community-pulse';
-import type { FeaturedVNData } from '@/lib/featured-vns';
+import type { CommunityPulse } from '@/lib/community-pulse';
 
 import { AdvanceMarker } from './AdvanceMarker';
 import { PulseLine } from './PulseLine';
@@ -13,30 +10,14 @@ import { PulseLine } from './PulseLine';
 /**
  * The hero, arranged the way a visual novel arranges a screen.
  *
- * Art fills the frame, a panel sits inset over it, a nameplate hangs off the panel's shoulder,
- * the character stands behind its lower lip, and the choices sit underneath. Anyone who reads
+ * A quiet ground fills the frame, a panel sits inset over it, a nameplate hangs off the
+ * panel's shoulder, the character stands behind its lower lip, and the choices sit underneath. Anyone who reads
  * these will recognise the arrangement before reading a word of it, and anyone who does not
- * still sees a headline, one true sentence and three ways in.
+ * still sees a headline, one true sentence and the ways in.
  *
  * The rule the whole thing rests on: the panel only ever says something that is true today and
  * traceable to a live source. No invented dialogue, and the mascot never speaks.
  */
-
-const WALL_SLOTS = 24;
-
-/**
- * The wall is decoration: desaturated, covered by a veil, and never the thing being looked at.
- * A cell is at most an eighth of the viewport, so the narrow variant carries it at every
- * breakpoint and the hero does not spend a third of the page's image bytes on background.
- */
-const WALL_COVER_WIDTH = 128;
-
-/**
- * The first row or so is fetched with the page and the rest waits for the browser to get to
- * it. Every cell is fetched at low priority either way: the wall must never be what the
- * mascot, the fonts, or the first band's covers are queued behind.
- */
-const WALL_EAGER = 8;
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -44,9 +25,9 @@ const MONTHS = [
 ];
 
 /**
- * The last day the figures cover, said the way the band below the hero says it, so the same
- * day is not printed two ways on one page. The parts are read off the ISO string rather than
- * through Date, which would shift the day into the viewer's zone.
+ * A day said the way the band below the hero says it, so the same day is not printed two
+ * ways on one page. The parts are read off the ISO string rather than through Date, which
+ * would shift the day into the viewer's zone.
  */
 function referenceLabel(iso: string): string {
   const [, month, day] = iso.split('-').map(Number);
@@ -54,88 +35,15 @@ function referenceLabel(iso: string): string {
   return name ? `${day} ${name}` : iso;
 }
 
-const WALL_FADE_SCRIPT = `(function(){var w=document.querySelector('.tb-wall');if(!w)return;var a=w.querySelectorAll('img');for(var k=0;k<a.length;k++){var i=a[k];if(i.complete)continue;i.setAttribute('data-pending','');i.addEventListener('load',function(e){e.target.removeAttribute('data-pending')},{once:true})}})();`;
-
 interface TextBoxProps {
   pulse: CommunityPulse | null;
-  /** Local, and cannot fail on the network, so the wall always has something to draw. */
-  fallbackCovers: FeaturedVNData[];
   /** The section the advance marker moves to. */
   advanceTo: string;
 }
 
-/**
- * Every title the pulse knows about, once each, for the wall behind the panel.
- *
- * The wall draws plain images, with no click and no reveal, so a cover that would merely be
- * blurred elsewhere cannot be shown here at all. `safeHomepageCover` swaps an explicit cover for
- * a safe one where it can and otherwise raises the score expecting something downstream to blur
- * it; nothing downstream of this does, so anything still over the bar is dropped from the wall
- * rather than displayed. The wall is decoration and can afford to lose a title.
- */
-function wallCovers(pulse: CommunityPulse | null, fallback: FeaturedVNData[]): string[] {
-  const fromPulse: PulseTitle[] = pulse
-    ? [...pulse.rising, ...pulse.newReleases, ...pulse.falling, ...pulse.anticipated, ...pulse.finishing]
-    : [];
-
-  const seen = new Set<string>();
-  const urls: string[] = [];
-
-  for (const title of fromPulse) {
-    if (seen.has(title.id) || !title.image_url) continue;
-    seen.add(title.id);
-    if ((title.image_sexual ?? 0) >= HOMEPAGE_COVER_THRESHOLD) continue;
-    const src = getCoverSrc(title.image_url, WALL_COVER_WIDTH);
-    if (src) urls.push(src);
-  }
-
-  // The featured list never goes through the home-page cover pass, so it is held to the same
-  // bar here on its own score.
-  for (const vn of fallback) {
-    if (urls.length >= WALL_SLOTS) break;
-    if (seen.has(vn.id) || !vn.imageUrl) continue;
-    seen.add(vn.id);
-    if ((vn.image_sexual ?? 0) >= HOMEPAGE_COVER_THRESHOLD) continue;
-    const src = getCoverSrc(vn.imageUrl, WALL_COVER_WIDTH);
-    if (src) urls.push(src);
-  }
-
-  return urls.slice(0, WALL_SLOTS);
-}
-
-export function TextBox({ pulse, fallbackCovers, advanceTo }: TextBoxProps) {
-  const covers = wallCovers(pulse, fallbackCovers);
-
+export function TextBox({ pulse, advanceTo }: TextBoxProps) {
   return (
     <section className="tb" aria-labelledby="tb-h1">
-      {/* Decorative. The covers are already held to the home page's stricter bar upstream, and
-          the panel paints its own fill, so the heading is legible before any of this loads. */}
-      <div className="tb-wall" aria-hidden="true">
-        {covers.map((src, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={src}
-            src={src}
-            alt=""
-            loading={i < WALL_EAGER ? 'eager' : 'lazy'}
-            fetchPriority="low"
-            decoding="async"
-          />
-        ))}
-        <div className="tb-wall-veil" />
-      </div>
-      {/* Each cover still in flight is held back and fades in from its own load event (see the
-          stylesheet). This runs inline rather than from a component because the covers arrive
-          with the document, mostly before any bundle has run, and a fade that waited for
-          hydration would hold a finished wall back for the whole of that time. It is only an
-          enhancement: a wall this never touches, such as one reached by a client-side
-          navigation, is drawn the moment each cover arrives. */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: WALL_FADE_SCRIPT,
-        }}
-      />
-
       <span className="tb-mark" aria-hidden="true">
         魑魅魍魎
       </span>
@@ -158,9 +66,11 @@ export function TextBox({ pulse, fallbackCovers, advanceTo }: TextBoxProps) {
         <div className="panel panel--box on-box tb-box">
           <span className="tb-plates">
             <span className="nameplate">VN Club</span>
-            {pulse?.reference && (
-              <span className="nameplate nameplate--quiet">{referenceLabel(pulse.reference)}</span>
-            )}
+            {/* The day the page was built, in UTC like the news pages: a masthead dates
+                itself, whatever day the figures beneath it reach. */}
+            <span className="nameplate nameplate--quiet">
+              {referenceLabel(new Date().toISOString().slice(0, 10))}
+            </span>
           </span>
 
           <h1 id="tb-h1" className="tb-h1">

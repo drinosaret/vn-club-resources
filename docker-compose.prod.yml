@@ -20,7 +20,7 @@
 # =============================================================================
 
 services:
-  # Nginx reverse proxy — the only service exposed to the internet
+  # Nginx reverse proxy: the only service exposed to the internet
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -99,7 +99,6 @@ services:
       - DUMP_STORAGE_PATH=/app/data
       - FRONTEND_URL=https://vnclub.org
       - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
-      - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       # Pairs with the web service's NEXT_PUBLIC_TURNSTILE_SITE_KEY build arg.
       # Set both or neither, or the two halves are inconsistent and /shared
@@ -285,8 +284,8 @@ services:
       - vnclub
 
   # Worker for scheduled imports and heavy computation (similarity matrices, model training).
-  # Memory limit set to 8GB — similarity computation needs ~6GB peak for loading 60K tag vectors.
-  # CPU capped at 3 cores — prevents import/ML jobs from starving live services on a 6-core VPS.
+  # Memory limit set to 8GB: similarity computation needs ~6GB peak for loading 60K tag vectors.
+  # CPU capped at 3 cores: prevents import/ML jobs from starving live services on a 6-core VPS.
   worker:
     build:
       context: ./vndb-stats-backend
@@ -313,7 +312,7 @@ services:
       - VNDB_API_URL=https://api.vndb.org/kana
       - VNDB_API_TOKEN=${VNDB_API_TOKEN:-}
       - DISCORD_LOG_WEBHOOK_URL=${DISCORD_LOG_WEBHOOK_URL:-}
-      - TWITTER_AUTH_TOKEN=${TWITTER_AUTH_TOKEN:-}
+      - VNDB_CACHE_DIR=/data/vndb-cache
       # hikaru -> calendar import source guild (VNCR). Defaults to DISCORD_GUILD_ID;
       # VNCR_GUILD_ID overrides only if the source guild differs.
       - DISCORD_GUILD_ID=${DISCORD_GUILD_ID:-}
@@ -332,6 +331,8 @@ services:
       # directly. HIKARU_DATA_DIR (deploy/.env.prod) is the host path; unset falls back
       # to ./hikaru-data, which leaves the import disabled.
       - ${HIKARU_DATA_DIR:-./hikaru-data}:/hikaru-data:ro
+      # The nightly reconcile removes cached covers of entries VNDB has deleted.
+      - vndb-cache:/data/vndb-cache
     restart: unless-stopped
     networks:
       - vnclub

@@ -185,7 +185,7 @@ export default async function Home() {
         ]) }}
       />
       <div className="w-full">
-        <TextBox pulse={pulse} fallbackCovers={featuredVNs} advanceTo="club" />
+        <TextBox pulse={pulse} advanceTo="club" />
 
         {/* The band's heading and its label live inside the shelf, so with nothing to shelve
             the whole band goes rather than leaving a tinted strip with no accessible name. */}

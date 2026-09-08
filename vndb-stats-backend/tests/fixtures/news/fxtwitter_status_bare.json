@@ -1,0 +1,12 @@
+{
+  "tweet": {
+    "id": "2000000000000000003",
+    "url": "https://x.com/brand/status/2000000000000000003",
+    "text": "Just words",
+    "author": {
+      "screen_name": "brand",
+      "name": "Brand"
+    },
+    "twitter_card": "summary"
+  }
+}

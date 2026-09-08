@@ -10,7 +10,7 @@ import type { MonthExplorer as MonthExplorerData } from '@/lib/vndb-stats-api';
 import type { LanguageFilterValue } from '@/components/stats/LanguageFilter';
 
 /**
- * The same month-by-month history the site has always held, finally readable.
+ * The month-by-month vote history, one month at a time.
  *
  * Served a month at a time rather than as one payload, so moving the scrubber fetches. Every
  * month already seen is kept, which makes going back instant and means a reader sweeping
@@ -18,7 +18,7 @@ import type { LanguageFilterValue } from '@/components/stats/LanguageFilter';
  *
  * The two lenses answer different questions and the second is the reason this exists. The
  * raw count is close to a constant: the same few perennial titles head almost every month
- * for fifteen years. Measuring each title against its own normal rate instead is what
+ * for the length of the record. Measuring each title against its own normal rate instead is what
  * surfaces the month something actually happened.
  */
 
@@ -146,6 +146,10 @@ export function MonthExplorer({ language }: { language: LanguageFilterValue }) {
   // month is out of date, which says the same thing without any text appearing or leaving.
   const settling = asked !== current.month;
 
+  // Empty lists mean one of two things, and only one of them is about the month. A month
+  // whose figures are not held is reported as such rather than as a month nobody read in.
+  const held = current.stored !== false;
+
   return (
     <div className="st-card p-4 sm:p-6">
       <div className="flex items-center justify-between gap-4">
@@ -229,14 +233,22 @@ export function MonthExplorer({ language }: { language: LanguageFilterValue }) {
           heading="Most read"
           note="The titles collecting the most votes that month."
           titles={current.read}
-          emptyNote="No votes recorded this month."
+          emptyNote={
+            held
+              ? 'No votes recorded this month.'
+              : 'This month is not available. It returns after the next nightly rebuild.'
+          }
           limit={SHOWN_PER_SIDE}
         />
         <TitleList
           heading="Biggest jump"
           note="Read far above their own normal rate, so a steady favourite never appears here."
           titles={current.jumped}
-          emptyNote="Nothing rose clearly above its usual rate this month."
+          emptyNote={
+            held
+              ? 'Nothing rose clearly above its usual rate this month.'
+              : 'This month is not available. It returns after the next nightly rebuild.'
+          }
           limit={SHOWN_PER_SIDE}
         />
       </div>

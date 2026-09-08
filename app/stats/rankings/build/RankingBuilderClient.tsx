@@ -596,7 +596,7 @@ export default function RankingBuilderClient() {
             {result?.state === 'missing'
               ? 'No tag with that id exists. Try searching for it by name.'
               : result?.state === 'rebuilding'
-                ? 'The rankings are being rebuilt from the latest VNDB data. Check back shortly.'
+                ? 'This ranking is not available right now. It returns after the next nightly rebuild.'
                 : result?.state === 'invalid'
                   ? result.detail
                   : 'The rankings service could not be reached. This is usually brief.'}

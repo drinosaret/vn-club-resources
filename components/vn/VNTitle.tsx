@@ -10,7 +10,7 @@ interface VNTitleProps {
   olang?: string;
 }
 
-/** Take only the first line of a potentially multi-line alias string */
+/** An alias field can hold several lines; only the first is a display name. */
 function firstLine(text: string): string {
   return text.split(/\\n|\n/)[0].trim();
 }
@@ -18,9 +18,8 @@ function firstLine(text: string): string {
 /**
  * The title block.
  *
- * The Japanese form leads where there is one and every other form follows beneath it, which
- * is the script the title is read in and the order every list on the site uses. The reader's
- * stored preference decides the heading only for a title with no Japanese form at all.
+ * The heading follows the reader's title setting, as every list on the site does, and every
+ * other form of the name follows beneath it.
  */
 export function VNTitle({ title, titleJp, titleRomaji }: VNTitleProps) {
   const { preference } = useTitlePreference();
@@ -30,12 +29,11 @@ export function VNTitle({ title, titleJp, titleRomaji }: VNTitleProps) {
   const cleanRomaji = titleRomaji ? firstLine(titleRomaji) : undefined;
   const cleanTitle = title ? firstLine(title) : undefined;
 
-  const japanese = cleanJp && hasJapanese(cleanJp) ? cleanJp : undefined;
-  const primaryTitle = japanese
-    ?? getDisplayTitle({ title, title_jp: titleJp, title_romaji: titleRomaji }, preference);
+  const primaryTitle = firstLine(
+    getDisplayTitle({ title, title_jp: titleJp, title_romaji: titleRomaji }, preference),
+  );
   const primaryIsJapanese = hasJapanese(primaryTitle);
 
-  // Build list of alternative titles to show below the main title
   const altTitles: Array<{ text: string; isJapanese: boolean }> = [];
 
   if (cleanJp && cleanJp !== primaryTitle) altTitles.push({ text: cleanJp, isJapanese: hasJapanese(cleanJp) });

@@ -1,0 +1,60 @@
+{
+  "code": 200,
+  "results": [
+    {
+      "type": "status",
+      "id": "1000000000000000001",
+      "url": "https://x.com/acct/status/1000000000000000001",
+      "text": "新作の記事を公開しました\nhttps://example.test/article",
+      "raw_text": {
+        "text": "新作の記事を公開しました\nhttps://t.co/abc123 https://t.co/img456",
+        "facets": [
+          {"type": "url", "indices": [13, 36], "original": "https://t.co/abc123", "replacement": "https://example.test/article", "display": "example.test/article"},
+          {"type": "media", "indices": [37, 60], "original": "https://t.co/img456", "replacement": "https://x.com/acct/status/1000000000000000001/photo/1"}
+        ]
+      },
+      "created_at": "Sat Sep 05 12:02:00 +0000 2026",
+      "created_timestamp": 1788609720,
+      "author": {"screen_name": "acct", "name": "Account", "avatar_url": "https://pbs.twimg.com/profile_images/1/a.jpg"},
+      "media": {"all": [{"type": "photo", "url": "https://pbs.twimg.com/media/AAA.jpg?name=orig", "width": 640, "height": 906}]},
+      "replying_to": null,
+      "reposted_by": null,
+      "possibly_sensitive": false,
+      "lang": "ja"
+    },
+    {
+      "type": "status",
+      "id": "1000000000000000002",
+      "url": "https://x.com/other/status/1000000000000000002",
+      "text": "A repost",
+      "raw_text": {"text": "A repost", "facets": []},
+      "created_timestamp": 1788600000,
+      "author": {"screen_name": "other"},
+      "reposted_by": {"screen_name": "acct"},
+      "replying_to": null
+    },
+    {
+      "type": "status",
+      "id": "1000000000000000003",
+      "url": "https://x.com/acct/status/1000000000000000003",
+      "text": "@someone thanks",
+      "raw_text": {"text": "@someone thanks", "facets": []},
+      "created_timestamp": 1788600000,
+      "author": {"screen_name": "acct"},
+      "reposted_by": null,
+      "replying_to": "someone"
+    },
+    {
+      "type": "status",
+      "id": "1000000000000000004",
+      "url": "https://x.com/acct/status/1000000000000000004",
+      "text": "English translation announced",
+      "raw_text": {"text": "English translation announced", "facets": []},
+      "created_timestamp": 1788600000,
+      "author": {"screen_name": "acct"},
+      "reposted_by": null,
+      "replying_to": null
+    }
+  ],
+  "cursor": {"top": "t", "bottom": "b"}
+}

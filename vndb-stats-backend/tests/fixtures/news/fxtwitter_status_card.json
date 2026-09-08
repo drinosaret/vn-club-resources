@@ -1,0 +1,15 @@
+{
+  "tweet": {
+    "id": "2000000000000000002",
+    "url": "https://x.com/brand/status/2000000000000000002",
+    "text": "A link post",
+    "author": {
+      "screen_name": "brand",
+      "name": "Brand"
+    },
+    "twitter_card": {
+      "kind": "summary_large_image",
+      "image": "https://pbs.twimg.com/card_img/BBBB.jpg"
+    }
+  }
+}

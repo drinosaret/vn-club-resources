@@ -143,7 +143,6 @@ jobs:
           DISCORD_ADMIN_USER_IDS: ${{ secrets.DISCORD_ADMIN_USER_IDS }}
           DISCORD_LOG_WEBHOOK_URL: ${{ secrets.DISCORD_LOG_WEBHOOK_URL }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          TWITTER_AUTH_TOKEN: ${{ secrets.TWITTER_AUTH_TOKEN }}
           UMAMI_DB_PASSWORD: ${{ secrets.UMAMI_DB_PASSWORD }}
           UMAMI_APP_SECRET: ${{ secrets.UMAMI_APP_SECRET }}
           NEXT_PUBLIC_UMAMI_URL: ${{ secrets.NEXT_PUBLIC_UMAMI_URL }}
@@ -166,7 +165,6 @@ jobs:
             printf 'DISCORD_ADMIN_USER_IDS=%q\n'         "$DISCORD_ADMIN_USER_IDS"
             printf 'DISCORD_LOG_WEBHOOK_URL=%q\n'        "$DISCORD_LOG_WEBHOOK_URL"
             printf 'TMDB_API_KEY=%q\n'                   "$TMDB_API_KEY"
-            printf 'TWITTER_AUTH_TOKEN=%q\n'             "$TWITTER_AUTH_TOKEN"
             printf 'UMAMI_DB_PASSWORD=%q\n'              "$UMAMI_DB_PASSWORD"
             printf 'UMAMI_APP_SECRET=%q\n'               "$UMAMI_APP_SECRET"
             printf 'NEXT_PUBLIC_UMAMI_URL=%q\n'          "$NEXT_PUBLIC_UMAMI_URL"

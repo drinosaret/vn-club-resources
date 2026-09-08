@@ -833,6 +833,7 @@ class NewsItemResponse(BaseModel):
     publishedAt: datetime
     tags: list[str] | None
     extraData: dict[str, Any] | None = None
+    vnId: str | None = None
 
     class Config:
         from_attributes = True
@@ -868,6 +869,7 @@ class NewsListItem(BaseModel):
     publishedAt: datetime | None = None
     tags: list[str] | None = None
     extraData: dict[str, Any] | None = None
+    vnId: str | None = None
     # Fields for digest items
     date: str | None = None
     count: int | None = None
@@ -908,6 +910,105 @@ class NewsDateListResponse(BaseModel):
     """List of dates that have news content."""
     dates: list[NewsDateInfo]
     total_dates: int
+
+
+class NewsFeedResponse(BaseModel):
+    """One page of a section, newest first, with the cursor for the page after it and the
+    cursor of its newest row, which a reader's poll for new rows starts from."""
+    items: list[NewsItemResponse]
+    nextCursor: str | None = None
+    newestCursor: str | None = None
+
+
+class NewsTickerResponse(BaseModel):
+    """The newest rows across the sections a reader watches, for the strip above the tabs."""
+    items: list[NewsItemResponse] = []
+
+
+class NewsRailSection(BaseModel):
+    """A few of another section's newest rows, for the panel that points elsewhere."""
+    section: str
+    items: list[NewsItemResponse] = []
+
+
+class NewsRailVN(BaseModel):
+    """A title with how many reviews it drew inside the window."""
+    vnId: str
+    title: str
+    titleJp: str | None = None
+    imageUrl: str | None = None
+    imageIsNsfw: bool = False
+    count: int
+
+
+class NewsRailReviewer(BaseModel):
+    """A reviewer and how many reviews they filed inside the window."""
+    name: str
+    count: int
+    # The reviewer's page on the catalogue site, absent for rows filed before it was read.
+    url: str | None = None
+
+
+class NewsRailResponse(BaseModel):
+    """What a section page's rails and inline modules need in one call. Every field is
+    filled whatever the section, since the payload is small and one call keeps the pages
+    simple."""
+    elsewhere: list[NewsRailSection] = []
+    boards: list[NewsItemResponse] = []
+    creators: list[NewsItemResponse] = []
+    mostReviewed: list[NewsRailVN] = []
+    reviewers: list[NewsRailReviewer] = []
+    trailers: list[NewsItemResponse] = []
+    covers: list[NewsItemResponse] = []
+    reviews: list[NewsItemResponse] = []
+
+
+class NewsFrontResponse(BaseModel):
+    """What the front page's rail needs in one call."""
+    releasesToday: list[NewsItemResponse]
+    releasesTomorrow: list[NewsItemResponse]
+    catalogue: list[NewsItemResponse]
+    trailers: list[NewsItemResponse]
+    reviews: list[NewsItemResponse] = []
+    sale: list[NewsItemResponse]
+    announcements: list["AnnouncementResponse"]
+    dlsiteRanking: list[dict[str, Any]] = []
+
+
+class NewsDlsiteResponse(BaseModel):
+    """The store's weekly rankings for adventure games, commercial and doujin."""
+    asOf: str | None = None
+    pro: list[dict[str, Any]] = []
+    maniax: list[dict[str, Any]] = []
+
+
+class NewsSourceEntry(BaseModel):
+    name: str
+    kind: str
+    url: str
+    section: str
+    lang: str | None = None
+
+
+class NewsInventoryResponse(BaseModel):
+    sources: list[NewsSourceEntry] = []
+
+
+class NewsReleasesResponse(BaseModel):
+    """The releases page: what is out, what is coming, what is cheaper, and the rankings."""
+    outNow: list[NewsItemResponse] = []
+    comingUp: list[NewsItemResponse] = []
+    onSale: list[NewsItemResponse] = []
+    doujin: list[NewsItemResponse] = []
+    dlsite: dict[str, Any] = {}
+    getchu: dict[str, Any] = {}
+
+
+class NewsGetchuResponse(BaseModel):
+    """The retailer's pre-order and sales rankings for PC games."""
+    asOf: str | None = None
+    reserve: list[dict[str, Any]] = []
+    sales: list[dict[str, Any]] = []
 
 
 class AnnouncementCreate(BaseModel):
