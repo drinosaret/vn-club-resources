@@ -2893,6 +2893,12 @@ async def refresh_leaderboards(dry_run: bool = False) -> dict:
         f"Leaderboards refreshed: {stats['boards']} boards stored in "
         f"{stats['elapsed_seconds']}s"
     )
+    if not dry_run:
+        # The site caches its read of the trend feed; a rebuild reaches readers
+        # when the site is told to drop that copy, not when the feed changes.
+        from app.services.site_refresh import revalidate_site
+
+        await revalidate_site(["trend-feed"])
     return stats
 
 

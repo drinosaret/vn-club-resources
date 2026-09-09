@@ -119,7 +119,8 @@ export async function getCommunityPulse(): Promise<CommunityPulse | null> {
 
   try {
     const res = await fetch(`${backendUrl}/api/v1/stats/global/trend-feed`, {
-      next: { revalidate: PULSE_REVALIDATE_SECONDS },
+      // Tagged so a rebuilt feed can ask the site to drop this copy early.
+      next: { revalidate: PULSE_REVALIDATE_SECONDS, tags: ['trend-feed'] },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) return null;

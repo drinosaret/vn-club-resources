@@ -319,6 +319,9 @@ services:
       - VNCR_GUILD_ID=${VNCR_GUILD_ID:-}
       # Pairs with the api service, which the nightly cached pages written here must match.
       - REC_PREDICTED_RATING=1
+      # The rebuild asks the site to drop its cached trend feed; same secret the bot uses.
+      - FRONTEND_URL=https://vnclub.org
+      - BLACKLIST_REFRESH_SECRET=${BLACKLIST_REFRESH_SECRET:-}
       - PYTHONUNBUFFERED=1
     depends_on:
       db:

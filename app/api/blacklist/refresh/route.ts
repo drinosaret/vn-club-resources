@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { verifyRefreshToken } from '@/lib/refresh-token';
 import { forceRefreshBlacklist, getBlacklistedIds } from '@/lib/blacklist-cache';
-import { checkRateLimit, getClientIp, createRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp, createRateLimitHeaders } from '@/lib/rate-limit';
 
 let warnedNoSecret = false;
 
@@ -25,33 +25,16 @@ export async function POST(request: Request) {
     );
   }
 
-  // Verify request comes from backend (shared secret)
-  const authHeader = request.headers.get('x-refresh-token');
-  const expectedSecret = process.env.BLACKLIST_REFRESH_SECRET;
-
-  // If no secret is configured, deny all requests
-  if (!expectedSecret) {
+  const auth = verifyRefreshToken(request);
+  if (auth === 'unconfigured') {
     if (!warnedNoSecret) {
       console.warn('BLACKLIST_REFRESH_SECRET not configured - refresh endpoint disabled');
       warnedNoSecret = true;
     }
-    return NextResponse.json(
-      { error: 'Refresh endpoint not configured' },
-      { status: 503 }
-    );
+    return NextResponse.json({ error: 'Refresh endpoint not configured' }, { status: 503 });
   }
-
-  // A header value's character count is not its byte count, and a comparison of raw bytes
-  // rejects a pair of unequal length rather than answering. Comparing digests instead leaves
-  // two fixed-width values whatever arrived, and the comparison stays constant time.
-  const provided = crypto.createHash('sha256').update(authHeader ?? '', 'utf8').digest();
-  const expected = crypto.createHash('sha256').update(expectedSecret, 'utf8').digest();
-
-  if (!crypto.timingSafeEqual(provided, expected)) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  if (auth !== 'ok') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
