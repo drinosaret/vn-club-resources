@@ -548,3 +548,24 @@ async def test_a_roudoku_row_without_art_is_left_without_art(monkeypatch):
     monkeypatch.setattr(em.jiten_covers, "resolve_display_cover", _resolver("https://c/ok.jpg", False, True))
     row = item(event_type="roudoku", image_url=None, url="/vn/24/", cover_url="https://c/raw.jpg", image_sexual=0.1)
     assert (await em.attach_safe_covers([row]))[0]["image_url"] is None
+
+
+# ── Catalogue blurbs ──────────────────────────────────────────
+
+
+def test_catalogue_prose_is_reduced_to_a_plain_line():
+    raw = "[url=https://example.test]A title[/url] about a [b]long[/b] summer." + chr(92) + "n" + chr(92) + "nMore."
+    assert em.plain_blurb(raw) == "A title about a long summer. More."
+
+
+def test_a_pick_that_already_has_a_blurb_keeps_it():
+    """Only a row that says nothing takes the catalogue text."""
+    import asyncio
+
+    class _NoDb:
+        async def execute(self, *a, **k):
+            raise AssertionError("the catalogue must not be read for a row with a blurb")
+
+    row = item(event_type="vn_of_month", description="Club copy.", url="/vn/24/")
+    out = asyncio.run(em.attach_catalogue_blurbs(_NoDb(), [row]))
+    assert out[0]["description"] == "Club copy."

@@ -135,8 +135,9 @@ class EventMirrorCog(commands.Cog):
         event to the generic location and writes them all back the moment the
         channel returns.
 
-        The name is only carried into the description where everyone can
-        already see the channel, since the event itself is visible server wide.
+        The channel is named as picked: an admin chose it for events that are
+        visible server wide, and on a server where the club channels sit behind
+        a member role, gating the name on the everyone role would blank it.
         """
         raw = self._config.get(em.channel_key(event_type)) or self._config.get(
             em.CONFIG_CHANNEL_DEFAULT
@@ -146,10 +147,9 @@ class EventMirrorCog(commands.Cog):
         channel = guild.get_channel(_as_id(raw))
         if channel is None:
             return None
-        public = channel.permissions_for(guild.default_role).view_channel
-        mention = channel.mention if public else None
+        mention = channel.mention
         if isinstance(channel, (discord.VoiceChannel, discord.StageChannel)):
-            label = channel.name if public else None
+            label = channel.name
             perms = channel.permissions_for(guild.me)
             if perms.view_channel and perms.connect:
                 entity = "stage" if isinstance(channel, discord.StageChannel) else "voice"
@@ -157,8 +157,7 @@ class EventMirrorCog(commands.Cog):
             # A voice event the bot cannot see or join would be refused outright,
             # so the channel is named instead of pointed at.
             return em.ChannelTarget(entity="external", label=label, mention=mention)
-        label = f"#{channel.name}" if public else None
-        return em.ChannelTarget(entity="external", label=label, mention=mention)
+        return em.ChannelTarget(entity="external", label=f"#{channel.name}", mention=mention)
 
     async def armed_sessions(self) -> dict[str, datetime]:
         """The showtime the club has set for each weekly session.
@@ -353,6 +352,7 @@ class EventMirrorCog(commands.Cog):
         try:
             async with async_session_maker() as db:
                 items = await events_service.get_window_merged(db, now, now + em.HORIZON)
+                items = await em.attach_catalogue_blurbs(db, items)
             items = await em.attach_safe_covers(items)
         except Exception as e:
             logger.error("Event mirror: calendar read failed: %s", e, exc_info=True)

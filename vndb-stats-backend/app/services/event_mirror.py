@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DiscordScheduledEvent
+from app.db.models import DiscordScheduledEvent, VisualNovel
 from app.services import jiten_covers, recurring_events
 
 logger = logging.getLogger(__name__)
@@ -626,6 +626,43 @@ def plan(
             continue
         planned[key] = entry
     return sorted(planned.values(), key=lambda entry: entry.start_at)
+
+
+_BBCODE = re.compile(r"\[/?[a-z]+(?:=[^\]]*)?\]", re.IGNORECASE)
+BLURB_SOURCE_LIMIT = 600
+
+
+def plain_blurb(text: str | None) -> str:
+    """Catalogue prose reduced to plain text: its markup dropped, the site's
+    two-character line breaks read as breaks."""
+    return one_line(_BBCODE.sub("", text or ""), BLURB_SOURCE_LIMIT)
+
+
+async def attach_catalogue_blurbs(db: AsyncSession, items: list[dict]) -> list[dict]:
+    """Give a monthly or seasonal pick a blurb where its row carries none.
+
+    Those rows come from the reading-club import, which names the VN and
+    nothing else; the catalogue holds a description for it. Mutates and
+    returns items.
+    """
+    wanted: dict[str, list[dict]] = {}
+    for item in items:
+        if item.get("event_type") not in PERIOD_TYPES or item.get("description"):
+            continue
+        match = _VN_URL.match(item.get("url") or "")
+        if match:
+            wanted.setdefault(f"v{match.group(1)}", []).append(item)
+    if not wanted:
+        return items
+    rows = await db.execute(
+        select(VisualNovel.id, VisualNovel.description).where(VisualNovel.id.in_(list(wanted)))
+    )
+    for vid, description in rows.all():
+        blurb = plain_blurb(description)
+        if blurb:
+            for item in wanted.get(vid, []):
+                item["description"] = blurb
+    return items
 
 
 async def attach_safe_covers(items: list[dict]) -> list[dict]:
