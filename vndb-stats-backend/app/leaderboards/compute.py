@@ -19,7 +19,7 @@ import logging
 import time
 from sys import intern
 from dataclasses import fields as dataclass_fields
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import NamedTuple
 
 from sqlalchemy import func, select, text
@@ -182,6 +182,9 @@ UPCOMING_DAYS = 500
 
 #: Weeks of community activity carried, which is a season and a half: long enough to see a
 #: direction, short enough that it is about now rather than about history.
+# The dump is cut part-way through its final day, so that day is never a whole one and
+# every window stops the day before it. The SQL below subtracts the same one day.
+PARTIAL_DAYS = timedelta(days=1)
 PULSE_WEEKS = 26
 # Days in the front page's week chart: the same seven the figures beside it count.
 PULSE_DAYS = 7
@@ -330,14 +333,16 @@ async def load_vn_facts(db) -> dict[str, VNFacts]:
 
 
 async def latest_vote_date(db) -> date:
-    """The most recent vote in the dump, which is what every rolling window ends at.
+    """The last complete day in the dump, which is what every rolling window ends at.
 
     Using the dump's own high-water mark rather than the wall clock keeps a board's window
     aligned with the data it was built from, so a late import does not silently produce an
-    emptier "this week" than it should.
+    emptier "this week" than it should. The dump is cut part-way through its final day, so
+    that day holds a fraction of its votes and is left out; every window ends the day before.
     """
     result = await db.execute(select(func.max(GlobalVote.date)))
-    return result.scalar() or datetime.now(timezone.utc).date()
+    latest = result.scalar() or datetime.now(timezone.utc).date()
+    return latest - PARTIAL_DAYS
 
 
 async def walk_votes(
@@ -1281,7 +1286,7 @@ async def load_reception_shift(db, depth: int, japanese_only: bool = True) -> di
     for key, days, min_recent in SHIFT_WINDOWS:
         rows = await db.execute(
             text(f"""
-                WITH bounds AS (SELECT max(date) AS latest FROM global_votes),
+                WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes),
                 lifetime AS (
                     SELECT gv.vn_id, avg(gv.vote) AS mean, count(*) AS votes
                     FROM global_votes gv
@@ -1393,7 +1398,7 @@ async def load_new_releases(db, depth: int, japanese_only: bool = True) -> list[
     """
     rows = await db.execute(
         text(f"""
-            WITH bounds AS (SELECT max(date) AS latest FROM global_votes)
+            WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes)
             SELECT v.id AS vn_id,
                    v.released,
                    count(*) AS votes,
@@ -1435,7 +1440,7 @@ async def load_being_finished(db, depth: int, japanese_only: bool = True) -> lis
     """
     rows = await db.execute(
         text(f"""
-            WITH bounds AS (SELECT max(date) AS latest FROM global_votes)
+            WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes)
             SELECT u.vid AS vn_id, count(*) AS finishes
             FROM ulist_vns u
             CROSS JOIN bounds b
@@ -1467,7 +1472,7 @@ async def load_anticipated(db, depth: int) -> list[dict]:
     """
     rows = await db.execute(
         text("""
-            WITH bounds AS (SELECT max(date) AS latest FROM global_votes),
+            WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes),
             upcoming AS (
                 SELECT rv.vn_id, min(r.released) AS out_on
                 FROM releases r
@@ -1525,7 +1530,7 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
     lang_join, lang_where = japanese_clause(japanese_only)
     rows = await db.execute(
         text(f"""
-            WITH bounds AS (SELECT max(date) AS latest FROM global_votes),
+            WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes),
             firsts AS (
                 SELECT user_hash, min(date) AS first_vote
                 FROM global_votes
@@ -1574,7 +1579,7 @@ async def load_community_days(db, days: int, japanese_only: bool = True) -> list
     lang_join, lang_where = japanese_clause(japanese_only)
     rows = await db.execute(
         text(f"""
-            WITH bounds AS (SELECT max(date) AS latest FROM global_votes),
+            WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes),
             firsts AS (
                 SELECT user_hash, min(date) AS first_vote
                 FROM global_votes
@@ -1629,7 +1634,7 @@ async def load_hot_now(
     lang_join, lang_where = japanese_clause(japanese_only)
     rows = await db.execute(
         text(f"""
-            WITH bounds AS (SELECT max(date) AS latest FROM global_votes),
+            WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes),
             windows AS (
                 SELECT gv.vn_id,
                        count(*) FILTER (
@@ -1708,7 +1713,7 @@ async def load_period_totals(db, days: int, japanese_only: bool = True) -> tuple
     row = (
         await db.execute(
             text(f"""
-                WITH bounds AS (SELECT max(date) AS latest FROM global_votes)
+                WITH bounds AS (SELECT max(date) - 1 AS latest FROM global_votes)
                 SELECT count(*) FILTER (WHERE gv.date > b.latest - CAST(:days AS integer)) AS current_votes,
                        count(*) FILTER (
                            WHERE gv.date > b.latest - CAST(:double AS integer)
@@ -1865,7 +1870,7 @@ async def load_terminal_votes(db) -> dict[str, tuple]:
     await db.execute(text(f"SET LOCAL work_mem = '{AGGREGATION_WORK_MEM}'"))
 
     rows = await db.execute(text(f"""
-        WITH bounds AS (SELECT max(date) AS last_day FROM global_votes),
+        WITH bounds AS (SELECT max(date) - 1 AS last_day FROM global_votes),
         quiet AS (
             SELECT user_hash, max(date) AS final_day
             FROM global_votes

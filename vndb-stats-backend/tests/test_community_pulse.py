@@ -24,9 +24,10 @@ async def test_pulse_windows_end_on_the_latest_vote_day():
         pulse = await load_community_pulse(db, 4)
     assert 1 <= len(pulse) <= 4
     starts = [date.fromisoformat(p["week"]) for p in pulse]
-    # The newest window reaches the last day the dump covers, and the windows tile back
-    # from it seven days apart, so none of them is a partial one.
-    assert starts[-1] == latest - timedelta(days=6)
+    # The newest window reaches the last complete day the dump covers (the dump is cut
+    # part-way through its final day), and the windows tile back from it seven days
+    # apart, so none of them is a partial one.
+    assert starts[-1] == latest - timedelta(days=7)
     assert all(b - a == timedelta(days=7) for a, b in zip(starts, starts[1:]))
     for p in pulse:
         assert p["votes"] >= p["readers"] >= p["new_readers"] >= 0
@@ -42,10 +43,10 @@ async def test_daily_series_covers_the_week_the_figures_describe():
         week = await load_community_pulse(db, 1)
     assert 1 <= len(days) <= 7
     stamps = [date.fromisoformat(d["day"]) for d in days]
-    # The series ends on the last day the dump covers and starts inside the newest
-    # weekly window, so the chart and the figures beside it describe one week.
-    assert stamps[-1] == latest
-    assert stamps[0] >= latest - timedelta(days=6)
+    # The series ends on the last complete day the dump covers and starts inside the
+    # newest weekly window, so the chart and the figures beside it describe one week.
+    assert stamps[-1] == latest - timedelta(days=1)
+    assert stamps[0] >= latest - timedelta(days=7)
     assert stamps == sorted(stamps)
     for d in days:
         assert d["votes"] >= d["readers"] >= d["new_readers"] >= 0
