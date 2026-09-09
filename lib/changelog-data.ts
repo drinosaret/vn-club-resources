@@ -57,7 +57,7 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
-    date: '2026-09-08',
+    date: '2026-09-09',
     project: 'ichijou',
     title: 'Club events in the Discord Events tab',
     description:

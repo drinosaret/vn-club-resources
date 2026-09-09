@@ -4,7 +4,7 @@ import { getCoverSrc, getCoverSrcSet, type ImageWidth } from '@/lib/vndb-image-c
 
 import { VNTitle } from '@/components/VNTitle';
 
-import type { CommunityPulse, PulseTitle } from '@/lib/community-pulse';
+import { weekEnd, type CommunityPulse, type PulseTitle } from '@/lib/community-pulse';
 
 import { WeeklyChart } from './WeeklyChart';
 
@@ -21,7 +21,7 @@ import { WeeklyChart } from './WeeklyChart';
  * the figures and it misdescribes who they count.
  *
  * The figures are counted in seven-day windows ending on the dump's last day, so the newest
- * window is always whole and always reaches the reference date; the label names its first day.
+ * window is always whole and always reaches the reference date; the label names the day it ends.
  *
  * Names follow the reader's own script setting, through the one client component the band
  * delegates them to. Choosing per title rather than per reader is what leaves a list looking
@@ -47,7 +47,7 @@ interface Figure {
   previous: number | null;
 }
 
-/** A week start as a reader would say it, from the ISO date the feed carries. */
+/** A date as a reader would say it, from the ISO date the feed carries. */
 function weekLabel(week: string): string {
   const [, month, day] = week.split('-').map(Number);
   const name = MONTHS[month - 1];
@@ -118,9 +118,10 @@ export function TheWeek({ pulse }: TheWeekProps) {
   const current = weeks[weeks.length - 1];
   const before = weeks[weeks.length - 2];
 
-  // The week the figures cover. The shelves below are measured over a rolling seven days
-  // ending on the reference date, so each block names its own window rather than taking one
-  // from the section caption.
+  // The week the figures cover, named by the day it ends, since that is the day a reader
+  // measures it against. The shelves below are measured over a rolling seven days ending on
+  // the reference date, so each block names its own window rather than taking one from the
+  // section caption.
   const figuresWeek = current && before ? current.week : null;
 
   const figures: Figure[] =
@@ -153,7 +154,7 @@ export function TheWeek({ pulse }: TheWeekProps) {
         </div>
 
         {figuresWeek && (
-          <p className="wk-note mb-4">Seven days from {weekLabel(figuresWeek)}.</p>
+          <p className="wk-note mb-4">Seven days to {weekLabel(weekEnd(figuresWeek))}.</p>
         )}
 
         {figures.length > 0 && (

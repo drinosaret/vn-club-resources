@@ -1,4 +1,4 @@
-import type { PulseWeek } from '@/lib/community-pulse';
+import { weekEnd, type PulseWeek } from '@/lib/community-pulse';
 
 /**
  * Half a year of reading, drawn.
@@ -46,7 +46,7 @@ function series(values: number[]): { path: string; area: string; last: { x: numb
   return { path, area, last: points[points.length - 1] };
 }
 
-/** The week label as a reader would say it, from the ISO date the feed carries. */
+/** A date as a reader would say it, from the ISO date the feed carries. */
 function monthLabel(week: string): string {
   const [, month, day] = week.split('-');
   const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -75,7 +75,7 @@ export function WeeklyChart({ weeks, span = 26 }: WeeklyChartProps) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Weekly ratings and readers over the last ${window.length} weeks, ending ${last.week}.`}
+        aria-label={`Weekly ratings and readers over the last ${window.length} weeks, ending ${weekEnd(last.week)}.`}
       >
         <defs>
           <linearGradient id="fig-fill" x1="0" y1="0" x2="0" y2="1">
@@ -111,7 +111,7 @@ export function WeeklyChart({ weeks, span = 26 }: WeeklyChartProps) {
 
       <p className="fig-axis">
         <span>{monthLabel(first.week)}</span>
-        <span>{monthLabel(last.week)}</span>
+        <span>{monthLabel(weekEnd(last.week))}</span>
       </p>
     </div>
   );

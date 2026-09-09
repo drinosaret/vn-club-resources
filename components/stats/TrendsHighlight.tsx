@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
 
+import Link from '@/components/Link';
+
 import { PreviewPanel, PreviewRow } from '@/components/stats/PreviewPanel';
 import { getDisplayTitle, useTitlePreference } from '@/lib/title-preference';
 import { vndbStatsApi } from '@/lib/vndb-stats-api';
@@ -53,6 +55,15 @@ export function TrendsHighlight() {
       href="/stats/trends/"
       linkLabel="All trends"
       blurb="Measured against each title&apos;s own previous seven days, so a steady favourite never appears."
+      // The panel beside this one closes with a link to a page its header does not reach, and
+      // the pair is read as one: this closes the same way, with the one destination the trends
+      // page itself points onward to.
+      footer={
+        <Link href="/stats/global/" className="sec-more">
+          The long view, thirty years rather than this week
+          <span aria-hidden>&rarr;</span>
+        </Link>
+      }
     >
       {movers.slice(0, ROWS_SHOWN).map((entry) => {
         const name = getDisplayTitle(

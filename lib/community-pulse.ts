@@ -153,3 +153,12 @@ export async function getCommunityPulse(): Promise<CommunityPulse | null> {
     return null;
   }
 }
+
+/** The last day of a seven-day window, from the ISO date of its first. */
+export function weekEnd(week: string): string {
+  const [year, month, day] = week.split('-').map(Number);
+  const end = new Date(Date.UTC(year, month - 1, day + 6));
+  // The feed emits a plain date; anything else is handed back as it came, the
+  // way the labels beside it already behave.
+  return Number.isNaN(end.getTime()) ? week : end.toISOString().slice(0, 10);
+}

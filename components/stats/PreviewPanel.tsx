@@ -41,9 +41,12 @@ export function PreviewPanel({
 }: PreviewPanelProps) {
   return (
     <div className="st-card flex h-full flex-col p-5">
-      <div className="st-card-head mb-1">
+      {/* The link sits under the title in both panels rather than beside it: beside it, a
+          long title wraps the link onto a second line while a short one keeps it inline, and
+          the two lists then start at different heights. */}
+      <div className="mb-1 flex flex-col items-start gap-0.5">
         <h2 className="st-card-title">{title}</h2>
-        <Link href={href} className="sec-more -my-1 min-h-9 py-1">
+        <Link href={href} className="sec-more min-h-9 py-1">
           {linkLabel}
           <span aria-hidden>&rarr;</span>
         </Link>
