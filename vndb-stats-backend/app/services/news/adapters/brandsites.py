@@ -465,7 +465,7 @@ async def fetch_site(session: aiohttp.ClientSession, site: BrandSite, now: datet
         if status == 200:
             page_url = url
             break
-        logger.warning("brand site %s returned %s for %s", site.name, status, url)
+        logger.info("brand site %s returned %s for %s", site.name, status, url)
     if page_url is None:
         return []
     drafts = parse_site(decode_page(raw, site), site, now, page_url)

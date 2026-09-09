@@ -27,6 +27,9 @@ _EMOJI = {
     "vn_month_voting": "🗳️",
     "vn_season_voting": "🗳️",
     "custom": "📌",
+    "anniversary": "🎉",
+    "season_start": "🍂",
+    "holiday": "🎏",
 }
 UPCOMING_LIMIT = 8
 

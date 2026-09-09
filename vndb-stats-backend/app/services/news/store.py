@@ -29,6 +29,11 @@ _RELAY_SOURCES = ("rss", "hatena")
 # Sources whose entries can arrive through more than one feed (a post carrying two
 # hashtags, a bookmark of a filed article); the address is the identity.
 _URL_UNIQUE_SOURCES = ("note", "review", "hatena")
+# Accounts that post the same text to more than one network; each copy carries its own
+# address, so the text is the identity, judged against other social posts only. The
+# whole post is compared, not just the opening line, since a brand opens many posts
+# the same way.
+_CROSSPOST_SOURCES = ("bluesky", "twitter")
 _RELAY_WINDOW = timedelta(days=3)
 _RELAY_TITLE_MIN = 12
 # A relay prints the outlet it took an article from after the headline, and a listing
@@ -110,9 +115,18 @@ async def unknown_keys(db: AsyncSession, source: str, keys: list[str]) -> list[s
 
 
 async def _repeats_known_title(db: AsyncSession, draft: NewsDraft) -> bool:
-    """Whether the same article was filed in the last few days under another spelling."""
-    if draft.source not in _RELAY_SOURCES or len(draft.title) < _RELAY_TITLE_MIN:
+    """Whether the same article was filed in the last few days under another spelling,
+    or the same post under another network's address."""
+    if len(draft.title) < _RELAY_TITLE_MIN:
         return False
+    if draft.source in _RELAY_SOURCES:
+        return await _repeats_relay(db, draft)
+    if draft.source in _CROSSPOST_SOURCES:
+        return await _repeats_crosspost(db, draft)
+    return False
+
+
+async def _repeats_relay(db: AsyncSession, draft: NewsDraft) -> bool:
     key = normalise_title(draft.title)
     if not key:
         return False
@@ -123,6 +137,29 @@ async def _repeats_known_title(db: AsyncSession, draft: NewsDraft) -> bool:
         )
     )
     return any(normalise_title(t) == key for t in filed.scalars() if t)
+
+
+def crosspost_key(title: str | None, summary: str | None) -> str:
+    """The whole post, reduced to what two copies of it share."""
+    text = unicodedata.normalize("NFKC", f"{title or ''} {summary or ''}").lower()
+    return _DROPPED_CHARS.sub(" ", text).strip()
+
+
+async def _repeats_crosspost(db: AsyncSession, draft: NewsDraft) -> bool:
+    key = crosspost_key(draft.title, draft.summary)
+    if not key:
+        return False
+    lower = draft.published_at - _RELAY_WINDOW
+    upper = draft.published_at + _RELAY_WINDOW
+    filed = await db.execute(
+        select(NewsItem.title, NewsItem.summary).where(
+            NewsItem.source.in_(_CROSSPOST_SOURCES),
+            NewsItem.published_at >= lower,
+            NewsItem.published_at <= upper,
+            NewsItem.id != draft.item_id,
+        )
+    )
+    return any(crosspost_key(t, sm) == key for t, sm in filed.all())
 
 
 async def save_drafts(
@@ -150,10 +187,17 @@ async def save_drafts(
         if draft.item_id in seen_ids:
             continue
         seen_ids.add(draft.item_id)
-        if draft.source in _RELAY_SOURCES and len(draft.title) >= _RELAY_TITLE_MIN:
-            if draft.title in seen_titles:
-                continue
-            seen_titles.add(draft.title)
+        if len(draft.title) >= _RELAY_TITLE_MIN:
+            if draft.source in _RELAY_SOURCES:
+                batch_key = draft.title
+            elif draft.source in _CROSSPOST_SOURCES:
+                batch_key = crosspost_key(draft.title, draft.summary)
+            else:
+                batch_key = None
+            if batch_key:
+                if batch_key in seen_titles:
+                    continue
+                seen_titles.add(batch_key)
         if (
             await _is_known(db, draft)
             or await _repeats_known_link(db, draft)

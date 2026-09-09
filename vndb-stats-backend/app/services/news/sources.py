@@ -15,9 +15,19 @@ VN_TERMS = [
     "18禁", "乙女ゲーム", "BLゲーム", "恋愛アドベンチャー",
 ]
 OTHER_GENRES = [
-    "アクション", "FPS", "TPS", "格闘", "シューティング", "レース", "RPG", "MMORPG",
+    "アクション", "3DACT", "FPS", "TPS", "格闘", "シューティング", "レース", "RPG", "MMORPG",
     "ストラテジー", "シミュレーション", "スポーツ", "パズル",
     "リズムゲーム", "リズムゲー", "音ゲー",
+]
+
+# What a relay account passes on that is not news of a work: shop stock, event goods,
+# lotteries and campaigns, and the running events of mobile games that share a brand's
+# name.
+RELAY_NOISE_TERMS = [
+    "ガチャ", "イベント", "シーズンパス", "メインクエスト", "ログインボーナス", "闘技場",
+    "ショップ", "SHOP", "グッズ", "タペストリー", "キーホルダー", "ねんどろいど", "フィギュア",
+    "抱き枕", "Tシャツ", "アクリル", "クッション", "タンブラー", "キャップ", "ポストカード",
+    "くじ", "キャンペーン", "通販", "再販", "周年のタイトル", "ランキング",
 ]
 
 # Terms that mark an English-language post as being about the medium, for accounts and
@@ -149,6 +159,8 @@ BOARD_HEADERS = {"User-Agent": "Monazilla/1.00 (vnclub-news; +https://vnclub.org
 # The forum's feeds refuse browser strings from datacenter addresses and ask for a
 # descriptive client name instead.
 REDDIT_HEADERS = {"User-Agent": "vnclub-news/1.0 (+https://vnclub.org/news/)"}
+# A thread asking for help or a recommendation is chatter rather than news of a work.
+REDDIT_TITLE_EXCLUDE = r"(?i)^(how (do|can) i|how to|help\b|question\b|does anyone|is there a way|any (good|recommend))|\brec(c|s|ommend)"
 # A few outlets answer only a browser client name and refuse every other string.
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -186,7 +198,7 @@ RSS_FEEDS: list[RssFeed] = [
     RssFeed("Game*Spark", "https://www.gamespark.jp/rss20/index.rdf", VN_TERMS, OTHER_GENRES),
     RssFeed("ITmedia", "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml", VN_TERMS, OTHER_GENRES),
     RssFeed("ねとらぼ", "https://rss.itmedia.co.jp/rss/2.0/netlab.xml", VN_TERMS, OTHER_GENRES),
-    RssFeed("Moepedia", "https://moepedia.net/feed/"),
+    RssFeed("Moepedia", "https://moepedia.net/feed/", nsfw_images=True),
     RssFeed("Ima-ero", "https://www.ima-ero.com/feed/", nsfw_images=True),
     # The tagged feeds rather than the site feed, which also carries comics.
     RssFeed("BugBug", "https://www.bugbug.news/tag/post_tag-227/feed/", nsfw_images=True),
@@ -241,7 +253,7 @@ RSS_FEEDS: list[RssFeed] = [
     RssFeed("Siliconera", "https://www.siliconera.com/?s=visual+novel&feed=rss2", ["visual novel", "otome", "eroge", "galge", "bishoujo"], LOCALISATION_TERMS, exclude_categories=LOCALISATION_CATEGORIES + NON_JP_ORIGIN_CATEGORIES, lang=EN),
     RssFeed("かーずSP", "https://www.karzusp.net/feed", VN_TERMS),
     # Retro and the store's own corporate releases.
-    RssFeed("D4 Enterprise", "https://www.d4e.co.jp/feed", brand=True),
+    RssFeed("D4 Enterprise", "https://www.d4e.co.jp/feed", VN_TERMS, brand=True),
     RssFeed("RetroPC NEWS", "https://retropcnews.com/feed", VN_TERMS + ["アドベンチャー", "PC-98", "PC98"]),
     RssFeed("PR TIMES (エイシス)", "https://prtimes.jp/companyrdf.php?company_id=42966", brand=True),
     # Search feeds: whatever any outlet wrote this week, each entry naming its outlet. The
@@ -277,7 +289,7 @@ RSS_FEEDS: list[RssFeed] = [
         lang=EN,
         source="forum",
         key_pattern=r"\.1$",
-        title_exclude_pattern=r"(?i)^(regarding [a-z]{1,2}\d+|about\b|where (to|can i) (get|buy|find|download)|how (to|do i) (get|buy|install|run|play)|crash|doesn't (work|start|run)|won't (work|start|run)|error\b)",
+        title_exclude_pattern=r"(?i)^(regarding [a-z]{1,2}\d+|about\b|where (to|can i) (get|buy|find|download)|how (to|do i|do you) (get|buy|install|run|play|save)|crash|freez|doesn't (work|start|run)|won't (work|start|run)|error\b|warm welcome|hello|hi (everyone|all)|new here|introduc)|\b(vote|votes|voting|my list|wishlist|tagging|spoiler flag)\b",
         summary_exclude_pattern=r"(?i)^\s*(hi|hey|hello|yo)?[,!. ]*\s*(i saw (that )?you|you (edited|added|removed|changed)|do you (have|know|own)|can you|could you|thanks for)|\b(notic(e|ed) you|you on your|your (profile|page|list|votes))\b",
     ),
     RssFeed(
@@ -287,6 +299,7 @@ RSS_FEEDS: list[RssFeed] = [
         TRANSLATION_TERMS,
         lang=EN,
         source="reddit",
+        title_exclude_pattern=REDDIT_TITLE_EXCLUDE,
         headers=REDDIT_HEADERS,
     ),
     RssFeed(
@@ -295,6 +308,7 @@ RSS_FEEDS: list[RssFeed] = [
         exclude=TRANSLATION_TERMS,
         lang=EN,
         source="reddit",
+        title_exclude_pattern=REDDIT_TITLE_EXCLUDE,
         headers=REDDIT_HEADERS,
     ),
     RssFeed(
@@ -303,6 +317,7 @@ RSS_FEEDS: list[RssFeed] = [
         exclude=TRANSLATION_TERMS,
         lang=EN,
         source="reddit",
+        title_exclude_pattern=REDDIT_TITLE_EXCLUDE,
         headers=REDDIT_HEADERS,
         max_items=8,
     ),
@@ -494,7 +509,7 @@ X_ACCOUNTS: list[XAccount] = [
     XAccount("entergram"),
     XAccount("moeaward", exclude_images=True),
     XAccount("cybernhmksk", include=["fanza.co.jp", "dlaf.jp"], exclude_images=True, link_images=False),
-    XAccount("Moepedia_net", exclude_images=True),
+    XAccount("Moepedia_net", exclude=RELAY_NOISE_TERMS, exclude_images=True),
     XAccount(
         "DLsite_info",
         include=["美少女ゲーム", "ノベル", "ADV", "PCゲーム"],
@@ -504,6 +519,7 @@ X_ACCOUNTS: list[XAccount] = [
     XAccount(
         "getchucom",
         include=["美少女ゲーム", "PCゲーム", "発売", "予約"],
+        exclude=RELAY_NOISE_TERMS,
         exclude_images=True,
         link_images=False,
     ),

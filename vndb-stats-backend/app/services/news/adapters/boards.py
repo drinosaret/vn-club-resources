@@ -62,7 +62,7 @@ async def fetch_board(session: aiohttp.ClientSession, board: Board, now: datetim
     url = SUBJECT_URL.format(host=board.host, board=board.board)
     async with session.get(url, timeout=REQUEST_TIMEOUT, headers=board.headers) as resp:
         if resp.status != 200:
-            logger.warning("Board %s returned %s", board.board, resp.status)
+            logger.info("Board %s returned %s", board.board, resp.status)
             return []
         payload = await resp.read()
     return parse_subjects(payload, board, now)

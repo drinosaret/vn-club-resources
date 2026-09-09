@@ -57,6 +57,14 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-09-08',
+    project: 'ichijou',
+    title: 'Club events in the Discord Events tab',
+    description:
+      'Kinoplex, Weekly Roudoku, the VN of the Month and Season and the voting windows now appear in the server’s Events tab, with a link to what’s on and to the calendar.',
+    links: [{ label: 'Events', href: '/events/' }],
+  },
+  {
     date: '2026-09-07',
     project: 'site',
     title: 'News overhaul',

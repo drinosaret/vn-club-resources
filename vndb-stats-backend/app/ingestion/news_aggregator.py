@@ -78,6 +78,8 @@ from app.services.news.sources import (
 logger = logging.getLogger(__name__)
 
 HTTP_TIMEOUT = aiohttp.ClientTimeout(total=60)
+# The forum's feeds allow one request a minute from one address.
+REDDIT_PAUSE = 61.0
 PER_HOST_CONNECTIONS = 8
 # Some outlets refuse a bare library client; every request says who is asking.
 USER_AGENT = "Mozilla/5.0 (compatible; VN-Club-Resources/1.0; +https://vnclub.org)"
@@ -260,7 +262,7 @@ async def run_community_check():
     async with _http() as http:
         batches = await asyncio.gather(
             *[_run_adapter(f.name, rss.fetch_feed(http, f, now)) for f in feeds],
-            _paced("reddit", [rss.fetch_feed(http, f, now) for f in paced]),
+            _paced("reddit", [rss.fetch_feed(http, f, now) for f in paced], pause=REDDIT_PAUSE),
             *[_run_adapter(a.handle, fxtwitter.fetch_statuses(http, a, now)) for a in CREATOR_ACCOUNTS],
             *[_run_adapter(b.board, boards.fetch_board(http, b, now)) for b in BOARDS],
             _run_adapter("4chan", fourchan.fetch_catalog(http, now)),

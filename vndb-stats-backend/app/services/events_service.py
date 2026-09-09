@@ -235,6 +235,84 @@ async def get_upcoming_merged(db: AsyncSession, now: datetime) -> list[dict]:
     return items
 
 
+def _months_spanned(start: datetime, end: datetime) -> list[tuple[int, int]]:
+    """(year, month) pairs a window touches, in order."""
+    out: list[tuple[int, int]] = []
+    year, month = start.year, start.month
+    while (year, month) <= (end.year, end.month):
+        out.append((year, month))
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return out
+
+
+def _as_utc(value: str | None) -> datetime | None:
+    """Read a serialized calendar timestamp back, tolerating a missing offset."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+
+
+# An item that names no end (a weekly slot, a published session) is read for this
+# long past its start, so a caller that assigns it a length still sees it.
+OPEN_ENDED_GRACE = timedelta(days=1)
+
+
+def _overlaps(item: dict, start: datetime, end: datetime) -> bool:
+    item_start = _as_utc(item.get("start_at"))
+    if item_start is None:
+        return False
+    item_end = _as_utc(item.get("end_at")) or item_start + OPEN_ENDED_GRACE
+    return item_start < end and item_end >= start
+
+
+async def get_window(db: AsyncSession, start: datetime, end: datetime) -> list[Event]:
+    """Active events overlapping [start, end), soonest first. A row with no end
+    counts as running for OPEN_ENDED_GRACE past its start."""
+    result = await db.execute(
+        select(Event)
+        .where(
+            and_(
+                Event.is_active.is_(True),
+                Event.start_at < end,
+                func.coalesce(Event.end_at, Event.start_at + OPEN_ENDED_GRACE) >= start,
+            )
+        )
+        .order_by(Event.start_at)
+    )
+    return list(result.scalars().all())
+
+
+async def get_window_merged(db: AsyncSession, start: datetime, end: datetime) -> list[dict]:
+    """Stored events + computed recurring ones overlapping [start, end), sorted.
+
+    get_upcoming_merged cannot serve a window this wide: the recurring feed
+    caps its weekly placeholders (MOVIE_NIGHT_UPCOMING_COUNT and
+    ROUDOKU_UPCOMING_COUNT) so the site's sidebar is not filled with repeats. This walks the calendar months the window touches
+    instead, so every weekly slot inside the range is present. Suppression stays
+    where it already lives, in recurring_events, fed by the same padded session
+    dates the month view uses.
+    """
+    db_items = [event_to_dict(ev) for ev in await get_window(db, start, end)]
+    movie_dates, roudoku_dates = await get_session_dates(db, start - _SLOT_PAD, end + _SLOT_PAD)
+    computed: list[dict] = []
+    for year, month in _months_spanned(start, end):
+        computed.extend(
+            recurring_events.for_month(
+                year,
+                month,
+                skip_movie_dates=movie_dates,
+                skip_roudoku_dates=roudoku_dates,
+            )
+        )
+    items = db_items + [item for item in computed if _overlaps(item, start, end)]
+    items.sort(key=lambda e: e["start_at"])
+    return await enrich_with_covers(db, items)
+
+
 async def get_past(
     db: AsyncSession,
     now: datetime,

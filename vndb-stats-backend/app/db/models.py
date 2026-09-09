@@ -1060,6 +1060,30 @@ class BotConfig(Base):
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class DiscordScheduledEvent(Base):
+    """Which native Discord scheduled event mirrors which calendar item.
+
+    Held apart from `events` because the items that gain the most from being
+    mirrored, the weekly session placeholders, are computed at read time and
+    have no row there to hang a column on.
+    """
+
+    __tablename__ = "discord_scheduled_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    guild_id = Column(BigInteger, nullable=False)
+    sync_key = Column(String(200), nullable=False)  # event_mirror identity, not events.external_key
+    discord_event_id = Column(BigInteger, nullable=False)
+    # Fingerprint of the payload last sent, so a tick that changes nothing sends nothing.
+    content_hash = Column(String(64), nullable=False, server_default="")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_discord_events_guild_key", "guild_id", "sync_key", unique=True),
+    )
+
+
 class RSSFeedConfig(Base):
     """Configurable RSS feed sources."""
 

@@ -177,3 +177,57 @@ def test_two_different_headlines_keep_their_own_titles():
         "新作アクションゲームを発表"
     )
     assert store.normalise_title("") == ""
+
+
+@pytest.mark.asyncio
+async def test_a_post_crossposted_to_another_network_is_filed_once():
+    """A brand that posts the same text to Bluesky and X gives each copy its own address,
+    so the text has to be the identity."""
+    text = "Today is the birthday of a heroine from a well known title, celebrate with us!"
+    first = _draft("xpost-a", source="bluesky", title=text, url="https://bsky.app/profile/x/post/1")
+    second = _draft("xpost-b", source="twitter", title=text, url="https://x.com/x/status/2")
+    try:
+        async with async_session_maker() as db:
+            assert await store.save_drafts(db, [first]) == 1
+            assert await store.save_drafts(db, [second]) == 0
+            assert await store.save_drafts(db, [first, second]) == 0
+    finally:
+        await _purge("bluesky", first.item_id)
+        await _purge("twitter", second.item_id)
+
+
+@pytest.mark.asyncio
+async def test_a_post_is_not_dropped_for_matching_an_article_headline():
+    """The cross-post rule is judged among social posts only; a brand quoting a press
+    headline is still its own row."""
+    text = "A studio announces a new title for the coming winter season"
+    article = _draft("xpost-art", source="rss", title=text, url="https://example.test/n/1")
+    post = _draft("xpost-post", source="twitter", title=text, url="https://x.com/x/status/3")
+    try:
+        async with async_session_maker() as db:
+            assert await store.save_drafts(db, [article]) == 1
+            assert await store.save_drafts(db, [post]) == 1
+    finally:
+        await _purge("rss", article.item_id)
+        await _purge("twitter", post.item_id)
+
+
+@pytest.mark.asyncio
+async def test_two_posts_sharing_an_opening_line_are_both_filed():
+    """A brand opens many posts the same way; the whole post is the identity."""
+    first = _draft("xpost-o1", source="twitter", title="[Title] Character introduction (A)",
+                   summary="Meet the first heroine.", url="https://x.com/x/status/11")
+    second = _draft("xpost-o2", source="twitter", title="[Title] Character introduction (B)",
+                    summary="Meet the second heroine.", url="https://x.com/x/status/12")
+    try:
+        async with async_session_maker() as db:
+            assert await store.save_drafts(db, [first]) == 1
+            assert await store.save_drafts(db, [second]) == 1
+    finally:
+        await _purge("twitter", first.item_id, second.item_id)
+
+
+def test_the_crosspost_key_keeps_the_trailing_parenthetical():
+    """Relays drop the outlet a headline names in brackets; a post keeps its own."""
+    assert store.crosspost_key("Intro (A)", None) != store.crosspost_key("Intro (B)", None)
+    assert store.crosspost_key("Same  text!", "") == store.crosspost_key("same text", None)

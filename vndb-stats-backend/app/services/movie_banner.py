@@ -7,12 +7,13 @@ back to a plain embed.
 """
 
 import asyncio
-import glob
 import io
 import logging
 
 import httpx
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
+
+from app.services.banner_text import font as _font, wrap as _wrap
 
 logger = logging.getLogger(__name__)
 
@@ -21,60 +22,6 @@ W, H = 1000, 420  # final size
 ACCENT = (244, 63, 94)  # rose
 WHITE = (245, 245, 248)
 MUTED = (188, 192, 204)
-
-_FONT_CACHE: dict[tuple[int, bool], ImageFont.FreeTypeFont] = {}
-
-
-def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    key = (size, bold)
-    if key in _FONT_CACHE:
-        return _FONT_CACHE[key]
-    weight = "Bold" if bold else "Regular"
-    patterns = [
-        f"/usr/share/fonts/**/NotoSansCJK*{weight}*.*",
-        "/usr/share/fonts/**/NotoSansCJK*.*",
-        f"/usr/share/fonts/**/NotoSans*{weight}*.*",
-        "/usr/share/fonts/**/*.ttf",
-    ]
-    font = ImageFont.load_default()
-    for pat in patterns:
-        files = sorted(glob.glob(pat, recursive=True))
-        if files:
-            try:
-                font = ImageFont.truetype(files[0], size)
-                break
-            except Exception:
-                continue
-    _FONT_CACHE[key] = font
-    return font
-
-
-def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_w: int, max_lines: int = 3) -> list[str]:
-    def width(s: str) -> int:
-        return draw.textbbox((0, 0), s, font=font)[2]
-
-    words = text.split()
-    # Word-wrap for spaced titles; char-wrap for unspaced (CJK) ones.
-    tokens = words if len(words) > 1 else list(text)
-    sep = " " if len(words) > 1 else ""
-    lines: list[str] = []
-    cur = ""
-    for tok in tokens:
-        trial = f"{cur}{sep}{tok}" if cur else tok
-        if width(trial) <= max_w or not cur:
-            cur = trial
-        else:
-            lines.append(cur)
-            cur = tok
-            if len(lines) == max_lines:
-                break
-    if cur and len(lines) < max_lines:
-        lines.append(cur)
-    if lines and width(lines[-1]) > max_w:
-        while lines[-1] and width(lines[-1] + "…") > max_w:
-            lines[-1] = lines[-1][:-1]
-        lines[-1] += "…"
-    return lines
 
 
 def _render(

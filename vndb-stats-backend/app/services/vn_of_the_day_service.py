@@ -245,6 +245,26 @@ async def get_vn_developers(db: AsyncSession, vn_id: str) -> list[dict]:
     return [{"name": name, "original": original} for name, original in result.all() if name]
 
 
+def developer_labels(developers, *, prefer_original: bool = True, limit: int | None = None) -> list[str]:
+    """Developer names as plain strings, whichever shape the credits arrive in.
+
+    Credits carry both scripts so the reader's setting can choose; a chat
+    message has no such setting, so one script is picked here. Bare strings
+    are accepted too, so a caller holding an older shape still renders.
+    """
+    out: list[str] = []
+    for dev in developers or []:
+        if isinstance(dev, dict):
+            first, second = ("original", "name") if prefer_original else ("name", "original")
+            label = dev.get(first) or dev.get(second)
+        else:
+            label = dev
+        label = str(label).strip() if label else ""
+        if label and label not in out:
+            out.append(label)
+    return out[:limit] if limit else out
+
+
 # ============ Scheduled Task ============
 
 

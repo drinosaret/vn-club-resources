@@ -80,7 +80,7 @@ async def fetch_search(session: aiohttp.ClientSession, word: str, now: datetime)
     url = SEARCH_URL.format(word=quote(word))
     async with session.get(url, timeout=REQUEST_TIMEOUT) as resp:
         if resp.status != 200:
-            logger.warning("%s search %s returned %s", LABEL, word, resp.status)
+            logger.info("%s search %s returned %s", LABEL, word, resp.status)
             return []
         page = await resp.text()
     return parse_search(page, now)

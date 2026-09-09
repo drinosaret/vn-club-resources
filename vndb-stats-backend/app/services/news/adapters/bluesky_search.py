@@ -55,7 +55,7 @@ async def fetch_search(session: aiohttp.ClientSession, search: BlueskySearch, no
     url = SEARCH_URL.format(q=quote(search.query))
     async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as resp:
         if resp.status != 200:
-            logger.warning("Bluesky search %r returned %s", search.query, resp.status)
+            logger.info("Bluesky search %r returned %s", search.query, resp.status)
             return []
         payload = await resp.json(content_type=None)
     return parse_search(payload, search, now)

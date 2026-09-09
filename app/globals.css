@@ -9131,6 +9131,10 @@ a.nw-burst-link:hover .nw-burst-title { color: var(--ai); }
   width: 12rem;
   margin-top: 0.5rem;
   padding: 0.25rem 0;
+  /* The header is fixed, so a menu taller than what sits below it has to
+     scroll or its last entries are out of reach on a short display. */
+  max-height: calc(100dvh - 7rem);
+  overflow-y: auto;
   transform: translateX(-50%);
   border: 1px solid var(--rule);
   border-radius: 2px;

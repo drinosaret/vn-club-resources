@@ -261,6 +261,14 @@ THREAD_FEED = """<?xml version="1.0" encoding="UTF-8"?>
 <guid isPermaLink="false">https://example.test/t7.1</guid>
 <pubDate>Sat, 05 Sep 2026 09:00:00 +0000</pubDate>
 <description>It closes on the menu.</description></item>
+<item><title>Warm welcomes! (#1)</title><link>https://vndb.org/t99998.1</link>
+<guid isPermaLink="false">https://vndb.org/t99998.1</guid>
+<pubDate>Sat, 05 Sep 2026 09:00:00 +0000</pubDate>
+<description>Hello everyone, glad to be here.</description></item>
+<item><title>Is it possible to know when I cast a vote on a VN? (#1)</title><link>https://vndb.org/t99997.1</link>
+<guid isPermaLink="false">https://vndb.org/t99997.1</guid>
+<pubDate>Sat, 05 Sep 2026 09:00:00 +0000</pubDate>
+<description>I cannot find the date of my votes anywhere.</description></item>
 </channel></rss>"""
 
 THREAD_FEED_CONFIG = next(f for f in RSS_FEEDS if f.source == "forum")
@@ -268,7 +276,7 @@ THREAD_FEED_CONFIG = next(f for f in RSS_FEEDS if f.source == "forum")
 
 def test_rss_keeps_every_thread_without_the_exclude_patterns():
     feed = RssFeed("Test", "https://example.test/feed")
-    assert len(parse_feed(THREAD_FEED, feed, NOW)) == 7
+    assert len(parse_feed(THREAD_FEED, feed, NOW)) == 9
 
 
 def test_rss_drops_record_keeping_and_threads_aimed_at_one_member():
@@ -326,6 +334,21 @@ def _status(text, *, status_id="1000000000000000009", media=None, urls=None):
     if media:
         status["media"] = {"all": [{"type": "photo", "url": media}]}
     return {"results": [status]}
+
+
+def test_relay_account_drops_shop_stock_and_mobile_game_events():
+    from app.services.news.sources import RELAY_NOISE_TERMS
+
+    relay = XAccount("acct", exclude=RELAY_NOISE_TERMS, exclude_images=True)
+    for noise in (
+        "【恋姫†大戦】 SSR【水辺の純真】朱里【ピックアップガチャ開催中】",
+        "【ゆずソフトショップ】 『カコ☆タマ』特大タペストリー 各種",
+        "【グッドスマイルカンパニー】 ねんどろいど 神尾観鈴【再販情報】",
+        "本日、発売15周年のタイトルはこちら！",
+    ):
+        assert parse_statuses(_status(noise, media="https://pbs.example.test/a.jpg"), relay, NOW) == [], noise
+    kept = parse_statuses(_status("【Innocent Grey】 『カラノショウジョコンプリートボックス』特設サイト公開！"), relay, NOW)
+    assert len(kept) == 1
 
 
 def test_creator_post_with_nothing_to_open_and_nothing_to_say_is_dropped():
@@ -387,3 +410,19 @@ def test_vndb_releases_bucket_by_their_own_day_and_drop_partial_dates():
         for g in _group_releases(days["2026-09-06"]).values()
     ]
     assert keys == ["v1-2026-09-04", "v1-2026-09-06"]
+
+
+def test_reddit_help_and_recommendation_threads_are_excluded():
+    import re
+
+    from app.services.news.sources import REDDIT_TITLE_EXCLUDE
+
+    for chatter in (
+        "How do I change the language text?",
+        "Any good short VN recs for a beginner?",
+        "Question about save files",
+        "Recommend me something short",
+    ):
+        assert re.search(REDDIT_TITLE_EXCLUDE, chatter), chatter
+    for news in ("Studio announces a new title for winter", "Finished reading a long eroge in Japanese, some thoughts"):
+        assert not re.search(REDDIT_TITLE_EXCLUDE, news), news

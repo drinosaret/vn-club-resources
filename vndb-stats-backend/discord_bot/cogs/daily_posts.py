@@ -20,6 +20,7 @@ from app.services.vn_of_the_day_service import (
     get_or_select,
     get_vn_tags,
     get_vn_developers,
+    developer_labels,
     MAX_IMAGE_SEXUAL,
 )
 from app.services.word_of_the_day_service import (
@@ -178,9 +179,8 @@ class DailyPostsCog(commands.Cog):
             tags = await get_vn_tags(db, pick.visual_novel.id, limit=5)
             devs = await get_vn_developers(db, pick.visual_novel.id)
 
-        embed, view = self._build_votd_embed(pick, tags, devs, is_daily=True)
-
         try:
+            embed, view = self._build_votd_embed(pick, tags, devs, is_daily=True)
             await channel.send(embed=embed, view=view)
             if not force:
                 await cache.set(redis_key, True, ttl=REDIS_TTL)
@@ -221,12 +221,9 @@ class DailyPostsCog(commands.Cog):
                 inline=True,
             )
 
-        if developers:
-            embed.add_field(
-                name="Developer",
-                value=", ".join(developers[:3]),
-                inline=True,
-            )
+        names = developer_labels(developers, limit=3)
+        if names:
+            embed.add_field(name="Developer", value=", ".join(names), inline=True)
 
         if vn.released:
             embed.add_field(name="Released", value=vn.released.isoformat(), inline=True)

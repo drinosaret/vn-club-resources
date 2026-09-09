@@ -17,6 +17,7 @@ COG_EXTENSIONS = [
     "discord_bot.cogs.news_new",        # /manage_news - news feed management
     "discord_bot.cogs.announcements",   # /manage_announcements - announcement management
     "discord_bot.cogs.events",          # /events (public), /manage_events (admin)
+    "discord_bot.cogs.event_mirror",    # /manage_event_sync - calendar to the Events tab
     "discord_bot.cogs.movie_night",     # /movie (public), /manage_movie_night (admin)
     "discord_bot.cogs.roudoku",         # /roudoku (public), /manage_roudoku (admin)
     "discord_bot.cogs.vn_of_the_day",  # /manage_vnotd - VN of the Day management
