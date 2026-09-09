@@ -54,6 +54,14 @@ export interface PulseWeek {
   new_readers: number;
 }
 
+/** One day of reading, inside the week the figures describe. */
+export interface PulseDay {
+  day: string;
+  votes: number;
+  readers: number;
+  new_readers: number;
+}
+
 export interface CommunityPulse {
   /** The day the figures were taken from, which is the last day the dump covers. */
   reference: string | null;
@@ -65,8 +73,10 @@ export interface CommunityPulse {
   anticipated: PulseTitle[];
   /** Titles readers are reaching the end of. */
   finishing: PulseTitle[];
-  /** Recent weeks, oldest first, for the shape of the line rather than its exact values. */
+  /** Recent weeks, oldest first, which is where this week's comparison comes from. */
   weeks: PulseWeek[];
+  /** The newest week day by day, oldest first, which is what the chart draws. */
+  days: PulseDay[];
   /** This week against the one before it, which is the only comparison the figure needs. */
   votesThisWeek: number | null;
   votesLastWeek: number | null;
@@ -119,6 +129,9 @@ export async function getCommunityPulse(): Promise<CommunityPulse | null> {
     const weeks: PulseWeek[] = Array.isArray(data?.pulse)
       ? data.pulse.filter((w: PulseWeek) => w && typeof w.votes === 'number')
       : [];
+    const days: PulseDay[] = Array.isArray(data?.pulse_days)
+      ? data.pulse_days.filter((d: PulseDay) => d && typeof d.day === 'string' && typeof d.votes === 'number')
+      : [];
 
     // The last entry is the newest week the dump covers, and the one before it is what a
     // reader is implicitly comparing it against.
@@ -141,6 +154,7 @@ export async function getCommunityPulse(): Promise<CommunityPulse | null> {
       anticipated,
       finishing,
       weeks,
+      days,
       votesThisWeek: latest?.votes ?? null,
       votesLastWeek: previous?.votes ?? null,
       readersThisWeek: latest?.readers ?? null,

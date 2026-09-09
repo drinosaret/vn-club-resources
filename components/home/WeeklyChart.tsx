@@ -1,10 +1,10 @@
-import { weekEnd, type PulseWeek } from '@/lib/community-pulse';
+import type { PulseDay } from '@/lib/community-pulse';
 
 /**
- * Half a year of reading, drawn.
+ * The week, drawn.
  *
- * Two series over the same weeks: how many ratings were logged, and how many people logged
- * them. They are plotted on independent scales because the question each answers is about its
+ * Two series over the same seven days the figures beside it count: how many ratings were
+ * logged each day, and how many people logged them. They are plotted on independent scales because the question each answers is about its
  * own shape, not about which number is larger, and a shared axis would flatten the smaller one
  * into a straight line.
  *
@@ -14,9 +14,7 @@ import { weekEnd, type PulseWeek } from '@/lib/community-pulse';
  */
 
 interface WeeklyChartProps {
-  weeks: PulseWeek[];
-  /** Weeks to draw, counting back from the most recent. */
-  span?: number;
+  days: PulseDay[];
 }
 
 const W = 640;
@@ -47,15 +45,15 @@ function series(values: number[]): { path: string; area: string; last: { x: numb
 }
 
 /** A date as a reader would say it, from the ISO date the feed carries. */
-function monthLabel(week: string): string {
-  const [, month, day] = week.split('-');
+function monthLabel(iso: string): string {
+  const [, month, day] = iso.split('-');
   const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const name = names[Number(month) - 1];
-  return name ? `${name} ${Number(day)}` : week;
+  return name ? `${name} ${Number(day)}` : iso;
 }
 
-export function WeeklyChart({ weeks, span = 26 }: WeeklyChartProps) {
-  const window = weeks.slice(-span);
+export function WeeklyChart({ days }: WeeklyChartProps) {
+  const window = days;
   if (window.length < 2) return null;
 
   const votes = series(window.map((w) => w.votes));
@@ -75,7 +73,7 @@ export function WeeklyChart({ weeks, span = 26 }: WeeklyChartProps) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Weekly ratings and readers over the last ${window.length} weeks, ending ${weekEnd(last.week)}.`}
+        aria-label={`Ratings and readers by day over the ${window.length} days to ${last.day}.`}
       >
         <defs>
           <linearGradient id="fig-fill" x1="0" y1="0" x2="0" y2="1">
@@ -110,8 +108,8 @@ export function WeeklyChart({ weeks, span = 26 }: WeeklyChartProps) {
       </svg>
 
       <p className="fig-axis">
-        <span>{monthLabel(first.week)}</span>
-        <span>{monthLabel(weekEnd(last.week))}</span>
+        <span>{monthLabel(first.day)}</span>
+        <span>{monthLabel(last.day)}</span>
       </p>
     </div>
   );

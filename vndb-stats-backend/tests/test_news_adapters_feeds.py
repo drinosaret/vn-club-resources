@@ -426,3 +426,24 @@ def test_reddit_help_and_recommendation_threads_are_excluded():
         assert re.search(REDDIT_TITLE_EXCLUDE, chatter), chatter
     for news in ("Studio announces a new title for winter", "Finished reading a long eroge in Japanese, some thoughts"):
         assert not re.search(REDDIT_TITLE_EXCLUDE, news), news
+
+
+def test_an_account_without_pictures_takes_none_from_its_links_either():
+    from app.services.news.adapters.fxtwitter import wants_page_image
+    from app.services.news.drafts import NewsDraft
+    from app.services.news.sources import XAccount
+
+    bare = NewsDraft(source="twitter", source_label="@a", key="1", title="a post about a title", published_at=NOW)
+    assert not wants_page_image(XAccount("acct", exclude_images=True), bare)
+    assert wants_page_image(XAccount("acct"), bare)
+    assert not wants_page_image(XAccount("acct", link_images=False), bare)
+    pictured = NewsDraft(source="twitter", source_label="@a", key="2", title="a post about a title",
+                         published_at=NOW, image_url="https://pbs.example.test/a.jpg")
+    assert not wants_page_image(XAccount("acct"), pictured)
+
+
+def test_a_catalogue_of_adult_titles_keeps_its_pictures_behind_the_blur():
+    """Its posts link to entries whose social image is the cover art."""
+    from app.services.news.sources import X_ACCOUNTS
+    acct = next(a for a in X_ACCOUNTS if a.handle.lower() == "moepedia_net")
+    assert acct.nsfw_images and not acct.exclude_images

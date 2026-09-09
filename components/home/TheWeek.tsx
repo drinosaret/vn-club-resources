@@ -164,7 +164,7 @@ export function TheWeek({ pulse }: TheWeekProps) {
                 <Stat key={entry.label} {...entry} />
               ))}
             </div>
-            <WeeklyChart weeks={weeks} />
+            <WeeklyChart days={pulse.days ?? []} />
           </div>
         )}
 

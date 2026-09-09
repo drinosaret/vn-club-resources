@@ -509,7 +509,7 @@ X_ACCOUNTS: list[XAccount] = [
     XAccount("entergram"),
     XAccount("moeaward", exclude_images=True),
     XAccount("cybernhmksk", include=["fanza.co.jp", "dlaf.jp"], exclude_images=True, link_images=False),
-    XAccount("Moepedia_net", exclude=RELAY_NOISE_TERMS, exclude_images=True),
+    XAccount("Moepedia_net", exclude=RELAY_NOISE_TERMS, nsfw_images=True),
     XAccount(
         "DLsite_info",
         include=["美少女ゲーム", "ノベル", "ADV", "PCゲーム"],

@@ -183,6 +183,8 @@ UPCOMING_DAYS = 500
 #: Weeks of community activity carried, which is a season and a half: long enough to see a
 #: direction, short enough that it is about now rather than about history.
 PULSE_WEEKS = 26
+# Days in the front page's week chart: the same seven the figures beside it count.
+PULSE_DAYS = 7
 
 #: Rows per feed section.
 FEED_DEPTH = 6
@@ -1560,6 +1562,53 @@ async def load_community_pulse(db, weeks: int, japanese_only: bool = True) -> li
     ]
 
 
+async def load_community_days(db, days: int, japanese_only: bool = True) -> list[dict]:
+    """Votes, active readers and first-time readers, one row per day.
+
+    The daily shape of the week the figures describe, ending on the last day the
+    dump covers like the weekly windows do. A day with no votes is absent rather
+    than zero, which the reader of the series fills in.
+    """
+    await db.execute(text(f"SET LOCAL work_mem = '{AGGREGATION_WORK_MEM}'"))
+
+    lang_join, lang_where = japanese_clause(japanese_only)
+    rows = await db.execute(
+        text(f"""
+            WITH bounds AS (SELECT max(date) AS latest FROM global_votes),
+            firsts AS (
+                SELECT user_hash, min(date) AS first_vote
+                FROM global_votes
+                WHERE date IS NOT NULL
+                GROUP BY user_hash
+            )
+            SELECT gv.date AS day,
+                   count(*) AS votes,
+                   count(DISTINCT gv.user_hash) AS readers,
+                   count(DISTINCT gv.user_hash) FILTER (WHERE f.first_vote = gv.date) AS new_readers
+            FROM global_votes gv
+            CROSS JOIN bounds b
+            JOIN firsts f ON f.user_hash = gv.user_hash
+            {lang_join}
+            WHERE gv.date > b.latest - CAST(:days AS integer)
+              AND gv.date <= b.latest
+              {lang_where}
+            GROUP BY 1
+            ORDER BY day
+        """),
+        {"days": days},
+    )
+
+    return [
+        {
+            "day": row.day.isoformat(),
+            "votes": row.votes,
+            "readers": row.readers,
+            "new_readers": row.new_readers,
+        }
+        for row in rows
+    ]
+
+
 async def load_hot_now(
     db, days: int, mover_floor: int, depth: int, japanese_only: bool = True
 ) -> dict:
@@ -2600,6 +2649,7 @@ async def refresh_leaderboards(dry_run: bool = False) -> dict:
                 # there is no wider view of it to offer, and one build serves both.
                 "anticipated": anticipated,
                 "pulse": await load_community_pulse(db, PULSE_WEEKS, japanese_only),
+                "pulse_days": await load_community_days(db, PULSE_DAYS, japanese_only),
             }
             periods = []
             for key, days, floor in HOT_PERIODS:
@@ -3237,6 +3287,7 @@ def build_trend_feed(feed: dict, hydrator: Hydrator, reference: date) -> dict:
         "finishing": section(feed["finishing"]),
         "anticipated": section(feed["anticipated"]),
         "pulse": feed["pulse"],
+        "pulse_days": feed.get("pulse_days", []),
     }
 
 

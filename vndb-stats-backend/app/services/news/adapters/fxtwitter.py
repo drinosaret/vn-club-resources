@@ -146,6 +146,15 @@ async def fetch_statuses(
             continue
         # A post that is only its link takes its words from the page.
         await fill_from_link(session, draft, link)
-        if account.link_images and not draft.image_url:
+        if wants_page_image(account, draft):
             draft.image_url = await extract_og_image(session, link)
     return drafts
+
+
+def wants_page_image(account: XAccount, draft: NewsDraft) -> bool:
+    """Whether a post without a picture of its own may take the linked page's.
+
+    An account whose pictures are excluded is excluded from pictures altogether:
+    the page behind its link carries the same art its posts do.
+    """
+    return bool(account.link_images and not account.exclude_images and not draft.image_url)
