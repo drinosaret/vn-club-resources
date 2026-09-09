@@ -142,7 +142,7 @@ def test_a_long_title_is_cut_to_the_field_ceiling():
 
 def test_the_description_names_the_channel_the_roles_command_and_the_calendar():
     text = only([item()]).description
-    assert "In talk (voice)" in text
+    assert "In talk" in text
     assert "/roles" in text
     assert "https://vnclub.org/events?date=2026-09-12" in text
 
@@ -520,7 +520,7 @@ def test_where_and_the_roles_hint_share_one_line():
     text = only([item()]).description
     first = text.splitlines()[0]
     assert "In <#" not in first or True
-    assert "In talk (voice)" in first and "/roles" in first
+    assert "In talk" in first and "/roles" in first
 
 
 # ── Review follow-ups ─────────────────────────────────────────
@@ -558,6 +558,12 @@ def test_catalogue_prose_is_reduced_to_a_plain_line():
     assert em.plain_blurb(raw) == "A title about a long summer. More."
 
 
+def test_a_spoiler_is_left_out_of_the_blurb_entirely():
+    """A plain field cannot hide text, so the spoiler goes, not just its tags."""
+    raw = "She arrives in town. [spoiler]She is the culprit.[/spoiler] Summer begins. [From a source]"
+    assert em.plain_blurb(raw) == "She arrives in town. Summer begins. [From a source]"
+
+
 def test_a_pick_that_already_has_a_blurb_keeps_it():
     """Only a row that says nothing takes the catalogue text."""
     import asyncio
@@ -569,3 +575,58 @@ def test_a_pick_that_already_has_a_blurb_keeps_it():
     row = item(event_type="vn_of_month", description="Club copy.", url="/vn/24/")
     out = asyncio.run(em.attach_catalogue_blurbs(_NoDb(), [row]))
     assert out[0]["description"] == "Club copy."
+
+
+# ── Happens in, organised in ──────────────────────────────────
+
+
+def test_the_organising_channel_is_named_beside_the_venue():
+    """Both may be text channels: voting happens in one and is discussed in another."""
+    target = em.ChannelTarget(entity="external", label="#announcements", mention="<#1>", talk_mention="<#2>")
+    vote = item(event_type="vn_month_voting", title="VN of the Month voting (October)",
+                external_key="auto:vn_month_voting:2026-10",
+                start_at="2026-09-24T00:00:00+00:00", end_at="2026-09-30T23:59:00+00:00")
+    text = only([vote], cfg(targets={"vn_month_voting": target})).description
+    assert text.splitlines()[0].startswith("\U0001f4cd In <#1> \u00b7 \U0001f4ac <#2>")
+
+
+def test_a_voice_venue_with_an_organising_channel():
+    target = em.ChannelTarget(channel_id=9, entity="voice", label="talk", mention="<#9>", talk_mention="<#2>")
+    entry = only([item()], cfg(targets={"movie_night": target}))
+    assert entry.entity == "voice"
+    assert "In <#9> \u00b7 \U0001f4ac <#2>" in entry.description
+
+
+def test_the_same_channel_for_both_is_named_once():
+    target = em.ChannelTarget(entity="external", label="#group-reads", mention="<#2>", talk_mention="<#2>")
+    text = only([item()], cfg(targets={"movie_night": target})).description
+    assert text.count("<#2>") == 1
+
+
+# ── Script ────────────────────────────────────────────────────
+
+
+def test_the_original_script_title_is_used_when_the_row_carries_one():
+    picked = item(title="Movie Night: A Film (1997)", title_jp="Movie Night: 映画 (1997)",
+                  all_day=False, start_at="2026-09-12T19:00:00+00:00")
+    assert only([picked]).name == "🎬 Kinoplex: 映画 (1997)"
+
+
+def test_a_row_without_a_japanese_title_keeps_the_one_it_has():
+    picked = item(title="Movie Night: A Film (1997)", title_jp=None, all_day=False,
+                  start_at="2026-09-12T19:00:00+00:00")
+    assert only([picked]).name == "🎬 Kinoplex: A Film (1997)"
+
+
+def test_a_bare_catalogue_japanese_title_still_keeps_the_label():
+    """The catalogue fills title_jp without the calendar label; the label must
+    not be lost with it."""
+    picked = item(event_type="vn_of_month", title="VN of the Month: A VN", title_jp="作品",
+                  external_key="k", start_at="2026-09-20T00:00:00+00:00", end_at="2026-09-30T23:59:00+00:00")
+    assert only([picked]).name == "✨ VN of the Month: 作品"
+
+
+def test_a_verbatim_type_takes_the_japanese_title_whole():
+    marker = item(event_type="anniversary", title="Founding", title_jp="創立",
+                  external_key="auto:anniversary:2026-09-20", start_at="2026-09-20T00:00:00+00:00")
+    assert only([marker]).name == "🎉 創立"

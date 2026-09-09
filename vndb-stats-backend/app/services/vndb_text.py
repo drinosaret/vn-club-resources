@@ -31,3 +31,20 @@ def clean_vndb_description(text: str, limit: int = 300) -> str:
             text = text[: text.rfind("||")].rstrip()
         text += "..."
     return text
+
+
+_SPOILER = re.compile(r"\[spoiler\].*?\[/spoiler\]", re.DOTALL | re.IGNORECASE)
+_KNOWN_TAG = re.compile(r"\[/?(?:url(?:=[^\]]*)?|spoiler|b|i|u|s|quote|code|raw)\]", re.IGNORECASE)
+
+
+def plain_vndb_description(text: str | None) -> str:
+    """VNDB BBCode reduced to plain prose for a field that must not carry markup.
+
+    Spoilers are removed with their contents rather than marked, since a plain
+    field has no way to hide them; every other tag is dropped and its text kept.
+    Literal brackets such as a source credit are left alone.
+    """
+    text = (text or "").replace("\\n", "\n")
+    text = _SPOILER.sub("", text)
+    text = _KNOWN_TAG.sub("", text)
+    return re.sub(r"\s+", " ", text).strip()

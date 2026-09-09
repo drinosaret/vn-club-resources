@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import DiscordScheduledEvent, VisualNovel
 from app.services import jiten_covers, recurring_events
+from app.services.vndb_text import plain_vndb_description
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ logger = logging.getLogger(__name__)
 CONFIG_ENABLED = "event_mirror_enabled"
 CONFIG_CHANNEL_DEFAULT = "event_mirror_channel_default"
 CONFIG_CHANNEL_PREFIX = "event_mirror_channel_"
+# Where a type is organised (nominations, discussion), as opposed to where it
+# happens. Named in the description beside the place, never used as the venue.
+CONFIG_TALK_PREFIX = "event_mirror_talk_"
+TALK = "💬"
 CONFIG_ROLES_HINT = "event_mirror_roles_hint"
 
 # Discord's own ceilings.
@@ -69,8 +74,13 @@ CALENDAR = "\U0001f5d3\ufe0f"
 
 
 def channel_key(event_type: str) -> str:
-    """bot_config key holding the channel this type's events point at."""
+    """bot_config key holding the channel this type's events happen in."""
     return f"{CONFIG_CHANNEL_PREFIX}{event_type}"
+
+
+def talk_key(event_type: str) -> str:
+    """bot_config key holding the channel this type is organised in."""
+    return f"{CONFIG_TALK_PREFIX}{event_type}"
 
 
 @dataclass(frozen=True)
@@ -216,8 +226,11 @@ class ChannelTarget:
     # Display name, used as the external location, which is a plain text field.
     label: str | None = None
     # The channel as a mention, for the description, which renders one as a
-    # link into the channel. Left unset where the channel is not public.
+    # link into the channel.
     mention: str | None = None
+    # Where the thing is organised, when that is a different channel from
+    # where it happens: the nominations and the talk around it.
+    talk_mention: str | None = None
 
 
 @dataclass(frozen=True)
@@ -404,9 +417,24 @@ def _pick_from_title(title: str, calendar_label: str) -> str | None:
 
 
 def build_name(item: dict, style: TypeStyle) -> str:
-    """The event's name, which is what the Events tab leads with."""
+    """The event's name, which is what the Events tab leads with.
+
+    The original-script title is used where the row carries one: the site lets
+    a reader choose a script, but the bot's own output is Japanese throughout.
+    """
     title = one_line(item.get("title"))
     pick = _pick_from_title(title, style.calendar_label)
+    japanese = one_line(item.get("title_jp"))
+    if japanese:
+        # A row's own Japanese title carries the calendar label; one filled in
+        # from the catalogue is the bare title, and stands in for the pick.
+        jp_pick = _pick_from_title(japanese, style.calendar_label)
+        if jp_pick:
+            pick = jp_pick
+        elif pick:
+            pick = japanese
+        elif not style.calendar_label:
+            title = japanese
     if pick and style.pick_prefix:
         body = f"{style.pick_prefix}: {pick}"
     elif pick:
@@ -422,9 +450,12 @@ def _where_line(target: ChannelTarget) -> str | None:
     if not target.label and not target.mention:
         return None
     shown = target.mention or inert_line(target.label, LABEL_LIMIT)
-    if target.entity in ("voice", "stage"):
-        return f"{PIN} In {shown} (voice)"
-    return f"{PIN} In {shown}"
+    # A voice channel's mention already carries the speaker mark, so the kind
+    # of channel is not spelled out.
+    line = f"{PIN} In {shown}"
+    if target.talk_mention and target.talk_mention != target.mention:
+        line = f"{line} · {TALK} {target.talk_mention}"
+    return line
 
 
 def _what_line(item: dict, config: MirrorConfig) -> str | None:
@@ -628,14 +659,12 @@ def plan(
     return sorted(planned.values(), key=lambda entry: entry.start_at)
 
 
-_BBCODE = re.compile(r"\[/?[a-z]+(?:=[^\]]*)?\]", re.IGNORECASE)
 BLURB_SOURCE_LIMIT = 600
 
 
 def plain_blurb(text: str | None) -> str:
-    """Catalogue prose reduced to plain text: its markup dropped, the site's
-    two-character line breaks read as breaks."""
-    return one_line(_BBCODE.sub("", text or ""), BLURB_SOURCE_LIMIT)
+    """Catalogue prose as one plain line, spoilers left out."""
+    return one_line(plain_vndb_description(text), BLURB_SOURCE_LIMIT)
 
 
 async def attach_catalogue_blurbs(db: AsyncSession, items: list[dict]) -> list[dict]:

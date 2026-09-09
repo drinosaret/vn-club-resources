@@ -139,9 +139,18 @@ class EventMirrorCog(commands.Cog):
         visible server wide, and on a server where the club channels sit behind
         a member role, gating the name on the everyone role would blank it.
         """
+        talk_raw = self._config.get(em.talk_key(event_type))
+        talk = guild.get_channel(_as_id(talk_raw)) if talk_raw else None
+        if talk_raw and talk is None:
+            return None
+        talk_mention = talk.mention if talk is not None else None
         raw = self._config.get(em.channel_key(event_type)) or self._config.get(
             em.CONFIG_CHANNEL_DEFAULT
         )
+        if not raw and talk is not None:
+            # Organised somewhere but happening nowhere in particular: the
+            # organising channel is the closest thing to a place.
+            return em.ChannelTarget(entity="external", label=f"#{talk.name}", mention=talk_mention)
         if not raw:
             return em.ChannelTarget()
         channel = guild.get_channel(_as_id(raw))
@@ -153,11 +162,16 @@ class EventMirrorCog(commands.Cog):
             perms = channel.permissions_for(guild.me)
             if perms.view_channel and perms.connect:
                 entity = "stage" if isinstance(channel, discord.StageChannel) else "voice"
-                return em.ChannelTarget(channel_id=channel.id, entity=entity, label=label, mention=mention)
+                return em.ChannelTarget(
+                    channel_id=channel.id, entity=entity, label=label,
+                    mention=mention, talk_mention=talk_mention,
+                )
             # A voice event the bot cannot see or join would be refused outright,
             # so the channel is named instead of pointed at.
-            return em.ChannelTarget(entity="external", label=label, mention=mention)
-        return em.ChannelTarget(entity="external", label=f"#{channel.name}", mention=mention)
+            return em.ChannelTarget(entity="external", label=label, mention=mention, talk_mention=talk_mention)
+        return em.ChannelTarget(
+            entity="external", label=f"#{channel.name}", mention=mention, talk_mention=talk_mention
+        )
 
     async def armed_sessions(self) -> dict[str, datetime]:
         """The showtime the club has set for each weekly session.

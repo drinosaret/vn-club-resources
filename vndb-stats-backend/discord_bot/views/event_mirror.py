@@ -69,12 +69,17 @@ class EventMirrorView(BaseView):
         lines = []
         for event_type, label in em.CHANNEL_TYPES:
             own = config.get(em.channel_key(event_type))
+            talk = config.get(em.talk_key(event_type))
             if own:
                 shown = self._channel_display(own)
+            elif talk:
+                shown = f"{self._channel_display(talk)} (where it is organised)"
             elif fallback:
                 shown = f"{self._channel_display(fallback)} via fallback"
             else:
                 shown = "Not set"
+            if own and talk:
+                shown = f"{shown}, organised in {self._channel_display(talk)}"
             lines.append(f"**{label}:** {shown}")
         lines.append(f"**{FALLBACK_LABEL}:** {self._channel_display(fallback)}")
         markers = ", ".join(em.STYLES[t].idle_name for t in em.NO_CHANNEL_TYPES)
@@ -95,7 +100,7 @@ class EventMirrorView(BaseView):
         embed.add_field(name="Where each one happens", value=self._channel_lines(), inline=False)
         embed.add_field(name="Currently mirrored", value=f"{self.mirrored} event(s)", inline=True)
         embed.add_field(name="Last run", value=self.cog.last_status[:1000], inline=False)
-        embed.set_footer(text="A voice channel gives members a join button; a text channel is named instead.")
+        embed.set_footer(text="Happens in: the venue (a voice channel gives a join button). Organised in: named beside it.")
         return embed
 
     async def refresh(self) -> None:
@@ -163,26 +168,33 @@ class TypeSelectView(BaseView):
     def __init__(self, user_id: int, parent: EventMirrorView):
         super().__init__(user_id, timeout=120)
         self.parent = parent
-        options = [
-            discord.SelectOption(label=label, value=em.channel_key(event_type), emoji=em.STYLES[event_type].emoji)
-            for event_type, label in em.CHANNEL_TYPES
-        ]
+        options = []
+        for event_type, label in em.CHANNEL_TYPES:
+            emoji = em.STYLES[event_type].emoji
+            options.append(discord.SelectOption(label=f"{label}: happens in", value=em.channel_key(event_type), emoji=emoji))
+            options.append(discord.SelectOption(label=f"{label}: organised in", value=em.talk_key(event_type), emoji=emoji))
         options.append(discord.SelectOption(label=FALLBACK_LABEL, value=em.CONFIG_CHANNEL_DEFAULT, emoji="\U0001f4cc"))
         self.type_select.options = options
 
     @ui.select(placeholder="What are you placing?", options=[discord.SelectOption(label="placeholder")])
     async def type_select(self, interaction: discord.Interaction, select: ui.Select) -> None:
         key = select.values[0]
-        label = next((l for t, l in em.CHANNEL_TYPES if em.channel_key(t) == key), FALLBACK_LABEL)
+        organised = key.startswith(em.CONFIG_TALK_PREFIX)
+        label = next(
+            (l for t, l in em.CHANNEL_TYPES if key in (em.channel_key(t), em.talk_key(t))),
+            FALLBACK_LABEL,
+        )
+        if organised:
+            title = f"Where is {label} organised?"
+            hint = "Named beside the venue in the event, for nominations and the talk around it."
+        else:
+            title = f"Where does {label} happen?"
+            hint = (
+                "A voice or stage channel gives members a join button; a text channel is "
+                "named as the venue instead."
+            )
         await interaction.response.edit_message(
-            embed=discord.Embed(
-                title=f"Where does {label} happen?",
-                description=(
-                    "A voice or stage channel gives members a join button; a text channel is "
-                    "named in the event instead."
-                ),
-                color=COLOR,
-            ),
+            embed=discord.Embed(title=title, description=hint, color=COLOR),
             view=ChannelPickerView(self.user_id, parent=self.parent, config_key=key),
         )
 
