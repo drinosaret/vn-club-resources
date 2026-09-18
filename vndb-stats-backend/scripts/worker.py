@@ -648,6 +648,7 @@ async def main():
         run_news_reconcile,
         run_news_cleanup,
         run_news_catch_up,
+        run_news_sweep,
     )
     from app.services.vn_of_the_day_service import run_vn_of_the_day_selection
     from app.services.word_of_the_day_service import run_word_of_the_day_selection
@@ -872,6 +873,10 @@ async def main():
         except Exception as e:
             logger.error(f"Startup difficulty import failed: {e}", exc_info=True)
 
+        try:
+            await run_news_sweep()
+        except Exception as e:
+            logger.warning(f"Startup news sweep failed: {e}")
         try:
             await run_news_catch_up()
         except Exception as e:

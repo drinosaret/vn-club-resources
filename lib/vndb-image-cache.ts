@@ -295,13 +295,18 @@ export function getCoverSrcSet(
   return entries.length > 0 ? entries.join(', ') : undefined;
 }
 
+/** The widths the image proxy will resize to; anything else is answered with the full picture. */
+export type NewsImageWidth = 256 | 512;
+
 /**
  * Gets the appropriate image URL for news items.
  * - VNDB images: routes through /img/ for caching
- * - Twitter images: routes through /api/proxy-image/ to avoid CORS
- * - Other URLs: proxied through this app
+ * - Everything else: proxied through this app, resized to `width` when one is given
  */
-export function getNewsImageUrl(imageUrl: string | null | undefined): string | null {
+export function getNewsImageUrl(
+  imageUrl: string | null | undefined,
+  width?: NewsImageWidth,
+): string | null {
   if (!imageUrl) {
     return null;
   }
@@ -313,11 +318,6 @@ export function getNewsImageUrl(imageUrl: string | null | undefined): string | n
     return getProxiedImageUrl(imageUrl);
   }
 
-  // Check for Twitter CDN URLs
-  if (isTwitterImageUrl(imageUrl)) {
-    return `/api/proxy-image/?url=${encodeURIComponent(imageUrl)}`;
-  }
-
-  // Route other external URLs through proxy to avoid CSP issues
-  return `/api/proxy-image/?url=${encodeURIComponent(imageUrl)}`;
+  const sized = width ? `&w=${width}` : '';
+  return `/api/proxy-image/?url=${encodeURIComponent(imageUrl)}${sized}`;
 }

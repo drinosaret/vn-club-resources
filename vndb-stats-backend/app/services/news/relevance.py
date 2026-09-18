@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.news.sources import VN_TERMS_EN, VN_TERMS_JA
+from app.services.news.sources import LOCALISATION_TERMS, VN_TERMS_EN, VN_TERMS_JA
 from app.services.news.text import matches_keywords
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,15 @@ _LATIN_QUERY = _union(_LATIN_COND, LATIN_CANDIDATES)
 
 def has_japanese(value: str) -> bool:
     return bool(_JA_SCRIPT.search(value or ""))
+
+
+def about_localisation(title: str, summary: str | None = None) -> bool:
+    """Whether an English-language row is about a localisation rather than the work.
+
+    Read at ingest for every row filed in English, whatever its source, and again over the
+    stored rows, so a change to the terms reaches what was filed before it.
+    """
+    return not matches_keywords(f"{title} {summary or ''}", None, LOCALISATION_TERMS)
 
 
 def names_vn_term(body: str) -> bool:

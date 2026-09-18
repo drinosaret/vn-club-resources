@@ -76,6 +76,12 @@ const EVICT_AGE_MS = 90 * 24 * 60 * 60 * 1000; // Delete files older than 90 day
 const EVICT_PROBABILITY = 0.01; // Run cleanup ~1% of cache writes
 const WEBP_QUALITY = 80;
 
+// Some outlets sit behind an edge that refuses a library client name and serves only a
+// browser's, so the fetch names a browser, as the feed reader does for the same hosts.
+const FETCH_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
+  'Chrome/140.0.0.0 Safari/537.36';
+
 // Security limits
 const FETCH_TIMEOUT_MS = 10000; // 10 second timeout
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB max
@@ -231,7 +237,7 @@ async function doFetchAndCache(
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; VN-Club-Resources/1.0)',
+        'User-Agent': FETCH_USER_AGENT,
         'Accept': 'image/*',
         ...refererFor(url),
       },

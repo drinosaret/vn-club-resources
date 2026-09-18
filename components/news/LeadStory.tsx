@@ -25,7 +25,7 @@ export function LeadStory({ item }: { item: NewsItem }) {
           aria-label={item.title}
         />
       )}
-      <Thumb item={item} className="nw-lead-art" />
+      <Thumb item={item} className="nw-lead-art" width={512} dense />
       <div className="nw-row-body">
         <div className="nw-meta">
           <span className="nameplate nameplate--plain">{plateFor(item, locale)}</span>

@@ -64,12 +64,13 @@ JP_READING_TERMS = [
     "yomitan", "textractor", "texthooker", "learning", "vocab", "kanji", "anki",
 ]
 TRANSLATION_TERMS = ["translation patch", "fan tl", "official tl", "localization", "localisation"]
-# What marks an English article as being about a localisation rather than the work itself.
+# What marks an English-language row as being about a localisation rather than the work
+# itself. Any mention of the language counts: a subtitle option, a worldwide release, a
+# port that adds it. The feed follows the works in their original language only, so a
+# row in English that names the language is out whatever else it says.
 LOCALISATION_TERMS = TRANSLATION_TERMS + [
-    "in the west", "in english", "english release", "english version", "english patch",
-    "localiz", "localis", "license", "translated", "translation status",
-    "tl release", "coming west", "english scenario", "published in english",
-    "for english release",
+    "english", "translation", "translated", "in the west", "localiz", "localis", "license",
+    "tl release", "coming west",
 ]
 
 

@@ -231,3 +231,22 @@ def test_the_crosspost_key_keeps_the_trailing_parenthetical():
     """Relays drop the outlet a headline names in brackets; a post keeps its own."""
     assert store.crosspost_key("Intro (A)", None) != store.crosspost_key("Intro (B)", None)
     assert store.crosspost_key("Same  text!", "") == store.crosspost_key("same text", None)
+
+
+@pytest.mark.asyncio
+async def test_sweep_removes_english_rows_about_localisations():
+    ids = ("rss-sweep-en-1", "rss-sweep-en-2", "rss-sweep-ja-1")
+    await _purge("rss", *ids)
+    async with async_session_maker() as db:
+        await store.save_drafts(
+            db,
+            [
+                _draft("sweep-en-1", title="Comes west with English subtitles", extra={"lang": "en"}),
+                _draft("sweep-en-2", title="Trial version out now", extra={"lang": "en"}),
+                _draft("sweep-ja-1", title="English という単語を含む日本語の記事", extra={"lang": "ja"}),
+            ],
+        )
+        assert await store.sweep_localised(db) == 1
+        rows = (await db.execute(select(NewsItem.id).where(NewsItem.id.in_(ids)))).scalars().all()
+    assert sorted(rows) == ["rss-sweep-en-2", "rss-sweep-ja-1"]
+    await _purge("rss", *ids)

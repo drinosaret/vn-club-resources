@@ -132,3 +132,40 @@ def test_a_brand_feed_marks_its_rows():
     page = (FIX / "rss.xml").read_text(encoding="utf-8")
     assert all(d.extra.get("brand") is True for d in parse_feed(page, brand, NOW))
     assert all("brand" not in d.extra for d in parse_feed(page, outlet, NOW))
+
+
+def test_localisation_wording_is_read_from_title_and_text():
+    from app.services.news.relevance import about_localisation
+
+    assert about_localisation("BL mystery comes to Switch in December with English subtitles")
+    assert about_localisation("Steam release announced", "The edition adds English and Chinese subtitles.")
+    assert about_localisation("Kickstarter for the official localization opens")
+    # A denial of a translation is not news of one.
+    assert not about_localisation("An untranslated eroge worth the effort")
+    assert not about_localisation("Sequel announced for the winter", "The trial is out on the brand's site.")
+
+
+@pytest.mark.asyncio
+async def test_english_rows_naming_english_are_dropped_from_every_source():
+    from datetime import datetime, timezone
+
+    from app.ingestion import news_aggregator
+    from app.services.news.drafts import NewsDraft
+
+    now = datetime(2026, 9, 18, tzinfo=timezone.utc)
+
+    def post(source, title, lang, summary=None):
+        return NewsDraft(source=source, source_label="s", key=title, title=title, summary=summary, published_at=now, extra={"lang": lang})
+
+    drafts = [
+        post("rss", "Comes to Switch with English Subtitles", "en"),
+        post("bluesky", "Will receive an English and Chinese release", "en"),
+        post("reddit", "Does the physical version have English subs?", "en"),
+        post("forum", "Seven new translations announced", "en"),
+        post("youtube", "Review of a classic", "en", "Now that it is in English I finally read it."),
+        post("rss", "Trial version out now", "en"),
+        post("rss", "英語版が発売", "ja"),
+        post("vndb", "New entry", None),
+    ]
+    kept = news_aggregator._drop_localised(drafts)
+    assert [d.title for d in kept] == ["Trial version out now", "英語版が発売", "New entry"]

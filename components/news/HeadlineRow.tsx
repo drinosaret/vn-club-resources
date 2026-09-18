@@ -7,7 +7,7 @@ import type { Locale } from '@/lib/i18n/types';
 import { useLocale } from '@/lib/i18n/locale-context';
 import { ns } from '@/lib/i18n/translations/news';
 import { clockLabel, isPostSource, safeExternalUrl } from '@/lib/news';
-import { getNewsImageUrl } from '@/lib/vndb-image-cache';
+import { getNewsImageUrl, type NewsImageWidth } from '@/lib/vndb-image-cache';
 import { LinkifiedText } from './LinkifiedText';
 
 const NETWORK: Record<string, string> = {
@@ -88,12 +88,27 @@ function standInMark(item: NewsItem): { src: string; avatar: boolean } | null {
 
 /**
  * The picture beside a row: the item's own, behind a blur when the source is adult art,
- * or the source's mark when there is none.
+ * or the source's mark when there is none. The picture is asked for at the width it is
+ * drawn at; a row's thumbnail is small, and only the lead story draws it large enough
+ * that a dense screen is offered the full picture instead.
  */
-export function Thumb({ item, className = 'nw-thumb' }: { item: NewsItem; className?: string }) {
+export function Thumb({
+  item,
+  className = 'nw-thumb',
+  width = 256,
+  dense = false,
+}: {
+  item: NewsItem;
+  className?: string;
+  width?: NewsImageWidth;
+  /** Offer the full picture to a screen with more than one device pixel per CSS pixel. */
+  dense?: boolean;
+}) {
   const [broken, setBroken] = useState(false);
   const [markBroken, setMarkBroken] = useState(false);
-  const src = !broken && item.imageUrl ? getNewsImageUrl(item.imageUrl) : null;
+  const src = !broken && item.imageUrl ? getNewsImageUrl(item.imageUrl, width) : null;
+  const full = dense && item.imageUrl ? getNewsImageUrl(item.imageUrl) : null;
+  const srcSet = src && full && full !== src ? `${src} 1x, ${full} 2x` : undefined;
 
   if (src && item.imageIsNsfw) {
     return (
@@ -102,6 +117,7 @@ export function Thumb({ item, className = 'nw-thumb' }: { item: NewsItem; classN
             behind one is named even though the title sits beside it. */}
         <NSFWImage
           src={src}
+          srcSet={srcSet}
           alt={item.title}
           imageSexual={2}
           className="h-full w-full object-cover"
@@ -114,7 +130,7 @@ export function Thumb({ item, className = 'nw-thumb' }: { item: NewsItem; classN
   if (src) {
     return (
       <span className={className}>
-        <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />
+        <img src={src} srcSet={srcSet} alt="" loading="lazy" onError={() => setBroken(true)} />
       </span>
     );
   }

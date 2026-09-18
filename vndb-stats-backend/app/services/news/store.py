@@ -9,12 +9,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import delete, exists, func, select
+from sqlalchemy import delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import NewsItem, PostedItemsTracker, VisualNovel
 from app.services.news.drafts import NewsDraft, tracker_key
+from app.services.news.relevance import about_localisation
 from app.services.news.sections import STORE_SOURCES
+from app.services.news.sources import EN, LOCALISATION_TERMS
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +240,30 @@ async def save_drafts(
         saved += 1
     await db.commit()
     return saved
+
+
+async def sweep_localised(db: AsyncSession) -> int:
+    """Remove the English rows that read as localisation news under the current terms.
+
+    The ingest gate keeps new ones out; this reaches the rows filed before a term was
+    added. The query narrows to rows carrying any term as a substring, and the shared
+    predicate makes the call, so the two never disagree. The tracker rows stay: a row
+    removed here is not one to file again.
+    """
+    body = func.lower(func.concat(NewsItem.title, " ", func.coalesce(NewsItem.summary, "")))
+    candidates = (
+        await db.execute(
+            select(NewsItem.id, NewsItem.title, NewsItem.summary).where(
+                NewsItem.extra_data["lang"].astext == EN,
+                or_(*[body.contains(term.lower()) for term in LOCALISATION_TERMS]),
+            )
+        )
+    ).all()
+    ids = [row.id for row in candidates if about_localisation(row.title, row.summary)]
+    if ids:
+        await db.execute(delete(NewsItem).where(NewsItem.id.in_(ids)))
+        await db.commit()
+    return len(ids)
 
 
 async def cleanup_old_items(db: AsyncSession) -> None:

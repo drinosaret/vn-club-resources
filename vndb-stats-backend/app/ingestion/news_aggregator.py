@@ -60,6 +60,7 @@ from app.services.news.adapters import (
     youtube,
 )
 from app.services.news.matching import article_origin, resolve_store_vn
+from app.services.news.relevance import about_localisation
 from app.services.news.sources import (
     EN,
     BLUESKY_ACCOUNTS,
@@ -171,6 +172,21 @@ async def _drop_off_topic(db, drafts: list) -> list:
     return kept
 
 
+def _drop_localised(drafts: list) -> list:
+    """English rows about a localisation, from any source.
+
+    Each source also carries its own exclude terms, but those are read against what that
+    source publishes; this is the one rule every English row answers to.
+    """
+    kept = []
+    for draft in drafts:
+        if draft.extra.get("lang") == EN and about_localisation(draft.title, draft.summary):
+            logger.info("Localisation story: %s", draft.title)
+            continue
+        kept.append(draft)
+    return kept
+
+
 async def _drop_other_origins(db, drafts: list) -> list:
     """English articles about a title the catalogue files under another original language."""
     kept = []
@@ -228,6 +244,7 @@ async def run_headlines_check():
         drafts = [d for batch in batches for d in batch]
         drafts.sort(key=lambda d: d.published_at, reverse=True)
         fetched = len(drafts)
+        drafts = _drop_localised(drafts)
         async with async_session_maker() as db:
             drafts = await _drop_other_origins(db, drafts)
             drafts = await _drop_off_topic(db, drafts)
@@ -271,6 +288,7 @@ async def run_community_check():
         drafts = [d for batch in batches for d in batch]
         drafts.sort(key=lambda d: d.published_at, reverse=True)
         fetched = len(drafts)
+        drafts = _drop_localised(drafts)
         async with async_session_maker() as db:
             drafts = await _drop_other_origins(db, drafts)
             drafts = await _drop_off_topic(db, drafts)
@@ -299,6 +317,7 @@ async def run_reviews_check():
         drafts += [d for batch in batches for d in batch]
         drafts.sort(key=lambda d: d.published_at, reverse=True)
         fetched = len(drafts)
+        drafts = _drop_localised(drafts)
         drafts = await _drop_other_origins(db, drafts)
         saved = await store.save_drafts(db, drafts)
     logger.info("Reviews check: %d new of %d fetched", saved, fetched)
@@ -312,6 +331,7 @@ async def run_trailers_check():
         )
     drafts = [d for batch in batches for d in batch]
     fetched = len(drafts)
+    drafts = _drop_localised(drafts)
     async with async_session_maker() as db:
         drafts = await _drop_off_topic(db, drafts)
         saved = await store.save_drafts(db, drafts)
@@ -391,9 +411,19 @@ async def run_vndb_releases_check():
     logger.info("VNDB releases: %d saved", saved)
 
 
+async def run_news_sweep():
+    """Stored rows against the current exclusion terms; run on start so a deploy that
+    widens the terms takes effect at once."""
+    async with async_session_maker() as db:
+        removed = await store.sweep_localised(db)
+    if removed:
+        logger.info("News sweep: %d localisation rows removed", removed)
+
+
 async def run_news_cleanup():
     async with async_session_maker() as db:
         await store.cleanup_old_items(db)
+        await store.sweep_localised(db)
     logger.info("News cleanup completed")
 
 
