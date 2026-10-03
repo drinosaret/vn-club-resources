@@ -57,6 +57,13 @@ export const PROJECT_META: Record<ChangelogProject, ProjectMeta> = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: '2026-10-01',
+    project: 'hikaru',
+    title: 'Rating scales and VNDB linking',
+    description:
+      'Rate on a 5, 10 or 100 point scale in /settings and link your VNDB account with /vndb_link. New leaderboards rank the server’s VNDB users, and /ratings shows every member’s take on a VN, with their VNDB notes beside their Hikaru reviews.',
+  },
+  {
     date: '2026-09-09',
     project: 'ichijou',
     title: 'Club events in the Discord Events tab',
