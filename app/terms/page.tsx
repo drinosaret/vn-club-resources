@@ -5,7 +5,7 @@ import { generatePageMetadata, SITE_URL, safeJsonLdStringify, generateBreadcrumb
 export const metadata: Metadata = generatePageMetadata({
   title: 'Terms of Use',
   description:
-    'The terms of use for VN Club, a free open source site about Japanese visual novels: how shared tier lists and collages work, where the catalogue data comes from, acceptable use, and liability.',
+    'The terms of use for VN Club, a free open source site about Japanese visual novels: where the catalogue data comes from, mature content, shared layouts, reporting content, and liability.',
   path: '/terms/',
 });
 
@@ -15,7 +15,7 @@ const jsonLd = [
     '@type': 'WebPage',
     name: 'Terms of Use',
     description:
-      'How shared tier lists and collages work, where the catalogue data comes from, acceptable use, and liability.',
+      'Where the catalogue data comes from, mature content, shared layouts, reporting content, and liability.',
     url: `${SITE_URL}/terms/`,
   },
   generateBreadcrumbJsonLd([
@@ -36,7 +36,7 @@ export default function TermsPage() {
           Terms of Use
         </h1>
         <p className="op-label mt-3">
-          Last updated: September 5, 2026
+          Last updated: October 3, 2026
         </p>
 
         <div className="prose op-doc mt-8">
@@ -72,6 +72,15 @@ export default function TermsPage() {
             ownership of any of it.
           </p>
           <p>
+            The news pages collect headlines, posts and store listings from other sites. Each item
+            shows a title, a short excerpt and a picture, links back to its source, and remains the
+            property of its author or publisher.
+          </p>
+          <p>
+            VN Club does not host, sell or distribute visual novels themselves, and does not link to
+            unauthorized copies of them.
+          </p>
+          <p>
             The site itself, including guides and original writing, is a community project licensed
             under the{' '}
             <a
@@ -94,9 +103,15 @@ export default function TermsPage() {
 
           <h2>Mature content</h2>
           <p>
-            Some visual novel cover images on this site may contain mature or suggestive content.
-            These images are blurred by default and require a deliberate click to reveal. Browse at
-            your own discretion.
+            Many visual novels are made for adults, so some cover art, character images and store
+            pictures on this site are sexually suggestive or explicit. These images are blurred by
+            default and only shown when you click to reveal them. By revealing one, you confirm that
+            you are old enough to view adult content where you live.
+          </p>
+          <p>
+            The visual novels on this site are works of fiction with drawn or computer-generated
+            artwork. Sexually explicit images of real people are not allowed anywhere on the site;
+            if you find one, report it as described below and it will be removed.
           </p>
 
           <h2>Privacy</h2>
@@ -124,11 +139,19 @@ export default function TermsPage() {
             you&apos;re misusing the site.
           </p>
 
-          <h2>Copyright</h2>
+          <h2>Reporting content</h2>
           <p>
-            If you believe something on VN Club infringes your copyright, contact us at{' '}
-            <a href="mailto:contact@vnclub.org">contact@vnclub.org</a> with what&apos;s being
-            infringed and where it is on the site.
+            To report something on VN Club, whether it infringes your copyright, is illegal, or is a
+            news item you want taken down, email{' '}
+            <a href="mailto:contact@vnclub.org">contact@vnclub.org</a> with a link to where it is on
+            the site and what the problem is. A copyright report should also name the work and say
+            that you own it or act for the owner.
+          </p>
+          <p>
+            Reports can be written in English or Japanese and are handled as soon as practical.
+            Content found to be infringing or illegal is removed, and you&apos;ll hear back about
+            what was done. The same address is the site&apos;s point of contact for users and
+            authorities.
           </p>
 
           <h2>Contributions</h2>
@@ -149,15 +172,15 @@ export default function TermsPage() {
           <p>
             The site is provided &quot;as is&quot; and &quot;as available,&quot; without warranties
             of any kind, express or implied, including merchantability, fitness for a particular
-            purpose, and non-infringement. VN data may be outdated. Features may break. This is a
-            hobby project.
+            purpose, and non-infringement. VN data may be outdated and features may break; VN Club
+            is run by volunteers.
           </p>
 
           <h2>Limitation of liability</h2>
           <p>
             VN Club and its contributors are not liable for any indirect, incidental, special, or
             consequential damages from your use of the site. Total liability for any claim is $0.
-            The service is free.
+            The site is free to use.
           </p>
 
           <h2>Governing law</h2>

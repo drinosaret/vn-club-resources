@@ -84,8 +84,9 @@ services:
     entrypoint: ["/bin/bash", "/app/docker-entrypoint.sh"]
     # --proxy-headers + --forwarded-allow-ips: trust nginx's forwarded client IP
     # (only nginx reaches this port on the internal network) so per-IP rate limits
-    # key on the real client, not the nginx container IP.
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    # key on the real client, not the nginx container IP. --no-access-log: nginx
+    # already logs every request that reaches this service.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]
     environment:
       - DATABASE_URL=postgresql+asyncpg://vndb:${POSTGRES_PASSWORD:-}@db:5432/vndb_stats
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set in deploy/.env.prod}@redis:6379
