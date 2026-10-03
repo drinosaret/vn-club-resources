@@ -652,7 +652,12 @@ class EventMirrorCog(commands.Cog):
                 if due > now:
                     continue
                 del self._starts[event_id]
-                await self._start_session(guild, event_id, now)
+                # An exception escaping a tasks.loop body stops the loop for
+                # good, which would end every later start until a restart.
+                try:
+                    await self._start_session(guild, event_id, now)
+                except Exception as e:
+                    logger.error("Event mirror: starting event %s failed: %s", event_id, e, exc_info=True)
 
     @start_loop.before_loop
     async def before_start_loop(self) -> None:
