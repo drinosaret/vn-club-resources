@@ -143,3 +143,112 @@ def test_removing_by_hand_still_spares_an_event_under_way():
 def test_the_armed_session_is_read_before_the_plan_is_built():
     source = reconcile_source()
     assert at(source, "await self.armed_sessions()") < at(source, "em.plan(")
+
+
+def _event(**fields):
+    import types
+    from datetime import datetime, timezone
+
+    import discord
+
+    base = {
+        "id": 1,
+        "entity_type": discord.EntityType.voice,
+        "status": discord.EventStatus.scheduled,
+        "start_time": datetime(2026, 10, 4, 16, tzinfo=timezone.utc),
+        "end_time": datetime(2026, 10, 4, 18, tzinfo=timezone.utc),
+        "channel_id": 7,
+    }
+    base.update(fields)
+    return types.SimpleNamespace(**base)
+
+
+def _entry(start_at):
+    import types
+
+    return types.SimpleNamespace(start_at=start_at)
+
+
+def test_only_a_waiting_voice_session_is_queued_to_start():
+    """Discord starts an external event itself; a voice one waits for a press."""
+    import discord
+
+    event = _event()
+    starts = {}
+    mirror.EventMirrorCog._queue_start(starts, event, _entry(event.start_time))
+    assert starts == {1: event.start_time}
+
+    for other in (
+        _event(entity_type=discord.EntityType.external),
+        _event(status=discord.EventStatus.active),
+    ):
+        starts = {}
+        mirror.EventMirrorCog._queue_start(starts, other, _entry(other.start_time))
+        assert starts == {}
+
+
+def test_a_session_is_queued_for_the_earlier_of_its_two_times():
+    """An edit that moves the session may not have landed, so the start loop is
+    woken by whichever time comes first and re-reads the event."""
+    from datetime import timedelta
+
+    event = _event()
+    later, starts = event.start_time + timedelta(hours=1), {}
+    mirror.EventMirrorCog._queue_start(starts, event, _entry(later))
+    assert starts[1] == event.start_time
+    earlier, starts = event.start_time - timedelta(hours=1), {}
+    mirror.EventMirrorCog._queue_start(starts, event, _entry(earlier))
+    assert starts[1] == earlier
+
+
+def test_a_start_re_reads_the_event_before_starting_it():
+    """The queue is up to a reconcile old: the event may have been started by
+    hand, canceled, moved later or deleted since."""
+    source = inspect.getsource(mirror.EventMirrorCog._start_session)
+    start = at(source, "await event.start(")
+    assert at(source, "await guild.fetch_scheduled_event(") < start
+    assert at(source, "if event.status is not discord.EventStatus.scheduled:") < start
+    assert at(source, "event.start_time > now") < start
+
+
+def test_starting_shares_the_reconcile_lock():
+    assert "async with self._lock:" in inspect.getsource(mirror.EventMirrorCog.start_loop.coro)
+
+
+def test_the_start_queue_is_only_replaced_by_a_completed_pass():
+    """A tick that bails early keeps the previous queue rather than dropping
+    every pending start."""
+    source = reconcile_source()
+    assert at(source, "for sync_key, row in list(mappings.items()):") < at(
+        source, "self._starts = starts"
+    )
+
+
+def test_only_an_empty_overrun_session_is_ended():
+    import types
+    from datetime import timedelta
+
+    import discord
+
+    event = _event(status=discord.EventStatus.active)
+    after = event.end_time + timedelta(minutes=5)
+    before = event.end_time - timedelta(minutes=5)
+
+    def guild(members):
+        channel = types.SimpleNamespace(members=members)
+        return types.SimpleNamespace(get_channel=lambda _id: channel)
+
+    assert mirror.EventMirrorCog._overran(guild([]), event, after)
+    assert not mirror.EventMirrorCog._overran(guild(["someone"]), event, after)
+    assert not mirror.EventMirrorCog._overran(guild([]), event, before)
+    assert not mirror.EventMirrorCog._overran(guild([]), _event(), after)
+    external = _event(status=discord.EventStatus.active, entity_type=discord.EntityType.external)
+    assert not mirror.EventMirrorCog._overran(guild([]), external, after)
+
+
+def test_ending_happens_only_on_the_branch_that_never_deletes():
+    source = reconcile_source()
+    prune = at(source, "for sync_key, row in list(mappings.items()):")
+    tail = source[prune:]
+    branch = at(tail, "if event.status is not discord.EventStatus.scheduled:")
+    assert branch < at(tail, "self._overran(") < at(tail, "await event.end(") < at(tail, "await event.delete(")

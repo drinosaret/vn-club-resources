@@ -47,6 +47,11 @@ MAX_EDITS_PER_TICK = 40
 # How close two start times have to be for an unmapped event to be recognised as
 # this bot's own after the mapping row was lost.
 ADOPT_TOLERANCE = timedelta(minutes=1)
+# Discord starts an external event at its time but leaves a voice event waiting
+# for someone to press Start, and cancels it hours later if nobody does. Due
+# sessions are checked this often so the start, and the notification members
+# get from it, lands close to the advertised time.
+START_CHECK_SECONDS = 30
 
 REASON = "Mirroring the VN Club calendar"
 
@@ -81,13 +86,18 @@ class EventMirrorCog(commands.Cog):
         # cannot be overtaken and produce a second event for the same slot.
         self._lock = asyncio.Lock()
         self._last_status = "Not run yet"
+        # Voice sessions waiting to be started, by Discord event id, with the
+        # time each is due. Rebuilt by every reconcile.
+        self._starts: dict[int, datetime] = {}
 
     async def cog_load(self) -> None:
         await self.load_config()
         self.sync_loop.start()
+        self.start_loop.start()
 
     async def cog_unload(self) -> None:
         self.sync_loop.cancel()
+        self.start_loop.cancel()
 
     # ── Config ────────────────────────────────────────────────
 
@@ -323,6 +333,36 @@ class EventMirrorCog(commands.Cog):
                 return event
         return None
 
+    @staticmethod
+    def _queue_start(
+        starts: dict[int, datetime], event: discord.ScheduledEvent, entry: em.PlannedEvent
+    ) -> None:
+        """Hold a voice session for the start loop. The earlier of the two times
+        is taken because an edit that moves it may not have landed; the start
+        loop re-reads the event before acting."""
+        if event.entity_type is not discord.EntityType.voice:
+            return
+        if event.status is not discord.EventStatus.scheduled:
+            return
+        due = entry.start_at
+        if event.start_time is not None and event.start_time < due:
+            due = event.start_time
+        starts[event.id] = due
+
+    @staticmethod
+    def _overran(guild: discord.Guild, event: discord.ScheduledEvent, now: datetime) -> bool:
+        """A running voice session past its end with nobody left in the channel.
+        Discord ends one a few minutes after the last member leaves; this covers
+        the rest, so a session is not left marked live."""
+        if event.status is not discord.EventStatus.active:
+            return False
+        if event.entity_type is not discord.EntityType.voice:
+            return False
+        if event.end_time is None or event.end_time > now:
+            return False
+        channel = guild.get_channel(event.channel_id or 0)
+        return not getattr(channel, "members", None)
+
     # ── Mapping writes ────────────────────────────────────────
 
     async def _save(self, guild_id: int, entry: em.PlannedEvent, discord_event_id: int) -> None:
@@ -353,6 +393,7 @@ class EventMirrorCog(commands.Cog):
 
     async def _reconcile(self) -> str:
         if not self._enabled:
+            self._starts = {}
             return "The mirror is off. Turn it on from this panel to start publishing events."
         settings = get_bot_settings()
         guild = self.bot.get_guild(settings.guild_id) if settings.guild_id else None
@@ -390,8 +431,9 @@ class EventMirrorCog(commands.Cog):
             if event.status in (discord.EventStatus.scheduled, discord.EventStatus.active)
         )
 
-        created = edited = adopted = removed = 0
+        created = edited = adopted = removed = ended = 0
         deferred = capped = failed = 0
+        starts: dict[int, datetime] = {}
 
         async with async_session_maker() as db:
             mappings = await em.load_mappings(db, guild.id)
@@ -461,10 +503,12 @@ class EventMirrorCog(commands.Cog):
                 created += 1
                 claimed.add(event.id)
                 await self._save(guild.id, entry, event.id)
+                self._queue_start(starts, event, entry)
                 continue
 
             if event.status in (discord.EventStatus.completed, discord.EventStatus.canceled):
                 continue
+            self._queue_start(starts, event, entry)
             if row is not None and row.content_hash == entry.content_hash:
                 continue
             if edited >= MAX_EDITS_PER_TICK:
@@ -490,6 +534,12 @@ class EventMirrorCog(commands.Cog):
             if event.status is not discord.EventStatus.scheduled:
                 # It began or finished. Taking it away would erase something
                 # that happened, so only the record lapses.
+                if self._overran(guild, event, now):
+                    try:
+                        await event.end(reason=REASON)
+                        ended += 1
+                    except (discord.HTTPException, ValueError) as e:
+                        logger.warning("Event mirror: ending %s failed: %s", sync_key, e)
                 continue
             try:
                 await event.delete(reason=REASON)
@@ -501,11 +551,14 @@ class EventMirrorCog(commands.Cog):
             await self._drop(guild.id, sync_key)
             removed += 1
 
+        self._starts = starts
+
         done = [
             f"{created} created" if created else "",
             f"{edited} updated" if edited else "",
             f"{removed} removed" if removed else "",
             f"{adopted} reclaimed" if adopted else "",
+            f"{ended} ended" if ended else "",
         ]
         summary = ", ".join(part for part in done if part) or "nothing to change"
         held = [
@@ -515,7 +568,7 @@ class EventMirrorCog(commands.Cog):
         ]
         note = ", ".join(part for part in held if part)
 
-        if created or edited or removed or adopted:
+        if created or edited or removed or adopted or ended:
             logger.info("Event mirror: %s (%d planned)", summary, len(planned))
         else:
             logger.debug("Event mirror: %s (%d planned)", summary, len(planned))
@@ -582,6 +635,57 @@ class EventMirrorCog(commands.Cog):
     @sync_loop.error
     async def sync_loop_error(self, error: Exception) -> None:
         logger.error("Event mirror sync error: %s", error, exc_info=True)
+
+    @tasks.loop(seconds=START_CHECK_SECONDS)
+    async def start_loop(self) -> None:
+        now = datetime.now(timezone.utc)
+        if not self._enabled or not any(due <= now for due in self._starts.values()):
+            return
+        settings = get_bot_settings()
+        guild = self.bot.get_guild(settings.guild_id) if settings.guild_id else None
+        if guild is None:
+            return
+        # Shares the reconcile's lock so a start never interleaves with an edit
+        # to the same event, or with the queue being rebuilt.
+        async with self._lock:
+            for event_id, due in list(self._starts.items()):
+                if due > now:
+                    continue
+                del self._starts[event_id]
+                await self._start_session(guild, event_id, now)
+
+    @start_loop.before_loop
+    async def before_start_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+    @start_loop.error
+    async def start_loop_error(self, error: Exception) -> None:
+        logger.error("Event mirror start error: %s", error, exc_info=True)
+
+    async def _start_session(self, guild: discord.Guild, event_id: int, now: datetime) -> None:
+        """Start a voice session whose time has come, as pressing Start would. A
+        failure is not retried here: the next reconcile queues it again while it
+        is still waiting."""
+        try:
+            event = await guild.fetch_scheduled_event(event_id, with_counts=False)
+        except discord.NotFound:
+            return
+        except discord.HTTPException as e:
+            logger.warning("Event mirror: could not read event %s to start it: %s", event_id, e)
+            return
+        if event.status is not discord.EventStatus.scheduled:
+            return
+        if event.end_time is not None and event.end_time <= now:
+            return
+        if event.start_time is not None and event.start_time > now:
+            self._starts[event_id] = event.start_time
+            return
+        try:
+            await event.start(reason=REASON)
+        except (discord.HTTPException, ValueError) as e:
+            logger.warning("Event mirror: starting event %s failed: %s", event_id, e)
+            return
+        logger.info("Event mirror: started event %s", event_id)
 
     # ── Command ───────────────────────────────────────────────
 

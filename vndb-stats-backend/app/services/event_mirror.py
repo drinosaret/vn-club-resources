@@ -110,7 +110,7 @@ STYLES: dict[str, TypeStyle] = {
         idle_name="Kinoplex (Movie Night)",
         pick_prefix="Kinoplex",
         calendar_label="Movie Night",
-        duration=timedelta(hours=3),
+        duration=timedelta(hours=2),
     ),
     "roudoku": TypeStyle(
         emoji="📚",
