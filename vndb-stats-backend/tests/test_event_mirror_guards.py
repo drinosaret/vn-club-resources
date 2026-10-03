@@ -252,3 +252,10 @@ def test_ending_happens_only_on_the_branch_that_never_deletes():
     tail = source[prune:]
     branch = at(tail, "if event.status is not discord.EventStatus.scheduled:")
     assert branch < at(tail, "self._overran(") < at(tail, "await event.end(") < at(tail, "await event.delete(")
+
+
+def test_a_failed_start_cannot_stop_the_start_loop():
+    """discord.py ends a tasks.loop for good when its body raises anything but a
+    network error, so each start has to contain its own failure."""
+    source = inspect.getsource(mirror.EventMirrorCog.start_loop.coro)
+    assert at(source, "try:") < at(source, "await self._start_session(") < at(source, "except Exception")
