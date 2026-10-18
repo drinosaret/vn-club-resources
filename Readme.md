@@ -1,10 +1,8 @@
 # VN Club
 
-A free, open source site about Japanese visual novels. Browse the full VNDB catalogue, build rankings, follow the reading club, check your stats, and get set up to read the original Japanese.
+> **This project has shut down.** vnclub.org is offline and the code is no longer maintained. It stays here as open source for anyone who wants to read it, fork it or run their own copy.
 
-## Website
-
-Visit: [vnclub.org](https://vnclub.org/)
+VN Club was a free, open source site about Japanese visual novels.
 
 ## Features
 
@@ -22,11 +20,11 @@ Visit: [vnclub.org](https://vnclub.org/)
 - **Discord bot** - The daily title and word, the events calendar, film nights and the reading club
 - Full-text search, dark mode, and an English or Japanese interface
 
-## Contributing
+## Running your own copy
 
-Contributions are always welcome. Whether it's fixing a typo, improving a guide, or adding new content, feel free to open a PR or issue.
+Issues and pull requests are no longer answered. Forks are welcome under the license below.
 
-Guide content lives in `content/guides/` as MDX files. The site is built with Next.js and Tailwind CSS, with a FastAPI + PostgreSQL backend for VNDB data.
+Guide content lives in `content/guides/` as MDX files. The site is built with Next.js and Tailwind CSS, with a FastAPI + PostgreSQL backend that imports VNDB's public data dumps.
 
 ```bash
 # Frontend development
@@ -39,10 +37,6 @@ npm run api:dev
 # Both together
 npm run dev:all
 ```
-
-## Community
-
-Join us on [Discord](https://discord.gg/Ze7dYKVTHf) to read alongside other people, get help with setup, and share what you have found.
 
 ## Data Sources
 
